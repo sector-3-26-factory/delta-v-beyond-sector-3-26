@@ -1,7 +1,15 @@
 [toolchain]
-# Pinned to a recent stable so that dependencies which started requiring
-# Cargo's `edition2024` feature (stabilized in 1.85) keep resolving.
-# Bump deliberately and update CI / MSRV in Cargo.toml when changing.
-channel = "1.85.0"
+# Pinned to a recent stable. The dependency graph (Bevy 0.14 + avian3d +
+# their transitive crates such as `image`, `pxfm`, ...) keeps raising its
+# MSRV as new patch releases are published. Without a committed
+# `Cargo.lock`, every fresh resolve picks the newest compatible versions,
+# which forces us to track a current toolchain.
+#
+# Plan: as soon as we have run `cargo` once inside the dev container and
+# committed `Cargo.lock`, this pin becomes the *only* place that decides
+# the toolchain, and external crate releases can no longer break CI.
+#
+# Bump deliberately and keep `rust-version` in Cargo.toml in sync.
+channel = "1.90.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

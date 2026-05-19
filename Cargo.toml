@@ -2,7 +2,7 @@
 name = "delta_v_beyond_sector_3_26"
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "A spiritual successor to Parsec (OpenParsec), rebuilt in Rust/Bevy with Newtonian physics."
 authors = ["Cute-Donkey <280984637+Cute-Donkey@users.noreply.github.com>"]
 license = "GPL-3.0-or-later"
