@@ -3,7 +3,6 @@
     "build": {
         "dockerfile": "Dockerfile"
     },
-
     // Mount the host's X11 socket so Bevy can open a window on the host
     // display. Requires a Linux host running X11 (or XWayland).
     // Before opening the container, run on the host once per session:
@@ -11,26 +10,41 @@
     "containerEnv": {
         "DISPLAY": "${localEnv:DISPLAY}",
         "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
-        "XDG_RUNTIME_DIR": "/tmp/xdg",
         // Use mold as the default linker for faster iteration.
         "RUSTFLAGS": "-C link-arg=-fuse-ld=mold"
+        // NOTE: We deliberately do NOT set XDG_RUNTIME_DIR here. Setting
+        // it to a non-existent or wrong-permissions path causes VS Code
+        // (and pulseaudio etc.) to fail opening IPC sockets, e.g.:
+        //   EACCES: permission denied /tmp/xdg/vscode-ipc-*.sock
+        // The base image leaves XDG_RUNTIME_DIR unset, which is fine
+        // for our purposes.
     },
-
     "mounts": [
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
         "source=${localEnv:HOME}/.Xauthority,target=/home/vscode/.Xauthority,type=bind,consistency=cached,readonly"
     ],
-
     "runArgs": [
         // GPU passthrough (DRI render node). Comment out if you don't have
         // /dev/dri (e.g. headless servers); software rendering will be used.
         "--device=/dev/dri",
-        // Needed for some Vulkan ICDs to enumerate devices.
+        // Group memberships needed so the container user can actually open
+        // the DRI devices that --device just exposed. On the host:
+        //   ls -l /dev/dri/             # shows owning group of each node
+        //   getent group render video   # shows numeric GIDs
+        //
+        // The GIDs below match a typical Debian/Ubuntu desktop:
+        //   video : 44   (legacy display group, owns /dev/dri/cardN)
+        //   render: 109  (owns /dev/dri/renderD128 on this host)
+        //
+        // If your host uses different GIDs (very common: render is 105,
+        // 110, ... on other distros), edit the render line below or set
+        // the RENDER_GID env var in your shell and switch to
+        // "--group-add=${localEnv:RENDER_GID}".
         "--group-add=video",
+        "--group-add=109",
         // Networking for cargo / crates.io.
         "--network=host"
     ],
-
     "customizations": {
         "vscode": {
             "extensions": [
@@ -50,7 +64,6 @@
             }
         }
     },
-
     "remoteUser": "vscode",
     "postCreateCommand": "rustc --version && cargo --version && (vulkaninfo --summary || true)"
 }
