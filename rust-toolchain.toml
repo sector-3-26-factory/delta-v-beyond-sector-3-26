@@ -1,4 +1,7 @@
 [toolchain]
-channel = "1.80.0"
+# Pinned to a recent stable so that dependencies which started requiring
+# Cargo's `edition2024` feature (stabilized in 1.85) keep resolving.
+# Bump deliberately and update CI / MSRV in Cargo.toml when changing.
+channel = "1.85.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
