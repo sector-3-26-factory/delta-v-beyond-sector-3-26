@@ -1,0 +1,35 @@
+# Normalize line endings to LF on checkin
+* text=auto eol=lf
+
+# Rust sources
+*.rs    text diff=rust
+*.toml  text
+*.md    text
+*.yml   text
+*.yaml  text
+*.json  text
+
+# Shell / docker
+*.sh         text eol=lf
+Dockerfile   text eol=lf
+
+# Treat common asset formats as binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ktx2 binary
+*.dds  binary
+*.hdr  binary
+*.exr  binary
+*.glb  binary
+*.gltf binary
+*.bin  binary
+*.ogg  binary
+*.wav  binary
+*.flac binary
+*.mp3  binary
+*.ttf  binary
+*.otf  binary
+*.wasm binary

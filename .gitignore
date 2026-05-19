@@ -1,0 +1,33 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Bevy / dynamic linking artifacts
+*.pdb
+
+# IDE / editor
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+.DS_Store
+
+# Profiling / traces
+*.trace
+perf.data*
+flamegraph.svg
+
+# Local environment
+.env
+.env.local
+
+# Build / packaging output
+/dist/
+/build/
+/out/
+
+# Generated assets caches
+/assets/.cache/

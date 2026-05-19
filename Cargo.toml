@@ -1,0 +1,35 @@
+[package]
+name = "delta_v_beyond_sector_3_26"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.80"
+description = "A spiritual successor to Parsec (OpenParsec), rebuilt in Rust/Bevy with Newtonian physics."
+authors = ["Cute-Donkey <280984637+Cute-Donkey@users.noreply.github.com>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/sector-3-26-factory/delta-v-beyond-sector-3-26"
+readme = "README.md"
+keywords = ["game", "bevy", "space", "newtonian", "parsec"]
+categories = ["games"]
+
+[features]
+# Enable Bevy's dynamic linking for much faster iterative builds during
+# development. Off by default so that `cargo check`/CI and release builds
+# stay portable.
+dev = ["bevy/dynamic_linking"]
+
+[dependencies]
+bevy = { version = "0.14", default-features = true }
+avian3d = "0.1"
+
+# Enable a bit of optimization for dependencies even in debug builds.
+# Bevy strongly recommends this for acceptable iteration times.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

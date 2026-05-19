@@ -1,0 +1,56 @@
+{
+    "name": "Delta-V beyond Sector 3.26",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+
+    // Mount the host's X11 socket so Bevy can open a window on the host
+    // display. Requires a Linux host running X11 (or XWayland).
+    // Before opening the container, run on the host once per session:
+    //   xhost +local:
+    "containerEnv": {
+        "DISPLAY": "${localEnv:DISPLAY}",
+        "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+        "XDG_RUNTIME_DIR": "/tmp/xdg",
+        // Use mold as the default linker for faster iteration.
+        "RUSTFLAGS": "-C link-arg=-fuse-ld=mold"
+    },
+
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+        "source=${localEnv:HOME}/.Xauthority,target=/home/vscode/.Xauthority,type=bind,consistency=cached,readonly"
+    ],
+
+    "runArgs": [
+        // GPU passthrough (DRI render node). Comment out if you don't have
+        // /dev/dri (e.g. headless servers); software rendering will be used.
+        "--device=/dev/dri",
+        // Needed for some Vulkan ICDs to enumerate devices.
+        "--group-add=video",
+        // Networking for cargo / crates.io.
+        "--network=host"
+    ],
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "tamasfe.even-better-toml",
+                "vadimcn.vscode-lldb",
+                "serayuzgur.crates",
+                "usernamehw.errorlens"
+            ],
+            "settings": {
+                "rust-analyzer.check.command": "clippy",
+                "editor.formatOnSave": true,
+                "[rust]": {
+                    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+                },
+                "files.eol": "\n"
+            }
+        }
+    },
+
+    "remoteUser": "vscode",
+    "postCreateCommand": "rustc --version && cargo --version && (vulkaninfo --summary || true)"
+}
