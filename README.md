@@ -8,6 +8,10 @@ scratch in **Rust** with the **[Bevy](https://bevyengine.org/)** engine and
 > Status: **Pre-alpha (Milestone M0)**. The project currently only opens an
 > empty window. See [`docs/design.md`](docs/design.md) for the roadmap.
 
+If you wonder about the name of the game you may take a look at
+[`docs/the_name_of_the_game.md`](docs/the_name_of_the_game.md). Of course
+nerds don't need to take a look :o)
+
 ## Goals
 
 - Faithful in spirit to Parsec: fast, skill-based 6-DoF space combat.
