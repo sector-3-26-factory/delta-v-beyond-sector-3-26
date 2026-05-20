@@ -1,46 +1,52 @@
 # Contributing to Delta-V beyond Sector 3.26
 
-Thanks for your interest in contributing!
+Thanks for your interest in Delta-V beyond Sector 3.26! 
 
-## Licensing of contributions
+To maintain a consistent architecture and ensure the project's long-term stability, **core code development is handled exclusively by the core organization team**. We do not accept external code contributions via Pull Requests. 
 
-This project is licensed under **GPL-3.0-or-later**. By submitting a pull
-request, an issue patch, or any other contribution, you agree that your
-contribution is licensed under the same terms.
+However, you can deeply impact the project in two ways: **Translations** and (coming soon) **Peer-to-Peer Content**.
 
-If you contribute third-party code or assets, make sure their license is
-compatible with GPL-3.0-or-later and document the origin in the commit
-message and, where appropriate, in a `LICENSES/` or `THIRD_PARTY.md` file.
+---
 
-## Development environment
+## How You Can Contribute
 
-The recommended setup is the Dev Container shipped in `.devcontainer/`. This
-gives you a known-good Linux toolchain with all system dependencies Bevy
-needs, without touching your host system.
+### 1. Translations (Localization)
+We want to make the game accessible to everyone. We highly welcome contributions to our UI texts and localization files.
+- If you find a typo or want to translate the game into a new language, please check our open issues or open a new one with the tag `localization`.
+- Translation files are stored in `[/assets/locales/]`.
 
-## Coding guidelines
+### 2. Peer-to-Peer Content (Future Feature)
+Delta-V is designed to be modular. We are working on a Peer-to-Peer (P2P) ecosystem that will allow players to share custom content directly with each other without altering the game's core repository.
+- **What can be shared:** Custom Worlds, Spaceships, and other game objects.
+- **How it works:** This system is currently in development. Once live, you will be able to export your creations in-game and share them via the P2P network.
 
-- **Language**: All code, comments, commit messages and documentation are
-  written in **English**.
-- **Formatting**: Run `cargo fmt --all` before committing.
-- **Linting**: Run `cargo clippy --all-targets --all-features -- -D warnings`
-  and fix or justify all warnings.
-- **Tests**: Run `cargo test --all` where applicable.
-- **Commit messages**: Use the imperative mood ("Add ship thruster system",
-  not "Added" or "Adds"). Conventional Commits are encouraged but not
-  mandatory.
+---
 
-## Pull requests
+## Licensing of Contributions
 
-- Keep PRs focused; one logical change per PR.
-- Reference the milestone (M0..M8, see `docs/design.md`) the change belongs to
-  in the description.
-- Make sure CI is green before requesting review.
+This project is licensed under **GPL-3.0-or-later**. 
 
-## Reporting bugs / proposing features
+By submitting translations, bug reports, or suggestions, you agree that your contribution is licensed under the same terms. If your translation includes third-party text or assets, ensure their license is compatible with GPL-3.0-or-later.
 
-Please open a GitHub issue with:
+---
 
-- A clear title.
+## Reporting Bugs & Proposing Features
+
+Even though we don't accept external code, your feedback is invaluable! Please open a GitHub issue if you find a bug or have a feature idea.
+
+When opening an issue, please provide:
+- A clear, concise title.
 - Steps to reproduce (for bugs) or a concrete use case (for features).
 - Your environment (host OS, GPU, container vs. native).
+
+---
+
+## Note for Core Team Members
+
+If you are an invited member of the sector-3.26-factory  organization with write/merge access, please adhere to our internal development guidelines:
+
+- **Language:** All code, comments, commit messages, and documentation are in **English**.
+- **Formatting:** Run `cargo fmt --all` before committing.
+- **Linting:** Run `cargo clippy --all-targets --all-features -- -D warnings` and fix all warnings.
+- **Tests:** Run `cargo test --all` where applicable.
+- **Commit Messages:** Use the imperative mood ("Add ship thruster system"). Conventional Commits are encouraged.
