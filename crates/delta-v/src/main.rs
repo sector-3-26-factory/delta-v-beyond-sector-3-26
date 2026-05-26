@@ -22,16 +22,16 @@
 //! application composition only. See ADR-0005 for the plugin architecture.
 
 use bevy::prelude::*;
-use delta_v_core::CorePlugin;
-use delta_v_config::ConfigPlugin;
-use delta_v_physics::PhysicsPlugin;
 use delta_v_assets::AssetsPlugin;
-use delta_v_net::NetPlugin;
-use delta_v_ships::ShipsPlugin;
-use delta_v_propulsion::PropulsionPlugin;
-use delta_v_weapons::WeaponsPlugin;
-use delta_v_stations::StationsPlugin;
+use delta_v_config::ConfigPlugin;
+use delta_v_core::CorePlugin;
 use delta_v_items::ItemsPlugin;
+use delta_v_net::NetPlugin;
+use delta_v_physics::PhysicsPlugin;
+use delta_v_propulsion::PropulsionPlugin;
+use delta_v_ships::ShipsPlugin;
+use delta_v_stations::StationsPlugin;
+use delta_v_weapons::WeaponsPlugin;
 use delta_v_world::WorldPlugin;
 
 fn main() {
