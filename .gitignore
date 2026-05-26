@@ -24,6 +24,11 @@ flamegraph.svg
 .env
 .env.local
 
+# Local scratch notes that are not part of the project history.
+# Used to hand things back and forth with AI agents during a session.
+docs/pending-ai-steps.md
+**/pending-ai-steps.md
+
 # Build / packaging output
 /dist/
 /build/
