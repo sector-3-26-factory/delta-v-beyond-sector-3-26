@@ -1,28 +1,38 @@
-[package]
-name = "delta_v_beyond_sector_3_26"
-version = "0.0.1"
-edition = "2021"
-rust-version = "1.88"
-description = "A spiritual successor to Parsec (OpenParsec), rebuilt in Rust/Bevy with Newtonian physics."
-authors = ["Cute-Donkey <280984637+Cute-Donkey@users.noreply.github.com>"]
-license = "GPL-3.0-or-later"
-repository = "https://github.com/sector-3-26-factory/delta-v-beyond-sector-3-26"
-readme = "README.md"
-keywords = ["game", "bevy", "space", "newtonian", "parsec"]
-categories = ["games"]
+[workspace]
+members = [
+    "crates/delta-v",
+    "crates/delta-v-core",
+    "crates/delta-v-config",
+    "crates/delta-v-physics",
+    "crates/delta-v-assets",
+    "crates/delta-v-net",
+    "crates/delta-v-ships",
+    "crates/delta-v-propulsion",
+    "crates/delta-v-weapons",
+    "crates/delta-v-stations",
+    "crates/delta-v-items",
+    "crates/delta-v-world",
+]
+resolver = "2"
 
-[features]
-# Enable Bevy's dynamic linking for much faster iterative builds during
-# development. Off by default so that `cargo check`/CI and release builds
-# stay portable.
-dev = ["bevy/dynamic_linking"]
-
-[dependencies]
+[workspace.dependencies]
 bevy = { version = "0.14", default-features = true }
 avian3d = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+env_logger = "0.11"
+thiserror = "1.0"
+tokio = { version = "1.40", features = ["full"] }
 
-# Enable a bit of optimization for dependencies even in debug builds.
-# Bevy strongly recommends this for acceptable iteration times.
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+
 [profile.dev.package."*"]
 opt-level = 3
 

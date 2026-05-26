@@ -1,0 +1,51 @@
+# See AGENTS.md
+#
+# cargo-deny configuration for Delta-V beyond Sector 3.26
+# See ADR-0028 (Third-party dependency policy) and
+# ADR-0029 (Security and supply chain).
+
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db/raw/main/db.toml"]
+vulnerability = "warn"
+unmaintained = "warn"
+noticed = "warn"
+severity = "low"
+
+[licenses]
+unknown-git = "warn"
+unknown-registry = "warn"
+allow = [
+    "GPL-3.0-or-later",
+    "GPL-3.0",
+    "GPL-2.0-or-later",
+    "GPL-2.0",
+    "AGPL-3.0-or-later",
+    "MIT",
+    "Apache-2.0",
+    "ISC",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "MPL-2.0",
+    "Zlib",
+]
+deny = []
+copyleft = "warn"
+allow-osi-fsf-free = "both"
+default = "deny"
+
+[bans]
+threshold = "low"
+unknown-git = "warn"
+unknown-registry = "warn"
+denied = []
+allow = []
+allow-git = []
+
+[sources]
+unknown-git = "warn"
+unknown-registry = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-org = {
+github = ["sector-3-26-factory"]
+}

@@ -1,0 +1,23 @@
+#!/bin/bash
+# See AGENTS.md
+#
+# Delta-V beyond Sector 3.26 pre-commit hook
+# Enforces: cargo fmt, cargo clippy, cargo test, cargo deny
+# See ADR-0034 (No warnings policy)
+
+set -e
+
+echo "[pre-commit] Running cargo fmt..."
+cargo fmt --all -- --check
+
+echo "[pre-commit] Running cargo clippy..."
+cargo clippy --workspace --all-targets -- -D warnings
+
+echo "[pre-commit] Running cargo test..."
+cargo test --workspace
+
+echo "[pre-commit] Running cargo deny..."
+cargo deny check
+
+echo "[pre-commit] All checks passed!"
+exit 0

@@ -5,8 +5,9 @@ A spiritual successor to the classic space combat game
 scratch in **Rust** with the **[Bevy](https://bevyengine.org/)** engine and
 **Newtonian** flight physics.
 
-> Status: **Pre-alpha (Milestone M0)**. The project currently only opens an
-> empty window. See [`docs/design.md`](docs/design.md) for the roadmap.
+> Status: **Pre-alpha (Milestone M0.5)**. Architecture foundation established.
+> See [`docs/roadmap.md`](docs/roadmap.md) for the current milestone and
+> [`AGENTS.md`](AGENTS.md) for development rules.
 
 If you wonder about the name of the game you may take a look at
 [`docs/the_name_of_the_game.md`](docs/the_name_of_the_game.md). Of course
@@ -72,10 +73,15 @@ cargo run
 ```
 .devcontainer/   Reproducible dev environment (Docker + VS Code)
 .github/         CI workflows
+.githooks/       Git hooks (pre-commit)
 assets/          Game assets (models, textures, audio) -- empty for now
-docs/            Design notes, physics notes, roadmap
-src/             Rust sources
+crates/          Workspace members (binary + 11 library crates)
+docs/            Architecture Decision Records, design notes, roadmap
+denied.toml      cargo-deny configuration (ADR-0028, ADR-0029)
+AGENTS.md        Rules for AI agents working on this project
 ```
+
+See [`docs/architecture.md`](docs/architecture.md) for an overview of the crate structure.
 
 ## Contributing
 
