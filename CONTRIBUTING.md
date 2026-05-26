@@ -13,7 +13,8 @@ However, you can deeply impact the project in two ways: **Translations** and (co
 ### 1. Translations (Localization)
 We want to make the game accessible to everyone. We highly welcome contributions to our UI texts and localization files.
 - If you find a typo or want to translate the game into a new language, please check our open issues or open a new one with the tag `localization`.
-- Translation files are stored in `[/assets/locales/]`.
+- Translation files are stored under `assets/i18n/`, one JSON file per language (e.g. `en.json`, `de.json`). The English file is the reference; it defines the complete set of keys. See [ADR-0037](docs/adr/0037-internationalization.md) for the file format and rules.
+- For a translation PR, add or edit only the JSON file for your language. The corresponding Rust struct and schema are maintained by the core team; if you spot a missing key in the reference file, open an issue rather than editing Rust code.
 
 ### 2. Peer-to-Peer Content (Future Feature)
 Delta-V is designed to be modular. We are working on a Peer-to-Peer (P2P) ecosystem that will allow players to share custom content directly with each other without altering the game's core repository.
@@ -43,10 +44,12 @@ When opening an issue, please provide:
 
 ## Note for Core Team Members
 
-If you are an invited member of the sector-3.26-factory  organization with write/merge access, please adhere to our internal development guidelines:
+If you are an invited member of the sector-3-26-factory organization with write/merge access, please adhere to our internal development guidelines:
 
-- **Language:** All code, comments, commit messages, and documentation are in **English**.
+- **Language:** All code, comments, commit messages and documentation are in **English**.
 - **Formatting:** Run `cargo fmt --all` before committing.
-- **Linting:** Run `cargo clippy --all-targets --all-features -- -D warnings` and fix all warnings.
-- **Tests:** Run `cargo test --all` where applicable.
-- **Commit Messages:** Use the imperative mood ("Add ship thruster system"). Conventional Commits are encouraged.
+- **Linting:** Run `cargo clippy --workspace --all-targets -- -D warnings` and fix all warnings (per [ADR-0034](docs/adr/0034-no-warnings-policy.md)).
+- **Tests:** Run `cargo test --workspace` and make sure everything passes.
+- **Commit Messages:** Conventional Commits format (per [ADR-0004](docs/adr/0004-commit-message-convention.md)).
+- **Branching and PRs:** Gitflow-light (per [ADR-0003](docs/adr/0003-branching-and-pr-workflow.md)); see [`docs/workflow.md`](docs/workflow.md) for the practical recipe.
+- **Project rules:** every architectural decision is recorded as an ADR under [`docs/adr/`](docs/adr/). Read the index in [`docs/adr/README.md`](docs/adr/README.md) before making non-trivial changes.
