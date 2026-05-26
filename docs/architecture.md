@@ -41,6 +41,30 @@ Domain crates depend on technical crates and may depend on each
 other only in one direction; cycles are prevented by Cargo and by
 review discipline.
 
+## Crate structure (M0.5 and beyond)
+
+The workspace contains 12 crates:
+
+**Binary:**
+- `crates/delta-v/` -- Application composition, plugin registration, CLI parsing.
+
+**Technical (must not depend on domain crates):**
+- `crates/delta-v-core/` -- ECS fundamentals, shared components, plugin traits.
+- `crates/delta-v-config/` -- JSON loading, schema validation, user-override merge.
+- `crates/delta-v-physics/` -- Newtonian physics, gravity, floating origin (avian3d).
+- `crates/delta-v-assets/` -- Asset loaders, glTF helpers.
+- `crates/delta-v-net/` -- Networking (stub until M7; ADR-0030/31/32).
+
+**Domain (may depend on technical crates; dependency graph is acyclic):**
+- `crates/delta-v-ships/` -- Ship types and ship-specific systems.
+- `crates/delta-v-propulsion/` -- Thrusters, hyperdrive.
+- `crates/delta-v-weapons/` -- Projectiles, damage.
+- `crates/delta-v-stations/` -- Space stations, docking.
+- `crates/delta-v-items/` -- Collectables, inventory.
+- `crates/delta-v-world/` -- Sectors, boundaries, hyperspace gates.
+
+See [ADR-0002](adr/0002-repository-layout-and-workspace.md) for the rationale.
+
 ## Data flow at a glance
 
 1. **Startup**:

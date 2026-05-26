@@ -1,0 +1,29 @@
+# See AGENTS.md
+[package]
+name = "delta-v"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.88"
+description = "Delta-V beyond Sector 3.26 - binary entrypoint"
+license = "GPL-3.0-or-later"
+
+[[bin]]
+name = "delta-v"
+path = "src/main.rs"
+
+[dependencies]
+delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
+delta-v-config = { path = "../delta-v-config", version = "0.0.1" }
+delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }
+delta-v-assets = { path = "../delta-v-assets", version = "0.0.1" }
+delta-v-net = { path = "../delta-v-net", version = "0.0.1" }
+delta-v-ships = { path = "../delta-v-ships", version = "0.0.1" }
+delta-v-propulsion = { path = "../delta-v-propulsion", version = "0.0.1" }
+delta-v-weapons = { path = "../delta-v-weapons", version = "0.0.1" }
+delta-v-stations = { path = "../delta-v-stations", version = "0.0.1" }
+delta-v-items = { path = "../delta-v-items", version = "0.0.1" }
+delta-v-world = { path = "../delta-v-world", version = "0.0.1" }
+
+bevy = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
