@@ -1,0 +1,37 @@
+# See AGENTS.md
+name: Security audit
+
+on:
+  # Run on every push and PR so dependency changes are audited immediately
+  # alongside the code that introduces them.
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  pull_request:
+    branches: ['**']
+  # Weekly scheduled run re-audits the RUSTSEC advisory database so new
+  # advisories surface promptly even without commits. See ADR-0029.
+  schedule:
+    - cron: '0 3 * * 1'
+  # Allow manual runs from the Actions tab (useful for debugging).
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same ref when a new commit is pushed.
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  deny:
+    name: Dependency audit (cargo deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        run: rustup show
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+      - name: cargo deny check
+        # Enforces licence allow-list, RUSTSEC advisories, source
+        # restrictions, and crate ban-list. See ADR-0028 and ADR-0029.
+        run: cargo deny check

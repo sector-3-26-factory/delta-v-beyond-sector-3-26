@@ -5,16 +5,14 @@
 # ADR-0029 (Security and supply chain).
 
 [advisories]
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db/raw/main/db.toml"]
-vulnerability = "warn"
-unmaintained = "warn"
-noticed = "warn"
-severity = "low"
+db-path = "~/.cargo/advisory-dbs"
+db-urls = ["https://github.com/RustSec/advisory-db"]
+unmaintained = "workspace"
+unsound = "workspace"
+yanked = "warn"
+unused-ignored-advisory = "warn"
 
 [licenses]
-unknown-git = "warn"
-unknown-registry = "warn"
 allow = [
     "GPL-3.0-or-later",
     "GPL-3.0",
@@ -22,30 +20,28 @@ allow = [
     "GPL-2.0",
     "AGPL-3.0-or-later",
     "MIT",
+    "MIT-0",
     "Apache-2.0",
+    "CC0-1.0",
     "ISC",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "MPL-2.0",
+    "Unicode-3.0",
     "Zlib",
 ]
-deny = []
-copyleft = "warn"
-allow-osi-fsf-free = "both"
-default = "deny"
+unused-allowed-license = "warn"
 
 [bans]
-threshold = "low"
-unknown-git = "warn"
-unknown-registry = "warn"
-denied = []
+multiple-versions = "warn"
+wildcards = "deny"
+deny = []
 allow = []
-allow-git = []
 
 [sources]
-unknown-git = "warn"
-unknown-registry = "warn"
+unknown-git = "deny"
+unknown-registry = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-org = {
+
+[sources.allow-org]
 github = ["sector-3-26-factory"]
-}

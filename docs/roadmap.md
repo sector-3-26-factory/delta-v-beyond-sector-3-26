@@ -18,19 +18,24 @@ Each milestone ends on a runnable, demoable build.
 - GPU-accelerated rendering verified inside the dev container.
 
 ### M0.5 -- Architecture foundation
-*Status: in progress.*
+*Status: complete.*
 
 - AGENTS.md created.
 - ADR process established
   ([ADR-0001](adr/0001-adr-process.md)).
-- All foundation ADRs (0001-0035) written and adopted.
+- All foundation ADRs (0001-0035) written and adopted; ADR-0036
+  (external contributors) and ADR-0037 (i18n) also adopted.
 - `docs/workflow.md`, `docs/architecture.md`, `docs/roadmap.md`
   populated.
 - Workspace conversion (binary + 11 library crates per
   [ADR-0002](adr/0002-repository-layout-and-workspace.md)).
-- `cargo deny` configuration and CI integration
+- `cargo deny` configuration (`deny.toml`) and CI integration:
+  audited on every push and PR; weekly scheduled re-audit via
+  `.github/workflows/security.yml`
   ([ADR-0028](adr/0028-third-party-dependency-policy.md),
   [ADR-0029](adr/0029-security-and-supply-chain.md)).
+- `--locked` enforced on all CI cargo invocations
+  ([ADR-0029](adr/0029-security-and-supply-chain.md)).
 - Source file header convention rolled out
   ([ADR-0033](adr/0033-agents-md-and-source-file-pointers.md)).
 - Pre-commit hook script
