@@ -1,45 +1,29 @@
 {
-    "name": "Delta-V beyond Sector 3.26",
+    "name": "Delta-V beyond Sector 3.26 (xhost-optimized)",
     "build": {
         "dockerfile": "Dockerfile"
     },
     // Mount the host's X11 socket so Bevy can open a window on the host
     // display. Requires a Linux host running X11 (or XWayland).
-    // Before opening the container, run on the host once per session:
-    //   xhost +local:
+    // BEFORE OPENING/RESTARTING THE CONTAINER:
+    //   1. Run once per session on the host:  xhost +local:
+    //   2. If you switched users/sessions and DISPLAY changed (e.g., :0 to :1),
+    //      just restart the container or reload the window so VS Code fetches the new env.
     "containerEnv": {
         "DISPLAY": "${localEnv:DISPLAY}",
         "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
         // Use mold as the default linker for faster iteration.
         "RUSTFLAGS": "-C link-arg=-fuse-ld=mold"
-        // NOTE: We deliberately do NOT set XDG_RUNTIME_DIR here. Setting
-        // it to a non-existent or wrong-permissions path causes VS Code
-        // (and pulseaudio etc.) to fail opening IPC sockets, e.g.:
-        //   EACCES: permission denied /tmp/xdg/vscode-ipc-*.sock
-        // The base image leaves XDG_RUNTIME_DIR unset, which is fine
-        // for our purposes.
+        // XDG_RUNTIME_DIR remains deliberately unset.
     },
     "mounts": [
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
-        "source=${localEnv:HOME}/.Xauthority,target=/home/vscode/.Xauthority,type=bind,consistency=cached,readonly"
+        // We only need the X11 sockets. No .Xauthority mount needed when using 'xhost +local:'
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
     ],
     "runArgs": [
-        // GPU passthrough (DRI render node). Comment out if you don't have
-        // /dev/dri (e.g. headless servers); software rendering will be used.
+        // GPU passthrough (DRI render node).
         "--device=/dev/dri",
-        // Group memberships needed so the container user can actually open
-        // the DRI devices that --device just exposed. On the host:
-        //   ls -l /dev/dri/             # shows owning group of each node
-        //   getent group render video   # shows numeric GIDs
-        //
-        // The GIDs below match a typical Debian/Ubuntu desktop:
-        //   video : 44   (legacy display group, owns /dev/dri/cardN)
-        //   render: 109  (owns /dev/dri/renderD128 on this host)
-        //
-        // If your host uses different GIDs (very common: render is 105,
-        // 110, ... on other distros), edit the render line below or set
-        // the RENDER_GID env var in your shell and switch to
-        // "--group-add=${localEnv:RENDER_GID}".
+        // Group memberships needed to open the DRI devices.
         "--group-add=video",
         "--group-add=109",
         // Networking for cargo / crates.io.
