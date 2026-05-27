@@ -1,108 +1,104 @@
-# M0.5 Documentation
+# Delta-V beyond Sector 3.26
 
-**Milestone:** M0.5 - Architecture Foundation
-**Status:** ✅ COMPLETE
-**Date:** 2025-05-19
+A spiritual successor to the classic space combat game
+[Parsec / OpenParsec](https://github.com/OpenParsec/openparsec), rebuilt from
+scratch in **Rust** with the **[Bevy](https://bevyengine.org/)** engine and
+**Newtonian** flight physics.
 
-This directory contains all documentation for Milestone M0.5 (Architecture Foundation).
+> Status: **Pre-alpha (Milestone M0.5)**. Architecture foundation established.
+> See [`docs/roadmap.md`](docs/roadmap.md) for the current milestone and
+> [`AGENTS.md`](AGENTS.md) for development rules.
 
-## Quick Navigation
+If you wonder about the name of the game you may take a look at
+[`docs/the_name_of_the_game.md`](docs/the_name_of_the_game.md). Of course
+nerds don't need to take a look :o)
 
-- **[INDEX.md](INDEX.md)** -- Start here for complete documentation index
-- **[READY-FOR-MERGE.md](READY-FOR-MERGE.md)** -- Merge checklist and requirements
-- **[HANDOFF.txt](HANDOFF.txt)** -- Handoff document with status
-- **[COMPLETION-REPORT.txt](COMPLETION-REPORT.txt)** -- Full completion report
-- **[COMPLETION-CHECKLIST.md](COMPLETION-CHECKLIST.md)** -- M0.5 completion checklist
-- **[IMPLEMENTATION-SUMMARY.md](IMPLEMENTATION-SUMMARY.md)** -- Implementation details
-- **[CLEANUP-SUMMARY.md](CLEANUP-SUMMARY.md)** -- Repository cleanup notes
+## Goals
 
-## What is M0.5?
+- Faithful in spirit to Parsec: fast, skill-based 6-DoF space combat.
+- Newtonian physics: thrust applies force, inertia is preserved, there is no
+  arbitrary top speed. An optional "flight assist" mode may be offered for
+  accessibility.
+- Modern, modular ECS architecture (Bevy).
+- Cross-platform (Linux first, Windows/macOS later).
+- Multiplayer as a first-class concern (target for a later milestone).
 
-Milestone M0.5 establishes the architectural foundation for the project:
+## Non-goals (for now)
 
-- ✅ All 37 Architecture Decision Records (ADRs) created and in Accepted status
-- ✅ Workspace restructured from monolith to 12-crate modular architecture
-- ✅ Plugin architecture with explicit composition
-- ✅ Tooling and CI infrastructure (cargo-deny, pre-commit hooks)
-- ✅ Comprehensive documentation and developer guides
-- ✅ All quality gates in place (no warnings policy)
+- Photorealistic graphics.
+- Persistent universe / MMO scope.
+- Mobile platforms.
 
-## Key Artifacts
+## Relationship to OpenParsec
 
-### Documentation
-- `INDEX.md` -- Complete documentation index
-- `READY-FOR-MERGE.md` -- Merge requirements and verification
-- `HANDOFF.txt` -- Handoff status and next steps
-- `COMPLETION-REPORT.txt` -- Detailed completion report
+This is a **clean-room reimplementation**. No source code is taken from
+OpenParsec; only the gameplay ideas and feel serve as inspiration. The project
+is nevertheless licensed under the GNU GPL v3 (or later) in the spirit of the
+original.
 
-### Code Structure
-- Binary crate: `crates/delta-v/`
-- 5 Technical crates: core, config, physics, assets, net
-- 6 Domain crates: ships, propulsion, weapons, stations, items, world
+## Building
 
-### Configuration
-- `Cargo.toml` (workspace definition, in root)
-- `deny.toml` (supply chain security, in root)
-- `.githooks/pre-commit` (quality gates, in root)
+### Recommended: Dev Container (VS Code)
 
-## Getting Started
+The repository ships with a [Dev Container](.devcontainer/) configuration that
+provides a reproducible Linux build environment with all system libraries
+Bevy requires. This avoids polluting your host system.
 
-### For Reviewers
-1. Read [`READY-FOR-MERGE.md`](READY-FOR-MERGE.md)
-2. Run `./.githooks/pre-commit` to verify all checks pass
-3. Review the workspace structure in `crates/`
+1. Install [VS Code](https://code.visualstudio.com/) and the
+   *Dev Containers* extension.
+2. Open the project folder and choose **"Reopen in Container"**.
+3. Inside the container:
 
-### For Developers
-1. Read [`../architecture.md`](../architecture.md) for big-picture overview
-2. Read [`../workspace-guide.md`](../workspace-guide.md) for workspace details
-3. Read [`../../AGENTS.md`](../../AGENTS.md) for development rules
+   ```bash
+   cargo run --bin delta-v
+   ```
 
-### For Integration
-1. Review [`READY-FOR-MERGE.md`](READY-FOR-MERGE.md)
-2. Create PR from `feature/architecture-foundation` to `dev`
-3. After approval and merge, tag the commit: `git tag -a M0.5 -m "M0.5 - Architecture Foundation"`
 
-## Compliance
+Graphical output is forwarded to the host via X11 (Linux host). **First-time setup:**
+on your host, run `xhost +local:` once per session. See
+[`.devcontainer/README.md`](.devcontainer/README.md) for details and
 
-All work in M0.5 honors:
-- ✅ ADR-0002: Repository layout and workspace
-- ✅ ADR-0005: Plugin architecture
-- ✅ ADR-0023: Code style and lints
-- ✅ ADR-0028: Third-party dependency policy
-- ✅ ADR-0029: Security and supply chain
-- ✅ ADR-0033: Source file headers
-- ✅ ADR-0034: No warnings policy
-- ✅ All other Accepted ADRs (0001-0037)
+troubleshooting if the window doesn't appear.
 
-See [`../adr/README.md`](../adr/README.md) for complete ADR index.
+### Native build
 
-## Next Milestone: M1
+If you prefer to build on the host, you will need a recent Rust toolchain
+(see [`rust-toolchain.toml`](rust-toolchain.toml)) and the usual Bevy system
+dependencies for your platform. See the
+[Bevy setup guide](https://bevyengine.org/learn/quick-start/getting-started/setup/).
 
-M1 -- "A ship in space" will add:
-- 3D scene with ship mesh and chase camera
-- Default world loading (JSON + glTF)
-- Keybindings system
-- Input handling
-- Logging and diagnostics
+```bash
+cargo run --bin delta-v
+```
 
-See [`../roadmap.md#m1----a-ship-in-space`](../roadmap.md) for details.
-
-## References
-
-- **Entry point:** [`../../AGENTS.md`](../../AGENTS.md)
-- **Architecture:** [`../architecture.md`](../architecture.md)
-- **Workspace guide:** [`../workspace-guide.md`](../workspace-guide.md)
-- **Workflow:** [`../workflow.md`](../workflow.md)
-- **Roadmap:** [`../roadmap.md`](../roadmap.md)
-- **ADRs:** [`../adr/README.md`](../adr/README.md)
-
-## Files in this Directory
+## Repository layout
 
 ```
-docs/M0.5/
-├── README.md                    # This file
-├── INDEX.md                     # Documentation index
-├── READY-FOR-MERGE.md           # Merge requirements
+.devcontainer/   Reproducible dev environment (Docker + VS Code)
+.github/         CI workflows
+.githooks/       Git hooks (pre-commit)
+assets/          Game assets (models, textures, audio) -- empty for now
+crates/          Workspace members (binary + 11 library crates)
+docs/            Architecture Decision Records, design notes, roadmap
+denied.toml      cargo-deny configuration (ADR-0028, ADR-0029)
+AGENTS.md        Rules for AI agents working on this project
+```
+
+See [`docs/architecture.md`](docs/architecture.md) for an overview of the crate structure.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). By contributing you agree that your
+contributions are licensed under GPL-3.0-or-later.
+
+## License
+
+Copyright (C) 2025 Cute-Donkey and contributors.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See [`LICENSE`](LICENSE) for the full text.
 ├── HANDOFF.txt                  # Handoff document
 └── COMPLETION-REPORT.txt        # Completion report
 ```

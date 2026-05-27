@@ -35,7 +35,11 @@ use delta_v_weapons::WeaponsPlugin;
 use delta_v_world::WorldPlugin;
 
 fn main() {
-    env_logger::init();
+    // Print a display-forwarding hint before Bevy initialises the window.
+    // If X11 is not reachable, Bevy will panic with XOpenDisplayFailed
+    // immediately after; the hint tells the developer what to check.
+    #[cfg(target_os = "linux")]
+    print_x11_hint();
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -68,4 +72,25 @@ fn main() {
 /// well-defined to render. Real scene setup will come in later milestones.
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
+}
+
+/// Prints a display-forwarding hint on Linux so the developer sees
+/// actionable steps if Bevy subsequently panics with XOpenDisplayFailed.
+#[cfg(target_os = "linux")]
+fn print_x11_hint() {
+    let display = std::env::var("DISPLAY").unwrap_or_else(|_| "(not set)".to_string());
+    eprintln!(
+        "\
+[delta-v] Starting on Linux. DISPLAY={display}
+[delta-v] If the next line panics with XOpenDisplayFailed, check:
+[delta-v]   1. On the HOST run once per session:
+[delta-v]        xhost +local:
+[delta-v]   2. Compare DISPLAY on host vs inside the devcontainer:
+[delta-v]        host:      echo $DISPLAY   (e.g. :0)
+[delta-v]        container: echo $DISPLAY   (must match)
+[delta-v]   3. If they differ, inside the container run:
+[delta-v]        export DISPLAY=<host value>   (e.g. export DISPLAY=:0)
+[delta-v]      then retry: cargo run --bin delta-v
+[delta-v]   See .devcontainer/README.md for full troubleshooting."
+    );
 }

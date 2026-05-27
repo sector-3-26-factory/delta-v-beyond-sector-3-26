@@ -50,7 +50,7 @@ Bevy requires. This avoids polluting your host system.
 3. Inside the container:
 
    ```bash
-   cargo run
+   cargo run --bin delta-v
    ```
 
 Graphical output is forwarded to the host via X11 (Linux host). See
@@ -65,7 +65,7 @@ dependencies for your platform. See the
 [Bevy setup guide](https://bevyengine.org/learn/quick-start/getting-started/setup/).
 
 ```bash
-cargo run
+cargo run --bin delta-v
 ```
 
 ## Repository layout

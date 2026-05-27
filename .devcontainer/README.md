@@ -38,12 +38,11 @@ This grants local-socket clients access to your display. Revoke later with
 4. Inside the container's terminal:
 
    ```bash
-   cargo run --features dev
+   cargo run --bin delta-v
    ```
 
    You should see an empty window titled "Delta-V beyond Sector 3.26" appear
-   on your host display. The `dev` feature enables Bevy's dynamic linking,
-   which dramatically speeds up incremental builds.
+   on your host display.
 
 ## GPU access (important on Linux hosts)
 
@@ -92,9 +91,37 @@ GPU, not just `llvmpipe`.
 
 ## Troubleshooting
 
-**"cannot open display"**
-: Make sure `echo $DISPLAY` inside the container prints the same value as on
-  your host, and that you ran `xhost +local:` on the host.
+**`XOpenDisplayFailed` / "cannot open display"**
+: The most common cause is a mismatch between `DISPLAY` and the X11 socket
+  that was mounted. The container inherits `DISPLAY` from the host at build
+  time, but the mounted socket directory `/tmp/.X11-unix/` may only contain
+  a socket for a different display number.
+
+  Diagnose inside the container:
+
+  ```bash
+  echo $DISPLAY           # e.g. :1
+  ls /tmp/.X11-unix/      # e.g. only X0 -- MISMATCH
+  ```
+
+  Fix on the host: set `DISPLAY` to match the actual socket, then rebuild:
+
+  ```bash
+  export DISPLAY=:0       # if the socket is X0
+  xhost +local:
+  # Then: VS Code → Dev Containers: Rebuild Container
+  ```
+
+  Note: VS Code reads `DISPLAY` from the host environment at the time it
+  starts the container. If VS Code was already running when you set
+  `DISPLAY`, restart VS Code after setting it.
+
+  **Switched-user / multi-session gotcha:** If you used your desktop's
+  "Switch User" feature, two X sessions are active simultaneously (`:0`
+  for the first user, `:1` for the second). VS Code picks up whichever
+  `DISPLAY` its session has, but the container may only have the socket
+  for the other session mounted. The safest fix is to log fully out of
+  the switched-to session and work from a single user session.
 
 **`Could not open device /dev/dri/renderD128: Permission denied` / falls back to `llvmpipe`**
 : The container user is not in the host's `render` group. See the
@@ -114,9 +141,9 @@ GPU, not just `llvmpipe`.
   takes effect.
 
 **Slow build times**
-: The container uses the `mold` linker by default and `cargo run --features dev`
-  enables Bevy's dynamic linking. First-time builds still take a while
-  because Bevy is large; subsequent incremental builds should be fast.
+: The container uses the `mold` linker by default, which speeds up linking.
+  First-time builds take a while because Bevy is large; subsequent
+  incremental builds should be fast.
 
 **Wayland**
 : The default configuration targets X11/XWayland because it is the most
