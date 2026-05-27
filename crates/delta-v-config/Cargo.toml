@@ -13,6 +13,15 @@ log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+jsonschema = { workspace = true }
+directories = { workspace = true }
+delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
+
+[features]
+dev = []
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints]
 rust.unsafe_code = "warn"

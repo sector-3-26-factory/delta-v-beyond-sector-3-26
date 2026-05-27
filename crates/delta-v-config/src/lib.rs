@@ -18,16 +18,78 @@
 
 //! JSON loading, schema validation, and configuration management.
 //!
-//! See ADR-0010 (Configuration system), ADR-0012 (JSON schema validation),
-//! and ADR-0013 (No silent fallbacks).
+//! This crate implements the two-layer configuration system (ADR-0010):
+//! a default layer shipped under `assets/config/` and an optional user
+//! override layer under the platform XDG config directory.
+//!
+//! Every JSON file is validated against its JSON Schema before use
+//! (ADR-0012). Missing or invalid defaults are hard errors (ADR-0013).
+//!
+//! See also ADR-0011 (Keybindings) and ADR-0035 (Hot-reload in dev builds).
+
+#![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
+#![warn(clippy::all, clippy::pedantic)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::todo,
+    clippy::unimplemented,
+    clippy::dbg_macro
+)]
+#![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
+
+pub mod error;
+pub mod keybindings;
+pub mod loader;
+pub mod resources;
+
+#[cfg(test)]
+#[path = "loader_tests.rs"]
+mod loader_tests;
+
+pub use error::ConfigError;
+pub use keybindings::{ActionBindings, Keybindings};
+pub use resources::KeybindingsResource;
 
 use bevy::prelude::*;
+use delta_v_core::AppState;
 
-/// Configuration plugin for loading and validating JSON configs.
+use crate::loader::load_keybindings;
+
+/// Configuration plugin: loads and validates all JSON config files.
+///
+/// Systems run in [`AppState::LoadingDefaults`]. On success the plugin
+/// inserts [`KeybindingsResource`] and transitions to
+/// [`AppState::LoadingWorld`]. On failure the application panics with a
+/// descriptive message (ADR-0013).
 pub struct ConfigPlugin;
 
 impl Plugin for ConfigPlugin {
-    fn build(&self, _app: &mut App) {
-        log::info!("ConfigPlugin initialized");
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(AppState::LoadingDefaults), load_configs_system);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Systems
+// ---------------------------------------------------------------------------
+
+/// Loads all configuration files and inserts their resources.
+///
+/// Transitions the state machine to [`AppState::LoadingWorld`] when done.
+fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, NextState<AppState>>) {
+    // Keybindings (ADR-0011).
+    // INVARIANT: a missing or invalid keybindings file is a hard startup
+    // error (ADR-0013). The panic is intentional; no recovery is possible.
+    #[allow(clippy::panic)]
+    let keybindings = load_keybindings().unwrap_or_else(|e| {
+        panic!("fatal: failed to load keybindings: {e}");
+    });
+    log::info!("keybindings loaded ({} actions)", keybindings.actions.len());
+    commands.insert_resource(KeybindingsResource(keybindings));
+
+    // Transition to the next phase.
+    next.set(AppState::LoadingWorld);
 }

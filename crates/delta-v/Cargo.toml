@@ -11,6 +11,11 @@ license = "GPL-3.0-or-later"
 name = "delta-v"
 path = "src/main.rs"
 
+[features]
+# Enable hot-reload of configs and extra debug overlays.
+# See ADR-0035.
+dev = ["delta-v-config/dev"]
+
 [dependencies]
 delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
 delta-v-config = { path = "../delta-v-config", version = "0.0.1" }
