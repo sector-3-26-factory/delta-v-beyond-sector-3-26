@@ -10,7 +10,6 @@ db-urls = ["https://github.com/RustSec/advisory-db"]
 unmaintained = "workspace"
 unsound = "workspace"
 yanked = "warn"
-notice = "workspace"
 unused-ignored-advisory = "warn"
 
 [licenses]
@@ -28,9 +27,7 @@ allow = [
     "MPL-2.0",
     "Zlib",
 ]
-copyleft = "warn"
-allow-osi-fsf-free = "both"
-default = "deny"
+
 unused-allowed-license = "warn"
 
 [bans]
