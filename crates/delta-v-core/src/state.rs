@@ -13,11 +13,10 @@ use bevy::prelude::*;
 /// Top-level application state.
 ///
 /// Transitions follow the path:
-/// `Boot -> LoadingDefaults -> LoadingWorld -> InGame`
-/// for the default development flow.
+/// `Boot -> LoadingDefaults -> LoadingWorld -> SpawningEntities -> InGame`
+/// for the default development flow (per ADR-0038).
 ///
-/// `MainMenu` and `Paused` are reserved for later milestones and must
-/// not be transitioned into during M1.
+/// `MainMenu` and `Paused` are reserved for later milestones.
 #[derive(States, Default, Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
     /// Initial frame; no plugin has completed setup yet.
@@ -28,18 +27,25 @@ pub enum AppState {
     #[default]
     Boot,
 
-    /// Loading default world and configuration files.
+    /// Loading default configuration files (keybindings, settings, etc.).
     ///
     /// `ConfigPlugin` runs its loaders here and transitions to
     /// [`AppState::LoadingWorld`] when all resources are ready.
     LoadingDefaults,
 
-    /// World JSON has been parsed; entities are being spawned.
+    /// World JSON has been parsed and validated.
     ///
-    /// `WorldPlugin` inserts [`crate::WorldDefResource`] (once it exists)
-    /// and triggers spawning. Transitions to [`AppState::InGame`] when
-    /// the scene is ready.
+    /// `WorldPlugin` loads the world definition and emits `SpawnEntity`
+    /// events. Transitions to [`AppState::SpawningEntities`] when the
+    /// world is loaded.
     LoadingWorld,
+
+    /// Entities are being spawned from templates.
+    ///
+    /// Domain plugins listen for `SpawnEntity` events and spawn entities
+    /// in dependency order (suns, planets, moons, stations, ships).
+    /// Transitions to [`AppState::InGame`] when complete (per ADR-0038).
+    SpawningEntities,
 
     /// Simulation is running; the player has control.
     ///

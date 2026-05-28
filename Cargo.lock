@@ -1812,7 +1812,10 @@ name = "delta-v-ships"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-core",
+ "delta-v-world",
  "log",
+ "serde_json",
 ]
 
 [[package]]

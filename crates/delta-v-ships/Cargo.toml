@@ -10,6 +10,9 @@ license = "GPL-3.0-or-later"
 [dependencies]
 bevy = { workspace = true }
 log = { workspace = true }
+serde_json = { workspace = true }
+delta-v-core = { path = "../delta-v-core" }
+delta-v-world = { path = "../delta-v-world" }
 
 [lints]
 rust.unsafe_code = "warn"
