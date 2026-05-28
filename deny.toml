@@ -43,6 +43,17 @@ allow = [
     # Per ADR-0028 (third-party dependency policy), this is acceptable.
     # TODO: Monitor for jsonschema/fancy-regex updates that consolidate versions.
     { name = "bit-set", version = "*" },
+    # ICU (internationalization) crates from jsonschema v0.46.5:
+    # zerofrom, zerofrom-derive, zerotrie, zerovec, zerovec-derive, zmij
+    # These are transitive dependencies only; not directly used.
+    # All are well-maintained and widely used in the Rust ecosystem.
+    # Per ADR-0028, adding these to allow list to unblock CI.
+    { name = "zerofrom", version = "*" },
+    { name = "zerofrom-derive", version = "*" },
+    { name = "zerotrie", version = "*" },
+    { name = "zerovec", version = "*" },
+    { name = "zerovec-derive", version = "*" },
+    { name = "zmij", version = "*" },
 ]
 
 [sources]
