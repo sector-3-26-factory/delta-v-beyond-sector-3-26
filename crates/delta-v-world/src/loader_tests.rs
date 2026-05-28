@@ -44,20 +44,22 @@ mod tests {
         assert!(!world.name.is_empty(), "world name must not be empty");
     }
 
-    /// The fill-defaults pass must insert the `facing` field when absent.
+    /// The default world must have at least one entity (per ADR-0038).
     #[test]
-    fn test_facing_default_is_filled() {
+    fn test_entities_present() {
         let root = workspace_root();
-        // default.world.json intentionally omits `facing`.
         let world = load_world_from_paths(
             &root.join("assets/worlds/default.world.json"),
             &root.join("assets/json/schema/world.schema.json"),
         )
         .expect("load");
-        // Schema default: {x:0, y:0, z:-1} (ADR-0006, ADR-0013).
-        assert!((world.player_ship.facing.x - 0.0_f32).abs() < f32::EPSILON);
-        assert!((world.player_ship.facing.y - 0.0_f32).abs() < f32::EPSILON);
-        assert!((world.player_ship.facing.z - (-1.0_f32)).abs() < f32::EPSILON);
+        assert!(
+            !world.entities.is_empty(),
+            "world must have at least one entity"
+        );
+        // The first entity should be the player ship (per M1 design).
+        let player_entity = &world.entities[0];
+        assert_eq!(player_entity.entity_type, "local_player_ship");
     }
 
     /// Pointing the loader at a nonexistent path must produce

@@ -2,10 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://delta-v-beyond-sector-3-26/schema/world",
   "title": "World definition",
-  "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a single playable sector: its name and the list of entities to spawn at load time. See ADR-0019 and ADR-0020.",
+  "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a single playable sector: its name and the list of entities to spawn via templates. Per ADR-0038, entities are spawned from templates in dependency order. See ADR-0019, ADR-0020, and ADR-0038.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format_version", "name", "player_ship"],
+  "required": [
+    "format_version",
+    "name"
+  ],
   "properties": {
     "format_version": {
       "description": "Integer schema version. Must be 1. Increment when the shape changes in a breaking way.",
@@ -16,40 +19,114 @@
       "description": "Human-readable sector name shown in loading screens.",
       "type": "string"
     },
-    "player_ship": {
-      "description": "Spawn parameters for the player-controlled ship.",
-      "$ref": "#/$defs/ship_spawn"
+    "entities": {
+      "description": "Array of entities to spawn from templates (per ADR-0038). Each entry specifies a template reference and instance data. Spawning order is controlled by WorldSpawnSet system sets in domain plugins.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entity_spawn"
+      },
+      "default": []
     }
   },
   "$defs": {
-    "ship_spawn": {
-      "description": "Spawn parameters for a single ship entity.",
+    "entity_spawn": {
+      "description": "Template-based entity spawn descriptor (per ADR-0038).",
       "type": "object",
       "additionalProperties": false,
-      "required": ["position"],
+      "required": [
+        "template",
+        "entity_type",
+        "position"
+      ],
       "properties": {
+        "template": {
+          "description": "Path to the template file (e.g., templates/ships/local_player_ship.json).",
+          "type": "string"
+        },
+        "entity_type": {
+          "description": "Entity type discriminator (e.g., \"local_player_ship\", \"sun\"). Used by domain plugins to filter SpawnEntity events.",
+          "type": "string"
+        },
         "position": {
-          "description": "Initial world position in metres (x, y, z). The coordinate system is right-handed, +Y up, -Z forward per ADR-0006. Positions are always in metres; no unit wrapper is needed here.",
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["x", "y", "z"],
-          "properties": {
-            "x": { "description": "X coordinate in metres.", "type": "number" },
-            "y": { "description": "Y coordinate in metres.", "type": "number" },
-            "z": { "description": "Z coordinate in metres.", "type": "number" }
+          "description": "Spawn position in world coordinates (metres). Coordinate system is right-handed, +Y up, -Z forward per ADR-0006.",
+          "$ref": "#/$defs/vec3"
+        },
+        "rotation": {
+          "description": "Optional rotation as a unit quaternion (x, y, z, w). Defaults to identity (no rotation).",
+          "$ref": "#/$defs/quat",
+          "default": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
           }
         },
-        "facing": {
-          "description": "Initial facing direction as a unit vector (x, y, z). Defaults to -Z (forward per ADR-0006).",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "x": { "description": "X component.", "type": "number", "default": 0.0 },
-            "y": { "description": "Y component.", "type": "number", "default": 0.0 },
-            "z": { "description": "Z component.", "type": "number", "default": -1.0 }
-          },
-          "default": { "x": 0.0, "y": 0.0, "z": -1.0 }
+        "scale": {
+          "description": "Optional scale factor (x, y, z). Defaults to (1, 1, 1) (no scaling).",
+          "$ref": "#/$defs/vec3",
+          "default": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
         }
+      }
+    },
+    "vec3": {
+      "description": "3-component vector (x, y, z).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "properties": {
+        "x": {
+          "description": "X component.",
+          "type": "number"
+        },
+        "y": {
+          "description": "Y component.",
+          "type": "number"
+        },
+        "z": {
+          "description": "Z component.",
+          "type": "number"
+        }
+      }
+    },
+    "quat": {
+      "description": "Unit quaternion (x, y, z, w) for rotation.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "description": "X component.",
+          "type": "number",
+          "default": 0.0
+        },
+        "y": {
+          "description": "Y component.",
+          "type": "number",
+          "default": 0.0
+        },
+        "z": {
+          "description": "Z component.",
+          "type": "number",
+          "default": 0.0
+        },
+        "w": {
+          "description": "W component (scalar).",
+          "type": "number",
+          "default": 1.0
+        }
+      },
+      "default": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "w": 1.0
       }
     }
   }

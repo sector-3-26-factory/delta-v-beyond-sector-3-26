@@ -78,10 +78,18 @@ impl Plugin for WorldPlugin {
 // Systems
 // ---------------------------------------------------------------------------
 
-/// Loads the default world definition and inserts [`WorldDefResource`].
+/// Loads the default world definition and emits `SpawnEntity` events.
 ///
-/// Transitions the state machine to [`AppState::InGame`] when done.
-fn load_world_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, NextState<AppState>>) {
+/// Reads the world JSON, validates it, inserts [`WorldDefResource`],
+/// and emits a `SpawnEntity` event for each entity in the world.
+///
+/// Transitions to [`AppState::SpawningEntities`] so domain plugins can
+/// spawn entities in dependency order (per ADR-0038).
+fn load_world_system(
+    mut commands: Commands<'_, '_>,
+    mut events: EventWriter<'_, SpawnEntity>,
+    mut next: ResMut<'_, NextState<AppState>>,
+) {
     // INVARIANT: a missing or invalid world file is a hard startup
     // error (ADR-0013). The panic is intentional; no recovery is possible.
     #[allow(clippy::panic)]
@@ -89,6 +97,39 @@ fn load_world_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, NextSt
         panic!("fatal: failed to load world: {e}");
     });
     log::info!("world loaded: {}", world.name);
+
+    // Emit SpawnEntity events for each entity in the world.
+    // Per ADR-0038, domain plugins listen for these events and spawn
+    // entities based on entity_type, in dependency order via WorldSpawnSet.
+    for entity_spawn in &world.entities {
+        let pos = Vec3::new(
+            entity_spawn.position.x,
+            entity_spawn.position.y,
+            entity_spawn.position.z,
+        );
+        let rot = Quat::from_xyzw(
+            entity_spawn.rotation.x,
+            entity_spawn.rotation.y,
+            entity_spawn.rotation.z,
+            entity_spawn.rotation.w,
+        );
+        let scale = Vec3::new(
+            entity_spawn.scale.x,
+            entity_spawn.scale.y,
+            entity_spawn.scale.z,
+        );
+
+        // For M1, template_data is empty. Templates are loaded by domain
+        // plugins from the template path (future enhancement per ADR-0038).
+        let template = serde_json::json!({});
+
+        let spawn_event = SpawnEntity::new(entity_spawn.entity_type.clone(), template, pos)
+            .with_rotation(rot)
+            .with_scale(scale);
+
+        events.send(spawn_event);
+    }
+
     commands.insert_resource(WorldDefResource(world));
-    next.set(AppState::InGame);
+    next.set(AppState::SpawningEntities);
 }
