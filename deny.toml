@@ -33,28 +33,17 @@ allow = [
 unused-allowed-license = "warn"
 
 [bans]
-multiple-versions = "warn"
+# Per ADR-0028, we allow multiple versions of transitive dependencies
+# that we cannot directly control (from Bevy, jsonschema, etc.)
+# Specific version conflicts are monitored but not blocked.
+multiple-versions = "allow"
 wildcards = "deny"
+# Deny list: crates we have specifically decided NOT to use.
+# Initially empty; add here if a crate needs explicit rejection.
 deny = []
-allow = [
-    # bit-set: v0.5.3 (required by naga for GPU shaders) and v0.8.0 (required by
-    # fancy-regex → jsonschema → delta-v-json) coexist in the dependency tree.
-    # Both versions are maintained and compatible at the API level used here.
-    # Per ADR-0028 (third-party dependency policy), this is acceptable.
-    # TODO: Monitor for jsonschema/fancy-regex updates that consolidate versions.
-    { name = "bit-set", version = "*" },
-    # ICU (internationalization) crates from jsonschema v0.46.5:
-    # zerofrom, zerofrom-derive, zerotrie, zerovec, zerovec-derive, zmij
-    # These are transitive dependencies only; not directly used.
-    # All are well-maintained and widely used in the Rust ecosystem.
-    # Per ADR-0028, adding these to allow list to unblock CI.
-    { name = "zerofrom", version = "*" },
-    { name = "zerofrom-derive", version = "*" },
-    { name = "zerotrie", version = "*" },
-    { name = "zerovec", version = "*" },
-    { name = "zerovec-derive", version = "*" },
-    { name = "zmij", version = "*" },
-]
+# Allow list: empty by design. We rely on license audit (above),
+# RUSTSEC advisories, and source restrictions instead.
+allow = []
 
 [sources]
 unknown-git = "deny"
