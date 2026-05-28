@@ -18,8 +18,11 @@
 
 //! Entry point for Delta-V beyond Sector 3.26.
 //!
-//! This binary orchestrates all plugins and is responsible for
-//! application composition only. See ADR-0005 for the plugin architecture.
+//! This binary is responsible for application composition only: it
+//! registers every plugin in the correct order and starts the Bevy
+//! event loop. No game logic lives here.
+//!
+//! See ADR-0005 (plugin architecture).
 
 use bevy::prelude::*;
 use delta_v_assets::AssetsPlugin;
@@ -50,32 +53,25 @@ fn main() {
             }),
             ..default()
         }))
-        // Core and technical plugins
+        // Technical plugins — must be added before domain plugins.
+        // CorePlugin owns AppState and must come first.
         .add_plugins(CorePlugin)
         .add_plugins(ConfigPlugin)
         .add_plugins(PhysicsPlugin)
         .add_plugins(AssetsPlugin)
         .add_plugins(NetPlugin)
-        // Domain plugins
+        // Domain plugins.
         .add_plugins(ShipsPlugin)
         .add_plugins(PropulsionPlugin)
         .add_plugins(WeaponsPlugin)
         .add_plugins(StationsPlugin)
         .add_plugins(ItemsPlugin)
         .add_plugins(WorldPlugin)
-        // Startup systems
-        .add_systems(Startup, setup)
         .run();
 }
 
-/// Minimal startup system: spawns a camera so the window has something
-/// well-defined to render. Real scene setup will come in later milestones.
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-}
-
 /// Prints a display-forwarding hint on Linux so the developer sees
-/// actionable steps if Bevy subsequently panics with XOpenDisplayFailed.
+/// actionable steps if Bevy subsequently panics with `XOpenDisplayFailed`.
 #[cfg(target_os = "linux")]
 fn print_x11_hint() {
     let display = std::env::var("DISPLAY").unwrap_or_else(|_| "(not set)".to_string());

@@ -43,14 +43,15 @@ review discipline.
 
 ## Crate structure (M0.5 and beyond)
 
-The workspace contains 12 crates:
+The workspace contains 13 crates:
 
 **Binary:**
 - `crates/delta-v/` -- Application composition, plugin registration, CLI parsing.
 
 **Technical (must not depend on domain crates):**
 - `crates/delta-v-core/` -- ECS fundamentals, shared components, plugin traits.
-- `crates/delta-v-config/` -- JSON loading, schema validation, user-override merge.
+- `crates/delta-v-json/` -- Shared JSON utilities: read, validate, fill-defaults pipeline. No Bevy dependency. Used by all JSON-loading crates.
+- `crates/delta-v-config/` -- Configuration management: default layer, user-override merge, XDG path resolution, hot-reload (dev builds).
 - `crates/delta-v-physics/` -- Newtonian physics, gravity, floating origin (avian3d).
 - `crates/delta-v-assets/` -- Asset loaders, glTF helpers.
 - `crates/delta-v-net/` -- Networking (stub until M7; ADR-0030/31/32).

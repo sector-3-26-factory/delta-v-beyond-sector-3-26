@@ -19,15 +19,91 @@
 //! Core ECS fundamentals, shared components, and plugin traits.
 //!
 //! This crate provides the foundation that all domain crates build upon.
-//! See ADR-0005 for the plugin architecture.
+//! It owns the top-level [`AppState`] state machine and registers the
+//! state-transition logging systems that every other plugin relies on.
+//!
+//! See ADR-0005 (plugin architecture) and ADR-0018 (state management).
+
+#![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
+#![warn(clippy::all, clippy::pedantic)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::todo,
+    clippy::unimplemented,
+    clippy::dbg_macro
+)]
+#![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
+
+pub mod state;
+
+pub use state::AppState;
+
+#[cfg(test)]
+#[path = "state_tests.rs"]
+mod state_tests;
 
 use bevy::prelude::*;
 
-/// The core plugin that initializes fundamental ECS infrastructure.
+/// The core plugin that initialises fundamental ECS infrastructure.
+///
+/// Responsibilities:
+/// - Registers the [`AppState`] state machine.
+/// - Logs an `INFO` line on every state transition (ADR-0015, ADR-0018).
+/// - Immediately transitions from [`AppState::Boot`] to
+///   [`AppState::LoadingDefaults`] so that config and world loaders can
+///   start their work.
 pub struct CorePlugin;
 
 impl Plugin for CorePlugin {
-    fn build(&self, _app: &mut App) {
-        log::info!("CorePlugin initialized");
+    fn build(&self, app: &mut App) {
+        info!(version = env!("CARGO_PKG_VERSION"), "Delta-V starting");
+
+        app.init_state::<AppState>();
+
+        // Log every state entry at INFO level (ADR-0015, ADR-0018).
+        app.add_systems(OnEnter(AppState::Boot), log_boot);
+        app.add_systems(OnEnter(AppState::LoadingDefaults), log_loading_defaults);
+        app.add_systems(OnEnter(AppState::LoadingWorld), log_loading_world);
+        app.add_systems(OnEnter(AppState::InGame), log_in_game);
+
+        // Immediately leave Boot: transition to LoadingDefaults so that
+        // ConfigPlugin can begin loading on the same frame.
+        app.add_systems(OnEnter(AppState::Boot), advance_from_boot);
     }
+}
+
+// ---------------------------------------------------------------------------
+// State-transition logging systems (ADR-0015, ADR-0018)
+// ---------------------------------------------------------------------------
+
+fn log_boot() {
+    info!("AppState -> Boot");
+}
+
+fn log_loading_defaults() {
+    info!("AppState -> LoadingDefaults");
+}
+
+fn log_loading_world() {
+    info!("AppState -> LoadingWorld");
+}
+
+fn log_in_game() {
+    info!("AppState -> InGame");
+}
+
+// ---------------------------------------------------------------------------
+// Boot transition
+// ---------------------------------------------------------------------------
+
+/// Advances the state machine from [`AppState::Boot`] to
+/// [`AppState::LoadingDefaults`].
+///
+/// This runs in `OnEnter(Boot)` so the transition happens on the very
+/// first frame, before any rendering occurs.
+fn advance_from_boot(mut next: ResMut<'_, NextState<AppState>>) {
+    next.set(AppState::LoadingDefaults);
 }

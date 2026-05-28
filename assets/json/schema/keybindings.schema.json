@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://delta-v-beyond-sector-3-26/schema/keybindings",
+  "title": "Keybindings",
+  "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nMaps logical action names to physical input bindings. See ADR-0011.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actions"],
+  "properties": {
+    "actions": {
+      "description": "Map from logical action name to one or more input bindings. Each key is a snake_case action name matching the LogicalAction enum in delta-v-core.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/action_bindings"
+      }
+    }
+  },
+  "$defs": {
+    "action_bindings": {
+      "description": "Input bindings for a single logical action.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keyboard"],
+      "properties": {
+        "keyboard": {
+          "description": "List of Bevy KeyCode variant names (e.g. \"KeyW\", \"ArrowUp\") that trigger this action. Empty list means no keyboard binding.",
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "gamepad_button": {
+          "description": "Optional gamepad button name. Null means no gamepad binding.",
+          "type": ["string", "null"],
+          "default": null
+        }
+      }
+    }
+  }
+}

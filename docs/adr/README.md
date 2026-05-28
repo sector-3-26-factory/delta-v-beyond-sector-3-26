@@ -50,6 +50,7 @@ with its original number for historical traceability.
 | 0035 | [Hot reload of configs in dev builds](0035-hot-reload-of-configs.md)      | Accepted |
 | 0036 | [External human contributors process](0036-external-human-contributors-process.md) | Accepted |
 | 0037 | [Internationalization (i18n)](0037-internationalization.md)               | Accepted |
+| 0038 | [Entity template system](0038-entity-template-system.md)                  | Accepted |
 
 ## How to add a new ADR
 

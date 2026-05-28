@@ -6,7 +6,7 @@ See [ADR-0002](adr/0002-repository-layout-and-workspace.md) for the rationale.
 
 ## Overview
 
-The project is organized as a **Cargo workspace** with 12 member crates:
+The project is organized as a **Cargo workspace** with 13 member crates:
 
 ```
 Repository root/
@@ -15,7 +15,8 @@ Repository root/
 ├── crates/
 │   ├── delta-v/             # Binary (App composition)
 │   ├── delta-v-core/        # Technical: ECS fundamentals
-│   ├── delta-v-config/      # Technical: JSON loading
+│   ├── delta-v-json/        # Technical: Shared JSON utilities
+│   ├── delta-v-config/      # Technical: Configuration management
 │   ├── delta-v-physics/     # Technical: Physics integration
 │   ├── delta-v-assets/      # Technical: Asset loading
 │   ├── delta-v-net/         # Technical: Networking (stub)
@@ -101,10 +102,17 @@ These provide cross-cutting infrastructure:
 - Plugin trait definitions
 - May not depend on domain crates
 
+**`crates/delta-v-json/`**
+- Shared JSON utilities: `read_json`, `validate`, `fill_defaults`, `load_validated`
+- Single implementation of the read → validate → fill-defaults pipeline
+- Resolves local `$defs` `$ref`s for the fill-defaults pass
+- No Bevy dependency; no domain knowledge
+- Used by `delta-v-config`, `delta-v-world`, and any future crate that loads JSON
+- May not depend on domain crates
+
 **`crates/delta-v-config/`**
-- JSON loading and deserialization
-- Schema validation
-- Configuration merging (defaults + user overrides)
+- Configuration management: default layer, user-override merge, XDG path resolution
+- Hot-reload of config files in dev builds (`--features dev`)
 - May not depend on domain crates
 
 **`crates/delta-v-physics/`**
@@ -147,13 +155,14 @@ Dependency flow (arrows point to dependencies):
 binary (delta-v)
     ↓
     ├→ delta-v-core
-    ├→ delta-v-config
+    ├→ delta-v-json        (no Bevy; no domain deps)
+    ├→ delta-v-config      → delta-v-json
     ├→ delta-v-physics
     ├→ delta-v-assets
     ├→ delta-v-net
     ├→ delta-v-ships       ↓
     ├→ delta-v-propulsion  ├→ delta-v-core
-    ├→ delta-v-weapons     ├→ delta-v-config
+    ├→ delta-v-weapons     ├→ delta-v-config → delta-v-json
     ├→ delta-v-stations    ├→ delta-v-physics
     ├→ delta-v-items       ├→ delta-v-assets
     └→ delta-v-world       └→ (no cycles)

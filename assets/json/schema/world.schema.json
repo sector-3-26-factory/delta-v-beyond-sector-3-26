@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://delta-v-beyond-sector-3-26/schema/world",
+  "title": "World definition",
+  "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a single playable sector: its name and the list of entities to spawn at load time. See ADR-0019 and ADR-0020.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "name", "player_ship"],
+  "properties": {
+    "format_version": {
+      "description": "Integer schema version. Must be 1. Increment when the shape changes in a breaking way.",
+      "type": "integer",
+      "const": 1
+    },
+    "name": {
+      "description": "Human-readable sector name shown in loading screens.",
+      "type": "string"
+    },
+    "player_ship": {
+      "description": "Spawn parameters for the player-controlled ship.",
+      "$ref": "#/$defs/ship_spawn"
+    }
+  },
+  "$defs": {
+    "ship_spawn": {
+      "description": "Spawn parameters for a single ship entity.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position"],
+      "properties": {
+        "position": {
+          "description": "Initial world position in metres (x, y, z). The coordinate system is right-handed, +Y up, -Z forward per ADR-0006. Positions are always in metres; no unit wrapper is needed here.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y", "z"],
+          "properties": {
+            "x": { "description": "X coordinate in metres.", "type": "number" },
+            "y": { "description": "Y coordinate in metres.", "type": "number" },
+            "z": { "description": "Z coordinate in metres.", "type": "number" }
+          }
+        },
+        "facing": {
+          "description": "Initial facing direction as a unit vector (x, y, z). Defaults to -Z (forward per ADR-0006).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": { "description": "X component.", "type": "number", "default": 0.0 },
+            "y": { "description": "Y component.", "type": "number", "default": 0.0 },
+            "z": { "description": "Z component.", "type": "number", "default": -1.0 }
+          },
+          "default": { "x": 0.0, "y": 0.0, "z": -1.0 }
+        }
+      }
+    }
+  }
+}

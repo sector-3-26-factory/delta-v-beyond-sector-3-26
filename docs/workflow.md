@@ -63,15 +63,12 @@ cargo test --workspace
 If any of these complains, fix it; do not commit warnings (see
 [ADR-0034](adr/0034-no-warnings-policy.md)).
 
-An optional Git hook in `scripts/git-hooks/` automates this; install
-it once per clone with:
+A Git hook in `.githooks/` automates this; install it once per clone
+with:
 
 ```bash
 ./scripts/install-git-hooks.sh
 ```
-
-(The script is added in a follow-up commit; until then, run the
-commands above manually.)
 
 ## Pull requests
 
