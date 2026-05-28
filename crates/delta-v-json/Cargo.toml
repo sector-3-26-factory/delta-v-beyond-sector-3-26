@@ -1,0 +1,19 @@
+# See AGENTS.md
+[package]
+name = "delta-v-json"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.88"
+description = "Shared JSON loading, schema validation and default-fill utilities"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+serde_json = { workspace = true }
+jsonschema = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

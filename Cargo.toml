@@ -12,6 +12,7 @@ members = [
     "crates/delta-v-stations",
     "crates/delta-v-items",
     "crates/delta-v-world",
+    "crates/delta-v-json",
 ]
 resolver = "2"
 
@@ -26,6 +27,7 @@ thiserror = "1.0"
 tokio = { version = "1.40", features = ["full"] }
 jsonschema = { version = "0.46", default-features = false }
 directories = "6.0"
+delta-v-json = { path = "crates/delta-v-json", version = "0.0.1" }
 
 [workspace.lints.rust]
 unsafe_code = "warn"
