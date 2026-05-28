@@ -93,6 +93,13 @@ agent must know:
   and is approved on review. See
   [ADR-0028](docs/adr/0028-third-party-dependency-policy.md) for the
   related dependency rule.
+- **JSON defaults in schema only** (ADR-0039 **strictly enforced**):
+  - ❌ No `#[serde(default = "...")]` on JSON-backed struct fields
+  - ❌ No custom `fn default_X()` functions
+  - ❌ No `Option<T>` for fields that always exist after schema validation
+  - ✅ All defaults in `*.schema.json` only
+  - See [ADR-0039](docs/adr/0039-enforcement-of-json-only-defaults.md) for
+    code review checklist and rationale. Violations are code review failures.
 
 ## 5. What to read next
 
