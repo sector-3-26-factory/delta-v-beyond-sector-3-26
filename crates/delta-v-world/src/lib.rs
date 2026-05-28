@@ -40,6 +40,7 @@
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 pub mod error;
+pub mod events;
 pub mod loader;
 pub mod resources;
 pub mod world_def;
@@ -49,6 +50,7 @@ pub mod world_def;
 mod loader_tests;
 
 pub use error::WorldError;
+pub use events::SpawnEntity;
 pub use resources::WorldDefResource;
 pub use world_def::WorldDef;
 
@@ -67,7 +69,8 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::LoadingWorld), load_world_system);
+        app.add_event::<SpawnEntity>()
+            .add_systems(OnEnter(AppState::LoadingWorld), load_world_system);
     }
 }
 

@@ -37,8 +37,10 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod spawn_sets;
 pub mod state;
 
+pub use spawn_sets::WorldSpawnSet;
 pub use state::AppState;
 
 #[cfg(test)]
