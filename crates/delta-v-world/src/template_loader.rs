@@ -66,8 +66,7 @@ fn load_template_from_paths(
             path: template_path.to_owned(),
             pointer: "/entity_type".to_string(),
             reason: format!(
-                "entity_type mismatch: template has '{}', expected '{}'",
-                type_in_template, entity_type
+                "entity_type mismatch: template has '{type_in_template}', expected '{entity_type}'"
             ),
         });
     }
