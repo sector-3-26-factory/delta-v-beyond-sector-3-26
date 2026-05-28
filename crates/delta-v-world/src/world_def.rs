@@ -9,30 +9,50 @@
 //! See ADR-0019 (Asset pipeline) and ADR-0020 (Save and load format).
 
 use serde::Deserialize;
+use serde_json::Value;
 
 /// Top-level world definition loaded from `*.world.json`.
+///
+/// Per ADR-0038 (entity template system), the world definition contains
+/// an array of entities to spawn. Each entity references a template file
+/// and specifies instance data (position, rotation, scale).
 #[derive(Debug, Deserialize)]
 pub struct WorldDef {
     /// Schema version. Always 1 at this milestone.
     pub format_version: u32,
     /// Human-readable sector name.
     pub name: String,
-    /// Spawn parameters for the player ship.
-    pub player_ship: ShipSpawn,
+    /// Array of entities to spawn (per ADR-0038).
+    /// Each entry specifies a template and instance data.
+    #[serde(default)]
+    pub entities: Vec<EntitySpawn>,
 }
 
-/// Spawn parameters for the player-controlled ship.
+/// Template-based entity spawn descriptor.
+///
+/// Per ADR-0038, each entity in the world is described by:
+/// - A reference to a template file (e.g., `templates/ships/player.json`)
+/// - The entity type discriminator (e.g., `"local_player_ship"`)
+/// - Instance data (position, rotation, scale)
+/// - The loaded template JSON itself
 #[derive(Debug, Deserialize)]
-pub struct ShipSpawn {
-    /// Initial world position in metres.
+pub struct EntitySpawn {
+    /// Path to the template file (e.g., `templates/ships/player.json`).
+    pub template: String,
+    /// Entity type discriminator (e.g., `"local_player_ship"`).
+    pub entity_type: String,
+    /// Spawn position in world coordinates (metres).
     pub position: Vec3Json,
-    /// Initial facing direction (unit vector).
-    ///
-    /// No `#[serde(default)]` here: the `delta-v-json` fill-defaults pass
-    /// inserts `{x:0,y:0,z:-1}` from the schema before deserialisation.
-    /// If that pass is skipped or broken, deserialisation fails — the
-    /// correct hard failure (ADR-0013).
-    pub facing: FacingJson,
+    /// Rotation as a unit quaternion (x, y, z, w).
+    /// Filled by schema defaults if not provided; never absent after loading.
+    pub rotation: QuatJson,
+    /// Scale factor (x, y, z).
+    /// Filled by schema defaults if not provided; never absent after loading.
+    pub scale: Vec3Json,
+    /// The loaded template JSON (populated by loader).
+    /// Not present in JSON; filled by `delta-v-world` loader.
+    #[serde(skip)]
+    pub template_data: Option<Value>,
 }
 
 /// A 3-component position in metres.
@@ -46,13 +66,15 @@ pub struct Vec3Json {
     pub z: f32,
 }
 
-/// A 3-component direction (unit vector).
+/// A 4-component unit quaternion (x, y, z, w).
 #[derive(Debug, Deserialize)]
-pub struct FacingJson {
+pub struct QuatJson {
     /// X component.
     pub x: f32,
     /// Y component.
     pub y: f32,
     /// Z component.
     pub z: f32,
+    /// W component (scalar).
+    pub w: f32,
 }

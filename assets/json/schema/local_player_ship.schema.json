@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://delta-v-beyond-sector-3-26/schema/local_player_ship",
+  "title": "Local player ship template",
+  "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines the player-controlled ship entity type. Per ADR-0038, templates are loaded and validated independently of the world definition.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entity_type"],
+  "properties": {
+    "entity_type": {
+      "description": "Entity type discriminator. Must be 'local_player_ship'.",
+      "type": "string",
+      "const": "local_player_ship"
+    },
+    "mesh": {
+      "description": "Mesh geometry. For M1, this is a placeholder; actual mesh is created procedurally in ShipsPlugin.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "Mesh type (e.g., 'capsule' for dev, 'gltf' for art pass).",
+          "type": "string",
+          "default": "capsule"
+        }
+      },
+      "default": { "type": "capsule" }
+    },
+    "material": {
+      "description": "Material properties (color, etc.).",
+      "type": "object",
+      "properties": {
+        "color": {
+          "description": "RGB color (0-1 range).",
+          "type": "object",
+          "properties": {
+            "r": { "type": "number", "default": 0.6 },
+            "g": { "type": "number", "default": 0.7 },
+            "b": { "type": "number", "default": 0.9 }
+          },
+          "default": { "r": 0.6, "g": 0.7, "b": 0.9 }
+        }
+      },
+      "default": { "color": { "r": 0.6, "g": 0.7, "b": 0.9 } }
+    }
+  }
+}

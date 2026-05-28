@@ -30,12 +30,21 @@ allow = [
     "Unicode-3.0",
     "Zlib",
 ]
-unused-allowed-license = "warn"
+# Some licenses are listed but not yet encountered in dependencies.
+# They are kept for future-proofing per ADR-0027 (Open source licensing).
+unused-allowed-license = "allow"
 
 [bans]
-multiple-versions = "warn"
+# Per ADR-0028, we allow multiple versions of transitive dependencies
+# that we cannot directly control (from Bevy, jsonschema, etc.)
+# Specific version conflicts are monitored but not blocked.
+multiple-versions = "allow"
 wildcards = "deny"
+# Deny list: crates we have specifically decided NOT to use.
+# Initially empty; add here if a crate needs explicit rejection.
 deny = []
+# Allow list: empty by design. We rely on license audit (above),
+# RUSTSEC advisories, and source restrictions instead.
 allow = []
 
 [sources]

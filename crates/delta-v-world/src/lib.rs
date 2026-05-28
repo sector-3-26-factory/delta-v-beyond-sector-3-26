@@ -40,8 +40,10 @@
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 pub mod error;
+pub mod events;
 pub mod loader;
 pub mod resources;
+pub mod template_loader;
 pub mod world_def;
 
 #[cfg(test)]
@@ -49,6 +51,7 @@ pub mod world_def;
 mod loader_tests;
 
 pub use error::WorldError;
+pub use events::SpawnEntity;
 pub use resources::WorldDefResource;
 pub use world_def::WorldDef;
 
@@ -56,6 +59,7 @@ use bevy::prelude::*;
 use delta_v_core::AppState;
 
 use crate::loader::load_default_world;
+use crate::template_loader::load_template;
 
 /// World plugin: loads and validates the world definition.
 ///
@@ -67,7 +71,8 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::LoadingWorld), load_world_system);
+        app.add_event::<SpawnEntity>()
+            .add_systems(OnEnter(AppState::LoadingWorld), load_world_system);
     }
 }
 
@@ -75,10 +80,18 @@ impl Plugin for WorldPlugin {
 // Systems
 // ---------------------------------------------------------------------------
 
-/// Loads the default world definition and inserts [`WorldDefResource`].
+/// Loads the default world definition and emits `SpawnEntity` events.
 ///
-/// Transitions the state machine to [`AppState::InGame`] when done.
-fn load_world_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, NextState<AppState>>) {
+/// Reads the world JSON, validates it, inserts [`WorldDefResource`],
+/// and emits a `SpawnEntity` event for each entity in the world.
+///
+/// Transitions to [`AppState::SpawningEntities`] so domain plugins can
+/// spawn entities in dependency order (per ADR-0038).
+fn load_world_system(
+    mut commands: Commands<'_, '_>,
+    mut events: EventWriter<'_, SpawnEntity>,
+    mut next: ResMut<'_, NextState<AppState>>,
+) {
     // INVARIANT: a missing or invalid world file is a hard startup
     // error (ADR-0013). The panic is intentional; no recovery is possible.
     #[allow(clippy::panic)]
@@ -86,6 +99,46 @@ fn load_world_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, NextSt
         panic!("fatal: failed to load world: {e}");
     });
     log::info!("world loaded: {}", world.name);
+
+    // Emit SpawnEntity events for each entity in the world.
+    // Per ADR-0038, domain plugins listen for these events and spawn
+    // entities based on entity_type, in dependency order via WorldSpawnSet.
+    for entity_spawn in &world.entities {
+        // Load and validate the template file per ADR-0038.
+        // If template loading fails, this is a hard error (ADR-0013).
+        #[allow(clippy::panic)]
+        let template = load_template(&entity_spawn.template, &entity_spawn.entity_type)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "fatal: failed to load template '{}' for entity type '{}': {}",
+                    entity_spawn.template, entity_spawn.entity_type, e
+                );
+            });
+
+        let pos = Vec3::new(
+            entity_spawn.position.x,
+            entity_spawn.position.y,
+            entity_spawn.position.z,
+        );
+        let rot = Quat::from_xyzw(
+            entity_spawn.rotation.x,
+            entity_spawn.rotation.y,
+            entity_spawn.rotation.z,
+            entity_spawn.rotation.w,
+        );
+        let scale = Vec3::new(
+            entity_spawn.scale.x,
+            entity_spawn.scale.y,
+            entity_spawn.scale.z,
+        );
+
+        let spawn_event = SpawnEntity::new(entity_spawn.entity_type.clone(), template, pos)
+            .with_rotation(rot)
+            .with_scale(scale);
+
+        events.send(spawn_event);
+    }
+
     commands.insert_resource(WorldDefResource(world));
-    next.set(AppState::InGame);
+    next.set(AppState::SpawningEntities);
 }

@@ -51,6 +51,7 @@ with its original number for historical traceability.
 | 0036 | [External human contributors process](0036-external-human-contributors-process.md) | Accepted |
 | 0037 | [Internationalization (i18n)](0037-internationalization.md)               | Accepted |
 | 0038 | [Entity template system](0038-entity-template-system.md)                  | Accepted |
+| 0039 | [Enforcement of JSON-only defaults](0039-enforcement-of-json-only-defaults.md) | Accepted |
 
 ## How to add a new ADR
 

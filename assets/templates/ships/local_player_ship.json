@@ -1,0 +1,13 @@
+{
+  "entity_type": "local_player_ship",
+  "mesh": {
+    "type": "capsule"
+  },
+  "material": {
+    "color": {
+      "r": 0.6,
+      "g": 0.7,
+      "b": 0.9
+    }
+  }
+}

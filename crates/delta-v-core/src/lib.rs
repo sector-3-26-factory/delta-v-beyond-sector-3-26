@@ -37,8 +37,10 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod spawn_sets;
 pub mod state;
 
+pub use spawn_sets::WorldSpawnSet;
 pub use state::AppState;
 
 #[cfg(test)]
@@ -67,6 +69,7 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::Boot), log_boot);
         app.add_systems(OnEnter(AppState::LoadingDefaults), log_loading_defaults);
         app.add_systems(OnEnter(AppState::LoadingWorld), log_loading_world);
+        app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
         app.add_systems(OnEnter(AppState::InGame), log_in_game);
 
         // Immediately leave Boot: transition to LoadingDefaults so that
@@ -89,6 +92,10 @@ fn log_loading_defaults() {
 
 fn log_loading_world() {
     info!("AppState -> LoadingWorld");
+}
+
+fn log_spawning_entities() {
+    info!("AppState -> SpawningEntities");
 }
 
 fn log_in_game() {
