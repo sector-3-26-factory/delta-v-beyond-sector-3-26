@@ -43,6 +43,7 @@ pub mod error;
 pub mod events;
 pub mod loader;
 pub mod resources;
+pub mod template_loader;
 pub mod world_def;
 
 #[cfg(test)]
@@ -58,6 +59,7 @@ use bevy::prelude::*;
 use delta_v_core::AppState;
 
 use crate::loader::load_default_world;
+use crate::template_loader::load_template;
 
 /// World plugin: loads and validates the world definition.
 ///
@@ -102,6 +104,17 @@ fn load_world_system(
     // Per ADR-0038, domain plugins listen for these events and spawn
     // entities based on entity_type, in dependency order via WorldSpawnSet.
     for entity_spawn in &world.entities {
+        // Load and validate the template file per ADR-0038.
+        // If template loading fails, this is a hard error (ADR-0013).
+        #[allow(clippy::panic)]
+        let template = load_template(&entity_spawn.template, &entity_spawn.entity_type)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "fatal: failed to load template '{}' for entity type '{}': {}",
+                    entity_spawn.template, entity_spawn.entity_type, e
+                );
+            });
+
         let pos = Vec3::new(
             entity_spawn.position.x,
             entity_spawn.position.y,
@@ -118,10 +131,6 @@ fn load_world_system(
             entity_spawn.scale.y,
             entity_spawn.scale.z,
         );
-
-        // For M1, template_data is empty. Templates are loaded by domain
-        // plugins from the template path (future enhancement per ADR-0038).
-        let template = serde_json::json!({});
 
         let spawn_event = SpawnEntity::new(entity_spawn.entity_type.clone(), template, pos)
             .with_rotation(rot)
