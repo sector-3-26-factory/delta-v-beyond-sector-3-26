@@ -27,6 +27,14 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  forbidden-patterns:
+    name: Forbidden pattern check (ADR-0013)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for forbidden patterns
+        run: bash scripts/check-forbidden-patterns.sh
+
   fmt:
     name: Formatting (rustfmt)
     runs-on: ubuntu-latest

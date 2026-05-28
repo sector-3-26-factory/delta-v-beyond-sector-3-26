@@ -19,5 +19,8 @@ cargo test --workspace
 echo "[pre-commit] Running cargo deny..."
 cargo deny check
 
+echo "[pre-commit] Checking forbidden patterns..."
+bash "$(dirname "$0")/../scripts/check-forbidden-patterns.sh"
+
 echo "[pre-commit] All checks passed!"
 exit 0

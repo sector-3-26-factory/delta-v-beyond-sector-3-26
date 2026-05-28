@@ -1,4 +1,5 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
+// allow-default: Bevy requires Default on States enums for state-machine initialisation; this is not a config type and carries no silent-fallback risk.
 
 //! Application-level state machine.
 //!
