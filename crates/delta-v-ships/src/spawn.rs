@@ -53,8 +53,6 @@ fn spawn_player_ship(
         rotation: event.rotation,
         scale: event.scale,
     };
-
-    // Spawn the ship entity.
     commands.spawn((
         PbrBundle {
             mesh,

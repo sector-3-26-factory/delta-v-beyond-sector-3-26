@@ -45,6 +45,10 @@ pub mod spawn;
 pub use components::PlayerShip;
 pub use spawn::{setup_scene_lighting, spawn_ship_from_template};
 
+#[cfg(test)]
+#[path = "spawn_tests.rs"]
+mod spawn_tests;
+
 /// Ships plugin for managing player and NPC vessels.
 ///
 /// Listens for [`delta_v_world::SpawnEntity`] events during

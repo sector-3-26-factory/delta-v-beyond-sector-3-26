@@ -1,0 +1,5 @@
+c3fd742 wip(ships): Track 4 - Ship entity & 3-D scene (incomplete, waiting for ADR-0038 implementation)
+7cf2c5b docs(adr): add ADR-0038 entity template system
+61c5adf build(ci): enforce Default-trait ban via forbidden-pattern check
+2ae6a70 style: apply cargo fmt --all
+2cb420e chore(scripts): add install-git-hooks.sh and activate pre-commit hook
