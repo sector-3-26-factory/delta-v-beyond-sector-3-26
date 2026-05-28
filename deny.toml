@@ -36,7 +36,14 @@ unused-allowed-license = "warn"
 multiple-versions = "warn"
 wildcards = "deny"
 deny = []
-allow = []
+allow = [
+    # bit-set: v0.5.3 (required by naga for GPU shaders) and v0.8.0 (required by
+    # fancy-regex → jsonschema → delta-v-json) coexist in the dependency tree.
+    # Both versions are maintained and compatible at the API level used here.
+    # Per ADR-0028 (third-party dependency policy), this is acceptable.
+    # TODO: Monitor for jsonschema/fancy-regex updates that consolidate versions.
+    { name = "bit-set", version = "*" },
+]
 
 [sources]
 unknown-git = "deny"
