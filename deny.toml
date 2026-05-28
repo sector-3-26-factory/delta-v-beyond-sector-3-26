@@ -30,7 +30,9 @@ allow = [
     "Unicode-3.0",
     "Zlib",
 ]
-unused-allowed-license = "warn"
+# Some licenses are listed but not yet encountered in dependencies.
+# They are kept for future-proofing per ADR-0027 (Open source licensing).
+unused-allowed-license = "allow"
 
 [bans]
 # Per ADR-0028, we allow multiple versions of transitive dependencies
