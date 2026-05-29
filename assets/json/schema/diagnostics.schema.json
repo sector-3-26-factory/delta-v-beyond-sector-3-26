@@ -1,0 +1,24 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://sector-3-26-factory.example/schema/diagnostics",
+    "title": "Diagnostics configuration",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nFrame-time watchdog thresholds for performance monitoring.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "frame_time_warn_threshold_ms",
+        "consecutive_frames_threshold"
+    ],
+    "properties": {
+        "frame_time_warn_threshold_ms": {
+            "description": "Frame time threshold in milliseconds. Warn when frame time exceeds this value. Default: 33 ms (30 fps floor).",
+            "type": "number",
+            "default": 33
+        },
+        "consecutive_frames_threshold": {
+            "description": "Number of consecutive frames exceeding threshold before emitting a WARN log message.",
+            "type": "integer",
+            "default": 60
+        }
+    }
+}

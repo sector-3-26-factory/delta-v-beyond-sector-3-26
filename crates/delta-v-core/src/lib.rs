@@ -38,16 +38,22 @@
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 pub mod camera;
+pub mod diagnostics;
 pub mod spawn_sets;
 pub mod state;
 
 pub use camera::{spawn_chase_camera, CameraFollow, PlayerShipEntity};
+pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use spawn_sets::WorldSpawnSet;
 pub use state::AppState;
 
 #[cfg(test)]
 #[path = "state_tests.rs"]
 mod state_tests;
+
+#[cfg(test)]
+#[path = "diagnostics_tests.rs"]
+mod diagnostics_tests;
 
 use bevy::prelude::*;
 
@@ -65,7 +71,7 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         info!(version = env!("CARGO_PKG_VERSION"), "Delta-V starting");
 
-        app.init_state::<AppState>();
+        app.init_state::<AppState>().add_plugins(DiagnosticsPlugin);
 
         // Log every state entry at INFO level (ADR-0015, ADR-0018).
         app.add_systems(OnEnter(AppState::Boot), log_boot);
