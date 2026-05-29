@@ -63,7 +63,7 @@ fn frame_time_watchdog_system(
 ) {
     let Some(ft) = diagnostics
         .get(&FrameTimeDiagnosticsPlugin::FRAME_TIME)
-        .and_then(|d| d.smoothed())
+        .and_then(bevy::diagnostic::Diagnostic::smoothed)
     else {
         return;
     };

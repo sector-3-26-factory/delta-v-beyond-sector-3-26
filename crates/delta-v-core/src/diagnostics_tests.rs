@@ -5,6 +5,7 @@
 use crate::diagnostics::DiagnosticsConfig;
 
 #[test]
+#[allow(clippy::expect_used)]
 fn test_config_serde_from_json() {
     // DiagnosticsConfig is loaded from JSON via delta-v-json (ADR-0039).
     // JSON stores threshold in milliseconds; struct converts to seconds via getter.
