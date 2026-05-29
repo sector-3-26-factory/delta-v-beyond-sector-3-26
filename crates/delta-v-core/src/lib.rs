@@ -37,9 +37,11 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod camera;
 pub mod spawn_sets;
 pub mod state;
 
+pub use camera::{spawn_chase_camera, CameraFollow, PlayerShipEntity};
 pub use spawn_sets::WorldSpawnSet;
 pub use state::AppState;
 
@@ -70,7 +72,13 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::LoadingDefaults), log_loading_defaults);
         app.add_systems(OnEnter(AppState::LoadingWorld), log_loading_world);
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
-        app.add_systems(OnEnter(AppState::InGame), log_in_game);
+        app.add_systems(OnEnter(AppState::InGame), (log_in_game, spawn_chase_camera));
+
+        // Chase camera follows the ship every frame during InGame.
+        app.add_systems(
+            Update,
+            camera::chase_camera_system.run_if(in_state(AppState::InGame)),
+        );
 
         // Immediately leave Boot: transition to LoadingDefaults so that
         // ConfigPlugin can begin loading on the same frame.

@@ -5,9 +5,8 @@
 //! See ADR-0038 (Entity template system) and ADR-0005 (Plugin architecture).
 
 use bevy::prelude::*;
+use delta_v_core::PlayerShipEntity;
 use delta_v_world::SpawnEntity;
-
-use crate::components::PlayerShip;
 
 /// Spawns ship entities in response to `SpawnEntity` events.
 ///
@@ -53,15 +52,18 @@ fn spawn_player_ship(
         rotation: event.rotation,
         scale: event.scale,
     };
-    commands.spawn((
-        PbrBundle {
+
+    let entity_id = commands
+        .spawn(PbrBundle {
             mesh,
             material,
             transform,
             ..default()
-        },
-        PlayerShip,
-    ));
+        })
+        .id();
+
+    // Store the player ship entity ID in a resource so the chase camera can find it.
+    commands.insert_resource(PlayerShipEntity(entity_id));
 
     log::info!(
         "local player ship spawned at position ({:.1}, {:.1}, {:.1})",

@@ -1,16 +1,0 @@
-Rebasing (1/1)Auto-merging Cargo.lock
-Auto-merging crates/delta-v-ships/Cargo.toml
-CONFLICT (content): Merge conflict in crates/delta-v-ships/Cargo.toml
-Auto-merging crates/delta-v-ships/src/components.rs
-CONFLICT (add/add): Merge conflict in crates/delta-v-ships/src/components.rs
-Auto-merging crates/delta-v-ships/src/lib.rs
-CONFLICT (content): Merge conflict in crates/delta-v-ships/src/lib.rs
-Auto-merging crates/delta-v-ships/src/spawn.rs
-CONFLICT (add/add): Merge conflict in crates/delta-v-ships/src/spawn.rs
-error: could not apply c3fd742... wip(ships): Track 4 - Ship entity & 3-D scene (incomplete, waiting for ADR-0038 implementation)
-hint: Resolve all conflicts manually, mark them as resolved with
-hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
-hint: You can instead skip this commit: run "git rebase --skip".
-hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
-hint: Disable this message with "git config set advice.mergeConflict false"
-Could not apply c3fd742... # wip(ships): Track 4 - Ship entity & 3-D scene (incomplete, waiting for ADR-0038 implementation)

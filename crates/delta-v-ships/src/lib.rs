@@ -39,10 +39,8 @@
 use bevy::prelude::*;
 use delta_v_core::{AppState, WorldSpawnSet};
 
-pub mod components;
 pub mod spawn;
 
-pub use components::PlayerShip;
 pub use spawn::{setup_scene_lighting, spawn_ship_from_template};
 
 #[cfg(test)]

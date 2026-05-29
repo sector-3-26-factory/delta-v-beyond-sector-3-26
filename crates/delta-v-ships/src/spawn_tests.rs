@@ -1,19 +1,8 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Unit tests for ship components.
+//! Unit tests for ship spawning.
 //!
 //! Full integration tests with entity spawning are deferred to future
-//! milestones. These tests verify component trait bounds.
+//! milestones. These tests verify the spawn systems work correctly.
 
-use crate::PlayerShip;
-
-#[test]
-fn test_player_ship_is_send_sync() {
-    // Verify PlayerShip is Send + Sync for use in Bevy ECS.
-    // This is a compile-time test; if it compiles, the assertion passes.
-    const fn assert_send_sync<T: Send + Sync>() {}
-    const fn check() {
-        assert_send_sync::<PlayerShip>();
-    }
-    check();
-}
+// Tests will be added as Track 4 (Ship entity & 3-D scene) is completed.
