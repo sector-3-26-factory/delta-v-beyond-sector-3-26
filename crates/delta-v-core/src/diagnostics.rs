@@ -35,6 +35,7 @@ impl DiagnosticsConfig {
     }
 }
 
+// allow-default: Bevy trait bound on init_resource::<T>(); internal state only, not configuration.
 #[derive(Resource, Default)]
 struct OverrunStreak(u32);
 
