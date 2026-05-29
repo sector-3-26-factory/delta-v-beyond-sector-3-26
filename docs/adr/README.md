@@ -52,6 +52,7 @@ with its original number for historical traceability.
 | 0037 | [Internationalization (i18n)](0037-internationalization.md)               | Accepted |
 | 0038 | [Entity template system](0038-entity-template-system.md)                  | Accepted |
 | 0039 | [Enforcement of JSON-only defaults](0039-enforcement-of-json-only-defaults.md) | Accepted |
+| 0040 | [delta-v-json for JSON validation](0040-delta-v-json-for-json-validation.md) | Accepted |
 
 ## How to add a new ADR
 
