@@ -33,7 +33,7 @@ pub struct CameraFollow {
 /// Runs during `OnEnter(AppState::InGame)`. Reads the `PlayerShipEntity`
 /// resource to determine which entity to follow. Panics if the resource
 /// is not present (programming error in plugin sequencing).
-pub fn spawn_chase_camera(mut commands: Commands, ship_entity: Res<PlayerShipEntity>) {
+pub fn spawn_chase_camera(mut commands: Commands<'_, '_>, ship_entity: Res<'_, PlayerShipEntity>) {
     commands.spawn((
         Camera3dBundle {
             transform: Transform::from_translation(Vec3::new(0.0, 8.0, 20.0))
@@ -55,8 +55,8 @@ pub fn spawn_chase_camera(mut commands: Commands, ship_entity: Res<PlayerShipEnt
 /// Rotates the offset by the ship's current rotation so the camera
 /// stays behind the ship as it turns.
 pub fn chase_camera_system(
-    mut camera_query: Query<(&mut Transform, &CameraFollow)>,
-    target_query: Query<&Transform, Without<CameraFollow>>,
+    mut camera_query: Query<'_, '_, (&mut Transform, &CameraFollow)>,
+    target_query: Query<'_, '_, &Transform, Without<CameraFollow>>,
 ) {
     for (mut cam_transform, follow) in &mut camera_query {
         let Ok(target_transform) = target_query.get(follow.target) else {
