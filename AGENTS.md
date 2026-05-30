@@ -149,6 +149,20 @@ that can take several minutes, especially the first time.
 
 This prevents misleading summaries and premature progress assumptions based on incomplete builds.
 
+**Important: One `run_terminal_command` per response**
+
+Only issue **one** `run_terminal_command` tool call per agent response.
+The remote environment queues terminal commands for user approval before
+execution. If multiple `run_terminal_command` calls appear in the same
+response, all of them get queued simultaneously and shown to the user for
+approval — which is confusing and error-prone. The user may cancel all but
+one, leaving the agent with missing output and an inconsistent mental model
+of what ran.
+
+Rule: finish one terminal command, read its output with `read_file`, then
+decide whether another command is needed. Never batch terminal commands in
+a single response.
+
 ## 6. What to read next
 
 In order:

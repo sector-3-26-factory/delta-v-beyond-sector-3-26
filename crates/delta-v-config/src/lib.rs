@@ -54,7 +54,7 @@ pub use keybindings::{ActionBindings, Keybindings};
 pub use resources::KeybindingsResource;
 
 use bevy::prelude::*;
-use delta_v_core::AppState;
+use delta_v_core::{keybindings_resource, AppState};
 
 use crate::loader::{load_diagnostics, load_keybindings};
 
@@ -88,7 +88,23 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
         panic!("fatal: failed to load keybindings: {e}");
     });
     log::info!("keybindings loaded ({} actions)", keybindings.actions.len());
-    commands.insert_resource(KeybindingsResource(keybindings));
+
+    // Convert delta-v-config::Keybindings into delta_v_core::KeybindingsResource.
+    // KeybindingsResource is defined in delta-v-core to avoid a crate-dep cycle (ADR-0002).
+    let kb_map = keybindings
+        .actions
+        .into_iter()
+        .map(|(name, b)| {
+            (
+                name,
+                keybindings_resource::ActionBindings {
+                    keyboard: b.keyboard,
+                    gamepad_button: b.gamepad_button,
+                },
+            )
+        })
+        .collect();
+    commands.insert_resource(KeybindingsResource(kb_map));
 
     // Diagnostics configuration (ADR-0022, ADR-0039).
     // INVARIANT: a missing or invalid diagnostics file is a hard startup
