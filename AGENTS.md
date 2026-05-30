@@ -149,19 +149,30 @@ that can take several minutes, especially the first time.
 
 This prevents misleading summaries and premature progress assumptions based on incomplete builds.
 
-**Important: One `run_terminal_command` per response**
+**CRITICAL: One tool call per response (ALL tools)**
 
-Only issue **one** `run_terminal_command` tool call per agent response.
-The remote environment queues terminal commands for user approval before
-execution. If multiple `run_terminal_command` calls appear in the same
-response, all of them get queued simultaneously and shown to the user for
-approval — which is confusing and error-prone. The user may cancel all but
-one, leaving the agent with missing output and an inconsistent mental model
-of what ran.
+Only issue **exactly one** tool call per agent response. This applies to ALL tools:
+- `run_terminal_command`
+- `edit_existing_file`
+- `create_new_file`
+- `read_file`
+- `file_glob_search`
+- `ls`
+- `fetch_url_content`
+- `view_diff`
+- `single_find_and_replace`
+- All other tools
 
-Rule: finish one terminal command, read its output with `read_file`, then
-decide whether another command is needed. Never batch terminal commands in
-a single response.
+The remote environment queues tool calls for user approval before execution. If multiple tool calls appear in the same response, all get queued simultaneously and shown for approval — which is confusing and error-prone. The user may cancel all but one, leaving the agent with incomplete output and an inconsistent mental model of what executed.
+
+**Pattern (mandatory):**
+1. Issue exactly one tool call per response
+2. Stop immediately after the tool block closes
+3. Wait for the tool to complete
+4. Next response: read/analyze output
+5. Decide if another tool call is needed
+6. If yes: issue exactly one new tool call
+7. Never batch multiple tool calls in a single response
 
 ## 6. What to read next
 
