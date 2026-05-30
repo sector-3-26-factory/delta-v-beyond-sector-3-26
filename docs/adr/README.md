@@ -54,6 +54,7 @@ with its original number for historical traceability.
 | 0039 | [Enforcement of JSON-only defaults](0039-enforcement-of-json-only-defaults.md) | Accepted |
 | 0040 | [delta-v-json for JSON validation](0040-delta-v-json-for-json-validation.md) | Accepted |
 | 0041 | [Third-party asset acquisition and licensing](0041-third-party-asset-acquisition.md) | Accepted |
+| 0042 | [Custom asset loader with two-root search](0042-custom-asset-loader-two-roots.md) | Proposed |
 
 ## How to add a new ADR
 
