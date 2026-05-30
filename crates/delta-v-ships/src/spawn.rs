@@ -10,7 +10,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::PlayerShipEntity;
+use delta_v_core::{ChaseCameraOffset, PlayerShipEntity};
 use delta_v_world::SpawnEntity;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
@@ -107,8 +107,9 @@ fn spawn_player_ship(
         })
         .id();
 
-    // Store player ship ID for camera tracking.
+    // Store player ship ID and chase camera offset for camera tracking.
     commands.insert_resource(PlayerShipEntity(ship_entity));
+    commands.insert_resource(ChaseCameraOffset(Vec3::new(chase_x, chase_y, chase_z)));
 
     log::info!(
         "local player ship spawned at position ({:.1}, {:.1}, {:.1}) from {}",

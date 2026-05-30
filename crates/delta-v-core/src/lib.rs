@@ -52,7 +52,7 @@ pub mod keybindings_resource;
 pub mod spawn_sets;
 pub mod state;
 
-pub use camera::{spawn_chase_camera, CameraFollow, PlayerShipEntity};
+pub use camera::{spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShipEntity};
 pub use debug_axes::{spawn_debug_axes, DebugAxes};
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};

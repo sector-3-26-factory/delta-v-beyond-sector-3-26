@@ -16,6 +16,13 @@ use bevy::prelude::*;
 #[derive(Resource)]
 pub struct PlayerShipEntity(pub Entity);
 
+/// Stores the chase camera offset from the template.
+///
+/// Inserted by `ShipsPlugin` when the player ship is spawned.
+/// Used by `spawn_chase_camera` to position the camera correctly.
+#[derive(Resource, Debug, Clone, Copy)]
+pub struct ChaseCameraOffset(pub Vec3);
+
 /// Instructs the chase-camera system to follow a target entity.
 ///
 /// Attach to the camera entity. Set `target` to the entity to follow.
@@ -34,20 +41,26 @@ pub struct CameraFollow {
 /// resource to determine which entity to follow. Panics if the resource
 /// is not present (programming error in plugin sequencing).
 #[allow(clippy::needless_pass_by_value)]
-pub fn spawn_chase_camera(mut commands: Commands<'_, '_>, ship_entity: Res<'_, PlayerShipEntity>) {
+pub fn spawn_chase_camera(
+    mut commands: Commands<'_, '_>,
+    ship_entity: Res<'_, PlayerShipEntity>,
+    camera_offset: Res<'_, ChaseCameraOffset>,
+) {
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 8.0, 20.0))
-                .looking_at(Vec3::ZERO, Vec3::Y),
+            transform: Transform::from_translation(camera_offset.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         },
         CameraFollow {
             target: ship_entity.0,
-            offset: Vec3::new(0.0, 8.0, 20.0),
+            offset: camera_offset.0,
         },
     ));
 
-    log::info!("chase camera spawned, following player ship");
+    log::info!(
+        "chase camera spawned at offset {:?}, following player ship",
+        camera_offset.0
+    );
 }
 
 /// Moves the camera to maintain its offset behind the followed entity.
