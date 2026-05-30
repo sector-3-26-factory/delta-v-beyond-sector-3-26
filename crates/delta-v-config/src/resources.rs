@@ -1,21 +1,16 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Bevy resources produced by the configuration loader.
+//! Re-exports [`delta_v_core::KeybindingsResource`].
 //!
-//! Resources defined here are inserted during [`AppState::LoadingDefaults`]
-//! and remain available for the lifetime of the application.
 
-use bevy::prelude::*;
+//! `KeybindingsResource` is defined in `delta-v-core` so that
+//! `delta-v-core`'s input translation system can read it without creating a
+//! crate-dependency cycle. `ConfigPlugin` converts the loaded `Keybindings`
+//! struct into `delta_v_core::KeybindingsResource` and inserts it during
+//! [`delta_v_core::AppState::LoadingDefaults`].
+//!
+//! See ADR-0011 (Keybindings) and ADR-0002 (Repository layout).
 
-use crate::keybindings::Keybindings;
-
-/// Loaded and validated keybindings.
-///
-/// Inserted as a Bevy resource by [`crate::ConfigPlugin`] during
-/// [`delta_v_core::AppState::LoadingDefaults`]. All gameplay systems that
-/// need to query which keys are bound to which actions read this resource.
-///
-/// The inner [`Keybindings`] value is guaranteed to have passed schema
-/// validation (ADR-0012) and to contain no silent fallbacks (ADR-0013).
-#[derive(Resource)]
-pub struct KeybindingsResource(pub Keybindings);
+// Re-export so that existing `use delta_v_config::KeybindingsResource` paths
+// continue to resolve without change.
+pub use delta_v_core::KeybindingsResource;

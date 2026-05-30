@@ -58,12 +58,44 @@ pub struct ShipsPlugin;
 
 impl Plugin for ShipsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting)
-            .add_systems(
-                Update,
-                spawn_ship_from_template
-                    .in_set(WorldSpawnSet::SpawnShips)
-                    .run_if(in_state(AppState::SpawningEntities)),
-            );
+        // Configure WorldSpawnSet ordering (ADR-0038).
+        app.configure_sets(
+            Update,
+            (
+                WorldSpawnSet::SpawnSuns,
+                WorldSpawnSet::SpawnPlanets,
+                WorldSpawnSet::SpawnMoons,
+                WorldSpawnSet::SpawnStations,
+                WorldSpawnSet::SpawnAsteroids,
+                WorldSpawnSet::SpawnShips,
+            )
+                .chain()
+                .run_if(in_state(AppState::SpawningEntities)),
+        )
+        .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting)
+        .add_systems(
+            Update,
+            spawn_ship_from_template
+                .in_set(WorldSpawnSet::SpawnShips)
+                .run_if(in_state(AppState::SpawningEntities)),
+        )
+        .add_systems(
+            Update,
+            advance_to_in_game
+                .after(WorldSpawnSet::SpawnShips)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
     }
+}
+
+/// Advances the state machine to [`AppState::InGame`] after all spawn
+/// systems in [`WorldSpawnSet::SpawnShips`] have run.
+///
+/// This runs in the same `Update` tick as the spawn systems, but after
+/// them (via `.after(WorldSpawnSet::SpawnShips)`). Because all
+/// [`delta_v_world::SpawnEntity`] events are emitted synchronously on
+/// [`AppState::SpawningEntities`] entry, a single `Update` tick is
+/// sufficient to process them all before advancing.
+fn advance_to_in_game(mut next: ResMut<'_, NextState<AppState>>) {
+    next.set(AppState::InGame);
 }

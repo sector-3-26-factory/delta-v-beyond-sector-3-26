@@ -42,6 +42,15 @@ cargo build --release --bin delta-v
 # Run the game
 cargo run --bin delta-v
 
+# Run the game with debug logging (input module only)
+RUST_LOG=delta_v_core::input=debug cargo run --bin delta-v
+
+# Run the game with debug logging (all delta-v crates)
+RUST_LOG=delta_v=debug cargo run --bin delta-v
+
+# Run the game with debug logging (all crates including dependencies)
+RUST_LOG=debug cargo run --bin delta-v
+
 # Run tests across all crates
 cargo test --workspace
 

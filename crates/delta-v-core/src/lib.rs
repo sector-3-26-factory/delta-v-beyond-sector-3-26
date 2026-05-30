@@ -19,8 +19,14 @@
 //! Core ECS fundamentals, shared components, and plugin traits.
 //!
 //! This crate provides the foundation that all domain crates build upon.
-//! It owns the top-level [`AppState`] state machine and registers the
-//! state-transition logging systems that every other plugin relies on.
+//! It owns the top-level [`AppState`] state machine, the logical input
+//! action pipeline (ADR-0011), and registers the state-transition logging
+//! systems that every other plugin relies on.
+//!
+//! [`KeybindingsResource`] is defined here (not in `delta-v-config`) so
+//! that [`input::input_translation_system`] can read it without creating
+//! a crate-dependency cycle.  `ConfigPlugin` in `delta-v-config` inserts
+//! the resource; `delta-v-config` already depends on `delta-v-core`.
 //!
 //! See ADR-0005 (plugin architecture) and ADR-0018 (state management).
 
@@ -39,11 +45,15 @@
 
 pub mod camera;
 pub mod diagnostics;
+pub mod input;
+pub mod keybindings_resource;
 pub mod spawn_sets;
 pub mod state;
 
 pub use camera::{spawn_chase_camera, CameraFollow, PlayerShipEntity};
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
+pub use input::{ActiveActions, InputSet, LogicalAction};
+pub use keybindings_resource::KeybindingsResource;
 pub use spawn_sets::WorldSpawnSet;
 pub use state::AppState;
 
@@ -55,7 +65,17 @@ mod state_tests;
 #[path = "diagnostics_tests.rs"]
 mod diagnostics_tests;
 
+#[cfg(test)]
+#[path = "input_tests.rs"]
+mod input_tests;
+
+#[cfg(test)]
+#[path = "camera_tests.rs"]
+mod camera_tests;
+
 use bevy::prelude::*;
+
+use crate::input::{input_log_system, input_translation_system};
 
 /// The core plugin that initialises fundamental ECS infrastructure.
 ///
@@ -65,6 +85,8 @@ use bevy::prelude::*;
 /// - Immediately transitions from [`AppState::Boot`] to
 ///   [`AppState::LoadingDefaults`] so that config and world loaders can
 ///   start their work.
+/// - Initialises [`ActiveActions`] and registers the input translation
+///   pipeline (ADR-0011, ADR-0017).
 pub struct CorePlugin;
 
 impl Plugin for CorePlugin {
@@ -85,6 +107,24 @@ impl Plugin for CorePlugin {
             Update,
             camera::chase_camera_system.run_if(in_state(AppState::InGame)),
         );
+
+        // Input pipeline (ADR-0011, ADR-0017).
+        // Runs in FixedUpdate during InGame; Translate always before Log.
+        app.init_resource::<ActiveActions>()
+            .configure_sets(
+                FixedUpdate,
+                (InputSet::Translate, InputSet::Log)
+                    .chain()
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                FixedUpdate,
+                (
+                    input_translation_system.in_set(InputSet::Translate),
+                    input_log_system.in_set(InputSet::Log),
+                )
+                    .run_if(in_state(AppState::InGame)),
+            );
 
         // Immediately leave Boot: transition to LoadingDefaults so that
         // ConfigPlugin can begin loading on the same frame.
