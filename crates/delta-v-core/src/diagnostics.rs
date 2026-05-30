@@ -51,6 +51,7 @@ impl DiagnosticsConfig {
 /// - The player sees meaningful performance data once the game is running
 ///
 /// See ADR-0022 (Performance instrumentation) for rationale.
+// allow-default: Bevy trait bound on init_resource::<T>(); internal runtime state only, not configuration.
 #[derive(Resource, Default)]
 struct DiagnosticsState {
     /// Number of consecutive frames exceeding the threshold.
