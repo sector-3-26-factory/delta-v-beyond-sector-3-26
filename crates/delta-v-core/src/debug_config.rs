@@ -8,6 +8,7 @@
 //!
 //! Per ADR-0013 (no silent fallbacks), missing or invalid debug config is a hard error.
 
+use bevy::prelude::Resource;
 use serde::Deserialize;
 
 /// Debug configuration loaded from `debug.json`.
@@ -15,7 +16,7 @@ use serde::Deserialize;
 /// Controls debug features like axis indicators and profiling.
 /// Loaded as a resource during `LoadingDefaults` state.
 /// Supports hot-reload in dev builds (ADR-0035).
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Resource)]
 pub struct DebugConfig {
     /// Master switch for debug axis indicators (RGB arrows from entity origins).
     /// When true with empty `axis_indicator_entities`, show axes for ALL entities.
