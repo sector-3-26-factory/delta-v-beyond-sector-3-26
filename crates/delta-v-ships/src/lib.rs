@@ -84,6 +84,11 @@ impl Plugin for ShipsPlugin {
             advance_to_in_game
                 .after(WorldSpawnSet::SpawnShips)
                 .run_if(in_state(AppState::SpawningEntities)),
+        )
+        // Attach glTF meshes during InGame once assets are loaded.
+        .add_systems(
+            Update,
+            spawn::attach_ship_meshes.run_if(in_state(AppState::InGame)),
         );
     }
 }
