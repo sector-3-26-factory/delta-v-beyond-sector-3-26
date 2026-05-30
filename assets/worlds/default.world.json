@@ -5,6 +5,7 @@
     {
       "template": "templates/ships/local_player_ship.json",
       "entity_type": "local_player_ship",
+      "id": "player_ship",
       "position": {
         "x": 0.0,
         "y": 0.0,
