@@ -134,6 +134,26 @@ Instead, use the following pattern:
 - Agent `read_file` tool can read any file on disk, including those in `.gitignore`
 - This avoids temp files accumulating in the project directory
 
+**CRITICAL: Working directory**
+
+The `run_terminal_command` tool **already executes in the correct repository root directory**.
+Do NOT use `cd` commands to change directories.
+
+**INCORRECT:**
+```bash
+cd /workspace && python3 script.py > .ai-tmp/out.txt 2>&1
+```
+This fails because:
+- The actual working directory may not be `/workspace`
+- Hardcoding paths breaks portability across machines and environments
+- It adds unnecessary complexity
+
+**CORRECT:**
+```bash
+python3 script.py > .ai-tmp/out.txt 2>&1
+```
+The command runs in the repository root automatically. Reference files relative to the current directory.
+
 **CRITICAL: Terminal commands take time**
 
 Many commands (`cargo test`, `cargo run`, `cargo build`, etc.) require a full build
