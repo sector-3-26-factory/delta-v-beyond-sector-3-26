@@ -134,34 +134,68 @@ Instead, use the following pattern:
 - Agent `read_file` tool can read any file on disk, including those in `.gitignore`
 - This avoids temp files accumulating in the project directory
 
-**Important: Wait for builds to complete**
+**CRITICAL: Terminal commands take time**
 
 Many commands (`cargo test`, `cargo run`, `cargo build`, etc.) require a full build
 that can take several minutes, especially the first time. 
 
-**Agent behavior:**
-- Do NOT assume the command completed immediately
-- Do NOT provide a summary after redirecting to `.ai-tmp/`
-- Do NOT move to the next agenda item
-- Run the command, then try reading the output file
-- If the file is empty, wait for user input (user will provide output or ask you to proceed)
-- Continue waiting: do not assume completion and move on
+**NEVER use `sleep` in terminal commands.** It is useless. YOU do not wait; the USER does.
+
+**Agent behavior (mandatory):**
+1. Run terminal command with output redirected: `command > .ai-tmp/file.txt 2>&1`
+2. **ALWAYS use `> file 2>&1` order.** The `2>&1` MUST be at the end.
+   - ✅ `cargo build > .ai-tmp/build.txt 2>&1` (correct)
+   - ❌ `cargo build 2>&1 > .ai-tmp/build.txt` (wrong - stderr lost)
+3. Issue the `run_terminal_command` and STOP immediately after the tool block closes.
+4. Do NOT assume the command finished.
+5. Do NOT provide a summary.
+6. Do NOT move to the next task.
+7. Wait for the next user message.
+8. When user responds, read the output file with `read_file` tool.
+9. If the file is empty or incomplete, ask the user to wait and try again.
+10. Do NOT try to work around delays with `sleep`, polling loops, or workarounds.
 
 This prevents misleading summaries and premature progress assumptions based on incomplete builds.
 
-**Important: One `run_terminal_command` per response**
+**CRITICAL: One tool call per response (ALL tools)**
 
-Only issue **one** `run_terminal_command` tool call per agent response.
-The remote environment queues terminal commands for user approval before
-execution. If multiple `run_terminal_command` calls appear in the same
-response, all of them get queued simultaneously and shown to the user for
-approval — which is confusing and error-prone. The user may cancel all but
-one, leaving the agent with missing output and an inconsistent mental model
-of what ran.
+Only issue **exactly one** tool call per agent response. This applies to ALL tools:
+- `run_terminal_command`
+- `edit_existing_file`
+- `create_new_file`
+- `read_file`
+- `file_glob_search`
+- `ls`
+- `fetch_url_content`
+- `view_diff`
+- `single_find_and_replace`
+- All other tools
 
-Rule: finish one terminal command, read its output with `read_file`, then
-decide whether another command is needed. Never batch terminal commands in
-a single response.
+The remote environment queues tool calls for user approval before execution. If multiple tool calls appear in the same response, all get queued simultaneously and shown for approval — which is confusing and error-prone. The user may cancel all but one, leaving the agent with incomplete output and an inconsistent mental model of what executed.
+
+**Pattern (mandatory):**
+1. Issue exactly one tool call per response
+2. Stop immediately after the tool block closes
+3. Do NOT assume the tool completed
+4. Do NOT provide a summary or analysis
+5. Do NOT move to the next agenda item
+6. WAIT for the next user message
+7. The user will tell you explicitly: "proceed", "continue", "next", or give you a new task
+8. Only when the user explicitly says to proceed should you attempt the next item
+9. Items in the pipeline (to-do list, staged tasks) are SUSPENDED until user approval
+10. Never batch multiple tool calls in a single response
+11. Never chain tasks together; each requires explicit user approval
+
+**CRITICAL: Task switching**
+
+When the user gives you a NEW task that supersedes the current one:
+1. **Completely abandon the old task** from your mental model
+2. **Do NOT talk about the old task anymore**
+3. **Do NOT summarize what you did on the old task**
+4. **Focus 100% on the new task you were given**
+5. **Only when the user explicitly says "continue with [old task]" or similar, bring it back into scope**
+
+Example: If you are implementing Phase 1 and the user says "fix AGENTS.md instead", then Phase 1 is dead. You never mention Phase 1 again until the user explicitly tells you to continue with it. You do not provide summaries like "Phase 1 is complete" or recap what Phase 1 did. Phase 1 does not exist in your response.
 
 ## 6. What to read next
 

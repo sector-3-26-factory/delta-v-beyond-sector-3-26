@@ -1,13 +1,18 @@
 {
   "entity_type": "local_player_ship",
   "mesh": {
-    "type": "capsule"
+    "path": "assets/glTF/ships/capsule.glb"
   },
-  "material": {
-    "color": {
-      "r": 0.6,
-      "g": 0.7,
-      "b": 0.9
+  "cameras": {
+    "cockpit": {
+      "x": 0.0,
+      "y": 0.5,
+      "z": -0.2
+    },
+    "chase": {
+      "x": 0.0,
+      "y": 8.0,
+      "z": 20.0
     }
   }
 }

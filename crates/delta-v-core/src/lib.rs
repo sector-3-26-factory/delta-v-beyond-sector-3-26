@@ -44,6 +44,8 @@
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 pub mod camera;
+pub mod debug_axes;
+pub mod debug_config;
 pub mod diagnostics;
 pub mod input;
 pub mod keybindings_resource;
@@ -51,6 +53,8 @@ pub mod spawn_sets;
 pub mod state;
 
 pub use camera::{spawn_chase_camera, CameraFollow, PlayerShipEntity};
+pub use debug_axes::{spawn_debug_axes, DebugAxes};
+pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use input::{ActiveActions, InputSet, LogicalAction};
 pub use keybindings_resource::KeybindingsResource;
@@ -101,6 +105,12 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::LoadingWorld), log_loading_world);
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
         app.add_systems(OnEnter(AppState::InGame), (log_in_game, spawn_chase_camera));
+
+        // Spawn debug axes during entity spawning (ADR-0022).
+        app.add_systems(
+            Update,
+            spawn_debug_axes.run_if(in_state(AppState::SpawningEntities)),
+        );
 
         // Chase camera follows the ship every frame during InGame.
         app.add_systems(

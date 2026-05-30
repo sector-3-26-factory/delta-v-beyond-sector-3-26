@@ -1,0 +1,25 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/debug",
+    "title": "Debug configuration",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nConfiguration for debug features: axis indicators, performance profiling, etc. Loaded from assets/config/debug.json with optional user overrides from $XDG_CONFIG_HOME/delta-v-beyond-sector-3-26/debug.json per ADR-0010.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [],
+    "properties": {
+        "show_axis_indicators": {
+            "description": "Master switch for debug axis indicators (RGB arrows from entity origins). When true with empty axis_indicator_entities, show axes for ALL entities. When false, no axes are shown regardless of axis_indicator_entities.",
+            "type": "boolean",
+            "default": false
+        },
+        "axis_indicator_entities": {
+            "description": "Array of entity IDs to show debug axis indicators for. If empty and show_axis_indicators is true, axes are shown for all entities. If non-empty, axes are shown ONLY for these IDs (selective debugging). Use case: debug specific misaligned objects without visual clutter.",
+            "type": "array",
+            "items": {
+                "type": "string",
+                "description": "Entity ID (must match an id in the world definition)"
+            },
+            "default": []
+        }
+    }
+}

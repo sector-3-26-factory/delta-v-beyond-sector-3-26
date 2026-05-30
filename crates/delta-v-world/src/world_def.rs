@@ -34,6 +34,7 @@ pub struct WorldDef {
 /// - A reference to a template file (e.g., `templates/ships/player.json`)
 /// - The entity type discriminator (e.g., `"local_player_ship"`)
 /// - Instance data (position, rotation, scale)
+/// - An optional unique identifier for entity referencing (UI panels, save/load, etc.)
 /// - The loaded template JSON itself
 #[derive(Debug, Deserialize)]
 pub struct EntitySpawn {
@@ -41,6 +42,10 @@ pub struct EntitySpawn {
     pub template: String,
     /// Entity type discriminator (e.g., `"local_player_ship"`).
     pub entity_type: String,
+    /// Unique identifier for this entity instance.
+    /// Used to reference the entity throughout the game (UI panels, save/load, networking, etc.).
+    /// Required; missing `id` is a hard error (ADR-0013).
+    pub id: String,
     /// Spawn position in world coordinates (metres).
     pub position: Vec3Json,
     /// Rotation as a unit quaternion (x, y, z, w).

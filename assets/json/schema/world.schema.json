@@ -36,6 +36,7 @@
       "required": [
         "template",
         "entity_type",
+        "id",
         "position"
       ],
       "properties": {
@@ -45,6 +46,10 @@
         },
         "entity_type": {
           "description": "Entity type discriminator (e.g., \"local_player_ship\", \"sun\"). Used by domain plugins to filter SpawnEntity events.",
+          "type": "string"
+        },
+        "id": {
+          "description": "Unique identifier for this entity instance. Used to reference the entity throughout the game (UI info panels, save/load, networking, etc.). Required; missing id is a hard error (ADR-0013). Must be unique within the world.",
           "type": "string"
         },
         "position": {

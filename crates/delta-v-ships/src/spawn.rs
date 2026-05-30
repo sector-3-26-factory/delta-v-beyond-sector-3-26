@@ -2,11 +2,23 @@
 
 //! Ship entity spawning from templates.
 //!
-//! See ADR-0038 (Entity template system) and ADR-0005 (Plugin architecture).
+//! Per ADR-0038 (entity template system), ships are spawned from templates
+//! loaded and validated by delta-v-json. Templates define mesh paths (glTF),
+//! cameras, and other static properties. All meshes come from glTF files (ADR-0019).
+//!
+//! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
+use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::PlayerShipEntity;
 use delta_v_world::SpawnEntity;
+
+/// Marker component for a pending ship entity waiting for its mesh to load.
+#[derive(Component)]
+pub(crate) struct PendingShipMesh {
+    /// Handle to the glTF asset being loaded.
+    gltf_handle: Handle<Gltf>,
+}
 
 /// Spawns ship entities in response to `SpawnEntity` events.
 ///
@@ -14,63 +26,132 @@ use delta_v_world::SpawnEntity;
 /// - `"local_player_ship"`: Player-controlled ship
 /// - `"npc_ship"`: NPC-controlled ship (future)
 ///
-/// Creates a `PbrBundle` with a primitive capsule mesh and inserts
-/// the `PlayerShip` marker component for player ships.
+/// The event's `template` field contains validated template JSON from delta-v-json.
+#[allow(clippy::needless_pass_by_value)]
 pub fn spawn_ship_from_template(
     mut commands: Commands<'_, '_>,
-    mut meshes: ResMut<'_, Assets<Mesh>>,
-    mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    asset_server: Res<'_, AssetServer>,
     mut events: EventReader<'_, '_, SpawnEntity>,
 ) {
     for event in events.read() {
         if event.entity_type == "local_player_ship" {
-            spawn_player_ship(&mut commands, &mut meshes, &mut materials, event);
+            spawn_player_ship(&mut commands, &asset_server, event);
         }
         // Other ship types (e.g., "npc_ship") handled in future
     }
 }
 
 /// Spawns the player-controlled ship from a template event.
+///
+/// Template is validated by delta-v-json; structure is guaranteed.
+#[allow(
+    clippy::indexing_slicing,
+    clippy::expect_used,
+    clippy::cast_possible_truncation
+)]
 fn spawn_player_ship(
     commands: &mut Commands<'_, '_>,
-    meshes: &mut ResMut<'_, Assets<Mesh>>,
-    materials: &mut ResMut<'_, Assets<StandardMaterial>>,
+    asset_server: &Res<'_, AssetServer>,
     event: &SpawnEntity,
 ) {
-    // Create capsule mesh: 0.5m radius, 2m length.
-    let mesh = meshes.add(Capsule3d::new(0.5, 2.0));
+    // Extract mesh path from validated template JSON (owned String for 'static lifetime).
+    let mesh_path = event.template["mesh"]["path"]
+        .as_str()
+        .expect("mesh.path must be a string")
+        .to_string();
 
-    // Create neutral blue-gray material.
-    let material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.6, 0.7, 0.9),
-        ..default()
-    });
+    // Extract camera positions from validated template JSON.
+    let cockpit_x = event.template["cameras"]["cockpit"]["x"]
+        .as_f64()
+        .expect("x must be a number") as f32;
+    let cockpit_y = event.template["cameras"]["cockpit"]["y"]
+        .as_f64()
+        .expect("y must be a number") as f32;
+    let cockpit_z = event.template["cameras"]["cockpit"]["z"]
+        .as_f64()
+        .expect("z must be a number") as f32;
 
-    // Build transform from event data.
-    let transform = Transform {
-        translation: event.position,
-        rotation: event.rotation,
-        scale: event.scale,
-    };
+    let chase_x = event.template["cameras"]["chase"]["x"]
+        .as_f64()
+        .expect("x must be a number") as f32;
+    let chase_y = event.template["cameras"]["chase"]["y"]
+        .as_f64()
+        .expect("y must be a number") as f32;
+    let chase_z = event.template["cameras"]["chase"]["z"]
+        .as_f64()
+        .expect("z must be a number") as f32;
 
-    let entity_id = commands
-        .spawn(PbrBundle {
-            mesh,
-            material,
-            transform,
-            ..default()
+    // Queue glTF mesh load.
+    let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
+
+    // Spawn ship entity with transform from world definition.
+    // Mark it as pending mesh attachment.
+    let ship_entity = commands
+        .spawn((
+            Transform {
+                translation: event.position,
+                rotation: event.rotation,
+                scale: event.scale,
+            },
+            GlobalTransform::default(),
+            PendingShipMesh { gltf_handle },
+        ))
+        .with_children(|parent| {
+            // Spawn cockpit and chase cameras as child entities.
+            parent.spawn(Transform::from_translation(Vec3::new(
+                cockpit_x, cockpit_y, cockpit_z,
+            )));
+            parent.spawn(Transform::from_translation(Vec3::new(
+                chase_x, chase_y, chase_z,
+            )));
         })
         .id();
 
-    // Store the player ship entity ID in a resource so the chase camera can find it.
-    commands.insert_resource(PlayerShipEntity(entity_id));
+    // Store player ship ID for camera tracking.
+    commands.insert_resource(PlayerShipEntity(ship_entity));
 
     log::info!(
-        "local player ship spawned at position ({:.1}, {:.1}, {:.1})",
+        "local player ship spawned at position ({:.1}, {:.1}, {:.1}) from {}",
         event.position.x,
         event.position.y,
-        event.position.z
+        event.position.z,
+        mesh_path
     );
+}
+
+/// Attaches loaded glTF meshes to pending ship entities.
+///
+/// Once the glTF asset finishes loading, this system extracts the first mesh
+/// from the glTF and attaches it to the ship entity with a `SceneBundle`.
+#[allow(clippy::indexing_slicing, clippy::needless_pass_by_value)]
+pub(crate) fn attach_ship_meshes(
+    mut commands: Commands<'_, '_>,
+    gltf_assets: Res<'_, Assets<Gltf>>,
+    query: Query<'_, '_, (Entity, &PendingShipMesh)>,
+) {
+    for (entity, pending) in query.iter() {
+        if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
+            // Get the first scene from the glTF (should contain the mesh).
+            if !gltf.scenes.is_empty() {
+                let scene_handle = gltf.scenes[0].clone();
+
+                // Attach the scene as a child to the ship entity.
+                commands.entity(entity).insert(SceneBundle {
+                    scene: scene_handle,
+                    transform: Transform::default(),
+                    global_transform: GlobalTransform::default(),
+                    visibility: Visibility::default(),
+                    inherited_visibility: InheritedVisibility::default(),
+                    view_visibility: ViewVisibility::default(),
+                });
+
+                // Remove the pending marker now that mesh is attached.
+                commands.entity(entity).remove::<PendingShipMesh>();
+
+                log::debug!("attached glTF mesh to ship entity");
+            }
+        }
+    }
 }
 
 /// Spawns lighting for the 3-D scene.
