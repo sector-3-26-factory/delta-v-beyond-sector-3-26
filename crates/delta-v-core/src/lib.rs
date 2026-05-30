@@ -44,6 +44,7 @@
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 pub mod camera;
+pub mod debug_axes;
 pub mod debug_config;
 pub mod diagnostics;
 pub mod input;
@@ -52,6 +53,7 @@ pub mod spawn_sets;
 pub mod state;
 
 pub use camera::{spawn_chase_camera, CameraFollow, PlayerShipEntity};
+pub use debug_axes::DebugAxes;
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use input::{ActiveActions, InputSet, LogicalAction};
