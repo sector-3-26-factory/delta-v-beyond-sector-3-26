@@ -1,7 +1,7 @@
 {
   "entity_type": "local_player_ship",
   "mesh": {
-    "path": "assets/glTF/ships/capsule.glb"
+    "path": "glTF/ships/capsule.glb"
   },
   "cameras": {
     "cockpit": {

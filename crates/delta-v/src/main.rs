@@ -55,6 +55,18 @@ fn main() {
                     }),
                     ..default()
                 })
+                .set(bevy::asset::AssetPlugin {
+                    file_path: std::env::var("CARGO_MANIFEST_DIR")
+                        .map(|dir| {
+                            std::path::PathBuf::from(dir)
+                                .join("../..")
+                                .join("assets")
+                                .to_string_lossy()
+                                .to_string()
+                        })
+                        .unwrap_or_else(|_| "assets".to_string()),
+                    ..default()
+                })
                 .set(bevy::log::LogPlugin {
                     #[cfg(not(feature = "dev"))]
                     filter: "warn,delta_v=info,delta_v_core=info,delta_v_config=info,\

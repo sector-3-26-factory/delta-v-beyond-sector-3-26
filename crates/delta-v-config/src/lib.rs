@@ -56,7 +56,7 @@ pub use resources::KeybindingsResource;
 use bevy::prelude::*;
 use delta_v_core::{keybindings_resource, AppState};
 
-use crate::loader::{load_diagnostics, load_keybindings};
+use crate::loader::{load_debug, load_diagnostics, load_keybindings};
 
 /// Configuration plugin: loads and validates all JSON config files.
 ///
@@ -118,6 +118,19 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
         diagnostics_config.frame_time_warn_threshold_secs() * 1000.0
     );
     commands.insert_resource(diagnostics_config);
+
+    // Debug configuration (ADR-0022, ADR-0041).
+    // INVARIANT: a missing or invalid debug config file is a hard startup
+    // error (ADR-0013). The panic is intentional; no recovery is possible.
+    #[allow(clippy::panic)]
+    let debug_config = load_debug().unwrap_or_else(|e| {
+        panic!("fatal: failed to load debug config: {e}");
+    });
+    log::info!(
+        "debug config loaded (show_axis_indicators: {})",
+        debug_config.show_axis_indicators
+    );
+    commands.insert_resource(debug_config);
 
     // Transition to the next phase.
     next.set(AppState::LoadingWorld);

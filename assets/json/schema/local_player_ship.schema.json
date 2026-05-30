@@ -48,30 +48,30 @@
           "$ref": "#/$defs/vec3"
         }
       }
-    },
-    "$defs": {
-      "vec3": {
-        "description": "3-component vector (x, y, z) in metres.",
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "x",
-          "y",
-          "z"
-        ],
-        "properties": {
-          "x": {
-            "type": "number",
-            "description": "X component (metres)."
-          },
-          "y": {
-            "type": "number",
-            "description": "Y component (metres)."
-          },
-          "z": {
-            "type": "number",
-            "description": "Z component (metres)."
-          }
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "description": "3-component vector (x, y, z) in metres.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X component (metres)."
+        },
+        "y": {
+          "type": "number",
+          "description": "Y component (metres)."
+        },
+        "z": {
+          "type": "number",
+          "description": "Z component (metres)."
         }
       }
     }
