@@ -93,15 +93,63 @@ agent must know:
   and is approved on review. See
   [ADR-0028](docs/adr/0028-third-party-dependency-policy.md) for the
   related dependency rule.
-- **JSON defaults in schema only** (ADR-0039 **strictly enforced**):
+- **JSON defaults in schema only** (ADR-0012, ADR-0013, ADR-0040 **strictly enforced**):
   - ❌ No `#[serde(default = "...")]` on JSON-backed struct fields
   - ❌ No custom `fn default_X()` functions
   - ❌ No `Option<T>` for fields that always exist after schema validation
   - ✅ All defaults in `*.schema.json` only
+  - ✅ Use the `delta-v-json` crate for all JSON loading (see [ADR-0040](docs/adr/0040-delta-v-json-for-json-validation.md))
   - See [ADR-0039](docs/adr/0039-enforcement-of-json-only-defaults.md) for
     code review checklist and rationale. Violations are code review failures.
 
-## 5. What to read next
+## 5. AI output handling (remote environment)
+
+The remote environment does not return command output directly to the agent.
+Instead, use the following pattern:
+
+**Setup (one-time):**
+- Directory `.ai-tmp/` exists at project root
+- `.ai-tmp/` is in `.gitignore` (already configured)
+
+**Workflow:**
+1. Run a command and redirect output to `.ai-tmp/`:
+   ```bash
+   cargo test --workspace > .ai-tmp/test-output.txt 2>&1
+   ```
+   **Important:** Redirection order matters! `> file 2>&1` (correct) vs `2>&1 > file` (wrong).
+   - ✅ `> .ai-tmp/file.txt 2>&1` — stdout redirected first, then stderr joined to stdout
+   - ❌ `2>&1 > .ai-tmp/file.txt` — stderr joined to stdout, then only stdout redirected (stderr lost!)
+2. Read the file back with the `read_file` tool:
+   ```
+   read_file: .ai-tmp/test-output.txt
+   ```
+
+**Benefits:**
+- Output files stay temporary and never commit to git
+- `.gitignore` prevents git tracking but doesn't block agent reading
+- Clear separation: `.ai-tmp/` = scratch space, project files = persistent
+
+**Why this works:**
+- `.gitignore` entries only prevent git from tracking files
+- Agent `read_file` tool can read any file on disk, including those in `.gitignore`
+- This avoids temp files accumulating in the project directory
+
+**Important: Wait for builds to complete**
+
+Many commands (`cargo test`, `cargo run`, `cargo build`, etc.) require a full build
+that can take several minutes, especially the first time. 
+
+**Agent behavior:**
+- Do NOT assume the command completed immediately
+- Do NOT provide a summary after redirecting to `.ai-tmp/`
+- Do NOT move to the next agenda item
+- Run the command, then try reading the output file
+- If the file is empty, wait for user input (user will provide output or ask you to proceed)
+- Continue waiting: do not assume completion and move on
+
+This prevents misleading summaries and premature progress assumptions based on incomplete builds.
+
+## 6. What to read next
 
 In order:
 

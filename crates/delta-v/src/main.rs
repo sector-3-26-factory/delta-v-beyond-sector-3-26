@@ -45,14 +45,33 @@ fn main() {
     print_x11_hint();
 
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Delta-V beyond Sector 3.26".to_string(),
-                resolution: (1280.0, 720.0).into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Delta-V beyond Sector 3.26".to_string(),
+                        resolution: (1280.0, 720.0).into(),
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(bevy::log::LogPlugin {
+                    #[cfg(not(feature = "dev"))]
+                    filter: "warn,delta_v=info,delta_v_core=info,delta_v_config=info,\
+                             delta_v_physics=info,delta_v_assets=info,delta_v_ships=info,\
+                             delta_v_propulsion=info,delta_v_weapons=info,delta_v_stations=info,\
+                             delta_v_items=info,delta_v_world=info"
+                        .to_string(),
+                    #[cfg(feature = "dev")]
+                    filter: "warn,delta_v=debug,delta_v_core=debug,delta_v_config=debug,\
+                             delta_v_physics=debug,delta_v_assets=debug,delta_v_ships=debug,\
+                             delta_v_propulsion=debug,delta_v_weapons=debug,delta_v_stations=debug,\
+                             delta_v_items=debug,delta_v_world=debug"
+                        .to_string(),
+                    level: bevy::log::Level::TRACE,
+                    ..default()
+                }),
+        )
         // Technical plugins — must be added before domain plugins.
         // CorePlugin owns AppState and must come first.
         .add_plugins(CorePlugin)

@@ -18,10 +18,37 @@ use directories::ProjectDirs;
 use serde_json::Value;
 
 use crate::{error::ConfigError, keybindings::Keybindings};
+use delta_v_core::DiagnosticsConfig;
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
+
+/// Loads and validates diagnostics configuration.
+///
+/// Steps (per ADR-0012, ADR-0013, ADR-0039):
+/// 1. Read `assets/config/diagnostics.json` (hard error if missing).
+/// 2. Validate against `assets/json/schema/diagnostics.schema.json`.
+/// 3. Fill schema `default` values for omitted optional fields.
+/// 4. Deserialise into [`DiagnosticsConfig`].
+///
+/// # Errors
+/// Returns [`ConfigError`] if any step fails. All errors include the
+/// file path and a precise description (ADR-0016).
+pub fn load_diagnostics() -> Result<DiagnosticsConfig, ConfigError> {
+    let config_path = PathBuf::from("assets/config/diagnostics.json");
+    let schema_path = PathBuf::from("assets/json/schema/diagnostics.schema.json");
+
+    // 1 + 2 + 3: load, validate, fill defaults via delta-v-json.
+    let config_value = json_loader::load_validated(&config_path, &schema_path)
+        .map_err(|e| map_json_error(e, &config_path))?;
+
+    // 4: deserialise.
+    serde_json::from_value(config_value).map_err(|e| ConfigError::Parse {
+        path: config_path,
+        source: e,
+    })
+}
 
 /// Loads, validates and merges keybindings configuration.
 ///

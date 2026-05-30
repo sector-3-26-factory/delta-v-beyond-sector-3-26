@@ -24,6 +24,10 @@ flamegraph.svg
 .env
 .env.local
 
+# AI temporary output directory
+# Agent writes command outputs here temporarily, then reads them back.
+.ai-tmp/
+
 # Local scratch notes that are not part of the project history.
 # Used to hand things back and forth with AI agents during a session.
 docs/pending-ai-steps.md
