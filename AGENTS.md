@@ -217,18 +217,87 @@ When the user gives you a NEW task that supersedes the current one:
 
 Example: If you are implementing Phase 1 and the user says "fix AGENTS.md instead", then Phase 1 is dead. You never mention Phase 1 again until the user explicitly tells you to continue with it. You do not provide summaries like "Phase 1 is complete" or recap what Phase 1 did. Phase 1 does not exist in your response.
 
-## 6. What to read next
+## 6. MANDATORY SEQUENCE: Read all ADRs before doing anything else
 
-In order:
+**NON-NEGOTIABLE: This sequence must be followed in order before you take any action.**
 
-1. **[`docs/adr/README.md`](docs/adr/README.md) – READ THIS FIRST.** This is the complete
-   index of all ADRs. You must read this file and understand which ADRs exist.
-2. **Then read every ADR file listed in that index.** Not "the relevant ones". Not "the ones
-   that seem related to your task". **Every single ADR.** The index will tell you which files
-   to read. Read them all before proceeding with any work.
-3. [`docs/workflow.md`](docs/workflow.md) -- branching, PRs, commits, CI.
-4. [`docs/architecture.md`](docs/architecture.md) -- the big-picture
+Before reading task descriptions, examining code, running commands, or using any tool, you MUST:
+
+1. **IMMEDIATELY read `docs/adr/README.md`** to obtain the complete list of all ADRs.
+2. **IMMEDIATELY read EVERY SINGLE ADR file listed in that index**, starting from ADR-0001 
+   and reading sequentially through the last ADR (currently ADR-0042). 
+   - Do not skip any ADR.
+   - Do not filter or decide "that one is not relevant".
+   - Do not read them out of order.
+   - Read all of them.
+3. **ONLY AFTER you have read every ADR from first to last** may you:
+   - Read task descriptions
+   - Examine project files
+   - Run any terminal command
+   - Use any tool
+   - Respond to the user
+
+**VIOLATION:** If you attempt to do any work before reading all ADRs in sequence, you have 
+violated this binding constraint. There is no exception, no context where this is acceptable.
+
+**VERIFICATION REQUIRED:** After reading the last ADR in the index, you MUST explicitly 
+state in your response:
+
+```
+All ADRs read (ADR-0001 through ADR-NNNN).
+```
+
+Then STOP and WAIT for the user's confirmation before proceeding to any other task.
+
+---
+
+## 7. What to read after ADRs are complete
+
+After you have verified that all ADRs are read, proceed with:
+
+1. [`docs/workflow.md`](docs/workflow.md) -- branching, PRs, commits, CI.
+2. [`docs/architecture.md`](docs/architecture.md) -- the big-picture
    architecture, which references the ADRs.
-5. [`docs/roadmap.md`](docs/roadmap.md) -- the milestone roadmap.
+3. [`docs/roadmap.md`](docs/roadmap.md) -- the milestone roadmap.
 
 When in doubt, ask in a pull request comment before writing code.
+
+## 8. MANDATORY: Agents NEVER commit changes
+
+**ABSOLUTE RULE: Under no circumstances may an agent execute `git commit`, `git push`, `git merge`, or any other git command that modifies the repository history or branches.**
+
+Git operations are reserved exclusively for human developers. This includes:
+
+- ❌ `git commit` (any variant)
+- ❌ `git push`
+- ❌ `git merge`
+- ❌ `git rebase`
+- ❌ `git cherry-pick`
+- ❌ `git tag`
+- ❌ `git branch -d` (or any branch deletion)
+- ❌ `git reset` (any form of history rewriting)
+- ❌ Any other git command that modifies history or branches
+
+**The only git operations an agent may perform are read-only:**
+
+- ✅ `git log` (viewing history)
+- ✅ `git diff` (viewing changes)
+- ✅ `git status` (checking state)
+- ✅ `git show` (viewing commits)
+- ✅ `git branch -l` (listing branches)
+
+**After making code changes:**
+
+1. Use the edit tools (`edit_existing_file`, `create_new_file`, etc.) to modify files.
+2. The user will see the changes in their editor.
+3. The user will review the changes.
+4. The user will commit and push when satisfied.
+
+**Why this rule exists:**
+
+- Only humans decide which changes go into the repository and when.
+- Only humans write commit messages and are accountable for what they claim in the message.
+- Only humans decide on branching strategy and integration timing.
+- Accidental agent commits can corrupt the repository state and blame history.
+
+**VIOLATION:** If an agent attempts to run any git write command, it has violated this binding constraint. There is no exception, no context where this is acceptable.
