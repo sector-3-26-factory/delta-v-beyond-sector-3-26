@@ -132,9 +132,14 @@ fn load_world_system(
             entity_spawn.scale.z,
         );
 
-        let spawn_event = SpawnEntity::new(entity_spawn.entity_type.clone(), template, pos)
-            .with_rotation(rot)
-            .with_scale(scale);
+        let spawn_event = SpawnEntity::new(
+            entity_spawn.id.clone(),
+            entity_spawn.entity_type.clone(),
+            template,
+            pos,
+        )
+        .with_rotation(rot)
+        .with_scale(scale);
 
         events.send(spawn_event);
     }

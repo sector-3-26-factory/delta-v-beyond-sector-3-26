@@ -53,7 +53,7 @@ pub mod spawn_sets;
 pub mod state;
 
 pub use camera::{spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShipEntity};
-pub use debug_axes::{spawn_debug_axes, DebugAxes};
+pub use debug_axes::{mark_debug_axes, spawn_debug_axes, DebugAxes, DebugAxesEligible};
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use input::{ActiveActions, InputSet, LogicalAction};
@@ -106,10 +106,25 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
         app.add_systems(OnEnter(AppState::InGame), (log_in_game, spawn_chase_camera));
 
-        // Spawn debug axes during entity spawning (ADR-0022).
+        // Configure WorldSpawnSet ordering: MarkDebugAxes runs after all domain spawning.
+        // Per ADR-0005 (plugin architecture), debug visualization is decoupled from domains.
+        // Sets must be configured in Update schedule, not OnEnter (per Bevy system scheduling).
+        app.configure_sets(
+            Update,
+            WorldSpawnSet::MarkDebugAxes
+                .after(WorldSpawnSet::SpawnShips)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+
+        // Mark eligible entities with debug axes, then spawn axis meshes (ADR-0022, ADR-0005).
+        // mark_debug_axes converts DebugAxesEligible → DebugAxes based on config.
+        // spawn_debug_axes renders the axes for marked entities.
+        // Both run in Update during SpawningEntities, after all domain spawn systems.
         app.add_systems(
             Update,
-            spawn_debug_axes.run_if(in_state(AppState::SpawningEntities)),
+            (debug_axes::mark_debug_axes, spawn_debug_axes)
+                .chain()
+                .in_set(WorldSpawnSet::MarkDebugAxes),
         );
 
         // Chase camera follows the ship every frame during InGame.

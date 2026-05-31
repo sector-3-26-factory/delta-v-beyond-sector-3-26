@@ -17,6 +17,10 @@ use serde_json::Value;
 /// to own its spawn logic (ADR-0005).
 #[derive(Event, Debug, Clone)]
 pub struct SpawnEntity {
+    /// Unique identifier for this entity instance (from world definition).
+    /// Used for debug filtering, save/load, networking, and player-facing UI.
+    pub id: String,
+
     /// The entity type discriminator (e.g., `"local_player_ship"`, `"sun"`).
     /// Must match an `entity_type` in a template JSON file.
     pub entity_type: String,
@@ -40,12 +44,14 @@ impl SpawnEntity {
     ///
     /// # Arguments
     ///
+    /// * `id` - Unique identifier for this entity instance.
     /// * `entity_type` - Discriminator for the entity type.
     /// * `template` - Loaded template JSON.
     /// * `position` - Spawn position in metres.
     #[allow(clippy::missing_const_for_fn)]
-    pub fn new(entity_type: String, template: Value, position: Vec3) -> Self {
+    pub fn new(id: String, entity_type: String, template: Value, position: Vec3) -> Self {
         Self {
+            id,
             entity_type,
             template,
             position,

@@ -11,14 +11,17 @@ use bevy::prelude::*;
 
 /// System sets for controlling the order of entity spawning.
 ///
-/// Each set represents a category of entities. Systems are ordered via
-/// `.after()` to respect dependencies:
+/// Each set represents a category of entities or post-processing task.
+/// Systems are ordered via `.after()` to respect dependencies:
 ///
 /// ```ignore
-/// SunSpawner -> PlanetSpawner -> MoonSpawner -> StationSpawner -> ShipSpawner
+/// SunSpawner -> PlanetSpawner -> MoonSpawner -> StationSpawner ->
+/// ShipSpawner -> MarkDebugAxes
 /// ```
 ///
-/// All spawning happens in `OnEnter(AppState::SpawningEntities)`.
+/// All spawning and post-processing happens in `OnEnter(AppState::SpawningEntities)`.
+/// Per ADR-0005 (plugin architecture), `MarkDebugAxes` decouples debug visualization
+/// from domain plugins.
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WorldSpawnSet {
     /// Spawn suns and stars. No dependencies.
@@ -36,6 +39,10 @@ pub enum WorldSpawnSet {
     /// Spawn asteroids and debris. Depends on: (none, but runs after stations).
     SpawnAsteroids,
 
-    /// Spawn player-controlled and NPC ships. Runs last.
+    /// Spawn player-controlled and NPC ships. Runs last in domain spawning.
     SpawnShips,
+
+    /// Mark eligible entities with debug axes. Runs after all domain spawning.
+    /// Per ADR-0005, this decouples debug visualization from domain plugins.
+    MarkDebugAxes,
 }
