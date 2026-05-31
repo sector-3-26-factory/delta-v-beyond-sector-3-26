@@ -5,9 +5,9 @@ repository. It collects the rules they must respect when modifying code,
 configuration or documentation.
 
 > **If you are an AI agent reading this**: read this file completely
-> before producing any change. Then read every Architecture Decision
-> Record under `docs/adr/` before making decisions that touch the
-> corresponding area. Never silently ignore an ADR.
+> before producing any change. Then read **EVERY SINGLE** Architecture Decision
+> Record under `docs/adr/` before making **ANY** decision or change. 
+> You do not decide which ADRs are relevant. **ALL ADRs are always relevant.**
 
 Scope: this file is written for AI agents. The project accepts
 external human contributions only in narrowly defined areas (notably
@@ -25,10 +25,10 @@ constraints on every change.
 
 Rules:
 
-1. **Read the index** at [`docs/adr/README.md`](docs/adr/README.md) before
-   starting work that might touch architecture, conventions, tooling,
-   networking, physics, configuration, assets, or any cross-cutting
-   concern.
+1. **READ THE ENTIRE ADR INDEX** at [`docs/adr/README.md`](docs/adr/README.md) first.
+   Then **read every single ADR file listed there**. You do not filter, you do not
+   prioritize, you do not skip. **Read them all.** The ADR index shows which ADRs exist.
+   Treat the list as mandatory reading, not a menu.
 2. **Honor every ADR in status `Accepted`.** If a change requires
    violating an Accepted ADR, the ADR must be superseded by a new ADR
    *first*, in a separate commit / pull request, before the change is
@@ -221,11 +221,14 @@ Example: If you are implementing Phase 1 and the user says "fix AGENTS.md instea
 
 In order:
 
-1. [`docs/adr/README.md`](docs/adr/README.md) -- index of all ADRs.
-2. [`docs/workflow.md`](docs/workflow.md) -- branching, PRs, commits, CI.
-3. [`docs/architecture.md`](docs/architecture.md) -- the big-picture
+1. **[`docs/adr/README.md`](docs/adr/README.md) – READ THIS FIRST.** This is the complete
+   index of all ADRs. You must read this file and understand which ADRs exist.
+2. **Then read every ADR file listed in that index.** Not "the relevant ones". Not "the ones
+   that seem related to your task". **Every single ADR.** The index will tell you which files
+   to read. Read them all before proceeding with any work.
+3. [`docs/workflow.md`](docs/workflow.md) -- branching, PRs, commits, CI.
+4. [`docs/architecture.md`](docs/architecture.md) -- the big-picture
    architecture, which references the ADRs.
-4. [`docs/roadmap.md`](docs/roadmap.md) -- the milestone roadmap.
-5. The ADR(s) closest to the area you are about to touch.
+5. [`docs/roadmap.md`](docs/roadmap.md) -- the milestone roadmap.
 
 When in doubt, ask in a pull request comment before writing code.
