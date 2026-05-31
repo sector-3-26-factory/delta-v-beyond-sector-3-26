@@ -11,6 +11,10 @@
 use bevy::prelude::Resource;
 use serde::Deserialize;
 
+#[cfg(test)]
+#[path = "debug_config_tests.rs"]
+mod debug_config_tests;
+
 /// Debug configuration loaded from `debug.json`.
 ///
 /// Controls debug features like axis indicators and profiling.

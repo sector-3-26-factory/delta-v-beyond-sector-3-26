@@ -5,9 +5,9 @@ repository. It collects the rules they must respect when modifying code,
 configuration or documentation.
 
 > **If you are an AI agent reading this**: read this file completely
-> before producing any change. Then read every Architecture Decision
-> Record under `docs/adr/` before making decisions that touch the
-> corresponding area. Never silently ignore an ADR.
+> before producing any change. Then read **EVERY SINGLE** Architecture Decision
+> Record under `docs/adr/` before making **ANY** decision or change. 
+> You do not decide which ADRs are relevant. **ALL ADRs are always relevant.**
 
 Scope: this file is written for AI agents. The project accepts
 external human contributions only in narrowly defined areas (notably
@@ -25,10 +25,10 @@ constraints on every change.
 
 Rules:
 
-1. **Read the index** at [`docs/adr/README.md`](docs/adr/README.md) before
-   starting work that might touch architecture, conventions, tooling,
-   networking, physics, configuration, assets, or any cross-cutting
-   concern.
+1. **READ THE ENTIRE ADR INDEX** at [`docs/adr/README.md`](docs/adr/README.md) first.
+   Then **read every single ADR file listed there**. You do not filter, you do not
+   prioritize, you do not skip. **Read them all.** The ADR index shows which ADRs exist.
+   Treat the list as mandatory reading, not a menu.
 2. **Honor every ADR in status `Accepted`.** If a change requires
    violating an Accepted ADR, the ADR must be superseded by a new ADR
    *first*, in a separate commit / pull request, before the change is
@@ -134,6 +134,26 @@ Instead, use the following pattern:
 - Agent `read_file` tool can read any file on disk, including those in `.gitignore`
 - This avoids temp files accumulating in the project directory
 
+**CRITICAL: Working directory**
+
+The `run_terminal_command` tool **already executes in the correct repository root directory**.
+Do NOT use `cd` commands to change directories.
+
+**INCORRECT:**
+```bash
+cd /workspace && python3 script.py > .ai-tmp/out.txt 2>&1
+```
+This fails because:
+- The actual working directory may not be `/workspace`
+- Hardcoding paths breaks portability across machines and environments
+- It adds unnecessary complexity
+
+**CORRECT:**
+```bash
+python3 script.py > .ai-tmp/out.txt 2>&1
+```
+The command runs in the repository root automatically. Reference files relative to the current directory.
+
 **CRITICAL: Terminal commands take time**
 
 Many commands (`cargo test`, `cargo run`, `cargo build`, etc.) require a full build
@@ -197,15 +217,87 @@ When the user gives you a NEW task that supersedes the current one:
 
 Example: If you are implementing Phase 1 and the user says "fix AGENTS.md instead", then Phase 1 is dead. You never mention Phase 1 again until the user explicitly tells you to continue with it. You do not provide summaries like "Phase 1 is complete" or recap what Phase 1 did. Phase 1 does not exist in your response.
 
-## 6. What to read next
+## 6. MANDATORY SEQUENCE: Read all ADRs before doing anything else
 
-In order:
+**NON-NEGOTIABLE: This sequence must be followed in order before you take any action.**
 
-1. [`docs/adr/README.md`](docs/adr/README.md) -- index of all ADRs.
-2. [`docs/workflow.md`](docs/workflow.md) -- branching, PRs, commits, CI.
-3. [`docs/architecture.md`](docs/architecture.md) -- the big-picture
+Before reading task descriptions, examining code, running commands, or using any tool, you MUST:
+
+1. **IMMEDIATELY read `docs/adr/README.md`** to obtain the complete list of all ADRs.
+2. **IMMEDIATELY read EVERY SINGLE ADR file listed in that index**, starting from ADR-0001 
+   and reading sequentially through the last ADR (currently ADR-0042). 
+   - Do not skip any ADR.
+   - Do not filter or decide "that one is not relevant".
+   - Do not read them out of order.
+   - Read all of them.
+3. **ONLY AFTER you have read every ADR from first to last** may you:
+   - Read task descriptions
+   - Examine project files
+   - Run any terminal command
+   - Use any tool
+   - Respond to the user
+
+**VIOLATION:** If you attempt to do any work before reading all ADRs in sequence, you have 
+violated this binding constraint. There is no exception, no context where this is acceptable.
+
+**VERIFICATION REQUIRED:** After reading the last ADR in the index, you MUST explicitly 
+state in your response:
+
+```
+All ADRs read (ADR-0001 through ADR-NNNN).
+```
+
+Then STOP and WAIT for the user's confirmation before proceeding to any other task.
+
+---
+
+## 7. What to read after ADRs are complete
+
+After you have verified that all ADRs are read, proceed with:
+
+1. [`docs/workflow.md`](docs/workflow.md) -- branching, PRs, commits, CI.
+2. [`docs/architecture.md`](docs/architecture.md) -- the big-picture
    architecture, which references the ADRs.
-4. [`docs/roadmap.md`](docs/roadmap.md) -- the milestone roadmap.
-5. The ADR(s) closest to the area you are about to touch.
+3. [`docs/roadmap.md`](docs/roadmap.md) -- the milestone roadmap.
 
 When in doubt, ask in a pull request comment before writing code.
+
+## 8. MANDATORY: Agents NEVER commit changes
+
+**ABSOLUTE RULE: Under no circumstances may an agent execute `git commit`, `git push`, `git merge`, or any other git command that modifies the repository history or branches.**
+
+Git operations are reserved exclusively for human developers. This includes:
+
+- ❌ `git commit` (any variant)
+- ❌ `git push`
+- ❌ `git merge`
+- ❌ `git rebase`
+- ❌ `git cherry-pick`
+- ❌ `git tag`
+- ❌ `git branch -d` (or any branch deletion)
+- ❌ `git reset` (any form of history rewriting)
+- ❌ Any other git command that modifies history or branches
+
+**The only git operations an agent may perform are read-only:**
+
+- ✅ `git log` (viewing history)
+- ✅ `git diff` (viewing changes)
+- ✅ `git status` (checking state)
+- ✅ `git show` (viewing commits)
+- ✅ `git branch -l` (listing branches)
+
+**After making code changes:**
+
+1. Use the edit tools (`edit_existing_file`, `create_new_file`, etc.) to modify files.
+2. The user will see the changes in their editor.
+3. The user will review the changes.
+4. The user will commit and push when satisfied.
+
+**Why this rule exists:**
+
+- Only humans decide which changes go into the repository and when.
+- Only humans write commit messages and are accountable for what they claim in the message.
+- Only humans decide on branching strategy and integration timing.
+- Accidental agent commits can corrupt the repository state and blame history.
+
+**VIOLATION:** If an agent attempts to run any git write command, it has violated this binding constraint. There is no exception, no context where this is acceptable.

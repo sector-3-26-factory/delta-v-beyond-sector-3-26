@@ -30,5 +30,6 @@ delta-v-items = { path = "../delta-v-items", version = "0.0.1" }
 delta-v-world = { path = "../delta-v-world", version = "0.0.1" }
 
 bevy = { workspace = true }
+bevy_mod_billboard = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }

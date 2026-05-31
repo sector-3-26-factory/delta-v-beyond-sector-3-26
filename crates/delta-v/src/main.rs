@@ -25,6 +25,7 @@
 //! See ADR-0005 (plugin architecture).
 
 use bevy::prelude::*;
+use bevy_mod_billboard::prelude::*;
 use delta_v_assets::AssetsPlugin;
 use delta_v_config::ConfigPlugin;
 use delta_v_core::CorePlugin;
@@ -55,6 +56,18 @@ fn main() {
                     }),
                     ..default()
                 })
+                .set(bevy::asset::AssetPlugin {
+                    file_path: std::env::var("CARGO_MANIFEST_DIR")
+                        .map(|dir| {
+                            std::path::PathBuf::from(dir)
+                                .join("../..")
+                                .join("assets")
+                                .to_string_lossy()
+                                .to_string()
+                        })
+                        .unwrap_or_else(|_| "assets".to_string()),
+                    ..default()
+                })
                 .set(bevy::log::LogPlugin {
                     #[cfg(not(feature = "dev"))]
                     filter: "warn,delta_v=info,delta_v_core=info,delta_v_config=info,\
@@ -76,6 +89,7 @@ fn main() {
         // CorePlugin owns AppState and must come first.
         .add_plugins(CorePlugin)
         .add_plugins(ConfigPlugin)
+        .add_plugins(BillboardPlugin)
         .add_plugins(PhysicsPlugin)
         .add_plugins(AssetsPlugin)
         .add_plugins(NetPlugin)

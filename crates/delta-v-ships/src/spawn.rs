@@ -10,7 +10,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::PlayerShipEntity;
+use delta_v_core::{ChaseCameraOffset, DebugAxesEligible, PlayerShipEntity};
 use delta_v_world::SpawnEntity;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
@@ -84,8 +84,24 @@ fn spawn_player_ship(
     // Queue glTF mesh load.
     let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
 
+    // Calculate axis length as 2× the largest expansion along any axis (ADR-0006: coordinate system).
+    let axis_length = (event
+        .scale
+        .x
+        .abs()
+        .max(event.scale.y.abs())
+        .max(event.scale.z.abs()))
+        * 2.0;
+
+    log::debug!(
+        "spawn_player_ship: calculated axis_length={} from scale {:?}",
+        axis_length,
+        event.scale
+    );
+
     // Spawn ship entity with transform from world definition.
-    // Mark it as pending mesh attachment.
+    // Mark it as pending mesh attachment and eligible for debug axes (ADR-0022, ADR-0005).
+    // Use event.id (unique entity identifier) for debug filtering, not entity_type (ADR-0038).
     let ship_entity = commands
         .spawn((
             Transform {
@@ -95,6 +111,7 @@ fn spawn_player_ship(
             },
             GlobalTransform::default(),
             PendingShipMesh { gltf_handle },
+            DebugAxesEligible::new(event.id.clone(), axis_length),
         ))
         .with_children(|parent| {
             // Spawn cockpit and chase cameras as child entities.
@@ -107,8 +124,9 @@ fn spawn_player_ship(
         })
         .id();
 
-    // Store player ship ID for camera tracking.
+    // Store player ship ID and chase camera offset for camera tracking.
     commands.insert_resource(PlayerShipEntity(ship_entity));
+    commands.insert_resource(ChaseCameraOffset(Vec3::new(chase_x, chase_y, chase_z)));
 
     log::info!(
         "local player ship spawned at position ({:.1}, {:.1}, {:.1}) from {}",
