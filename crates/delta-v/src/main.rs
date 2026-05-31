@@ -25,6 +25,7 @@
 //! See ADR-0005 (plugin architecture).
 
 use bevy::prelude::*;
+use bevy_mod_billboard::prelude::*;
 use delta_v_assets::AssetsPlugin;
 use delta_v_config::ConfigPlugin;
 use delta_v_core::CorePlugin;
@@ -88,6 +89,7 @@ fn main() {
         // CorePlugin owns AppState and must come first.
         .add_plugins(CorePlugin)
         .add_plugins(ConfigPlugin)
+        .add_plugins(BillboardPlugin)
         .add_plugins(PhysicsPlugin)
         .add_plugins(AssetsPlugin)
         .add_plugins(NetPlugin)

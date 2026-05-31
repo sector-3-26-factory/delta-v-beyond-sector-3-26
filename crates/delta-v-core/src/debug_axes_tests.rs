@@ -4,14 +4,12 @@
 //!
 //! Tests verify that:
 //! 1. `DebugAxesEligible` marker can be created and cloned
-//! 2. `DebugAxes` component preserves entity_id and axis_length
+//! 2. `DebugAxes` component preserves `entity_id` and `axis_length`
 //! 3. `DebugConfig::should_show_axes_for()` correctly filters based on configuration
 //!
 //! Per ADR-0021 (testing strategy), unit tests are in sibling `_tests.rs` files.
-//! System behavior (mark_debug_axes, spawn_debug_axes) is tested indirectly via
-//! DebugConfig filtering logic, which is the decision point for visibility.
-
-#![cfg(test)]
+//! System behavior (`mark_debug_axes`, `spawn_debug_axes`) is tested indirectly via
+//! `DebugConfig` filtering logic, which is the decision point for visibility.
 
 use crate::debug_axes::{DebugAxes, DebugAxesEligible};
 use crate::debug_config::DebugConfig;
@@ -20,14 +18,14 @@ use crate::debug_config::DebugConfig;
 fn test_debug_axes_eligible_creation() {
     let eligible = DebugAxesEligible::new("ship_1".to_string(), 2.5);
     assert_eq!(eligible.entity_id, "ship_1");
-    assert_eq!(eligible.axis_length, 2.5);
+    assert!((eligible.axis_length - 2.5).abs() < 1e-6);
 }
 
 #[test]
 fn test_debug_axes_creation() {
     let axes = DebugAxes::new("station_main".to_string(), 3.0);
     assert_eq!(axes.entity_id, "station_main");
-    assert_eq!(axes.axis_length, 3.0);
+    assert!((axes.axis_length - 3.0).abs() < 1e-6);
 }
 
 #[test]
@@ -35,7 +33,7 @@ fn test_debug_axes_eligible_clone() {
     let eligible = DebugAxesEligible::new("entity_1".to_string(), 1.5);
     let cloned = eligible.clone();
     assert_eq!(cloned.entity_id, eligible.entity_id);
-    assert_eq!(cloned.axis_length, eligible.axis_length);
+    assert!((cloned.axis_length - eligible.axis_length).abs() < 1e-6);
 }
 
 #[test]
@@ -43,7 +41,7 @@ fn test_debug_axes_clone() {
     let axes = DebugAxes::new("entity_1".to_string(), 1.5);
     let cloned = axes.clone();
     assert_eq!(cloned.entity_id, axes.entity_id);
-    assert_eq!(cloned.axis_length, axes.axis_length);
+    assert!((cloned.axis_length - axes.axis_length).abs() < 1e-6);
 }
 
 #[test]

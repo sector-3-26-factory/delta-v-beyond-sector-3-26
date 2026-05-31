@@ -6,8 +6,6 @@
 //! the `show_axis_indicators` master switch and `axis_indicator_entities` filtering.
 //! Per ADR-0021 (testing strategy), unit tests live in sibling `_tests.rs` files.
 
-#![cfg(test)]
-
 use crate::debug_config::DebugConfig;
 
 #[test]

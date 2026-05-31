@@ -172,11 +172,7 @@ where
     log::debug!("loading defaults from {}", defaults_path.display());
     let mut merged = json_loader::load_validated(&defaults_path, &schema_path)
         .map_err(|e| map_json_error(e, &defaults_path))?;
-    log::debug!(
-        "defaults loaded from {}: {}",
-        defaults_path.display(),
-        merged
-    );
+    log::debug!("defaults loaded from {}: {merged}", defaults_path.display());
 
     // 3: try user override.
     if let Some(user_path) = user_path_fn() {
@@ -184,12 +180,12 @@ where
             log::info!("user override found at {}", user_path.display());
             let user_value =
                 json_loader::read_json(&user_path).map_err(|e| map_json_error(e, &user_path))?;
-            log::debug!("user override content: {}", user_value);
+            log::debug!("user override content: {user_value}");
             deep_merge(&mut merged, user_value);
-            log::debug!("merged config: {}", merged);
+            log::debug!("merged config: {merged}");
             json_loader::validate(&merged, &schema_path, &user_path)
                 .map_err(|e| map_json_error(e, &user_path))?;
-            log::info!("user override for {} validated and merged", name);
+            log::info!("user override for {name} validated and merged");
         } else {
             log::debug!(
                 "no user override at {} (file does not exist)",
@@ -199,11 +195,7 @@ where
     }
 
     // 4: deserialise.
-    log::info!(
-        "final {} config after defaults + overrides: {}",
-        name,
-        merged
-    );
+    log::info!("final {name} config after defaults + overrides: {merged}");
     serde_json::from_value(merged).map_err(|e| ConfigError::Parse {
         path: defaults_path,
         source: e,

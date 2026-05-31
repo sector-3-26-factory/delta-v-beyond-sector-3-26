@@ -6,25 +6,22 @@
 //! entity orientations and alignment during development.
 //!
 //! The spawning process is decoupled per ADR-0005 (plugin architecture):
-//! - Domain plugins (ShipsPlugin, etc.) mark entities with `DebugAxesEligible`.
-//! - CorePlugin's `mark_debug_axes` system converts eligible entities to `DebugAxes`.
-//! - CorePlugin's `spawn_debug_axes` system renders the axes.
+//! - Domain plugins (`ShipsPlugin`, etc.) mark entities with `DebugAxesEligible`.
+//! - `CorePlugin`'s `mark_debug_axes` system converts eligible entities to `DebugAxes`.
+//! - `CorePlugin`'s `spawn_debug_axes` system renders the axes and labels.
 //!
 //! Axes are rendered as children with:
-//! - X axis: red line
-//! - Y axis: green line
-//! - Z axis: blue line
+//! - X axis: red line with "X" label
+//! - Y axis: green line with "Y" label
+//! - Z axis: blue line with "Z" label
 //!
 //! Length is calculated as 2× the entity's longest expansion along any axis.
 
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy_mod_billboard::prelude::*;
 
 use crate::debug_config::DebugConfig;
-
-#[cfg(test)]
-#[path = "debug_axes_tests.rs"]
-mod debug_axes_tests;
 
 #[cfg(test)]
 #[path = "debug_axes_tests.rs"]
@@ -32,13 +29,13 @@ mod tests;
 
 /// Marker component for entities eligible to have debug axes rendered.
 ///
-/// Domain plugins (e.g., ShipsPlugin) spawn entities and mark them with this component.
-/// The `mark_debug_axes` system (in CorePlugin) reads this marker and adds `DebugAxes`
+/// Domain plugins (e.g., `ShipsPlugin`) spawn entities and mark them with this component.
+/// The `mark_debug_axes` system (in `CorePlugin`) reads this marker and adds `DebugAxes`
 /// if debug config enables visualization. Per ADR-0005, this decouples debug
 /// visualization from domain spawn logic.
 #[derive(Component, Debug, Clone)]
 pub struct DebugAxesEligible {
-    /// Entity type or name for debug filtering (e.g., "local_player_ship").
+    /// Entity type or name for debug filtering (e.g., `"local_player_ship"`).
     pub entity_id: String,
     /// Axis length in metres.
     pub axis_length: f32,
@@ -57,7 +54,7 @@ impl DebugAxesEligible {
 
 /// Component marking an entity that should have debug axes rendered.
 ///
-/// The axes are spawned as child entities with line meshes.
+/// The axes are spawned as child entities with line meshes and text labels.
 /// Length is calculated as 2× the entity's longest expansion along any axis.
 #[derive(Component, Debug, Clone)]
 pub struct DebugAxes {
@@ -83,7 +80,7 @@ impl DebugAxes {
 /// Runs during `SpawningEntities` state after all domain spawn systems have run.
 /// Reads `DebugAxesEligible` markers and adds `DebugAxes` if `show_axis_indicators` is true.
 /// Per ADR-0005, this decouples debug visualization from domain plugins.
-/// Per ADR-0013, if DebugConfig is missing it is a hard error (checked at startup).
+/// Per ADR-0013, if `DebugConfig` is missing it is a hard error (checked at startup).
 #[allow(clippy::needless_pass_by_value)]
 pub fn mark_debug_axes(
     mut commands: Commands<'_, '_>,
@@ -126,15 +123,18 @@ pub fn mark_debug_axes(
     }
 }
 
-/// Spawns debug axis line meshes for entities with `DebugAxes` component.
+/// Spawns debug axis line meshes and labels for entities with `DebugAxes` component.
 ///
 /// Runs during `SpawningEntities` state. Creates three child entities per
-/// marked entity:
-/// - X axis: red line from origin to (`axis_length`, 0, 0)
-/// - Y axis: green line from origin to (0, `axis_length`, 0)
-/// - Z axis: blue line from origin to (0, 0, `axis_length`)
+/// marked entity (one per axis):
+/// - X axis: red line with "X" label
+/// - Y axis: green line with "Y" label
+/// - Z axis: blue line with "Z" label
 ///
-/// Each axis is rendered as a line mesh via Bevy's line rendering.
+/// Each axis line is rendered as a line mesh via Bevy's line rendering.
+/// Text labels are positioned at the end of each axis line (at coordinates
+/// (length, 0, 0), (0, length, 0), (0, 0, length) respectively) and rendered
+/// as Text2d with Billboard so they always face the camera.
 /// Per ADR-0006, axes follow the right-handed coordinate system: +X right, +Y up, -Z forward.
 #[allow(clippy::needless_pass_by_value)]
 pub fn spawn_debug_axes(
@@ -150,10 +150,7 @@ pub fn spawn_debug_axes(
         return;
     }
 
-    log::info!(
-        "spawn_debug_axes: spawning axes for {} entities",
-        axes_count
-    );
+    log::info!("spawn_debug_axes: spawning axes for {axes_count} entities");
 
     for (entity, axes) in query.iter() {
         // Check if this entity should have axes shown based on config.
@@ -197,30 +194,82 @@ pub fn spawn_debug_axes(
             ..default()
         });
 
-        // Spawn axis lines as child entities
+        // Spawn axis lines as child entities with labels
         commands.entity(entity).with_children(|parent| {
-            // X axis (red)
+            // X axis (red) with "X" label
             parent.spawn(PbrBundle {
                 mesh: meshes.add(x_axis_mesh),
                 material: x_material,
                 ..default()
             });
+            spawn_axis_label(
+                parent,
+                "X",
+                length * 1.1,
+                0.0,
+                0.0,
+                Color::srgb(1.0, 0.0, 0.0),
+            );
 
-            // Y axis (green)
+            // Y axis (green) with "Y" label
             parent.spawn(PbrBundle {
                 mesh: meshes.add(y_axis_mesh),
                 material: y_material,
                 ..default()
             });
+            spawn_axis_label(
+                parent,
+                "Y",
+                0.0,
+                length * 1.1,
+                0.0,
+                Color::srgb(0.0, 1.0, 0.0),
+            );
 
-            // Z axis (blue)
+            // Z axis (blue) with "Z" label
             parent.spawn(PbrBundle {
                 mesh: meshes.add(z_axis_mesh),
                 material: z_material,
                 ..default()
             });
+            spawn_axis_label(
+                parent,
+                "Z",
+                0.0,
+                0.0,
+                length * 1.1,
+                Color::srgb(0.0, 0.0, 1.0),
+            );
         });
     }
+}
+
+/// Helper function to spawn an axis label at the given position with the given color.
+/// The label is rendered as `BillboardTextBundle` so it always faces the camera.
+/// Uses the default Bevy font with high resolution (fontsize 50.0) and scales down
+/// to avoid pixelation while keeping the label small in 3D space.
+fn spawn_axis_label(
+    parent: &mut ChildBuilder<'_>,
+    label: &str,
+    x: f32,
+    y: f32,
+    z: f32,
+    color: Color,
+) {
+    log::info!("spawn_axis_label: spawning label '{label}' at ({x}, {y}, {z})");
+    parent.spawn(BillboardTextBundle {
+        transform: Transform::from_xyz(x, y, z).with_scale(Vec3::splat(0.01)),
+        text: Text::from_section(
+            label,
+            TextStyle {
+                font_size: 50.0,
+                color,
+                ..default()
+            },
+        ),
+        ..default()
+    });
+    log::info!("spawn_axis_label: label '{label}' spawned successfully");
 }
 
 /// Creates a line mesh from start to end point.
