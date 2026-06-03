@@ -3,7 +3,7 @@
   "name": "Sector 3.26 — Development Default",
   "entities": [
     {
-      "template": "templates/ships/local_player_ship.json",
+      "template": "templates/ships/space-fighter.json",
       "entity_type": "local_player_ship",
       "id": "player_ship",
       "position": {

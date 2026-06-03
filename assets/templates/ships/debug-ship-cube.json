@@ -6,18 +6,18 @@
   },
   "inertia_scale": 1.0,
   "mesh": {
-    "path": "glTF/ships/space-fighter-comrade1280.glb"
+    "path": "glTF/ships/cube.glb"
   },
   "cameras": {
     "cockpit": {
       "x": 0.0,
-      "y": 50.0,
-      "z": -30.0
+      "y": 0.5,
+      "z": -0.2
     },
     "chase": {
       "x": 0.0,
-      "y": 150.0,
-      "z": 250.0
+      "y": 12.0,
+      "z": 20.0
     }
   },
   "propulsion": {

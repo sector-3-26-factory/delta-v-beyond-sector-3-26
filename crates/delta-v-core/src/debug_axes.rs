@@ -20,6 +20,9 @@
 //! - Z axis: blue line with "Z" label
 //!
 //! Length is calculated as 2× the entity's longest expansion along any axis.
+//! When the axis length changes (e.g. after a glTF mesh finishes loading and
+//! the bounding box is computed), the old axis root is despawned and a new one
+//! is created with the updated length.
 
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
@@ -93,6 +96,17 @@ pub struct DebugAxisTarget {
     pub target: Entity,
 }
 
+/// Component on a target entity that tracks its spawned debug axis root entity.
+///
+/// When the [`DebugAxes`] component changes (e.g. axis length updated after mesh
+/// load), the old axis root is despawned and a new one is spawned. This component
+/// stores a reference to the current axis root so it can be cleaned up.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct DebugAxisRoot {
+    /// The entity that renders the debug axes for this target.
+    pub root: Entity,
+}
+
 /// Marks eligible entities with `DebugAxes` if debug config enables visualization.
 ///
 /// Runs during `SpawningEntities` state after all domain spawn systems have run.
@@ -143,9 +157,10 @@ pub fn mark_debug_axes(
 
 /// Spawns debug axis line meshes and labels for entities with `DebugAxes` component.
 ///
-/// Runs during `SpawningEntities` state. For each marked entity, spawns an
-/// independent world-space entity (NOT a child) at the same position, with
-/// identity rotation so axes are world-aligned:
+/// Runs during `SpawningEntities` state and also during `InGame` (for re-spawns
+/// when axis length changes). For each marked entity, spawns an independent
+/// world-space entity (NOT a child) at the same position, with identity rotation
+/// so axes are world-aligned:
 /// - X axis: red line with "X" label
 /// - Y axis: green line with "Y" label
 /// - Z axis: blue line with "Z" label
@@ -189,93 +204,178 @@ pub fn spawn_debug_axes(
             axes.axis_length
         );
 
-        let length = axes.axis_length;
+        let root_entity = spawn_axis_root(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            axes,
+            transform,
+            entity,
+        );
 
-        // Create line meshes for each axis
-        let x_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(length, 0.0, 0.0));
-        let y_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(0.0, length, 0.0));
-        let z_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(0.0, 0.0, length));
-
-        // Create materials for each axis (red, green, blue)
-        let x_material = materials.add(StandardMaterial {
-            base_color: Color::srgb(1.0, 0.0, 0.0),
-            emissive: Color::srgb(1.0, 0.0, 0.0).into(),
-            ..default()
-        });
-        let y_material = materials.add(StandardMaterial {
-            base_color: Color::srgb(0.0, 1.0, 0.0),
-            emissive: Color::srgb(0.0, 1.0, 0.0).into(),
-            ..default()
-        });
-        let z_material = materials.add(StandardMaterial {
-            base_color: Color::srgb(0.0, 0.0, 1.0),
-            emissive: Color::srgb(0.0, 0.0, 1.0).into(),
-            ..default()
-        });
-
-        // Spawn axis root as an independent world-space entity at the target's
-        // current position, with identity rotation (world-aligned).
-        // Child entities (lines + labels) inherit this identity rotation, so
-        // they always show world X/Y/Z regardless of the target's orientation.
+        // Store a reference to the axis root on the target entity so it can
+        // be despawned when the axis length changes.
         commands
-            .spawn((
-                Transform {
-                    translation: transform.translation,
-                    rotation: Quat::IDENTITY,
-                    scale: Vec3::ONE,
-                },
-                GlobalTransform::default(),
-                Visibility::default(),
-                InheritedVisibility::default(),
-                DebugAxisTarget { target: entity },
-            ))
-            .with_children(|parent| {
-                // X axis (red) with "X" label
-                parent.spawn(PbrBundle {
-                    mesh: meshes.add(x_axis_mesh),
-                    material: x_material,
-                    ..default()
-                });
-                spawn_axis_label(
-                    parent,
-                    "X",
-                    length * 1.1,
-                    0.0,
-                    0.0,
-                    Color::srgb(1.0, 0.0, 0.0),
-                );
-
-                // Y axis (green) with "Y" label
-                parent.spawn(PbrBundle {
-                    mesh: meshes.add(y_axis_mesh),
-                    material: y_material,
-                    ..default()
-                });
-                spawn_axis_label(
-                    parent,
-                    "Y",
-                    0.0,
-                    length * 1.1,
-                    0.0,
-                    Color::srgb(0.0, 1.0, 0.0),
-                );
-
-                // Z axis (blue) with "Z" label
-                parent.spawn(PbrBundle {
-                    mesh: meshes.add(z_axis_mesh),
-                    material: z_material,
-                    ..default()
-                });
-                spawn_axis_label(
-                    parent,
-                    "Z",
-                    0.0,
-                    0.0,
-                    length * 1.1,
-                    Color::srgb(0.0, 0.0, 1.0),
-                );
-            });
+            .entity(entity)
+            .insert(DebugAxisRoot { root: root_entity });
     }
+}
+
+/// Updates debug axes when the [`DebugAxes`] component changes (e.g. axis length
+/// updated after glTF mesh load).
+///
+/// Runs during `InGame`. When the axis length changes, despawns the old axis root
+/// entity and spawns a new one with the correct length.
+#[allow(clippy::needless_pass_by_value)]
+pub fn update_debug_axes_on_change(
+    mut commands: Commands<'_, '_>,
+    mut meshes: ResMut<'_, Assets<Mesh>>,
+    mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    debug_config: Res<'_, DebugConfig>,
+    query: Query<'_, '_, (Entity, &DebugAxes, &Transform, &DebugAxisRoot), Changed<DebugAxes>>,
+) {
+    for (entity, axes, transform, axis_root) in query.iter() {
+        if !debug_config.should_show_axes_for(&axes.entity_id) {
+            continue;
+        }
+
+        log::info!(
+            "update_debug_axes_on_change: axis length changed for entity {:?} (id: {}), despawning old root {:?}",
+            entity,
+            axes.entity_id,
+            axis_root.root
+        );
+
+        // Despawn the old axis root entity.
+        commands.entity(axis_root.root).despawn_recursive();
+
+        // Spawn a new axis root with the updated length.
+        let new_root = spawn_axis_root(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            axes,
+            transform,
+            entity,
+        );
+
+        // Update the root reference.
+        commands
+            .entity(entity)
+            .insert(DebugAxisRoot { root: new_root });
+    }
+}
+
+/// Spawns a debug axis root entity with line meshes and labels.
+///
+/// # Arguments
+///
+/// * `commands` - Bevy commands buffer.
+/// * `meshes` - Mesh asset storage.
+/// * `materials` - Material asset storage.
+/// * `axes` - The `DebugAxes` component with entity ID and length.
+/// * `transform` - The target entity's transform (for initial position).
+/// * `target` - The entity whose position the axis root should track.
+///
+/// Returns the entity ID of the spawned root.
+fn spawn_axis_root(
+    commands: &mut Commands<'_, '_>,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    axes: &DebugAxes,
+    transform: &Transform,
+    target: Entity,
+) -> Entity {
+    let length = axes.axis_length;
+
+    // Create line meshes for each axis
+    let x_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(length, 0.0, 0.0));
+    let y_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(0.0, length, 0.0));
+    let z_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(0.0, 0.0, length));
+
+    // Create materials for each axis (red, green, blue)
+    let x_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(1.0, 0.0, 0.0),
+        emissive: Color::srgb(1.0, 0.0, 0.0).into(),
+        ..default()
+    });
+    let y_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 1.0, 0.0),
+        emissive: Color::srgb(0.0, 1.0, 0.0).into(),
+        ..default()
+    });
+    let z_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 0.0, 1.0),
+        emissive: Color::srgb(0.0, 0.0, 1.0).into(),
+        ..default()
+    });
+
+    // Spawn axis root as an independent world-space entity at the target's
+    // current position, with identity rotation (world-aligned).
+    // Child entities (lines + labels) inherit this identity rotation, so
+    // they always show world X/Y/Z regardless of the target's orientation.
+    commands
+        .spawn((
+            Transform {
+                translation: transform.translation,
+                rotation: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            GlobalTransform::default(),
+            Visibility::default(),
+            InheritedVisibility::default(),
+            DebugAxisTarget { target },
+        ))
+        .with_children(|parent| {
+            // X axis (red) with "X" label
+            parent.spawn(PbrBundle {
+                mesh: meshes.add(x_axis_mesh),
+                material: x_material,
+                ..default()
+            });
+            spawn_axis_label(
+                parent,
+                "X",
+                length * LABEL_POSITION_FRACTION,
+                0.0,
+                0.0,
+                Color::srgb(1.0, 0.0, 0.0),
+                length,
+            );
+
+            // Y axis (green) with "Y" label
+            parent.spawn(PbrBundle {
+                mesh: meshes.add(y_axis_mesh),
+                material: y_material,
+                ..default()
+            });
+            spawn_axis_label(
+                parent,
+                "Y",
+                0.0,
+                length * LABEL_POSITION_FRACTION,
+                0.0,
+                Color::srgb(0.0, 1.0, 0.0),
+                length,
+            );
+
+            // Z axis (blue) with "Z" label
+            parent.spawn(PbrBundle {
+                mesh: meshes.add(z_axis_mesh),
+                material: z_material,
+                ..default()
+            });
+            spawn_axis_label(
+                parent,
+                "Z",
+                0.0,
+                0.0,
+                length * LABEL_POSITION_FRACTION,
+                Color::srgb(0.0, 0.0, 1.0),
+                length,
+            );
+        })
+        .id()
 }
 
 /// Updates the position of all debug axis root entities to match their target.
@@ -297,10 +397,45 @@ pub fn update_debug_axes_positions(
     }
 }
 
-/// Helper function to spawn an axis label at the given position with the given color.
+/// Base font size for axis labels at the reference axis length.
+const LABEL_BASE_FONT_SIZE: f32 = 50.0;
+
+/// Base transform scale for axis labels at the reference axis length.
+const LABEL_BASE_SCALE: f32 = 0.01;
+
+/// Reference axis length for label sizing.
+///
+/// comfortably readable labels. For other lengths, labels are scaled
+/// with the square root of the ratio to avoid enormous labels on
+/// large ships while keeping them visible.
+/// comfortably readable labels. For other lengths, labels are scaled
+/// with the square root of the ratio to avoid enormous labels on
+/// large ships while keeping them visible.
+const LABEL_REFERENCE_LENGTH: f32 = 2.0;
+
+/// Fraction of axis length where labels are placed.
+///
+/// Labels are positioned at this fraction of the axis length along
+/// their respective axis, measured from the origin. A value of 1.1
+/// places labels just past the tip of the axis line.
+const LABEL_POSITION_FRACTION: f32 = 1.1;
+
+/// Helper function to spawn an axis label with size adapted to the ship scale.
+///
 /// The label is rendered as `BillboardTextBundle` so it always faces the camera.
-/// Uses the default Bevy font with high resolution (fontsize 50.0) and scales down
-/// to avoid pixelation while keeping the label small in 3D space.
+/// Font size and transform scale grow with the square root of the axis length,
+/// providing readable labels on both small and large ships without overwhelming
+/// the screen.
+///
+/// # Arguments
+///
+/// * `parent` - The child builder to spawn the label into.
+/// * `label` - The text to display (e.g. "X").
+/// * `x` - X position in local space.
+/// * `y` - Y position in local space.
+/// * `z` - Z position in local space.
+/// * `color` - Text color.
+/// * `axis_length` - The axis length used to scale the label size.
 fn spawn_axis_label(
     parent: &mut ChildBuilder<'_>,
     label: &str,
@@ -308,21 +443,26 @@ fn spawn_axis_label(
     y: f32,
     z: f32,
     color: Color,
+    axis_length: f32,
 ) {
-    log::info!("spawn_axis_label: spawning label '{label}' at ({x}, {y}, {z})");
+    let scale_factor = (axis_length / LABEL_REFERENCE_LENGTH).sqrt();
+    let font_size = LABEL_BASE_FONT_SIZE * scale_factor;
+    let transform_scale = LABEL_BASE_SCALE * scale_factor;
+    log::info!(
+        "spawn_axis_label: spawning label '{label}' at ({x}, {y}, {z}) font_size={font_size:.1} scale={transform_scale:.4}"
+    );
     parent.spawn(BillboardTextBundle {
-        transform: Transform::from_xyz(x, y, z).with_scale(Vec3::splat(0.01)),
+        transform: Transform::from_xyz(x, y, z).with_scale(Vec3::splat(transform_scale)),
         text: Text::from_section(
             label,
             TextStyle {
-                font_size: 50.0,
+                font_size,
                 color,
                 ..default()
             },
         ),
         ..default()
     });
-    log::info!("spawn_axis_label: label '{label}' spawned successfully");
 }
 
 /// Creates a line mesh from start to end point.

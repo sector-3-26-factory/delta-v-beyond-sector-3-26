@@ -13,11 +13,12 @@
 //!
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
-use bevy::gltf::Gltf;
+use bevy::gltf::{Gltf, GltfMesh};
 use bevy::prelude::*;
+use bevy::render::mesh::{Mesh, VertexAttributeValues};
 use delta_v_core::{
-    ChaseCameraOffset, DebugAxesEligible, FlightAssist, PlayerShipEntity, ShipPropulsionConfig,
-    ShipTemplate,
+    ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
+    ShipPropulsionConfig, ShipTemplate,
 };
 use delta_v_physics::RigidBody;
 use delta_v_world::SpawnEntity;
@@ -27,6 +28,51 @@ use delta_v_world::SpawnEntity;
 pub(crate) struct PendingShipMesh {
     /// Handle to the glTF asset being loaded.
     gltf_handle: Handle<Gltf>,
+}
+
+/// Computes the bounding box half-extent from all meshes in a glTF asset.
+///
+/// Iterates through every [`GltfMesh`] and its primitives in the loaded glTF,
+/// reads the `ATTRIBUTE_POSITION` vertex data from each primitive's [`Mesh`]
+/// asset, and returns the maximum absolute value along each axis.
+///
+/// The returned `Vec3` contains the half-extents (max absolute value per axis).
+/// Returns `None` if no meshes/primitives/position data are found.
+fn compute_gltf_half_extent(
+    gltf: &Gltf,
+    gltf_meshes: &Assets<GltfMesh>,
+    meshes: &Assets<Mesh>,
+) -> Option<Vec3> {
+    let mut max_extent = Vec3::ZERO;
+    let mut found_any = false;
+
+    for gltf_mesh_handle in &gltf.meshes {
+        let Some(gltf_mesh) = gltf_meshes.get(gltf_mesh_handle) else {
+            continue;
+        };
+        for primitive in &gltf_mesh.primitives {
+            let Some(mesh) = meshes.get(&primitive.mesh) else {
+                continue;
+            };
+            let Some(VertexAttributeValues::Float32x3(positions)) =
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            else {
+                continue;
+            };
+            found_any = true;
+            for pos in positions {
+                max_extent.x = max_extent.x.max(pos[0].abs());
+                max_extent.y = max_extent.y.max(pos[1].abs());
+                max_extent.z = max_extent.z.max(pos[2].abs());
+            }
+        }
+    }
+
+    if found_any {
+        Some(max_extent)
+    } else {
+        None
+    }
 }
 
 /// Spawns ship entities in response to `SpawnEntity` events.
@@ -114,8 +160,10 @@ fn spawn_player_ship(
     // Queue glTF mesh load.
     let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
 
-    // Calculate axis length as 2× the largest expansion along any axis (ADR-0006: coordinate system).
-    let axis_length = (event
+    // Use a placeholder axis length based on world scale.
+    // The real axis length is computed from the glTF bounding box once the
+    // mesh finishes loading (see `attach_ship_meshes`).
+    let placeholder_axis_length = (event
         .scale
         .x
         .abs()
@@ -124,8 +172,8 @@ fn spawn_player_ship(
         * 2.0;
 
     log::debug!(
-        "spawn_player_ship: calculated axis_length={} from scale {:?}",
-        axis_length,
+        "spawn_player_ship: placeholder axis_length={} from scale {:?} (real length computed after mesh load)",
+        placeholder_axis_length,
         event.scale
     );
 
@@ -143,7 +191,7 @@ fn spawn_player_ship(
             },
             GlobalTransform::default(),
             PendingShipMesh { gltf_handle },
-            DebugAxesEligible::new(event.id.clone(), axis_length),
+            DebugAxesEligible::new(event.id.clone(), placeholder_axis_length),
             // Physics components: mass and inertia from template JSON (ADR-0014)
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
@@ -187,15 +235,33 @@ fn spawn_player_ship(
 
 /// Attaches loaded glTF meshes to pending ship entities.
 ///
-/// Once the glTF asset finishes loading, this system extracts the first mesh
+/// Once the glTF asset finishes loading, this system extracts the first scene
 /// from the glTF and attaches it to the ship entity with a `SceneBundle`.
+///
+/// After attaching the mesh, it computes the bounding box from the glTF vertex
+/// data and updates both [`DebugAxesEligible`] and [`DebugAxes`] components with
+/// the correct axis length (2× the largest half-extent). This ensures debug axes
+/// are scaled proportionally to the actual mesh, not the world definition's scale
+/// field. Re-inserting `DebugAxes` triggers `Changed<DebugAxes>`, which causes
+/// `update_debug_axes_on_change` to despawn the old axis root and spawn a new one.
 #[allow(clippy::indexing_slicing, clippy::needless_pass_by_value)]
 pub(crate) fn attach_ship_meshes(
     mut commands: Commands<'_, '_>,
     gltf_assets: Res<'_, Assets<Gltf>>,
-    query: Query<'_, '_, (Entity, &PendingShipMesh)>,
+    gltf_mesh_assets: Res<'_, Assets<GltfMesh>>,
+    mesh_assets: Res<'_, Assets<Mesh>>,
+    query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &PendingShipMesh,
+            &DebugAxesEligible,
+            Option<&DebugAxes>,
+        ),
+    >,
 ) {
-    for (entity, pending) in query.iter() {
+    for (entity, pending, debug_eligible, debug_axes) in query.iter() {
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
             // Get the first scene from the glTF (should contain the mesh).
             if !gltf.scenes.is_empty() {
@@ -210,6 +276,35 @@ pub(crate) fn attach_ship_meshes(
                     inherited_visibility: InheritedVisibility::default(),
                     view_visibility: ViewVisibility::default(),
                 });
+
+                // Compute the bounding box from the glTF mesh data and update
+                // the debug axis length to match the actual mesh size.
+                if let Some(half_extent) =
+                    compute_gltf_half_extent(gltf, &gltf_mesh_assets, &mesh_assets)
+                {
+                    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0;
+                    log::info!(
+                        "attach_ship_meshes: computed axis_length={axis_length:.1} from glTF bounding box (half_extent={half_extent:?})"
+                    );
+                    // Re-insert DebugAxesEligible with the correct length.
+                    commands.entity(entity).insert(DebugAxesEligible::new(
+                        debug_eligible.entity_id.clone(),
+                        axis_length,
+                    ));
+                    // If the entity already has DebugAxes (spawned during
+                    // SpawningEntities with placeholder length), re-insert with
+                    // the correct length so Changed<DebugAxes> fires and the
+                    // visual axes are re-spawned at the correct scale.
+                    if let Some(existing) = debug_axes {
+                        commands
+                            .entity(entity)
+                            .insert(DebugAxes::new(existing.entity_id.clone(), axis_length));
+                    }
+                } else {
+                    log::warn!(
+                        "attach_ship_meshes: could not compute bounding box for glTF mesh on entity {entity:?}"
+                    );
+                }
 
                 // Remove the pending marker now that mesh is attached.
                 commands.entity(entity).remove::<PendingShipMesh>();

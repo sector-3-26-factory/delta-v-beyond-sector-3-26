@@ -55,8 +55,8 @@ pub mod state;
 
 pub use camera::{spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShipEntity};
 pub use debug_axes::{
-    mark_debug_axes, spawn_debug_axes, update_debug_axes_positions, DebugAxes, DebugAxesEligible,
-    DebugAxisTarget,
+    mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_positions,
+    DebugAxes, DebugAxesEligible, DebugAxisRoot, DebugAxisTarget,
 };
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
@@ -139,6 +139,14 @@ impl Plugin for CorePlugin {
         app.add_systems(
             Update,
             camera::chase_camera_system.run_if(in_state(AppState::InGame)),
+        );
+
+        // Debug axes: re-spawn axes when length changes (e.g. after glTF load
+        // updates DebugAxes with the correct bounding-box length).
+        // Runs in InGame after attach_ship_meshes updates DebugAxes.
+        app.add_systems(
+            Update,
+            debug_axes::update_debug_axes_on_change.run_if(in_state(AppState::InGame)),
         );
 
         // Debug axes position update: keeps axis roots at the target's position
