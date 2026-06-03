@@ -1,0 +1,23 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/flight-assist",
+    "title": "Flight Assist Configuration",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nInertial damping settings for accessibility. See ADR-0010, ADR-0012, ADR-0013.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [],
+    "properties": {
+        "enabled_by_default": {
+            "description": "Whether flight assist is enabled on startup. When true, inertial damping is active from the first frame of gameplay.",
+            "type": "boolean",
+            "default": true
+        },
+        "damping_coefficient": {
+            "description": "Velocity damping strength when flight assist is active (dimensionless, 0-1). Higher values damp velocity more aggressively. 0 = no damping, 1 = full stop.",
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 0.1
+        }
+    }
+}

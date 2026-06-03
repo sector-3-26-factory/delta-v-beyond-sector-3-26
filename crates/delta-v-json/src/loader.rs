@@ -2,13 +2,15 @@
 
 //! Core JSON loading, schema validation and default-fill utilities.
 //!
-//! This module is the single implementation of the pipeline that every
-//! JSON-backed crate uses (ADR-0038):
+//! This module is the single implementation of the JSON pipeline
+//! used by all JSON-backed crates (ADR-0038):
 //!
 //! 1. Read a file from disk into a [`serde_json::Value`].
 //! 2. Validate the value against a JSON Schema file (ADR-0012).
 //! 3. Recursively fill schema `default` values for absent fields
 //!    (ADR-0013 — no silent fallbacks via `Default` impls).
+//! 4. Optionally validate physical quantity units against the central
+//!    units registry (ADR-0008).
 //!
 //! Callers then deserialise the filled `Value` into their own types.
 //!
@@ -118,6 +120,147 @@ pub fn load_validated(json_path: &Path, schema_path: &Path) -> Result<Value, Jso
     validate(&value, schema_path, json_path)?;
     fill_defaults(&mut value, schema_path)?;
     Ok(value)
+}
+
+/// Full pipeline: read, validate, fill defaults, and validate units.
+///
+/// After the standard [`load_validated`] pipeline, this additionally
+/// walks the JSON value tree and validates every `{"value": N, "unit": "..."}`
+/// object against the central units registry at `units_schema_path`.
+///
+/// Per ADR-0008, all numeric physical quantities MUST use the
+/// `{"value": N, "unit": "..."}` format with a unit from the registry.
+///
+/// # Errors
+/// Returns [`JsonError`] if any step fails, including
+/// [`JsonError::InvalidUnit`] if a unit is not in the registry.
+pub fn load_validated_with_units(
+    json_path: &Path,
+    schema_path: &Path,
+    units_schema_path: &Path,
+) -> Result<Value, JsonError> {
+    let value = load_validated(json_path, schema_path)?;
+    validate_units(&value, json_path, units_schema_path)?;
+    Ok(value)
+}
+
+// ---------------------------------------------------------------------------
+// Unit validation (ADR-0008)
+// ---------------------------------------------------------------------------
+
+/// Recursively walks `value` and validates every `{"value": N, "unit": "..."}`
+/// object against the allowed units from the units schema.
+///
+/// A physical quantity object is identified by having both `"value"` (number)
+/// and `"unit"` (string) keys. The unit string is checked against the
+/// `"enum"` list in the units schema's `properties.unit`.
+///
+/// # Errors
+/// Returns [`JsonError::InvalidUnit`] if a unit is not in the registry.
+/// Returns [`JsonError::SchemaLoad`] if the units schema cannot be read.
+pub(crate) fn validate_units(
+    value: &Value,
+    data_path: &Path,
+    units_schema_path: &Path,
+) -> Result<(), JsonError> {
+    let allowed_units = load_allowed_units(units_schema_path)?;
+    validate_units_recursive(
+        value,
+        data_path,
+        units_schema_path,
+        &allowed_units,
+        String::new(),
+    )
+}
+
+/// Loads the allowed unit strings from the units schema file.
+///
+/// Reads the `"enum"` array from `properties.unit` in the units schema.
+pub(crate) fn load_allowed_units(units_schema_path: &Path) -> Result<Vec<String>, JsonError> {
+    let schema_text =
+        std::fs::read_to_string(units_schema_path).map_err(|e| JsonError::SchemaLoad {
+            path: units_schema_path.to_owned(),
+            reason: e.to_string(),
+        })?;
+    let schema: Value = serde_json::from_str(&schema_text).map_err(|e| JsonError::SchemaLoad {
+        path: units_schema_path.to_owned(),
+        reason: e.to_string(),
+    })?;
+
+    let allowed = schema
+        .get("properties")
+        .and_then(|p| p.get("unit"))
+        .and_then(|u| u.get("enum"))
+        .and_then(|e| e.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(allowed)
+}
+
+/// Recursively walks the JSON tree and validates physical quantity units.
+///
+/// Returns the **first** invalid unit found.
+fn validate_units_recursive(
+    value: &Value,
+    data_path: &Path,
+    units_schema_path: &Path,
+    allowed_units: &[String],
+    pointer: String,
+) -> Result<(), JsonError> {
+    match value {
+        Value::Object(map) => {
+            // Check if this object is a physical quantity (has "value" as number and "unit" as string).
+            if let (Some(Value::Number(_)), Some(Value::String(unit_str))) =
+                (map.get("value"), map.get("unit"))
+            {
+                if !allowed_units.contains(unit_str) {
+                    return Err(JsonError::InvalidUnit {
+                        path: data_path.to_owned(),
+                        pointer,
+                        unit: unit_str.clone(),
+                        units_schema: units_schema_path.to_owned(),
+                    });
+                }
+            }
+
+            // Recurse into children.
+            for (key, child) in map {
+                let child_pointer = if pointer.is_empty() {
+                    format!("/{key}")
+                } else {
+                    format!("{pointer}/{key}")
+                };
+                validate_units_recursive(
+                    child,
+                    data_path,
+                    units_schema_path,
+                    allowed_units,
+                    child_pointer,
+                )?;
+            }
+        }
+        Value::Array(arr) => {
+            // Recurse into array elements.
+            for (index, element) in arr.iter().enumerate() {
+                let child_pointer = format!("{pointer}[{index}]");
+                validate_units_recursive(
+                    element,
+                    data_path,
+                    units_schema_path,
+                    allowed_units,
+                    child_pointer,
+                )?;
+            }
+        }
+        _ => {}
+    }
+
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

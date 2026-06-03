@@ -49,4 +49,19 @@ pub enum ConfigError {
         /// Description of what went wrong.
         reason: String,
     },
+
+    /// A physical quantity unit is not in the allowed units registry.
+    #[error(
+        "{path}: invalid unit '{unit}' at '{pointer}': not in allowed units registry ({units_schema})"
+    )]
+    InvalidUnit {
+        /// Path to the JSON data file.
+        path: PathBuf,
+        /// JSON Pointer to the failing value+unit object.
+        pointer: String,
+        /// The invalid unit string.
+        unit: String,
+        /// Path to the units schema file.
+        units_schema: PathBuf,
+    },
 }

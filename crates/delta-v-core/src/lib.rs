@@ -47,6 +47,7 @@ pub mod camera;
 pub mod debug_axes;
 pub mod debug_config;
 pub mod diagnostics;
+pub mod flight_assist;
 pub mod input;
 pub mod keybindings_resource;
 pub mod spawn_sets;
@@ -56,6 +57,10 @@ pub use camera::{spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShip
 pub use debug_axes::{mark_debug_axes, spawn_debug_axes, DebugAxes, DebugAxesEligible};
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
+pub use flight_assist::{
+    FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate, PhysicalQuantity,
+    ShipPropulsionConfig, ShipPropulsionTemplate, ShipTemplate, ThrustCommand, TorqueCommand,
+};
 pub use input::{ActiveActions, InputSet, LogicalAction};
 pub use keybindings_resource::KeybindingsResource;
 pub use spawn_sets::WorldSpawnSet;

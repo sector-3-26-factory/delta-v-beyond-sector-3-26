@@ -1,0 +1,163 @@
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
+
+//! Unit tests for JSON loader unit validation (ADR-0008).
+
+#![allow(clippy::unwrap_used, clippy::panic)]
+use std::path::Path;
+
+use crate::error::JsonError;
+use crate::loader::{load_allowed_units, validate_units};
+use serde_json::Value;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Minimal units schema for testing.
+fn units_schema_json() -> Value {
+    serde_json::json!({
+        "type": "object",
+        "properties": {
+            "value": { "type": "number" },
+            "unit": {
+                "type": "string",
+                "enum": ["kg", "N", "N⋅m", "m", "s", "dimensionless"]
+            }
+        }
+    })
+}
+
+/// Write units schema to a temp file and return the path.
+fn write_units_schema(name: &str) -> std::path::PathBuf {
+    let tmp_dir = std::env::temp_dir();
+    let path = tmp_dir.join(name);
+    std::fs::write(&path, units_schema_json().to_string()).unwrap();
+    path
+}
+
+// ---------------------------------------------------------------------------
+// Tests: validate_units
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_validate_units_valid() {
+    let value = serde_json::json!({
+        "mass": { "value": 10000, "unit": "kg" },
+        "propulsion": {
+            "main_thrusters": [{
+                "id": "main",
+                "type": "chemical",
+                "max_forward_thrust": { "value": 100_000, "unit": "N" },
+                "max_backward_thrust": { "value": 40000, "unit": "N" }
+            }],
+            "maneuvering_thruster": {
+                "type": "rcs",
+                "max_torque": { "value": 50000, "unit": "N⋅m" },
+                "max_strafe_thrust": { "value": 50000, "unit": "N" }
+            }
+        }
+    });
+
+    let units_path = write_units_schema("test_units_valid.schema.json");
+    let result = validate_units(&value, Path::new("test.json"), &units_path);
+    assert!(result.is_ok(), "valid units should pass validation");
+}
+
+#[test]
+fn test_validate_units_invalid() {
+    let value = serde_json::json!({
+        "mass": { "value": 10000, "unit": "pounds" }
+    });
+
+    let units_path = write_units_schema("test_units_invalid.schema.json");
+    let result = validate_units(&value, Path::new("test.json"), &units_path);
+    assert!(
+        result.is_err(),
+        "invalid unit 'pounds' should fail validation"
+    );
+
+    match result.unwrap_err() {
+        JsonError::InvalidUnit { unit, .. } => {
+            assert_eq!(unit, "pounds");
+        }
+        other => panic!("expected InvalidUnit error, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_validate_units_nested_invalid() {
+    let value = serde_json::json!({
+        "propulsion": {
+            "main_thrusters": [{
+                "id": "main",
+                "type": "chemical",
+                "max_forward_thrust": { "value": 100_000, "unit": "invalid_unit" }
+            }]
+        }
+    });
+
+    let units_path = write_units_schema("test_units_nested.schema.json");
+    let result = validate_units(&value, Path::new("test.json"), &units_path);
+    assert!(
+        result.is_err(),
+        "nested invalid unit should fail validation"
+    );
+
+    match result.unwrap_err() {
+        JsonError::InvalidUnit { unit, pointer, .. } => {
+            assert_eq!(unit, "invalid_unit");
+            assert!(
+                pointer.contains("max_forward_thrust"),
+                "pointer should contain path to invalid unit, got {pointer}"
+            );
+        }
+        other => panic!("expected InvalidUnit error, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_validate_units_no_physical_quantities() {
+    let value = serde_json::json!({
+        "name": "test",
+        "count": 42,
+        "nested": { "key": "value" }
+    });
+
+    let units_path = write_units_schema("test_units_none.schema.json");
+    let result = validate_units(&value, Path::new("test.json"), &units_path);
+    assert!(
+        result.is_ok(),
+        "JSON without physical quantities should pass"
+    );
+}
+
+#[test]
+fn test_validate_units_value_as_string() {
+    // "value" is a string, not a number — not a physical quantity.
+    let value = serde_json::json!({
+        "description": { "value": "not a number", "unit": "kg" }
+    });
+
+    let units_path = write_units_schema("test_units_string.schema.json");
+    let result = validate_units(&value, Path::new("test.json"), &units_path);
+    assert!(
+        result.is_ok(),
+        "object with string 'value' is not a physical quantity"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Tests: load_allowed_units
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_load_allowed_units() {
+    let units_path = write_units_schema("test_allowed_units.schema.json");
+    let allowed = load_allowed_units(&units_path).unwrap();
+
+    assert!(allowed.contains(&"kg".to_string()));
+    assert!(allowed.contains(&"N".to_string()));
+    assert!(allowed.contains(&"N⋅m".to_string()));
+    assert!(allowed.contains(&"dimensionless".to_string()));
+    assert!(!allowed.contains(&"pounds".to_string()));
+}

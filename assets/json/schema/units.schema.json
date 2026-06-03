@@ -1,0 +1,72 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/units",
+    "title": "Physical Units Registry",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nCentral registry of allowed physical units for use in `{\"value\": N, \"unit\": \"...\"}` objects throughout the project. Per ADR-0008, all numeric physical quantities in JSON MUST use this format. Allowed units are defined here and referenced by individual schemas via `\"$ref`.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "unit"
+    ],
+    "properties": {
+        "value": {
+            "description": "Numeric magnitude. Must be finite (no NaN, no Infinity).",
+            "type": "number"
+        },
+        "unit": {
+            "description": "Physical unit identifier. Must be one of the allowed units listed in `$defs/allowed_units`.",
+            "type": "string",
+            "enum": [
+                "kg",
+                "N",
+                "N⋅m",
+                "m",
+                "m/s",
+                "m/s²",
+                "rad",
+                "rad/s",
+                "s",
+                "dimensionless"
+            ]
+        }
+    },
+    "$defs": {
+        "allowed_units": {
+            "description": "Documentation of allowed units and their meanings.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "kg": {
+                    "description": "Kilograms — unit of mass."
+                },
+                "N": {
+                    "description": "Newtons — unit of force (kg⋅m/s²)."
+                },
+                "N⋅m": {
+                    "description": "Newton-meters — unit of torque."
+                },
+                "m": {
+                    "description": "Meters — unit of length/distance."
+                },
+                "m/s": {
+                    "description": "Meters per second — unit of velocity."
+                },
+                "m/s²": {
+                    "description": "Meters per second squared — unit of acceleration."
+                },
+                "rad": {
+                    "description": "Radians — unit of angle."
+                },
+                "rad/s": {
+                    "description": "Radians per second — unit of angular velocity."
+                },
+                "s": {
+                    "description": "Seconds — unit of time."
+                },
+                "dimensionless": {
+                    "description": "Dimensionless quantity (pure ratio, no physical unit)."
+                }
+            }
+        }
+    }
+}

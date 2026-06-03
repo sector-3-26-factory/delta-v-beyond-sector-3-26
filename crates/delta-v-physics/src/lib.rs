@@ -40,11 +40,12 @@ pub mod systems;
 
 pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
 pub use rigid_body::{MassSource, RigidBody};
+pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
-    integrate_position_system, integrate_velocity_system, PhysicsSet,
+    integrate_position_system, integrate_velocity_system,
 };
 
 /// Physics plugin providing Newtonian dynamics and collision detection.

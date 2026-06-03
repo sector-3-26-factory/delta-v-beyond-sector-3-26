@@ -91,5 +91,16 @@ fn map_json_error(e: delta_v_json::error::JsonError, _context: &Path) -> WorldEr
             reason,
         },
         JsonError::SchemaLoad { path, reason } => WorldError::SchemaLoad { path, reason },
+        JsonError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        } => WorldError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        },
     }
 }

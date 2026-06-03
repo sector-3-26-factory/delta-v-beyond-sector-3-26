@@ -4,13 +4,22 @@
 //!
 //! Per ADR-0038 (entity template system), ships are spawned from templates
 //! loaded and validated by delta-v-json. Templates define mesh paths (glTF),
-//! cameras, and other static properties. All meshes come from glTF files (ADR-0019).
+//! cameras, physical properties (mass, inertia), and propulsion configuration.
+//! All meshes come from glTF files (ADR-0019).
+//!
+//! Per ADR-0014, all gameplay values (mass, thrust, torque) come from JSON
+//! — never from Rust constants. The template `Value` is deserialized into
+//! [`ShipTemplate`] via `serde_json::from_value` (a one-liner per ADR-0040).
 //!
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::{ChaseCameraOffset, DebugAxesEligible, PlayerShipEntity};
+use delta_v_core::{
+    ChaseCameraOffset, DebugAxesEligible, FlightAssist, PlayerShipEntity, ShipPropulsionConfig,
+    ShipTemplate,
+};
+use delta_v_physics::RigidBody;
 use delta_v_world::SpawnEntity;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
@@ -41,9 +50,22 @@ pub fn spawn_ship_from_template(
     }
 }
 
+/// Deserializes the template JSON into a [`ShipTemplate`] struct.
+///
+/// Per ADR-0040, the template `Value` has already been validated and
+/// filled with schema defaults by `delta-v-json`, so deserialization
+/// into the struct is a one-liner.
+#[allow(clippy::expect_used)] // INVARIANT: template validated by delta-v-json; cannot fail
+fn deserialize_template(event: &SpawnEntity) -> ShipTemplate {
+    serde_json::from_value(event.template.clone())
+        .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
+}
+
 /// Spawns the player-controlled ship from a template event.
 ///
 /// Template is validated by delta-v-json; structure is guaranteed.
+/// Mass, inertia, and propulsion values are read from the template JSON
+/// per ADR-0014 (gameplay values in JSON, not Rust constants).
 #[allow(
     clippy::indexing_slicing,
     clippy::expect_used,
@@ -54,6 +76,14 @@ fn spawn_player_ship(
     asset_server: &Res<'_, AssetServer>,
     event: &SpawnEntity,
 ) {
+    // Deserialize template JSON into typed struct (ADR-0040 one-liner).
+    let template = deserialize_template(event);
+
+    // Extract propulsion values from the active main thruster.
+    let active_index = 0_usize; // M2: single active thruster
+    let main = &template.propulsion.main_thrusters[active_index];
+    let maneuvering = &template.propulsion.maneuvering_thruster;
+
     // Extract mesh path from validated template JSON (owned String for 'static lifetime).
     let mesh_path = event.template["mesh"]["path"]
         .as_str()
@@ -102,6 +132,8 @@ fn spawn_player_ship(
     // Spawn ship entity with transform from world definition.
     // Mark it as pending mesh attachment and eligible for debug axes (ADR-0022, ADR-0005).
     // Use event.id (unique entity identifier) for debug filtering, not entity_type (ADR-0038).
+    // Add RigidBody for Newtonian physics and FlightAssist for inertial damping.
+    // Mass and inertia come from template JSON per ADR-0014.
     let ship_entity = commands
         .spawn((
             Transform {
@@ -112,6 +144,9 @@ fn spawn_player_ship(
             GlobalTransform::default(),
             PendingShipMesh { gltf_handle },
             DebugAxesEligible::new(event.id.clone(), axis_length),
+            // Physics components: mass and inertia from template JSON (ADR-0014)
+            RigidBody::new(template.mass.value, template.inertia_scale),
+            FlightAssist,
         ))
         .with_children(|parent| {
             // Spawn cockpit and chase cameras as child entities.
@@ -128,12 +163,25 @@ fn spawn_player_ship(
     commands.insert_resource(PlayerShipEntity(ship_entity));
     commands.insert_resource(ChaseCameraOffset(Vec3::new(chase_x, chase_y, chase_z)));
 
+    // Insert propulsion configuration from template JSON (ADR-0014).
+    // These values are read by the input → forces pipeline each tick.
+    commands.insert_resource(ShipPropulsionConfig {
+        max_forward_thrust: main.max_forward_thrust.value,
+        max_backward_thrust: main.max_backward_thrust.value,
+        max_torque: maneuvering.max_torque.value,
+        max_strafe_thrust: maneuvering.max_strafe_thrust.value,
+        active_main_thruster_index: active_index,
+    });
+
     log::info!(
-        "local player ship spawned at position ({:.1}, {:.1}, {:.1}) from {}",
+        "local player ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
         event.position.x,
         event.position.y,
         event.position.z,
-        mesh_path
+        mesh_path,
+        template.mass.value,
+        main.max_forward_thrust.value,
+        main.max_backward_thrust.value,
     );
 }
 

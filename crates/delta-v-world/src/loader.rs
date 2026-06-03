@@ -66,5 +66,16 @@ fn map_json_error(e: JsonError, _context: &Path) -> WorldError {
             reason,
         },
         JsonError::SchemaLoad { path, reason } => WorldError::SchemaLoad { path, reason },
+        JsonError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        } => WorldError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        },
     }
 }

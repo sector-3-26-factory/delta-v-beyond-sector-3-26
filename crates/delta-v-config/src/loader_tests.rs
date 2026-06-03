@@ -53,6 +53,30 @@ mod tests {
             kb.actions.contains_key("thrust_forward"),
             "expected thrust_forward action"
         );
+        assert!(
+            kb.actions.contains_key("toggle_flight_assist"),
+            "expected toggle_flight_assist action (M2 flight assist feature)"
+        );
+    }
+
+    /// The shipped default flight-assist file must load without errors.
+    #[test]
+    fn test_loads_default_flight_assist_ok() {
+        let root = workspace_root();
+        let fa = load_and_validate_from_paths(
+            &root.join("assets/config/flight-assist.json"),
+            &root.join("assets/json/schema/flight-assist.schema.json"),
+        )
+        .expect("default flight-assist config should load without error");
+        let fa: delta_v_core::FlightAssistConfig = serde_json::from_value(fa).expect("deserialise");
+        assert!(
+            fa.enabled_by_default,
+            "expected enabled_by_default to be true"
+        );
+        assert!(
+            (fa.damping_coefficient - 0.1).abs() < f32::EPSILON,
+            "expected damping_coefficient 0.1"
+        );
     }
 
     /// Pointing the loader at a nonexistent path must produce a

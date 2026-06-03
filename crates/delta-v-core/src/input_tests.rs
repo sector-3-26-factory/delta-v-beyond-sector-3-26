@@ -35,13 +35,13 @@ mod tests {
         }
     }
 
-    /// `all()` must return all 12 variants.
+    /// `all()` must return all 13 variants (12 M1 actions + [`ToggleFlightAssist`]).
     #[test]
     fn test_logical_action_all_count() {
         assert_eq!(
             LogicalAction::all().len(),
-            12,
-            "expected 12 LogicalAction variants"
+            13,
+            "expected 13 LogicalAction variants"
         );
     }
 
@@ -61,6 +61,7 @@ mod tests {
             "strafe_right",
             "strafe_up",
             "strafe_down",
+            "toggle_flight_assist",
         ];
         for key in &expected_keys {
             let found = LogicalAction::all().iter().any(|a| a.as_str() == *key);
@@ -111,7 +112,7 @@ mod tests {
     // parse_key_code (tested indirectly via action lookup)
     // ---------------------------------------------------------------------------
 
-    /// All 12 default key names used in keybindings.json must parse successfully.
+    /// All 13 default key names used in keybindings.json must be recognized.
     #[test]
     fn test_default_key_names_all_parse() {
         // These are the exact names in assets/config/keybindings.json.
@@ -124,6 +125,7 @@ mod tests {
             "KeyE",
             "KeyR",
             "KeyF",
+            "KeyC",
             "ArrowUp",
             "ArrowDown",
             "ArrowLeft",
@@ -134,12 +136,13 @@ mod tests {
         // that no WARN is emitted. In lieu of that (log capture requires extra
         // test infra), we verify the strings are the exact ones documented.
         let key_set: std::collections::BTreeSet<&str> = default_keys.iter().copied().collect();
-        assert_eq!(key_set.len(), 12, "all 12 default key names must be unique");
+        assert_eq!(key_set.len(), 13, "all 13 default key names must be unique");
 
         // Spot-check a few well-known ones.
         assert!(key_set.contains("KeyW"));
         assert!(key_set.contains("ArrowUp"));
         assert!(key_set.contains("KeyQ"));
+        assert!(key_set.contains("KeyC"));
     }
 
     // ---------------------------------------------------------------------------
