@@ -264,7 +264,11 @@ fn spawn_player_ship(
 ///
 /// Re-inserting `DebugAxes` triggers `Changed<DebugAxes>`, which causes
 /// `update_debug_axes_on_change` to despawn the old axis root and spawn a new one.
-#[allow(clippy::indexing_slicing, clippy::needless_pass_by_value, clippy::type_complexity)]
+#[allow(
+    clippy::indexing_slicing,
+    clippy::needless_pass_by_value,
+    clippy::type_complexity
+)]
 pub(crate) fn attach_ship_meshes(
     mut commands: Commands<'_, '_>,
     gltf_assets: Res<'_, Assets<Gltf>>,
