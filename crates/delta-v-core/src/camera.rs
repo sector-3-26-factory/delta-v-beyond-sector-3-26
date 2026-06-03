@@ -68,6 +68,11 @@ pub fn spawn_chase_camera(
 /// Runs every frame in `Update` when `AppState::InGame`.
 /// Rotates the offset by the ship's current rotation so the camera
 /// stays behind the ship as it turns.
+///
+/// Uses the ship's local up vector (+Y in ship space) as the `look_at`
+/// up reference to avoid the gimbal lock singularity that occurs with
+/// a fixed world `Vec3::Y` when the camera is directly above or below
+/// the target (e.g. at 90° pitch).
 #[allow(clippy::needless_pass_by_value)]
 pub fn chase_camera_system(
     mut camera_query: Query<'_, '_, (&mut Transform, &CameraFollow)>,
@@ -82,6 +87,10 @@ pub fn chase_camera_system(
         // stays behind the ship as it turns.
         let world_offset = target_transform.rotation * follow.offset;
         cam_transform.translation = target_transform.translation + world_offset;
-        cam_transform.look_at(target_transform.translation, Vec3::Y);
+
+        // Use the ship's local up vector as the look_at up reference.
+        // This avoids gimbal lock when the camera is above/below the ship.
+        let ship_up = target_transform.rotation * Vec3::Y;
+        cam_transform.look_at(target_transform.translation, ship_up);
     }
 }

@@ -10,7 +10,11 @@
 //! - `CorePlugin`'s `mark_debug_axes` system converts eligible entities to `DebugAxes`.
 //! - `CorePlugin`'s `spawn_debug_axes` system renders the axes and labels.
 //!
-//! Axes are rendered as children with:
+//! Axes are rendered as independent world-space entities (not children of the
+//! tracked entity) so they translate with the entity but do not inherit its
+//! rotation. A separate `update_debug_axes_positions` system syncs their
+//! position each frame.
+//!
 //! - X axis: red line with "X" label
 //! - Y axis: green line with "Y" label
 //! - Z axis: blue line with "Z" label
@@ -54,7 +58,8 @@ impl DebugAxesEligible {
 
 /// Component marking an entity that should have debug axes rendered.
 ///
-/// The axes are spawned as child entities with line meshes and text labels.
+/// The axes are spawned as independent world-space entities (not children of the
+/// target) so they translate with the target but do not inherit its rotation.
 /// Length is calculated as 2× the entity's longest expansion along any axis.
 #[derive(Component, Debug, Clone)]
 pub struct DebugAxes {
@@ -73,6 +78,19 @@ impl DebugAxes {
             axis_length,
         }
     }
+}
+
+/// Component on a debug axis root entity linking it to the target entity whose
+/// position it should follow.
+///
+/// The axis root is spawned as an independent world-space entity (not a child of
+/// the target). The `update_debug_axes_positions` system updates its
+/// `Transform::translation` each frame to match the target's position, while
+/// keeping rotation at identity so the axes remain world-aligned.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct DebugAxisTarget {
+    /// The entity whose position this axis root should track.
+    pub target: Entity,
 }
 
 /// Marks eligible entities with `DebugAxes` if debug config enables visualization.
@@ -125,8 +143,9 @@ pub fn mark_debug_axes(
 
 /// Spawns debug axis line meshes and labels for entities with `DebugAxes` component.
 ///
-/// Runs during `SpawningEntities` state. Creates three child entities per
-/// marked entity (one per axis):
+/// Runs during `SpawningEntities` state. For each marked entity, spawns an
+/// independent world-space entity (NOT a child) at the same position, with
+/// identity rotation so axes are world-aligned:
 /// - X axis: red line with "X" label
 /// - Y axis: green line with "Y" label
 /// - Z axis: blue line with "Z" label
@@ -142,7 +161,7 @@ pub fn spawn_debug_axes(
     mut meshes: ResMut<'_, Assets<Mesh>>,
     mut materials: ResMut<'_, Assets<StandardMaterial>>,
     debug_config: Res<'_, DebugConfig>,
-    query: Query<'_, '_, (Entity, &DebugAxes), Added<DebugAxes>>,
+    query: Query<'_, '_, (Entity, &DebugAxes, &Transform), Added<DebugAxes>>,
 ) {
     let axes_count = query.iter().count();
     if axes_count == 0 {
@@ -152,7 +171,7 @@ pub fn spawn_debug_axes(
 
     log::info!("spawn_debug_axes: spawning axes for {axes_count} entities");
 
-    for (entity, axes) in query.iter() {
+    for (entity, axes, transform) in query.iter() {
         // Check if this entity should have axes shown based on config.
         if !debug_config.should_show_axes_for(&axes.entity_id) {
             log::debug!(
@@ -194,53 +213,87 @@ pub fn spawn_debug_axes(
             ..default()
         });
 
-        // Spawn axis lines as child entities with labels
-        commands.entity(entity).with_children(|parent| {
-            // X axis (red) with "X" label
-            parent.spawn(PbrBundle {
-                mesh: meshes.add(x_axis_mesh),
-                material: x_material,
-                ..default()
-            });
-            spawn_axis_label(
-                parent,
-                "X",
-                length * 1.1,
-                0.0,
-                0.0,
-                Color::srgb(1.0, 0.0, 0.0),
-            );
+        // Spawn axis root as an independent world-space entity at the target's
+        // current position, with identity rotation (world-aligned).
+        // Child entities (lines + labels) inherit this identity rotation, so
+        // they always show world X/Y/Z regardless of the target's orientation.
+        commands
+            .spawn((
+                Transform {
+                    translation: transform.translation,
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+                GlobalTransform::default(),
+                Visibility::default(),
+                InheritedVisibility::default(),
+                DebugAxisTarget { target: entity },
+            ))
+            .with_children(|parent| {
+                // X axis (red) with "X" label
+                parent.spawn(PbrBundle {
+                    mesh: meshes.add(x_axis_mesh),
+                    material: x_material,
+                    ..default()
+                });
+                spawn_axis_label(
+                    parent,
+                    "X",
+                    length * 1.1,
+                    0.0,
+                    0.0,
+                    Color::srgb(1.0, 0.0, 0.0),
+                );
 
-            // Y axis (green) with "Y" label
-            parent.spawn(PbrBundle {
-                mesh: meshes.add(y_axis_mesh),
-                material: y_material,
-                ..default()
-            });
-            spawn_axis_label(
-                parent,
-                "Y",
-                0.0,
-                length * 1.1,
-                0.0,
-                Color::srgb(0.0, 1.0, 0.0),
-            );
+                // Y axis (green) with "Y" label
+                parent.spawn(PbrBundle {
+                    mesh: meshes.add(y_axis_mesh),
+                    material: y_material,
+                    ..default()
+                });
+                spawn_axis_label(
+                    parent,
+                    "Y",
+                    0.0,
+                    length * 1.1,
+                    0.0,
+                    Color::srgb(0.0, 1.0, 0.0),
+                );
 
-            // Z axis (blue) with "Z" label
-            parent.spawn(PbrBundle {
-                mesh: meshes.add(z_axis_mesh),
-                material: z_material,
-                ..default()
+                // Z axis (blue) with "Z" label
+                parent.spawn(PbrBundle {
+                    mesh: meshes.add(z_axis_mesh),
+                    material: z_material,
+                    ..default()
+                });
+                spawn_axis_label(
+                    parent,
+                    "Z",
+                    0.0,
+                    0.0,
+                    length * 1.1,
+                    Color::srgb(0.0, 0.0, 1.0),
+                );
             });
-            spawn_axis_label(
-                parent,
-                "Z",
-                0.0,
-                0.0,
-                length * 1.1,
-                Color::srgb(0.0, 0.0, 1.0),
-            );
-        });
+    }
+}
+
+/// Updates the position of all debug axis root entities to match their target.
+///
+/// Runs every frame in `Update` when `AppState::InGame`. Keeps the axis root's
+/// rotation at identity so axes remain world-aligned while translating with
+/// the target entity.
+#[allow(clippy::needless_pass_by_value)]
+pub fn update_debug_axes_positions(
+    mut axis_query: Query<'_, '_, (&mut Transform, &DebugAxisTarget)>,
+    target_query: Query<'_, '_, &Transform, Without<DebugAxisTarget>>,
+) {
+    for (mut axis_transform, axis_target) in &mut axis_query {
+        let Ok(target_transform) = target_query.get(axis_target.target) else {
+            continue;
+        };
+        // Match position only; keep rotation at identity (world-aligned).
+        axis_transform.translation = target_transform.translation;
     }
 }
 

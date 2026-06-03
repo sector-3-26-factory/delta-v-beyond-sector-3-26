@@ -54,7 +54,10 @@ pub mod spawn_sets;
 pub mod state;
 
 pub use camera::{spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShipEntity};
-pub use debug_axes::{mark_debug_axes, spawn_debug_axes, DebugAxes, DebugAxesEligible};
+pub use debug_axes::{
+    mark_debug_axes, spawn_debug_axes, update_debug_axes_positions, DebugAxes, DebugAxesEligible,
+    DebugAxisTarget,
+};
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use flight_assist::{
@@ -136,6 +139,13 @@ impl Plugin for CorePlugin {
         app.add_systems(
             Update,
             camera::chase_camera_system.run_if(in_state(AppState::InGame)),
+        );
+
+        // Debug axes position update: keeps axis roots at the target's position
+        // while maintaining world-aligned (identity) rotation.
+        app.add_systems(
+            Update,
+            debug_axes::update_debug_axes_positions.run_if(in_state(AppState::InGame)),
         );
 
         // Input pipeline (ADR-0011, ADR-0017).

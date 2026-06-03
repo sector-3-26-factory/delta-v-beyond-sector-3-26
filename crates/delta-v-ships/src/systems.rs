@@ -18,6 +18,8 @@
 //! 6. Flight-assist damping — if enabled, damp velocity
 //! 7. Clear commands — zero out [`ThrustCommand`] + [`TorqueCommand`]
 
+use std::collections::BTreeSet;
+
 use bevy::prelude::*;
 use delta_v_core::{
     ActiveActions, FlightAssist, FlightAssistConfig, FlightAssistState, LogicalAction,
@@ -44,6 +46,15 @@ pub enum ShipInputSet {
     /// Clear [`ThrustCommand`] and [`TorqueCommand`] after application.
     ClearCommands,
 }
+
+/// Tracks the previous tick's [`ActiveActions`] for edge detection.
+///
+/// Used by [`flight_assist_toggle_system`] to detect key press transitions
+/// (on press, not on hold).
+// allow-default: Bevy requires Default on resources for init_resource.
+// This is per-tick state, not configuration.
+#[derive(Resource, Default, Debug)]
+pub struct PreviousActions(pub BTreeSet<LogicalAction>);
 
 /// Reads [`ActiveActions`] and accumulates thrust/torque commands.
 ///
@@ -114,16 +125,24 @@ pub fn input_reader_system(
 ///
 /// Runs in `FixedUpdate` after [`delta_v_core::InputSet::Translate`].
 /// Only toggles on the frame the action transitions from not-active to active
-/// (i.e. on press, not on hold).
-#[allow(clippy::needless_pass_by_value)]
+/// (i.e. on press, not on hold). Uses [`PreviousActions`] for edge detection.
 pub fn flight_assist_toggle_system(
     active: Res<'_, ActiveActions>,
+    mut prev: ResMut<'_, PreviousActions>,
     mut state: ResMut<'_, FlightAssistState>,
 ) {
-    if active.0.contains(&LogicalAction::ToggleFlightAssist) {
+    let toggle = LogicalAction::ToggleFlightAssist;
+    let is_pressed = active.0.contains(&toggle);
+    let was_pressed = prev.0.contains(&toggle);
+
+    // Edge detection: only toggle on the transition from not-pressed to pressed.
+    if is_pressed && !was_pressed {
         state.enabled = !state.enabled;
         log::info!("flight assist toggled: {}", state.enabled);
     }
+
+    // Update previous state for next tick.
+    prev.0 = active.0.clone();
 }
 
 /// Applies accumulated thrust as a force on the player ship's [`RigidBody`].
@@ -172,14 +191,20 @@ pub fn torque_system(
     body.apply_torque(world_torque);
 }
 
+/// Minimum angular velocity threshold below which rotation is fully stopped.
+///
+/// When flight assist damping reduces angular velocity below this value,
+/// the velocity is zeroed out entirely to prevent endless micro-rotation.
+const ANGULAR_VELOCITY_THRESHOLD: f32 = 0.001;
+
 /// Applies flight-assist velocity damping when enabled.
 ///
-/// When flight assist is active, this system applies a damping force
-/// proportional to the ship's current velocity, gently decelerating it.
-/// The damping coefficient controls how aggressively velocity is reduced.
+/// When flight assist is active, this system reduces both linear and angular
+/// velocity by the damping coefficient each tick. The coefficient is a 0-1
+/// value where 0 = no damping and 1 = full stop in one tick.
 ///
-/// This is NOT an instantaneous velocity kill — it applies soft deceleration
-/// each tick, giving a smooth "inertial damping" feel.
+/// Angular velocity is zeroed out entirely when it falls below
+/// [`ANGULAR_VELOCITY_THRESHOLD`] to prevent endless micro-rotation.
 ///
 /// Runs in `FixedUpdate`.
 #[allow(clippy::needless_pass_by_value)]
@@ -197,14 +222,19 @@ pub fn flight_assist_damping_system(
         return;
     };
 
-    // Apply damping: F_damp = -coeff * v
-    // This gives exponential decay of velocity over time.
-    let damping_force = -config.damping_coefficient * body.velocity;
-    body.apply_force(damping_force);
+    let one_minus_coeff = 1.0 - config.damping_coefficient;
 
-    // Also damp angular velocity
-    let damping_torque = -config.damping_coefficient * body.angular_velocity;
-    body.apply_torque(damping_torque);
+    // Apply linear damping: reduce velocity by coefficient directly.
+    body.velocity *= one_minus_coeff;
+
+    // Apply angular damping the same way. When angular velocity is very
+    // small, zero it out entirely to prevent endless micro-rotation.
+    let ang_vel = body.angular_velocity;
+    if ang_vel.length_squared() < ANGULAR_VELOCITY_THRESHOLD * ANGULAR_VELOCITY_THRESHOLD {
+        body.angular_velocity = Vec3::ZERO;
+    } else {
+        body.angular_velocity *= one_minus_coeff;
+    }
 }
 
 /// Clears thrust and torque commands after they have been applied.

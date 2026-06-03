@@ -59,7 +59,7 @@ use delta_v_core::{AppState, InputSet, ThrustCommand, TorqueCommand, WorldSpawnS
 use delta_v_physics::PhysicsSet;
 use systems::{
     clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
-    input_reader_system, thrust_system, torque_system, ShipInputSet,
+    input_reader_system, thrust_system, torque_system, PreviousActions, ShipInputSet,
 };
 
 /// Ships plugin for managing player and NPC vessels.
@@ -78,7 +78,8 @@ impl Plugin for ShipsPlugin {
         // allow-default: Bevy requires Default on resources for init_resource.
         // These are per-tick command buffers, not configuration.
         app.init_resource::<ThrustCommand>()
-            .init_resource::<TorqueCommand>();
+            .init_resource::<TorqueCommand>()
+            .init_resource::<PreviousActions>();
 
         // Configure WorldSpawnSet ordering (ADR-0038).
         app.configure_sets(
