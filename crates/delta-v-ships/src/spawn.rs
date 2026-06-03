@@ -17,7 +17,7 @@ use bevy::gltf::{Gltf, GltfMesh};
 use bevy::prelude::*;
 use bevy::render::mesh::{Mesh, VertexAttributeValues};
 use delta_v_core::{
-    ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
+    CameraFollow, ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
     ShipPropulsionConfig, ShipTemplate,
 };
 use delta_v_physics::RigidBody;
@@ -29,6 +29,15 @@ pub(crate) struct PendingShipMesh {
     /// Handle to the glTF asset being loaded.
     gltf_handle: Handle<Gltf>,
 }
+
+/// Marker component for a ship whose chase camera offset needs to be computed
+/// from the glTF bounding box.
+///
+/// When the chase camera position is not specified in the template JSON, this
+/// component is inserted at spawn time. The `attach_ship_meshes` system reads
+/// it and computes the offset from the bounding box once the mesh loads.
+#[derive(Component)]
+pub(crate) struct PendingChaseCamera;
 
 /// Computes the bounding box half-extent from all meshes in a glTF asset.
 ///
@@ -75,6 +84,16 @@ fn compute_gltf_half_extent(
     }
 }
 
+/// Computes a default chase camera offset from the bounding box half-extents.
+///
+/// Places the camera behind and above the ship at a distance proportional
+/// to the ship's size. The Z distance (behind) is 2× the largest half-extent,
+/// and the Y distance (above) is 0.5× the largest half-extent.
+fn compute_chase_offset(half_extent: Vec3) -> Vec3 {
+    let max_extent = half_extent.x.max(half_extent.y).max(half_extent.z);
+    Vec3::new(0.0, max_extent * 0.5, max_extent * 2.0)
+}
+
 /// Spawns ship entities in response to `SpawnEntity` events.
 ///
 /// Listens for events with `entity_type` matching known ship types:
@@ -112,6 +131,10 @@ fn deserialize_template(event: &SpawnEntity) -> ShipTemplate {
 /// Template is validated by delta-v-json; structure is guaranteed.
 /// Mass, inertia, and propulsion values are read from the template JSON
 /// per ADR-0014 (gameplay values in JSON, not Rust constants).
+///
+/// If the template specifies a chase camera position, it is used directly.
+/// If the chase camera is omitted, a [`PendingChaseCamera`] marker is inserted
+/// and the offset is computed from the glTF bounding box when the mesh loads.
 #[allow(
     clippy::indexing_slicing,
     clippy::expect_used,
@@ -136,26 +159,19 @@ fn spawn_player_ship(
         .expect("mesh.path must be a string")
         .to_string();
 
-    // Extract camera positions from validated template JSON.
-    let cockpit_x = event.template["cameras"]["cockpit"]["x"]
-        .as_f64()
-        .expect("x must be a number") as f32;
-    let cockpit_y = event.template["cameras"]["cockpit"]["y"]
-        .as_f64()
-        .expect("y must be a number") as f32;
-    let cockpit_z = event.template["cameras"]["cockpit"]["z"]
-        .as_f64()
-        .expect("z must be a number") as f32;
+    // Extract camera positions from the typed template struct.
+    let cockpit = &template.cameras.cockpit;
+    let chase = &template.cameras.chase;
 
-    let chase_x = event.template["cameras"]["chase"]["x"]
-        .as_f64()
-        .expect("x must be a number") as f32;
-    let chase_y = event.template["cameras"]["chase"]["y"]
-        .as_f64()
-        .expect("y must be a number") as f32;
-    let chase_z = event.template["cameras"]["chase"]["z"]
-        .as_f64()
-        .expect("z must be a number") as f32;
+    // Determine chase camera offset: use JSON value if present, otherwise
+    // use a placeholder that will be overwritten when the mesh loads.
+    let (chase_offset, needs_chase_computation) = if let Some(c) = chase {
+        (Vec3::new(c.x, c.y, c.z), false)
+    } else {
+        // Placeholder; will be replaced by bounding-box-based value
+        // in attach_ship_meshes.
+        (Vec3::new(0.0, 5.0, 20.0), true)
+    };
 
     // Queue glTF mesh load.
     let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
@@ -177,39 +193,40 @@ fn spawn_player_ship(
         event.scale
     );
 
-    // Spawn ship entity with transform from world definition.
-    // Mark it as pending mesh attachment and eligible for debug axes (ADR-0022, ADR-0005).
-    // Use event.id (unique entity identifier) for debug filtering, not entity_type (ADR-0038).
-    // Add RigidBody for Newtonian physics and FlightAssist for inertial damping.
-    // Mass and inertia come from template JSON per ADR-0014.
-    let ship_entity = commands
-        .spawn((
-            Transform {
-                translation: event.position,
-                rotation: event.rotation,
-                scale: event.scale,
-            },
-            GlobalTransform::default(),
-            PendingShipMesh { gltf_handle },
-            DebugAxesEligible::new(event.id.clone(), placeholder_axis_length),
-            // Physics components: mass and inertia from template JSON (ADR-0014)
-            RigidBody::new(template.mass.value, template.inertia_scale),
-            FlightAssist,
-        ))
+    // Build the ship entity spawn command.
+    let mut ship_spawner = commands.spawn((
+        Transform {
+            translation: event.position,
+            rotation: event.rotation,
+            scale: event.scale,
+        },
+        GlobalTransform::default(),
+        PendingShipMesh { gltf_handle },
+        DebugAxesEligible::new(event.id.clone(), placeholder_axis_length),
+        // Physics components: mass and inertia from template JSON (ADR-0014)
+        RigidBody::new(template.mass.value, template.inertia_scale),
+        FlightAssist,
+    ));
+
+    // If chase camera needs to be computed from bounding box, add marker.
+    if needs_chase_computation {
+        ship_spawner.insert(PendingChaseCamera);
+    }
+
+    let ship_entity = ship_spawner
         .with_children(|parent| {
-            // Spawn cockpit and chase cameras as child entities.
+            // Spawn cockpit camera as a child entity.
             parent.spawn(Transform::from_translation(Vec3::new(
-                cockpit_x, cockpit_y, cockpit_z,
+                cockpit.x, cockpit.y, cockpit.z,
             )));
-            parent.spawn(Transform::from_translation(Vec3::new(
-                chase_x, chase_y, chase_z,
-            )));
+            // Spawn chase camera as a child entity.
+            parent.spawn(Transform::from_translation(chase_offset));
         })
         .id();
 
     // Store player ship ID and chase camera offset for camera tracking.
     commands.insert_resource(PlayerShipEntity(ship_entity));
-    commands.insert_resource(ChaseCameraOffset(Vec3::new(chase_x, chase_y, chase_z)));
+    commands.insert_resource(ChaseCameraOffset(chase_offset));
 
     // Insert propulsion configuration from template JSON (ADR-0014).
     // These values are read by the input → forces pipeline each tick.
@@ -239,10 +256,12 @@ fn spawn_player_ship(
 /// from the glTF and attaches it to the ship entity with a `SceneBundle`.
 ///
 /// After attaching the mesh, it computes the bounding box from the glTF vertex
-/// data and updates both [`DebugAxesEligible`] and [`DebugAxes`] components with
-/// the correct axis length (2× the largest half-extent). This ensures debug axes
-/// are scaled proportionally to the actual mesh, not the world definition's scale
-/// field. Re-inserting `DebugAxes` triggers `Changed<DebugAxes>`, which causes
+/// data and:
+/// - Updates [`DebugAxesEligible`] and [`DebugAxes`] with the correct axis length
+/// - If the entity has [`PendingChaseCamera`], computes and sets the chase camera
+///   offset from the bounding box and updates the [`CameraFollow`] component
+///
+/// Re-inserting `DebugAxes` triggers `Changed<DebugAxes>`, which causes
 /// `update_debug_axes_on_change` to despawn the old axis root and spawn a new one.
 #[allow(clippy::indexing_slicing, clippy::needless_pass_by_value)]
 pub(crate) fn attach_ship_meshes(
@@ -250,6 +269,8 @@ pub(crate) fn attach_ship_meshes(
     gltf_assets: Res<'_, Assets<Gltf>>,
     gltf_mesh_assets: Res<'_, Assets<GltfMesh>>,
     mesh_assets: Res<'_, Assets<Mesh>>,
+    mut chase_offset: ResMut<'_, ChaseCameraOffset>,
+    mut camera_follow_query: Query<'_, '_, &'static mut CameraFollow>,
     query: Query<
         '_,
         '_,
@@ -258,10 +279,11 @@ pub(crate) fn attach_ship_meshes(
             &PendingShipMesh,
             &DebugAxesEligible,
             Option<&DebugAxes>,
+            Option<&PendingChaseCamera>,
         ),
     >,
 ) {
-    for (entity, pending, debug_eligible, debug_axes) in query.iter() {
+    for (entity, pending, debug_eligible, debug_axes, pending_chase) in query.iter() {
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
             // Get the first scene from the glTF (should contain the mesh).
             if !gltf.scenes.is_empty() {
@@ -277,11 +299,11 @@ pub(crate) fn attach_ship_meshes(
                     view_visibility: ViewVisibility::default(),
                 });
 
-                // Compute the bounding box from the glTF mesh data and update
-                // the debug axis length to match the actual mesh size.
+                // Compute the bounding box from the glTF mesh data.
                 if let Some(half_extent) =
                     compute_gltf_half_extent(gltf, &gltf_mesh_assets, &mesh_assets)
                 {
+                    // Update debug axis length to match the actual mesh size.
                     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0;
                     log::info!(
                         "attach_ship_meshes: computed axis_length={axis_length:.1} from glTF bounding box (half_extent={half_extent:?})"
@@ -300,14 +322,31 @@ pub(crate) fn attach_ship_meshes(
                             .entity(entity)
                             .insert(DebugAxes::new(existing.entity_id.clone(), axis_length));
                     }
+
+                    // If the chase camera offset needs to be computed from
+                    // the bounding box, compute it and update both the resource
+                    // and the CameraFollow component on the camera entity.
+                    if pending_chase.is_some() {
+                        let computed_offset = compute_chase_offset(half_extent);
+                        log::info!(
+                            "attach_ship_meshes: computed chase offset {computed_offset:?} from bounding box"
+                        );
+                        chase_offset.0 = computed_offset;
+                        // Update the CameraFollow component so the chase camera
+                        // system uses the new offset starting this frame.
+                        for mut follow in &mut camera_follow_query {
+                            follow.offset = computed_offset;
+                        }
+                    }
                 } else {
                     log::warn!(
                         "attach_ship_meshes: could not compute bounding box for glTF mesh on entity {entity:?}"
                     );
                 }
 
-                // Remove the pending marker now that mesh is attached.
+                // Remove the pending markers now that mesh is attached.
                 commands.entity(entity).remove::<PendingShipMesh>();
+                commands.entity(entity).remove::<PendingChaseCamera>();
 
                 log::debug!("attached glTF mesh to ship entity");
             }

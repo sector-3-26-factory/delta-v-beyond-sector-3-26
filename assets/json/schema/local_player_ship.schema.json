@@ -43,12 +43,11 @@
       }
     },
     "cameras": {
-      "description": "Camera definitions for cockpit and chase views. Both are required and spawn as child entities.",
+      "description": "Camera definitions for cockpit and chase views. Cockpit is always required. If chase is omitted, the chase camera position is computed automatically from the glTF mesh bounding box.",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "cockpit",
-        "chase"
+        "cockpit"
       ],
       "properties": {
         "cockpit": {
@@ -56,7 +55,7 @@
           "$ref": "#/$defs/vec3"
         },
         "chase": {
-          "description": "Chase camera position relative to ship center (metres). Right-handed coordinates: +Y up, -Z forward per ADR-0006.",
+          "description": "Chase camera position relative to ship center (metres). Right-handed coordinates: +Y up, -Z forward per ADR-0006. If omitted, the position is computed automatically from the glTF mesh bounding box.",
           "$ref": "#/$defs/vec3"
         }
       }

@@ -53,7 +53,10 @@ pub mod keybindings_resource;
 pub mod spawn_sets;
 pub mod state;
 
-pub use camera::{spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShipEntity};
+pub use camera::{
+    spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShipEntity, ShipCamerasTemplate,
+    Vec3Json,
+};
 pub use debug_axes::{
     mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_positions,
     DebugAxes, DebugAxesEligible, DebugAxisRoot, DebugAxisTarget,

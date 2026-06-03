@@ -15,6 +15,8 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+use crate::camera::ShipCamerasTemplate;
+
 /// Marker component for entities that use flight assist (inertial damping).
 ///
 /// When this component is present on an entity and flight assist is enabled,
@@ -61,6 +63,8 @@ pub struct ShipTemplate {
     pub mass: PhysicalQuantity,
     /// Dimensionless inertia multiplier (default 1.0 from schema).
     pub inertia_scale: f32,
+    /// Camera definitions (cockpit required, chase optional).
+    pub cameras: ShipCamerasTemplate,
     /// Propulsion system configuration.
     pub propulsion: ShipPropulsionTemplate,
 }
