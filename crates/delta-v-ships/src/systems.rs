@@ -126,6 +126,7 @@ pub fn input_reader_system(
 /// Runs in `FixedUpdate` after [`delta_v_core::InputSet::Translate`].
 /// Only toggles on the frame the action transitions from not-active to active
 /// (i.e. on press, not on hold). Uses [`PreviousActions`] for edge detection.
+#[allow(clippy::needless_pass_by_value)]
 pub fn flight_assist_toggle_system(
     active: Res<'_, ActiveActions>,
     mut prev: ResMut<'_, PreviousActions>,
@@ -142,7 +143,7 @@ pub fn flight_assist_toggle_system(
     }
 
     // Update previous state for next tick.
-    prev.0 = active.0.clone();
+    prev.0.clone_from(&active.0);
 }
 
 /// Applies accumulated thrust as a force on the player ship's [`RigidBody`].

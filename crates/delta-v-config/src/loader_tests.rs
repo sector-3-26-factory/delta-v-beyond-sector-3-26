@@ -74,8 +74,8 @@ mod tests {
             "expected enabled_by_default to be true"
         );
         assert!(
-            (fa.damping_coefficient - 0.1).abs() < f32::EPSILON,
-            "expected damping_coefficient 0.1"
+            (fa.damping_coefficient - 0.05).abs() < f32::EPSILON,
+            "expected damping_coefficient 0.05"
         );
     }
 

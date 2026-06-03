@@ -136,6 +136,7 @@ fn deserialize_template(event: &SpawnEntity) -> ShipTemplate {
 /// If the chase camera is omitted, a [`PendingChaseCamera`] marker is inserted
 /// and the offset is computed from the glTF bounding box when the mesh loads.
 #[allow(
+    clippy::option_if_let_else,
     clippy::indexing_slicing,
     clippy::expect_used,
     clippy::cast_possible_truncation
@@ -263,7 +264,7 @@ fn spawn_player_ship(
 ///
 /// Re-inserting `DebugAxes` triggers `Changed<DebugAxes>`, which causes
 /// `update_debug_axes_on_change` to despawn the old axis root and spawn a new one.
-#[allow(clippy::indexing_slicing, clippy::needless_pass_by_value)]
+#[allow(clippy::indexing_slicing, clippy::needless_pass_by_value, clippy::type_complexity)]
 pub(crate) fn attach_ship_meshes(
     mut commands: Commands<'_, '_>,
     gltf_assets: Res<'_, Assets<Gltf>>,
