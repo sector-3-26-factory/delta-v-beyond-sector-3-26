@@ -1,0 +1,103 @@
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
+
+//! Events emitted for entity spawning.
+//!
+//! [`SpawnEntity`] is defined here (in `delta-v-core`) so that all domain
+//! crates can reference it without creating domain-to-domain dependencies.
+//! The world plugin emits these events; domain plugins listen for them.
+//!
+//! See ADR-0005 (plugin architecture) and ADR-0038 (entity template system).
+
+use bevy::prelude::*;
+use serde_json::Value;
+
+/// Event emitted when an entity should be spawned from a template.
+///
+/// The world plugin emits these events during [`AppState::LoadingWorld`].
+/// Domain-specific plugins (`ShipsPlugin`, `SunPlugin`, etc.) listen for this
+/// event, filter by `entity_type`, and spawn the entity with appropriate
+/// components.
+///
+/// This decouples world loading from entity spawning, allowing each domain
+/// to own its spawn logic (ADR-0005).
+#[derive(Event, Debug, Clone)]
+pub struct SpawnEntity {
+    /// Unique identifier for this entity instance (from world definition).
+    /// Used for debug filtering, save/load, networking, and player-facing UI.
+    pub id: String,
+
+    /// The entity type discriminator (e.g., `"player_controlled_ship"`, `"sun"`).
+    /// Must match an `entity_type` in a template JSON file.
+    pub entity_type: String,
+
+    /// The loaded and validated template JSON.
+    /// Contains all static properties for the entity.
+    pub template: Value,
+
+    /// Path to the template file (e.g., `templates/ships/player_ship/template.json`).
+    pub template_path: String,
+
+    /// Path to the template that contains the mesh (e.g., `templates/ships/space-fighter-comrade1280/template.json`).
+    /// For standalone ship templates, this is the same as `template_path`.
+    /// For `player_controlled_ship`, this is the referenced `ship_template` path.
+    /// The mesh is always at `mesh.glb` in this template's directory.
+    pub mesh_template_path: String,
+
+    /// Spawn position in world coordinates (metres).
+    pub position: Vec3,
+
+    /// Optional rotation (unit quaternion). Defaults to identity.
+    pub rotation: Quat,
+
+    /// Optional scale. Defaults to 1.0 on all axes.
+    pub scale: Vec3,
+}
+
+impl SpawnEntity {
+    /// Creates a new `SpawnEntity` event with default rotation and scale.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - Unique identifier for this entity instance.
+    /// * `entity_type` - Discriminator for the entity type.
+    /// * `template` - Loaded template JSON.
+    /// * `template_path` - Path to the template file.
+    /// * `mesh_template_path` - Path to the template containing the mesh.
+    /// * `position` - Spawn position in metres.
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn new(
+        id: String,
+        entity_type: String,
+        template: Value,
+        template_path: String,
+        mesh_template_path: String,
+        position: Vec3,
+    ) -> Self {
+        Self {
+            id,
+            entity_type,
+            template,
+            template_path,
+            mesh_template_path,
+            position,
+            rotation: Quat::IDENTITY,
+            scale: Vec3::ONE,
+        }
+    }
+
+    /// Sets the rotation for this spawn event.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn with_rotation(mut self, rotation: Quat) -> Self {
+        self.rotation = rotation;
+        self
+    }
+
+    /// Sets the scale for this spawn event.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn with_scale(mut self, scale: Vec3) -> Self {
+        self.scale = scale;
+        self
+    }
+}

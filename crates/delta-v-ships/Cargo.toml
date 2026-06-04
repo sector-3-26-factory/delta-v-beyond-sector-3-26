@@ -13,7 +13,6 @@ log = { workspace = true }
 serde_json = { workspace = true }
 delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
 delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }
-delta-v-world = { path = "../delta-v-world", version = "0.0.1" }
 
 [lints]
 rust.unsafe_code = "warn"

@@ -439,7 +439,7 @@ from Step 5 analysis:
 ```json
 {
     "entity_type": "player_controlled_ship",
-    "ship_template": "templates/ships/<asset-name>/template.json",
+    "ship_template": "ships/<asset-name>",
     "cameras": {
         "cockpit": {
             "x": <cockpit_x>,

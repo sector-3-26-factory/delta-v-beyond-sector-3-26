@@ -123,13 +123,16 @@ fn load_world_system(
         // the raw JSON first, then validating against the correct schema.
         // If template loading fails, this is a hard error (ADR-0013).
         #[allow(clippy::panic, clippy::indexing_slicing)]
+        let template_path = crate::template_loader::resolve_template_path(&entity_spawn.template);
+        #[allow(clippy::panic)]
         let (entity_type, template, mesh_template_path) =
-            load_template_and_extract_type(&entity_spawn.template).unwrap_or_else(|e| {
-                panic!(
+            match load_template_and_extract_type(&template_path) {
+                Ok(result) => result,
+                Err(e) => panic!(
                     "fatal: failed to load template '{}': {}",
                     entity_spawn.template, e
-                );
-            });
+                ),
+            };
 
         let pos = Vec3::new(
             entity_spawn.position.x,
@@ -152,7 +155,7 @@ fn load_world_system(
             entity_spawn.id.clone(),
             entity_type,
             template,
-            entity_spawn.template.clone(),
+            template_path,
             mesh_template_path,
             pos,
         )
@@ -222,8 +225,8 @@ fn load_template_and_extract_type(
     // Unknown entity types are a hard error — no silent fallbacks (ADR-0013).
     match entity_type.as_str() {
         "player_controlled_ship" => {
-            // Extract the ship_template path from the raw JSON to know where the mesh lives.
-            let mesh_template_path = raw_value
+            // Extract the ship_template path from the raw JSON and resolve it to a full path.
+            let ship_template_short = raw_value
                 .get("ship_template")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| WorldError::Schema {
@@ -231,8 +234,9 @@ fn load_template_and_extract_type(
                     pointer: "/ship_template".to_string(),
                     reason: "player_controlled_ship template missing 'ship_template' field"
                         .to_string(),
-                })?
-                .to_string();
+                })?;
+            let mesh_template_path =
+                crate::template_loader::resolve_template_path(ship_template_short);
             let template = load_template(template_path, &entity_type)?;
             Ok((entity_type, template, mesh_template_path))
         }

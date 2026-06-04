@@ -18,10 +18,9 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Mesh, VertexAttributeValues};
 use delta_v_core::{
     CameraFollow, ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipPropulsionConfig,
+    PlayerShipTemplate, ShipPropulsionConfig, SpawnEntity,
 };
 use delta_v_physics::RigidBody;
-use delta_v_world::SpawnEntity;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
