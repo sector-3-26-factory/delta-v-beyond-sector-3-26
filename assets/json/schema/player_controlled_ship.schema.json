@@ -1,0 +1,68 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/player_controlled_ship",
+    "title": "Player-controlled ship template",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines the player-controlled ship entity type. References a base ship template for physical properties (mass, mesh, propulsion) and adds camera definitions for cockpit and chase views. Per ADR-0038, templates are loaded and validated independently of the world definition.\n\nPhysical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "entity_type",
+        "ship_template",
+        "cameras"
+    ],
+    "properties": {
+        "entity_type": {
+            "description": "Entity type discriminator. Must be 'player_controlled_ship'.",
+            "type": "string",
+            "const": "player_controlled_ship"
+        },
+        "ship_template": {
+            "description": "Path to the base ship template file (e.g., templates/ships/fighter.json). Loaded and merged at spawn time. The referenced template must have entity_type 'ship'.",
+            "type": "string"
+        },
+        "cameras": {
+            "description": "Camera definitions for cockpit and chase views. Cockpit is always required. If chase is omitted, the chase camera position is computed automatically from the glTF mesh bounding box.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "cockpit"
+            ],
+            "properties": {
+                "cockpit": {
+                    "description": "Cockpit camera position relative to ship center (metres). Right-handed coordinates: +Y up, -Z forward per ADR-0006.",
+                    "$ref": "#/$defs/vec3"
+                },
+                "chase": {
+                    "description": "Chase camera position relative to ship center (metres). Right-handed coordinates: +Y up, -Z forward per ADR-0006. If omitted, the position is computed automatically from the glTF mesh bounding box.",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
+        }
+    },
+    "$defs": {
+        "vec3": {
+            "description": "3-component vector (x, y, z) in metres.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "x",
+                "y",
+                "z"
+            ],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "X component (metres)."
+                },
+                "y": {
+                    "type": "number",
+                    "description": "Y component (metres)."
+                },
+                "z": {
+                    "type": "number",
+                    "description": "Z component (metres)."
+                }
+            }
+        }
+    }
+}

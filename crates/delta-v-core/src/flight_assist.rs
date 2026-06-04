@@ -52,8 +52,9 @@ pub struct FlightAssistState {
 // Ship template structs (ADR-0014, ADR-0039, ADR-0040)
 // ---------------------------------------------------------------------------
 
-/// Deserialized ship template JSON.
+/// Base deserialized ship template JSON.
 ///
+/// Contains common properties for all ship types (mass, inertia, propulsion).
 /// This struct is produced by deserializing the validated + default-filled
 /// `serde_json::Value` from the template file. Per ADR-0040, the schema is
 /// the only source of defaults — no `#[serde(default)]` or `impl Default`.
@@ -63,10 +64,26 @@ pub struct ShipTemplate {
     pub mass: PhysicalQuantity,
     /// Dimensionless inertia multiplier (default 1.0 from schema).
     pub inertia_scale: f32,
-    /// Camera definitions (cockpit required, chase optional).
-    pub cameras: ShipCamerasTemplate,
     /// Propulsion system configuration.
     pub propulsion: ShipPropulsionTemplate,
+}
+
+/// Deserialized player-controlled ship template JSON.
+///
+/// Extends [`ShipTemplate`] with camera definitions.
+/// Used only for `entity_type` `player_controlled_ship`.
+/// The template JSON is merged from the `player_controlled_ship` template
+/// and the referenced ship template at load time.
+#[derive(Debug, Deserialize)]
+pub struct PlayerShipTemplate {
+    /// Ship mass in kilograms (from merged ship template).
+    pub mass: PhysicalQuantity,
+    /// Dimensionless inertia multiplier (from merged ship template).
+    pub inertia_scale: f32,
+    /// Propulsion system configuration (from merged ship template).
+    pub propulsion: ShipPropulsionTemplate,
+    /// Camera definitions (cockpit required, chase optional).
+    pub cameras: ShipCamerasTemplate,
 }
 
 /// Physical quantity with value and unit (ADR-0008).

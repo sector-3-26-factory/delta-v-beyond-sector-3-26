@@ -4,6 +4,11 @@
 //!
 //! Loads entity templates from files and validates them against their
 //! schemas per ADR-0038.
+//!
+//! For `player_controlled_ship` templates, the loader additionally resolves
+//! the `ship_template` reference: it loads the referenced ship template,
+//! merges the two (ship properties + player cameras), and validates the
+//! merged result against `ship.schema.json`.
 
 use std::path::{Path, PathBuf};
 
@@ -14,24 +19,47 @@ use crate::error::WorldError;
 
 /// Loads and validates a template file.
 ///
+/// For `player_controlled_ship` templates, the `ship_template` field is
+/// resolved and the referenced ship template is merged in before validation.
+///
 /// # Arguments
 ///
-/// * `template_path` - Relative path to the template (e.g., `templates/ships/local_player_ship.json`)
-/// * `entity_type` - The entity type discriminator (e.g., `"local_player_ship"`)
+/// * `template_path` - Relative path to the template (e.g., `templates/ships/player_ship.json`)
+/// * `entity_type` - The entity type discriminator (e.g., `"player_controlled_ship"`)
 ///
 /// # Returns
 ///
-/// The loaded and validated template JSON.
+/// The loaded, merged (if applicable), and validated template JSON.
 ///
 /// # Errors
 ///
 /// Returns [`WorldError`] if the file cannot be read, parsed, or fails schema validation.
+/// # Panics
+///
+/// Panics if `CARGO_MANIFEST_DIR` is not set or the workspace directory structure
+/// is unexpected. This should never happen in normal cargo builds.
+#[allow(clippy::expect_used)] // CARGO_MANIFEST_DIR is always set by cargo; workspace structure is fixed
 pub fn load_template(template_path: &str, entity_type: &str) -> Result<Value, WorldError> {
-    let root = PathBuf::from("assets");
-    let template_file = root.join(template_path);
-    let schema_file = root.join(format!("json/schema/{entity_type}.schema.json"));
+    // Determine the workspace root from CARGO_MANIFEST_DIR (crates/delta-v-world -> workspace root).
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir
+        .parent()
+        .expect("CARGO_MANIFEST_DIR parent (crates dir) must exist")
+        .parent()
+        .expect("workspace root must exist");
+    let assets_root = workspace_root.join("assets");
 
-    load_template_from_paths(&template_file, &schema_file, entity_type)
+    let template_file = assets_root.join(template_path);
+    let schema_file = assets_root.join(format!("json/schema/{entity_type}.schema.json"));
+
+    let template = load_template_from_paths(&template_file, &schema_file, entity_type)?;
+
+    // For player_controlled_ship, resolve and merge the referenced ship template.
+    if entity_type == "player_controlled_ship" {
+        return merge_ship_template(&template, &assets_root);
+    }
+
+    Ok(template)
 }
 
 /// Loads and validates a template from explicit paths.
@@ -72,6 +100,76 @@ fn load_template_from_paths(
     }
 
     Ok(template)
+}
+
+/// Loads and merges a referenced ship template into the player template.
+///
+/// The `player_controlled_ship` template references a base ship template via
+/// the `ship_template` field. This function:
+/// 1. Reads the `ship_template` path from the player template
+/// 2. Loads and validates the referenced ship template
+/// 3. Merges: ship template provides base properties, player template adds cameras
+/// 4. Sets `entity_type` to `player_controlled_ship` on the merged result
+///
+/// # Errors
+///
+/// Returns [`WorldError`] if the ship template cannot be loaded or validated.
+fn merge_ship_template(player_template: &Value, root: &Path) -> Result<Value, WorldError> {
+    let ship_template_path = player_template
+        .get("ship_template")
+        .and_then(Value::as_str)
+        .ok_or_else(|| WorldError::Schema {
+            path: PathBuf::from("<player_controlled_ship template>"),
+            pointer: "/ship_template".to_string(),
+            reason: "player_controlled_ship template missing 'ship_template' field".to_string(),
+        })?;
+
+    // Load the referenced ship template.
+    let ship_template_file = root.join(ship_template_path);
+    let ship_schema_file = root.join("json/schema/ship.schema.json");
+    let ship_template = json_loader::load_validated(&ship_template_file, &ship_schema_file)
+        .map_err(|e| map_json_error(e, &ship_template_file))?;
+
+    // Verify the referenced template is a ship.
+    let ship_type = ship_template
+        .get("entity_type")
+        .and_then(Value::as_str)
+        .ok_or_else(|| WorldError::Schema {
+            path: ship_template_file.clone(),
+            pointer: "/entity_type".to_string(),
+            reason: "referenced ship template missing 'entity_type' field".to_string(),
+        })?;
+
+    if ship_type != "ship" {
+        return Err(WorldError::Schema {
+            path: ship_template_file,
+            pointer: "/entity_type".to_string(),
+            reason: format!(
+                "referenced ship template must have entity_type 'ship', found '{ship_type}'"
+            ),
+        });
+    }
+
+    // Merge: start with ship template properties, then overlay player-specific fields.
+    let mut merged = ship_template;
+
+    if let (Some(merged_obj), Some(player_obj)) =
+        (merged.as_object_mut(), player_template.as_object())
+    {
+        for (key, value) in player_obj {
+            // Skip entity_type (we set it below) and ship_template (metadata, not a ship property).
+            if key != "entity_type" && key != "ship_template" {
+                merged_obj.insert(key.clone(), value.clone());
+            }
+        }
+        // Set entity_type to player_controlled_ship.
+        merged_obj.insert(
+            "entity_type".to_string(),
+            Value::String("player_controlled_ship".to_string()),
+        );
+    }
+
+    Ok(merged)
 }
 
 /// Maps a `delta-v-json` error to a `WorldError`.

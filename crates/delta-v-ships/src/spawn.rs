@@ -9,7 +9,7 @@
 //!
 //! Per ADR-0014, all gameplay values (mass, thrust, torque) come from JSON
 //! — never from Rust constants. The template `Value` is deserialized into
-//! [`ShipTemplate`] via `serde_json::from_value` (a one-liner per ADR-0040).
+//! [`PlayerShipTemplate`] via `serde_json::from_value` (a one-liner per ADR-0040).
 //!
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
@@ -18,7 +18,7 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Mesh, VertexAttributeValues};
 use delta_v_core::{
     CameraFollow, ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    ShipPropulsionConfig, ShipTemplate,
+    PlayerShipTemplate, ShipPropulsionConfig,
 };
 use delta_v_physics::RigidBody;
 use delta_v_world::SpawnEntity;
@@ -97,7 +97,7 @@ fn compute_chase_offset(half_extent: Vec3) -> Vec3 {
 /// Spawns ship entities in response to `SpawnEntity` events.
 ///
 /// Listens for events with `entity_type` matching known ship types:
-/// - `"local_player_ship"`: Player-controlled ship
+/// - `"player_controlled_ship"`: Player-controlled ship
 /// - `"npc_ship"`: NPC-controlled ship (future)
 ///
 /// The event's `template` field contains validated template JSON from delta-v-json.
@@ -108,20 +108,24 @@ pub fn spawn_ship_from_template(
     mut events: EventReader<'_, '_, SpawnEntity>,
 ) {
     for event in events.read() {
-        if event.entity_type == "local_player_ship" {
-            spawn_player_ship(&mut commands, &asset_server, event);
+        match event.entity_type.as_str() {
+            "player_controlled_ship" => spawn_player_ship(&mut commands, &asset_server, event),
+            "npc_ship" => {
+                // NPC ships: future implementation
+                log::warn!("NPC ship spawning not yet implemented");
+            }
+            other => log::warn!("Unknown entity_type: {other}"),
         }
-        // Other ship types (e.g., "npc_ship") handled in future
     }
 }
 
-/// Deserializes the template JSON into a [`ShipTemplate`] struct.
+/// Deserializes the template JSON into a [`PlayerShipTemplate`] struct.
 ///
 /// Per ADR-0040, the template `Value` has already been validated and
 /// filled with schema defaults by `delta-v-json`, so deserialization
 /// into the struct is a one-liner.
 #[allow(clippy::expect_used)] // INVARIANT: template validated by delta-v-json; cannot fail
-fn deserialize_template(event: &SpawnEntity) -> ShipTemplate {
+fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
     serde_json::from_value(event.template.clone())
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
 }
@@ -240,7 +244,7 @@ fn spawn_player_ship(
     });
 
     log::info!(
-        "local player ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
+        "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
         event.position.x,
         event.position.y,
         event.position.z,

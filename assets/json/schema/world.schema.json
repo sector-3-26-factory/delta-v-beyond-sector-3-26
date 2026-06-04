@@ -35,17 +35,12 @@
       "additionalProperties": false,
       "required": [
         "template",
-        "entity_type",
         "id",
         "position"
       ],
       "properties": {
         "template": {
-          "description": "Path to the template file (e.g., templates/ships/local_player_ship.json).",
-          "type": "string"
-        },
-        "entity_type": {
-          "description": "Entity type discriminator (e.g., \"local_player_ship\", \"sun\"). Used by domain plugins to filter SpawnEntity events.",
+          "description": "Path to the template file (e.g., templates/ships/player_ship.json). The template's entity_type field determines the entity type.",
           "type": "string"
         },
         "id": {

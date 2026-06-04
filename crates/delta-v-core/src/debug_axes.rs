@@ -42,7 +42,7 @@ mod tests;
 /// visualization from domain spawn logic.
 #[derive(Component, Debug, Clone)]
 pub struct DebugAxesEligible {
-    /// Entity type or name for debug filtering (e.g., `"local_player_ship"`).
+    /// Entity type or name for debug filtering (e.g., `"player_controlled_ship"`).
     pub entity_id: String,
     /// Axis length in metres.
     pub axis_length: f32,

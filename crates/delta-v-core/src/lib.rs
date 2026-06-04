@@ -65,7 +65,8 @@ pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use flight_assist::{
     FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate, PhysicalQuantity,
-    ShipPropulsionConfig, ShipPropulsionTemplate, ShipTemplate, ThrustCommand, TorqueCommand,
+    PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate, ShipTemplate, ThrustCommand,
+    TorqueCommand,
 };
 pub use input::{ActiveActions, InputSet, LogicalAction};
 pub use keybindings_resource::KeybindingsResource;

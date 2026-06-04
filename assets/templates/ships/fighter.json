@@ -1,5 +1,5 @@
 {
-    "entity_type": "local_player_ship",
+    "entity_type": "ship",
     "mass": {
         "value": 10000,
         "unit": "kg"
@@ -7,13 +7,6 @@
     "inertia_scale": 1.0,
     "mesh": {
         "path": "glTF/ships/space-fighter-comrade1280.glb"
-    },
-    "cameras": {
-        "cockpit": {
-            "x": 0.0,
-            "y": 0.5,
-            "z": -0.2
-        }
     },
     "propulsion": {
         "main_thrusters": [

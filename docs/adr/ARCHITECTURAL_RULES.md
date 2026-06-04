@@ -92,6 +92,8 @@ informational and must be aligned with.
 
 [ADR-0042]: (Proposed) Implement a custom `DeltaVAssetLoader` managing two roots: shipped (`assets/`) and user (`$XDG_DATA_HOME/delta-v-beyond-sector-3-26/`). Default search: user root first, shipped root fallback. Asset references may declare `scope`: `null`/omitted = both roots (user preferred), `"user_only"` = user root only (hard error if missing), `"shipped_only"` = shipped root only (hard error if missing). Shipped root not found at startup = hard startup error listing all checked paths. NEVER silently fall back to a different root than requested.
 
+[ADR-0043]: Ship templates use a two-level pattern: base ship templates (`entity_type: "ship"`) define common properties (mass, mesh, propulsion), and player-controlled ship templates (`entity_type: "player_controlled_ship"`) reference a base ship template via `ship_template` and add camera definitions. The template loader merges the two at load time. The `entity_type` is derived from the template, not from the world definition. Switching ships requires changing only the `ship_template` reference in `player_ship.json`.
+
 ---
 
 ## Summary of Absolute Prohibitions
