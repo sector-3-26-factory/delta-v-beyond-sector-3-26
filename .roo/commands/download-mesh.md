@@ -402,7 +402,6 @@ Required fields:
 - `entity_type`: `"ship"`
 - `mass`: prompt the user for mass in kg (or use a sensible default based on ship size)
 - `inertia_scale`: default `1.0`
-- `mesh.path`: `templates/<type>/<asset-name>/mesh.glb`
 - `propulsion`: prompt the user or use reasonable defaults:
   - `main_thrusters[0].id`: `"main"`
   - `main_thrusters[0].type`: `"chemical"`

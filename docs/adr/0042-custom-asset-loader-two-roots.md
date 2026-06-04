@@ -77,7 +77,6 @@ JSON schema for mesh definitions:
 ```json
 {
   "mesh": {
-    "path": "templates/ships/space-fighter-comrade1280/mesh.glb",
     "scope": null
   }
 }
@@ -87,6 +86,8 @@ Where `scope` is:
 - `null` or omitted: search both roots, user preferred (default)
 - `"user_only"`: search user root only (error if not found)
 - `"shipped_only"`: search shipped root only (error if not found)
+
+Note: The mesh path is always implicit (`mesh.glb` in the template directory), so no `path` field is needed.
 
 ### 4. Error Handling
 
@@ -204,18 +205,15 @@ Follow-up work:
   "ships": [
     {
       "type": "local_player_ship",
-      "mesh": {
-        "path": "templates/ships/space-fighter-comrade1280/mesh.glb"
-        // scope omitted → uses shipped fighter if available
-      }
+      "template": "templates/ships/space-fighter-comrade1280/template.json"
     }
   ]
 }
 ```
 
 When recipient loads this world:
-- Loader searches `user_root/templates/ships/space-fighter-comrade1280/mesh.glb` (not found)
-- Falls back to `shipped_root/templates/ships/space-fighter-comrade1280/mesh.glb` (found)
+- Loader resolves the template path, derives `mesh.glb` from the template directory
+- Searches user root first, falls back to shipped root
 - World loads successfully
 
 **Scenario 2: User shares world with custom ship mesh**
@@ -225,8 +223,8 @@ When recipient loads this world:
   "name": "My Custom Sector",
   "ships": [
     {
+      "template": "templates/ships/custom-fighter/template.json",
       "mesh": {
-        "path": "templates/ships/custom-fighter/mesh.glb",
         "scope": "user_only"
       }
     }
@@ -234,8 +232,8 @@ When recipient loads this world:
 }
 ```
 
-Recipient must have `custom_fighter.glb` in their user root, or load fails with
-explicit error: "asset scope violation: custom_fighter.glb required in user root"
+Recipient must have `custom-fighter/mesh.glb` in their user root, or load fails with
+explicit error: "asset scope violation: custom-fighter/mesh.glb required in user root"
 
 **Scenario 3: User forces official asset**
 

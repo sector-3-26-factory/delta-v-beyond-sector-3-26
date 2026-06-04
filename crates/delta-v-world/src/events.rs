@@ -29,6 +29,15 @@ pub struct SpawnEntity {
     /// Contains all static properties for the entity.
     pub template: Value,
 
+    /// Path to the template file (e.g., `templates/ships/player_ship/template.json`).
+    pub template_path: String,
+
+    /// Path to the template that contains the mesh (e.g., `templates/ships/space-fighter-comrade1280/template.json`).
+    /// For standalone ship templates, this is the same as `template_path`.
+    /// For `player_controlled_ship`, this is the referenced `ship_template` path.
+    /// The mesh is always at `mesh.glb` in this template's directory.
+    pub mesh_template_path: String,
+
     /// Spawn position in world coordinates (metres).
     pub position: Vec3,
 
@@ -47,13 +56,23 @@ impl SpawnEntity {
     /// * `id` - Unique identifier for this entity instance.
     /// * `entity_type` - Discriminator for the entity type.
     /// * `template` - Loaded template JSON.
+    /// * `template_path` - Path to the template file.
     /// * `position` - Spawn position in metres.
     #[allow(clippy::missing_const_for_fn)]
-    pub fn new(id: String, entity_type: String, template: Value, position: Vec3) -> Self {
+    pub fn new(
+        id: String,
+        entity_type: String,
+        template: Value,
+        template_path: String,
+        mesh_template_path: String,
+        position: Vec3,
+    ) -> Self {
         Self {
             id,
             entity_type,
             template,
+            template_path,
+            mesh_template_path,
             position,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,

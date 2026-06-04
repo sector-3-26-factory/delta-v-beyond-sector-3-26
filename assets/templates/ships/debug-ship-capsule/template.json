@@ -5,9 +5,6 @@
         "unit": "kg"
     },
     "inertia_scale": 1.0,
-    "mesh": {
-        "path": "templates/ships/debug-ship-capsule/mesh.glb"
-    },
     "propulsion": {
         "main_thrusters": [
             {

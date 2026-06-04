@@ -8,7 +8,6 @@
     "required": [
         "entity_type",
         "mass",
-        "mesh",
         "propulsion"
     ],
     "properties": {
@@ -26,20 +25,6 @@
             "type": "number",
             "exclusiveMinimum": 0.0,
             "default": 1.0
-        },
-        "mesh": {
-            "description": "Mesh geometry loaded from glTF file. Required; missing glTF is a hard error (ADR-0013).",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "path"
-            ],
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to glTF file relative to assets/ (e.g., templates/ships/space-fighter-comrade1280/mesh.glb). Required; missing file is a hard error."
-                }
-            }
         },
         "propulsion": {
             "description": "Propulsion system configuration. Defines main thrusters (forward/backward) and maneuvering thrusters (rotation + strafe). Required per ADR-0014 (gameplay values in JSON).",
