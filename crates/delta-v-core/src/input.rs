@@ -49,6 +49,8 @@ pub enum LogicalAction {
     StrafeUp,
     /// Strafe down along local -Y.
     StrafeDown,
+    /// Toggle flight assist (inertial damping) on/off.
+    ToggleFlightAssist,
 }
 
 impl LogicalAction {
@@ -70,6 +72,7 @@ impl LogicalAction {
             Self::StrafeRight => "strafe_right",
             Self::StrafeUp => "strafe_up",
             Self::StrafeDown => "strafe_down",
+            Self::ToggleFlightAssist => "toggle_flight_assist",
         }
     }
 
@@ -91,6 +94,7 @@ impl LogicalAction {
             Self::StrafeRight,
             Self::StrafeUp,
             Self::StrafeDown,
+            Self::ToggleFlightAssist,
         ]
     }
 }
@@ -173,7 +177,7 @@ pub fn input_log_system(active: Res<'_, ActiveActions>) {
 
 /// Maps a Bevy `KeyCode` variant name string to the enum variant.
 ///
-/// Covers all 12 keys used in the default keybindings. Unknown names
+/// Covers all keys used in the default keybindings. Unknown names
 /// emit a `WARN` and return `None` (no panic; the action is simply absent).
 fn parse_key_code(name: &str) -> Option<KeyCode> {
     match name {
@@ -185,6 +189,7 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "KeyE" => Some(KeyCode::KeyE),
         "KeyR" => Some(KeyCode::KeyR),
         "KeyF" => Some(KeyCode::KeyF),
+        "KeyC" => Some(KeyCode::KeyC),
         "ArrowUp" => Some(KeyCode::ArrowUp),
         "ArrowDown" => Some(KeyCode::ArrowDown),
         "ArrowLeft" => Some(KeyCode::ArrowLeft),

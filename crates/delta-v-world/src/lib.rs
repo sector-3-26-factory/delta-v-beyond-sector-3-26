@@ -50,10 +50,16 @@ pub mod world_def;
 #[path = "loader_tests.rs"]
 mod loader_tests;
 
+#[cfg(test)]
+#[path = "template_loader_tests.rs"]
+mod template_loader_tests;
+
 pub use error::WorldError;
 pub use events::SpawnEntity;
 pub use resources::WorldDefResource;
 pub use world_def::WorldDef;
+
+use std::path::PathBuf;
 
 use bevy::prelude::*;
 use delta_v_core::AppState;
@@ -85,8 +91,16 @@ impl Plugin for WorldPlugin {
 /// Reads the world JSON, validates it, inserts [`WorldDefResource`],
 /// and emits a `SpawnEntity` event for each entity in the world.
 ///
+/// The `entity_type` is derived from the template's `entity_type` field
+/// (per ADR-0038, the template declares its own type).
+///
 /// Transitions to [`AppState::SpawningEntities`] so domain plugins can
 /// spawn entities in dependency order (per ADR-0038).
+///
+/// # Panics
+///
+/// Panics if the world file or any template file cannot be loaded or validated.
+/// This is intentional per ADR-0013 (no silent fallbacks).
 fn load_world_system(
     mut commands: Commands<'_, '_>,
     mut events: EventWriter<'_, SpawnEntity>,
@@ -102,16 +116,18 @@ fn load_world_system(
 
     // Emit SpawnEntity events for each entity in the world.
     // Per ADR-0038, domain plugins listen for these events and spawn
-    // entities based on entity_type, in dependency order via WorldSpawnSet.
+    // entities based on `entity_type`, in dependency order via WorldSpawnSet.
     for entity_spawn in &world.entities {
         // Load and validate the template file per ADR-0038.
+        // The entity_type is derived from the template itself by reading
+        // the raw JSON first, then validating against the correct schema.
         // If template loading fails, this is a hard error (ADR-0013).
-        #[allow(clippy::panic)]
-        let template = load_template(&entity_spawn.template, &entity_spawn.entity_type)
+        #[allow(clippy::panic, clippy::indexing_slicing)]
+        let (entity_type, template) = load_template_and_extract_type(&entity_spawn.template)
             .unwrap_or_else(|e| {
                 panic!(
-                    "fatal: failed to load template '{}' for entity type '{}': {}",
-                    entity_spawn.template, entity_spawn.entity_type, e
+                    "fatal: failed to load template '{}': {}",
+                    entity_spawn.template, e
                 );
             });
 
@@ -132,18 +148,82 @@ fn load_world_system(
             entity_spawn.scale.z,
         );
 
-        let spawn_event = SpawnEntity::new(
-            entity_spawn.id.clone(),
-            entity_spawn.entity_type.clone(),
-            template,
-            pos,
-        )
-        .with_rotation(rot)
-        .with_scale(scale);
+        let spawn_event = SpawnEntity::new(entity_spawn.id.clone(), entity_type, template, pos)
+            .with_rotation(rot)
+            .with_scale(scale);
 
         events.send(spawn_event);
     }
 
     commands.insert_resource(WorldDefResource(world));
     next.set(AppState::SpawningEntities);
+}
+
+/// Loads a template and extracts the `entity_type` from it.
+///
+/// The `entity_type` is determined by reading the raw JSON file first
+/// and extracting the `entity_type` field. The template is then validated
+/// against the schema matching its declared type. Unknown entity types
+/// are a hard error (ADR-0013 — no silent fallbacks).
+///
+/// Returns a tuple of (`entity_type`, `template_value`).
+///
+/// # Errors
+///
+/// Returns [`WorldError`] if:
+/// - The file cannot be read or parsed
+/// - The template is missing the `entity_type` field
+/// - The `entity_type` is not a known/supported type
+/// - The template fails schema validation
+#[allow(clippy::expect_used)] // INVARIANT: CARGO_MANIFEST_DIR always set by cargo; workspace structure fixed
+fn load_template_and_extract_type(
+    template_path: &str,
+) -> Result<(String, serde_json::Value), WorldError> {
+    // Read the raw JSON to determine entity_type before validation.
+    // Per ADR-0038, the template declares its own entity_type.
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir
+        .parent()
+        .expect("CARGO_MANIFEST_DIR parent (crates dir) must exist")
+        .parent()
+        .expect("workspace root must exist");
+    let assets_root = workspace_root.join("assets");
+    let template_file = assets_root.join(template_path);
+
+    let raw_json = std::fs::read_to_string(&template_file).map_err(|e| WorldError::Io {
+        path: template_file.clone(),
+        source: e,
+    })?;
+    let raw_value: serde_json::Value =
+        serde_json::from_str(&raw_json).map_err(|e| WorldError::Parse {
+            path: template_file.clone(),
+            source: e,
+        })?;
+
+    // Extract entity_type from raw JSON — missing is a hard error.
+    let entity_type = raw_value
+        .get("entity_type")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| WorldError::Schema {
+            path: template_file.clone(),
+            pointer: "/entity_type".to_string(),
+            reason: "template missing 'entity_type' field".to_string(),
+        })?
+        .to_string();
+
+    // Validate against the correct schema based on the declared entity_type.
+    // Unknown entity types are a hard error — no silent fallbacks (ADR-0013).
+    match entity_type.as_str() {
+        "player_controlled_ship" | "ship" => {
+            let template = load_template(template_path, &entity_type)?;
+            Ok((entity_type, template))
+        }
+        other => Err(WorldError::Schema {
+            path: template_file,
+            pointer: "/entity_type".to_string(),
+            reason: format!(
+                "unknown entity_type '{other}'. Supported types: player_controlled_ship, ship"
+            ),
+        }),
+    }
 }

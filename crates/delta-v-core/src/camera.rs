@@ -5,9 +5,13 @@
 //! The chase camera is intentionally simple at M1: fixed offset, no
 //! lag, no spring damping. Those are M6 concerns.
 //!
+//! This module also owns the camera-related template structs used to
+//! deserialize camera positions from the ship template JSON.
+//!
 //! See ADR-0005 (plugin architecture) and ADR-0018 (state management).
 
 use bevy::prelude::*;
+use serde::Deserialize;
 
 /// Stores the entity ID of the player-controlled ship.
 ///
@@ -33,6 +37,30 @@ pub struct CameraFollow {
     /// Offset from the target's position in the target's local space.
     /// Default: 20 m behind, 8 m above (Vec3 in target-local coords).
     pub offset: Vec3,
+}
+
+/// Camera positions from the ship template.
+///
+/// The chase camera position is optional — if omitted, it is computed
+/// automatically from the glTF mesh bounding box when the mesh loads.
+#[derive(Debug, Deserialize)]
+pub struct ShipCamerasTemplate {
+    /// Cockpit camera position relative to ship center (metres).
+    pub cockpit: Vec3Json,
+    /// Chase camera position relative to ship center (metres).
+    /// If omitted, computed automatically from the glTF bounding box.
+    pub chase: Option<Vec3Json>,
+}
+
+/// A 3-component vector deserialized from JSON `{"x": N, "y": N, "z": N}`.
+#[derive(Debug, Deserialize)]
+pub struct Vec3Json {
+    /// X component in metres.
+    pub x: f32,
+    /// Y component in metres.
+    pub y: f32,
+    /// Z component in metres.
+    pub z: f32,
 }
 
 /// Spawns the 3-D chase camera after the player ship entity exists.
@@ -68,6 +96,11 @@ pub fn spawn_chase_camera(
 /// Runs every frame in `Update` when `AppState::InGame`.
 /// Rotates the offset by the ship's current rotation so the camera
 /// stays behind the ship as it turns.
+///
+/// Uses the ship's local up vector (+Y in ship space) as the `look_at`
+/// up reference to avoid the gimbal lock singularity that occurs with
+/// a fixed world `Vec3::Y` when the camera is directly above or below
+/// the target (e.g. at 90° pitch).
 #[allow(clippy::needless_pass_by_value)]
 pub fn chase_camera_system(
     mut camera_query: Query<'_, '_, (&mut Transform, &CameraFollow)>,
@@ -82,6 +115,10 @@ pub fn chase_camera_system(
         // stays behind the ship as it turns.
         let world_offset = target_transform.rotation * follow.offset;
         cam_transform.translation = target_transform.translation + world_offset;
-        cam_transform.look_at(target_transform.translation, Vec3::Y);
+
+        // Use the ship's local up vector as the look_at up reference.
+        // This avoids gimbal lock when the camera is above/below the ship.
+        let ship_up = target_transform.rotation * Vec3::Y;
+        cam_transform.look_at(target_transform.translation, ship_up);
     }
 }

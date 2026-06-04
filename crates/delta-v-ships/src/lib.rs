@@ -21,7 +21,16 @@
 //! Manages the spawning and lifecycle of ship entities. Listens for
 //! [`delta_v_world::SpawnEntity`] events and spawns ships from templates.
 //!
-//! See ADR-0005 (plugin architecture) and ADR-0038 (entity template system).
+//! The input → forces pipeline (D3) runs in `FixedUpdate`:
+//! 1. Input reader: [`ActiveActions`] → [`ThrustCommand`] + [`TorqueCommand`]
+//! 2. Flight-assist toggle: [`LogicalAction::ToggleFlightAssist`] action → flip state
+//! 3. Thrust system: [`ThrustCommand`] → `apply_force` on [`RigidBody`]
+//! 4. Torque system: [`TorqueCommand`] → `apply_torque` on [`RigidBody`]
+//! 5. Flight-assist damping: if enabled, damp velocity
+//! 6. Clear commands: zero out command buffers
+//!
+//! See ADR-0005 (plugin architecture), ADR-0038 (entity template system),
+//! and ADR-0017 (Fixed timestep).
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic)]
@@ -36,10 +45,8 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
-use bevy::prelude::*;
-use delta_v_core::{AppState, WorldSpawnSet};
-
 pub mod spawn;
+pub mod systems;
 
 pub use spawn::{setup_scene_lighting, spawn_ship_from_template};
 
@@ -47,17 +54,33 @@ pub use spawn::{setup_scene_lighting, spawn_ship_from_template};
 #[path = "spawn_tests.rs"]
 mod spawn_tests;
 
+use bevy::prelude::*;
+use delta_v_core::{AppState, InputSet, ThrustCommand, TorqueCommand, WorldSpawnSet};
+use delta_v_physics::PhysicsSet;
+use systems::{
+    clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
+    input_reader_system, thrust_system, torque_system, PreviousActions, ShipInputSet,
+};
+
 /// Ships plugin for managing player and NPC vessels.
 ///
 /// Listens for [`delta_v_world::SpawnEntity`] events during
 /// [`AppState::SpawningEntities`] and spawns ship entities based on
 /// their `entity_type` field.
 ///
-/// The plugin also sets up scene lighting on world load.
+/// The plugin also sets up the input → forces pipeline in `FixedUpdate`
+/// during `InGame`, and sets up scene lighting on world load.
 pub struct ShipsPlugin;
 
 impl Plugin for ShipsPlugin {
     fn build(&self, app: &mut App) {
+        // Per-tick command buffers (cleared each tick by clear_commands_system).
+        // allow-default: Bevy requires Default on resources for init_resource.
+        // These are per-tick command buffers, not configuration.
+        app.init_resource::<ThrustCommand>()
+            .init_resource::<TorqueCommand>()
+            .init_resource::<PreviousActions>();
+
         // Configure WorldSpawnSet ordering (ADR-0038).
         app.configure_sets(
             Update,
@@ -89,6 +112,36 @@ impl Plugin for ShipsPlugin {
         .add_systems(
             Update,
             spawn::attach_ship_meshes.run_if(in_state(AppState::InGame)),
+        );
+
+        // Input → Forces pipeline in FixedUpdate (ADR-0017).
+        // Must run after InputSet::Translate (which populates ActiveActions)
+        // and before PhysicsSet::AccumulateForces (which includes gravity).
+        app.configure_sets(
+            FixedUpdate,
+            (
+                ShipInputSet::AccumulateCommands,
+                ShipInputSet::ToggleFlightAssist,
+                ShipInputSet::ApplyThrust,
+                ShipInputSet::ApplyTorque,
+                ShipInputSet::FlightAssistDamping,
+                ShipInputSet::ClearCommands,
+            )
+                .chain()
+                .after(InputSet::Translate)
+                .before(PhysicsSet::AccumulateForces)
+                .run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            FixedUpdate,
+            (
+                input_reader_system.in_set(ShipInputSet::AccumulateCommands),
+                flight_assist_toggle_system.in_set(ShipInputSet::ToggleFlightAssist),
+                thrust_system.in_set(ShipInputSet::ApplyThrust),
+                torque_system.in_set(ShipInputSet::ApplyTorque),
+                flight_assist_damping_system.in_set(ShipInputSet::FlightAssistDamping),
+                clear_commands_system.in_set(ShipInputSet::ClearCommands),
+            ),
         );
     }
 }

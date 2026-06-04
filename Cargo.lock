@@ -1840,6 +1840,7 @@ version = "0.0.1"
 dependencies = [
  "bevy",
  "delta-v-core",
+ "delta-v-physics",
  "delta-v-world",
  "log",
  "serde_json",

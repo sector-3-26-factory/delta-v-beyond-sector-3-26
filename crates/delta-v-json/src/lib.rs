@@ -45,4 +45,8 @@ pub mod error;
 pub mod loader;
 
 pub use error::JsonError;
-pub use loader::{fill_defaults, load_validated, read_json, validate};
+pub use loader::{fill_defaults, load_validated, load_validated_with_units, read_json, validate};
+
+#[cfg(test)]
+#[path = "loader_tests.rs"]
+mod loader_tests;

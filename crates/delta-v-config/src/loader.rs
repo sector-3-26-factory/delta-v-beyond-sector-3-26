@@ -18,7 +18,7 @@ use directories::ProjectDirs;
 use serde_json::Value;
 
 use crate::{error::ConfigError, keybindings::Keybindings};
-use delta_v_core::{DebugConfig, DiagnosticsConfig};
+use delta_v_core::{DebugConfig, DiagnosticsConfig, FlightAssistConfig};
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -58,6 +58,18 @@ pub fn load_debug() -> Result<DebugConfig, ConfigError> {
 /// file path and a precise description (ADR-0016).
 pub fn load_keybindings() -> Result<Keybindings, ConfigError> {
     load_with_user_override("keybindings", user_keybindings_path)
+}
+
+/// Loads, validates and merges flight-assist configuration.
+///
+/// Uses [`load_with_user_override`] to handle defaults + user override merging.
+/// See ADR-0010 (configuration system).
+///
+/// # Errors
+/// Returns [`ConfigError`] if any step fails. All errors include the
+/// file path and a precise description (ADR-0016).
+pub fn load_flight_assist() -> Result<FlightAssistConfig, ConfigError> {
+    load_with_user_override("flight-assist", user_flight_assist_path)
 }
 
 // ---------------------------------------------------------------------------
@@ -103,6 +115,17 @@ fn map_json_error(e: JsonError, _context: &Path) -> ConfigError {
             reason,
         },
         JsonError::SchemaLoad { path, reason } => ConfigError::SchemaLoad { path, reason },
+        JsonError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        } => ConfigError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        },
     }
 }
 
@@ -141,6 +164,16 @@ fn user_keybindings_path() -> Option<PathBuf> {
 fn user_debug_path() -> Option<PathBuf> {
     ProjectDirs::from("com", "delta-v", "delta-v-beyond-sector-3-26")
         .map(|dirs| dirs.config_dir().join("debug.json"))
+}
+
+/// Returns the platform-appropriate user flight-assist config override path, if
+/// the base directory can be determined.
+///
+/// On Linux: `$XDG_CONFIG_HOME/delta-v-beyond-sector-3-26/flight-assist.json`
+/// (or `~/.config/...` if `XDG_CONFIG_HOME` is unset). See ADR-0010.
+fn user_flight_assist_path() -> Option<PathBuf> {
+    ProjectDirs::from("com", "delta-v", "delta-v-beyond-sector-3-26")
+        .map(|dirs| dirs.config_dir().join("flight-assist.json"))
 }
 
 /// Generic helper to load a config file with user override support.

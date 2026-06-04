@@ -1,0 +1,38 @@
+{
+  "entity_type": "ship",
+  "mass": {
+    "value": 10000,
+    "unit": "kg"
+  },
+  "inertia_scale": 1.0,
+  "mesh": {
+    "path": "glTF/ships/cube.glb"
+  },
+  "propulsion": {
+    "main_thrusters": [
+      {
+        "id": "main",
+        "type": "chemical",
+        "max_forward_thrust": {
+          "value": 100000,
+          "unit": "N"
+        },
+        "max_backward_thrust": {
+          "value": 40000,
+          "unit": "N"
+        }
+      }
+    ],
+    "maneuvering_thruster": {
+      "type": "rcs",
+      "max_torque": {
+        "value": 50000,
+        "unit": "N⋅m"
+      },
+      "max_strafe_thrust": {
+        "value": 50000,
+        "unit": "N"
+      }
+    }
+  }
+}

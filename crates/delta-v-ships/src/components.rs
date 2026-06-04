@@ -10,6 +10,6 @@ use bevy::prelude::*;
 ///
 /// At most one entity carries this component at any time. This component
 /// is added during ship spawning in response to a `SpawnEntity` event
-/// with `entity_type: "local_player_ship"`.
+/// with `entity_type: "player_controlled_ship"`.
 #[derive(Component, Debug)]
 pub struct PlayerShip;

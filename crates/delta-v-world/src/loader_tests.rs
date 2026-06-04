@@ -57,9 +57,9 @@ mod tests {
             !world.entities.is_empty(),
             "world must have at least one entity"
         );
-        // The first entity should be the player ship (per M1 design).
+        // The first entity should reference the player_ship template.
         let player_entity = &world.entities[0];
-        assert_eq!(player_entity.entity_type, "local_player_ship");
+        assert_eq!(player_entity.template, "templates/ships/player_ship.json");
     }
 
     /// Pointing the loader at a nonexistent path must produce

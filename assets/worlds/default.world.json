@@ -3,8 +3,7 @@
   "name": "Sector 3.26 — Development Default",
   "entities": [
     {
-      "template": "templates/ships/local_player_ship.json",
-      "entity_type": "local_player_ship",
+      "template": "templates/ships/player_ship.json",
       "id": "player_ship",
       "position": {
         "x": 0.0,

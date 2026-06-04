@@ -1,16 +1,69 @@
 {
   "actions": {
-    "thrust_forward":  { "keyboard": ["KeyW"] },
-    "thrust_backward": { "keyboard": ["KeyS"] },
-    "pitch_up":        { "keyboard": ["ArrowUp"] },
-    "pitch_down":      { "keyboard": ["ArrowDown"] },
-    "yaw_left":        { "keyboard": ["ArrowLeft"] },
-    "yaw_right":       { "keyboard": ["ArrowRight"] },
-    "roll_left":       { "keyboard": ["KeyQ"] },
-    "roll_right":      { "keyboard": ["KeyE"] },
-    "strafe_left":     { "keyboard": ["KeyA"] },
-    "strafe_right":    { "keyboard": ["KeyD"] },
-    "strafe_up":       { "keyboard": ["KeyR"] },
-    "strafe_down":     { "keyboard": ["KeyF"] }
+    "thrust_forward": {
+      "keyboard": [
+        "KeyW"
+      ]
+    },
+    "thrust_backward": {
+      "keyboard": [
+        "KeyS"
+      ]
+    },
+    "pitch_up": {
+      "keyboard": [
+        "ArrowUp"
+      ]
+    },
+    "pitch_down": {
+      "keyboard": [
+        "ArrowDown"
+      ]
+    },
+    "yaw_left": {
+      "keyboard": [
+        "ArrowLeft"
+      ]
+    },
+    "yaw_right": {
+      "keyboard": [
+        "ArrowRight"
+      ]
+    },
+    "roll_left": {
+      "keyboard": [
+        "KeyQ"
+      ]
+    },
+    "roll_right": {
+      "keyboard": [
+        "KeyE"
+      ]
+    },
+    "strafe_left": {
+      "keyboard": [
+        "KeyA"
+      ]
+    },
+    "strafe_right": {
+      "keyboard": [
+        "KeyD"
+      ]
+    },
+    "strafe_up": {
+      "keyboard": [
+        "KeyR"
+      ]
+    },
+    "strafe_down": {
+      "keyboard": [
+        "KeyF"
+      ]
+    },
+    "toggle_flight_assist": {
+      "keyboard": [
+        "KeyC"
+      ]
+    }
   }
 }

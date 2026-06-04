@@ -31,17 +31,15 @@ pub struct WorldDef {
 /// Template-based entity spawn descriptor.
 ///
 /// Per ADR-0038, each entity in the world is described by:
-/// - A reference to a template file (e.g., `templates/ships/player.json`)
-/// - The entity type discriminator (e.g., `"local_player_ship"`)
+/// - A reference to a template file (e.g., `templates/ships/player_ship.json`)
 /// - Instance data (position, rotation, scale)
-/// - An optional unique identifier for entity referencing (UI panels, save/load, etc.)
-/// - The loaded template JSON itself
+/// - A unique identifier for entity referencing (UI panels, save/load, etc.)
+///
+/// The entity type is derived from the template's `entity_type` field at load time.
 #[derive(Debug, Deserialize)]
 pub struct EntitySpawn {
-    /// Path to the template file (e.g., `templates/ships/player.json`).
+    /// Path to the template file (e.g., `templates/ships/player_ship.json`).
     pub template: String,
-    /// Entity type discriminator (e.g., `"local_player_ship"`).
-    pub entity_type: String,
     /// Unique identifier for this entity instance.
     /// Used to reference the entity throughout the game (UI panels, save/load, networking, etc.).
     /// Required; missing `id` is a hard error (ADR-0013).

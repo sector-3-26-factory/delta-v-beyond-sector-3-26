@@ -54,9 +54,9 @@ pub use keybindings::{ActionBindings, Keybindings};
 pub use resources::KeybindingsResource;
 
 use bevy::prelude::*;
-use delta_v_core::{keybindings_resource, AppState};
+use delta_v_core::{keybindings_resource, AppState, FlightAssistState};
 
-use crate::loader::{load_debug, load_diagnostics, load_keybindings};
+use crate::loader::{load_debug, load_diagnostics, load_flight_assist, load_keybindings};
 
 /// Configuration plugin: loads and validates all JSON config files.
 ///
@@ -131,6 +131,23 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
         debug_config.show_axis_indicators
     );
     commands.insert_resource(debug_config);
+
+    // Flight-assist configuration (ADR-0010, ADR-0039).
+    // INVARIANT: a missing or invalid flight-assist file is a hard startup
+    // error (ADR-0013). The panic is intentional; no recovery is possible.
+    #[allow(clippy::panic)]
+    let flight_assist_config = load_flight_assist().unwrap_or_else(|e| {
+        panic!("fatal: failed to load flight-assist config: {e}");
+    });
+    log::info!(
+        "flight-assist config loaded (enabled_by_default: {}, damping_coefficient: {})",
+        flight_assist_config.enabled_by_default,
+        flight_assist_config.damping_coefficient
+    );
+    commands.insert_resource(flight_assist_config.clone());
+    commands.insert_resource(FlightAssistState {
+        enabled: flight_assist_config.enabled_by_default,
+    });
 
     // Transition to the next phase.
     next.set(AppState::LoadingWorld);

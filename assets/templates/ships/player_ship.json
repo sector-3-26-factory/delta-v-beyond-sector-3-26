@@ -1,0 +1,11 @@
+{
+    "entity_type": "player_controlled_ship",
+    "ship_template": "templates/ships/fighter.json",
+    "cameras": {
+        "cockpit": {
+            "x": 0.0,
+            "y": 0.5,
+            "z": -0.2
+        }
+    }
+}
