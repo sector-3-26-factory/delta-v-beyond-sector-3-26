@@ -40,12 +40,12 @@ player_controlled_ship.schema.json (player ship)
 ### Template Structure
 
 ```
-templates/ships/fighter.json (entity_type: "ship")
+templates/ships/space-fighter-comrade1280/template.json (entity_type: "ship")
 ├── mass, inertia_scale, mesh, propulsion
 └── NO cameras
 
-templates/ships/player_ship.json (entity_type: "player_controlled_ship")
-├── ship_template: "templates/ships/fighter.json"
+templates/ships/player_ship/template.json (entity_type: "player_controlled_ship")
+├── ship_template: "templates/ships/space-fighter-comrade1280/template.json"
 └── cameras: { cockpit: { x, y, z } }
 ```
 

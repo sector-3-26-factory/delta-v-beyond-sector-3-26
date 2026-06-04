@@ -40,7 +40,7 @@
       ],
       "properties": {
         "template": {
-          "description": "Path to the template file (e.g., templates/ships/player_ship.json). The template's entity_type field determines the entity type.",
+          "description": "Path to the template file (e.g., templates/ships/player_ship/template.json). The template's entity_type field determines the entity type.",
           "type": "string"
         },
         "id": {

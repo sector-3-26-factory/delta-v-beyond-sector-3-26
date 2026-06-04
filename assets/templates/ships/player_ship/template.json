@@ -1,6 +1,6 @@
 {
     "entity_type": "player_controlled_ship",
-    "ship_template": "templates/ships/fighter.json",
+    "ship_template": "templates/ships/space-fighter-comrade1280/template.json",
     "cameras": {
         "cockpit": {
             "x": 0.0,

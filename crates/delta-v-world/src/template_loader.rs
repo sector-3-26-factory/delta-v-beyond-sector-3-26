@@ -24,7 +24,7 @@ use crate::error::WorldError;
 ///
 /// # Arguments
 ///
-/// * `template_path` - Relative path to the template (e.g., `templates/ships/player_ship.json`)
+/// * `template_path` - Relative path to the template (e.g., `templates/ships/player_ship/template.json`)
 /// * `entity_type` - The entity type discriminator (e.g., `"player_controlled_ship"`)
 ///
 /// # Returns

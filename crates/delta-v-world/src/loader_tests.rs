@@ -59,7 +59,10 @@ mod tests {
         );
         // The first entity should reference the player_ship template.
         let player_entity = &world.entities[0];
-        assert_eq!(player_entity.template, "templates/ships/player_ship.json");
+        assert_eq!(
+            player_entity.template,
+            "templates/ships/player_ship/template.json"
+        );
     }
 
     /// Pointing the loader at a nonexistent path must produce

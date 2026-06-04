@@ -37,7 +37,7 @@
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Path to glTF file (e.g., glTF/ships/fighter.glb). Required; missing file is a hard error."
+                    "description": "Path to glTF file relative to assets/ (e.g., templates/ships/space-fighter-comrade1280/mesh.glb). Required; missing file is a hard error."
                 }
             }
         },

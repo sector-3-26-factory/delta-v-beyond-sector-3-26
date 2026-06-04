@@ -6,7 +6,7 @@
     },
     "inertia_scale": 1.0,
     "mesh": {
-        "path": "glTF/ships/space-fighter-comrade1280.glb"
+        "path": "templates/ships/space-fighter-comrade1280/mesh.glb"
     },
     "propulsion": {
         "main_thrusters": [

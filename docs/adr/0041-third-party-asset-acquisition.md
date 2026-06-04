@@ -19,7 +19,7 @@ Current challenges:
 2. **Attribution**: Third-party creators must be credited in CREDITS.md with
    author, license, source URL, and modification notes.
 3. **Asset organization**: Assets must be sorted into logical type directories
-   (`ships/`, `asteroids/`, `stations/`, etc.) under `assets/glTF/`.
+   (`ships/`, `asteroids/`, `stations/`, etc.) under `assets/templates/`, with each entity in its own subdirectory containing `mesh.glb` and `template.json`.
 4. **Format consistency**: All 3D assets must be in glTF 2.0 format (per ADR-0019)
    to ensure compatibility with Bevy's loader.
 5. **Reproducibility**: Agents need clear, automated rules for the acquisition
@@ -112,12 +112,12 @@ The agent MUST:
 Place the converted glTF file in:
 
 ```
-assets/glTF/<type>/<asset-name>.glb
+assets/templates/<type>/<asset-name>/mesh.glb
 ```
 
 Example:
 ```
-assets/glTF/ships/space-fighter-rauv.glb
+assets/templates/ships/space-fighter-rauv/mesh.glb
 ```
 
 Naming convention:
@@ -155,7 +155,7 @@ For license text, see the LICENSE file at the repository root.
 - **Source**: [Sketchfab](https://sketchfab.com/models/...)
 - **License**: CC BY 4.0
 - **License URL**: https://creativecommons.org/licenses/by/4.0/
-- **File**: `assets/glTF/ships/space-fighter.glb`
+- **File**: `assets/templates/ships/space-fighter-comrade1280/mesh.glb`
 - **Modifications**: *None* (or describe changes: e.g., "decimated to 50k triangles, optimized for mobile")
 ```
 
@@ -165,7 +165,7 @@ For license text, see the LICENSE file at the repository root.
 - **Source**: Direct link to the asset's page (Sketchfab, Poly Haven, etc.)
 - **License**: Short name (CC BY 4.0, MIT, etc.)
 - **License URL**: Full URL to license text
-- **File**: Exact path under `assets/glTF/`
+- **File**: Exact path under `assets/templates/<type>/<name>/`
 - **Modifications**: Blank line with `*None*` if unmodified; describe any processing
   (mesh optimization, texture baking, format conversion, etc.)
 
@@ -185,7 +185,7 @@ After integration, the agent MUST:
 After completing steps 1-6, the agent MUST:
 
 1. Report completion with:
-   - Asset path: `assets/glTF/<type>/<name>.glb`
+   - Asset path: `assets/templates/<type>/<name>/mesh.glb`
    - CREDITS.md entry (exact text)
    - Commit message (exact text)
    - License confirmed as compatible
@@ -216,7 +216,7 @@ feat: add space-fighter asset from Rauv
 Download from Sketchfab under CC BY 4.0 license.
 - Creator: Rauv
 - Source: https://sketchfab.com/3d-models/space-fighter-...
-- File: assets/glTF/ships/space-fighter-rauv.glb
+- File: assets/templates/ships/space-fighter-rauv/mesh.glb
 - CREDITS.md updated
 ```
 
@@ -234,7 +234,7 @@ The agent:
 4. If compatible:
    - Downloads the asset
    - Converts to glTF 2.0 if needed (or reports if conversion failed)
-   - Places in `assets/glTF/ships/space-fighter-rauv.glb`
+   - Places in `assets/templates/ships/space-fighter-rauv/mesh.glb`
    - Updates `CREDITS.md`
    - Commits with proper attribution
    - Reports success with asset path

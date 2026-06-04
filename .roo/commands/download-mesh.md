@@ -13,7 +13,7 @@ ADR-0019 (asset pipeline), ADR-0038 (entity template system), and ADR-0040
 
 - Python 3 must be available (used for glTF binary parsing — no numpy or third-party deps)
 - `curl` or `wget` for downloading from URLs
-- Write access to `assets/glTF/`, `assets/templates/`, and `CREDITS.md`
+- Write access to `assets/templates/`, and `CREDITS.md`
 
 ---
 
@@ -60,15 +60,18 @@ Classify the asset into one of these categories (per ADR-0041 §2):
 Use the model name, description, tags, and visual appearance (if describable) to decide.
 If ambiguous, ask the user.
 
-### 2d. Determine asset filename
+### 2d. Determine asset directory name
 
 Convention: lowercase, hyphen-separated, include creator name for disambiguation.
-Format: `<type>-<creator>.glb` or `<descriptive-name>-<creator>.glb`
+Format: `<type>-<creator>` or `<descriptive-name>-<creator>`
+
+The asset is placed in a unified entity directory under `assets/templates/<type>/<name>/`
+containing both the mesh file (`mesh.glb`) and the template (`template.json`).
 
 Examples:
-- `assets/glTF/ships/space-fighter-rauv.glb`
-- `assets/glTF/ships/space-fighter-comrade1280.glb`
-- `assets/glTF/asteroids/rock-cluster-milster.glb`
+- `assets/templates/ships/space-fighter-rauv/mesh.glb`
+- `assets/templates/ships/space-fighter-comrade1280/mesh.glb`
+- `assets/templates/asteroids/rock-cluster-milster/mesh.glb`
 
 ---
 
@@ -129,11 +132,13 @@ If invalid → **STOP**. Report the error.
 
 ### 4c. Place in assets directory
 
-Copy the file to:
+Copy the file to the unified entity directory:
 
 ```
-assets/glTF/<type>/<asset-name>.glb
+assets/templates/<type>/<asset-name>/mesh.glb
 ```
+
+Create the directory if it does not exist.
 
 ---
 
@@ -374,7 +379,7 @@ if __name__ == '__main__':
 Save this script to a temporary path (e.g., `/tmp/analyze_glb.py`) and run:
 
 ```bash
-python3 /tmp/analyze_glb.py assets/glTF/<type>/<asset-name>.glb
+python3 /tmp/analyze_glb.py assets/templates/<type>/<asset-name>/mesh.glb
 ```
 
 Capture the output. The key result is the **RECOMMENDED COCKPIT POSITION** in glTF
@@ -388,16 +393,16 @@ Based on the asset type from Step 2c, create the appropriate JSON template file.
 
 ### 6a. For `ships/` type — create a ship template
 
-Create `assets/templates/ships/<asset-name>.json` following the
+Create `assets/templates/<type>/<asset-name>/template.json` following the
 [`ship.schema.json`](../assets/json/schema/ship.schema.json) schema.
 
-Use [`fighter.json`](../assets/templates/ships/fighter.json) as a reference.
+Use [`space-fighter-comrade1280/template.json`](../assets/templates/ships/space-fighter-comrade1280/template.json) as a reference.
 
 Required fields:
 - `entity_type`: `"ship"`
 - `mass`: prompt the user for mass in kg (or use a sensible default based on ship size)
 - `inertia_scale`: default `1.0`
-- `mesh.path`: `glTF/<type>/<asset-name>.glb`
+- `mesh.path`: `templates/<type>/<asset-name>/mesh.glb`
 - `propulsion`: prompt the user or use reasonable defaults:
   - `main_thrusters[0].id`: `"main"`
   - `main_thrusters[0].type`: `"chemical"`
@@ -424,10 +429,10 @@ JSON Schema validator. Ensure it passes before proceeding.
 If the asset is a `ships/` type and intended for player use, create a
 `player_controlled_ship` template referencing the ship template.
 
-Create `assets/templates/ships/<asset-name>-player.json` following the
+Create `assets/templates/ships/<asset-name>-player/template.json` following the
 [`player_controlled_ship.schema.json`](../assets/json/schema/player_controlled_ship.schema.json) schema.
 
-Use [`player_ship.json`](../assets/templates/ships/player_ship.json) as a reference.
+Use [`player_ship/template.json`](../assets/templates/ships/player_ship/template.json) as a reference.
 
 The `cameras.cockpit` position should use the **RECOMMENDED COCKPIT POSITION**
 from Step 5 analysis:
@@ -435,7 +440,7 @@ from Step 5 analysis:
 ```json
 {
     "entity_type": "player_controlled_ship",
-    "ship_template": "templates/ships/<asset-name>.json",
+    "ship_template": "templates/ships/<asset-name>/template.json",
     "cameras": {
         "cockpit": {
             "x": <cockpit_x>,
@@ -465,7 +470,7 @@ Format:
 - **Source:** [Platform](https://asset-page-url/)
 - **License:** <License Name> (<License Short>)
 - **License URL:** <license-url>
-- **File:** `assets/glTF/<type>/<asset-name>.glb`
+- **File:** `assets/templates/<type>/<asset-name>/mesh.glb`
 - **Modifications:** *None*
 ```
 
@@ -482,9 +487,9 @@ Present a complete summary to the user:
 Asset ingestion complete for "<Asset Name>":
 
 Files created:
-  - assets/glTF/<type>/<asset-name>.glb
-  - assets/templates/ships/<asset-name>.json
-  - assets/templates/ships/<asset-name>-player.json (if applicable)
+  - assets/templates/<type>/<asset-name>/mesh.glb
+  - assets/templates/<type>/<asset-name>/template.json
+  - assets/templates/ships/<asset-name>-player/template.json (if applicable)
 
 Cockpit position: (x, y, z) [from Strategy 1/2/3]
   Note: <any caveats about the estimation method>

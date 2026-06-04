@@ -17,7 +17,7 @@
             "const": "player_controlled_ship"
         },
         "ship_template": {
-            "description": "Path to the base ship template file (e.g., templates/ships/fighter.json). Loaded and merged at spawn time. The referenced template must have entity_type 'ship'.",
+            "description": "Path to the base ship template file (e.g., templates/ships/space-fighter-comrade1280/template.json). Loaded and merged at spawn time. The referenced template must have entity_type 'ship'.",
             "type": "string"
         },
         "cameras": {

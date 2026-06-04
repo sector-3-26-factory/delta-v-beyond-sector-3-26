@@ -17,7 +17,7 @@ use crate::template_loader::load_template;
 #[test]
 fn test_load_ship_template() {
     // load_template expects a path relative to the assets directory.
-    let result = load_template("templates/ships/fighter.json", "ship");
+    let result = load_template("templates/ships/space-fighter-comrade1280/template.json", "ship");
     assert!(
         result.is_ok(),
         "failed to load fighter template: {result:?}"
@@ -34,7 +34,10 @@ fn test_load_ship_template() {
 #[test]
 fn test_load_player_controlled_ship_template() {
     // load_template expects a path relative to the assets directory.
-    let result = load_template("templates/ships/player_ship.json", "player_controlled_ship");
+    let result = load_template(
+        "templates/ships/player_ship/template.json",
+        "player_controlled_ship",
+    );
     assert!(
         result.is_ok(),
         "failed to load player_ship template: {result:?}"
@@ -53,9 +56,12 @@ fn test_load_player_controlled_ship_template() {
 #[test]
 fn test_debug_ship_templates() {
     for (path, name) in [
-        ("templates/ships/debug-ship-cube.json", "cube"),
-        ("templates/ships/debug-ship-sphere.json", "sphere"),
-        ("templates/ships/debug-ship-capsule.json", "capsule"),
+        ("templates/ships/debug-ship-cube/template.json", "cube"),
+        ("templates/ships/debug-ship-sphere/template.json", "sphere"),
+        (
+            "templates/ships/debug-ship-capsule/template.json",
+            "capsule",
+        ),
     ] {
         // load_template expects a path relative to the assets directory.
         let result = load_template(path, "ship");

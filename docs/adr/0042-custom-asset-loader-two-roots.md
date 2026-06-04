@@ -12,8 +12,8 @@ ADR-0019 defines a "two roots, one loader" architecture for asset management:
 - **Shipped assets**: `assets/` (immutable, game-owned, updated with releases)
 - **User content**: `$XDG_DATA_HOME/delta-v-beyond-sector-3-26/` (user-owned, never touched by updates)
 
-Both roots contain identically-structured subdirectories (`glTF/`, `worlds/`, `ships/`, etc.).
-When a world references an asset (e.g., `"path": "glTF/ships/fighter.glb"`), the loader must:
+Both roots contain identically-structured subdirectories (`templates/`, `worlds/`, etc.).
+When a world references an asset (e.g., `"path": "templates/ships/space-fighter-comrade1280/mesh.glb"`), the loader must:
 
 1. Search the user root first (override mechanism)
 2. Fall back to the shipped root if not found in user
@@ -50,23 +50,23 @@ We implement a custom **`DeltaVAssetLoader`** that:
 
 ### 2. Implements Search and Override Logic
 
-When loading an asset by path (e.g., `glTF/ships/fighter.glb`):
+When loading an asset by path (e.g., `templates/ships/space-fighter-comrade1280/mesh.glb`):
 
 **Default behavior (no scope specified):**
-1. Check `user_root/glTF/ships/fighter.glb`
+1. Check `user_root/templates/ships/space-fighter-comrade1280/mesh.glb`
    - If exists: load from user (override)
    - If not exists: continue to step 2
-2. Check `shipped_root/glTF/ships/fighter.glb`
+2. Check `shipped_root/templates/ships/space-fighter-comrade1280/mesh.glb`
    - If exists: load from shipped (fallback)
    - If not exists: error (asset not found in either root)
 
 **With `scope: "user_only"`:**
-- Load from `user_root/glTF/ships/fighter.glb` only
+- Load from `user_root/templates/ships/space-fighter-comrade1280/mesh.glb` only
 - Error if not found (do not fall back to shipped)
 - Use case: World requires a custom asset; not portable without it
 
 **With `scope: "shipped_only"`:**
-- Load from `shipped_root/glTF/ships/fighter.glb` only
+- Load from `shipped_root/templates/ships/space-fighter-comrade1280/mesh.glb` only
 - Error if not found (do not fall back to user)
 - Use case: World explicitly requires the official game asset
 
@@ -77,7 +77,7 @@ JSON schema for mesh definitions:
 ```json
 {
   "mesh": {
-    "path": "glTF/ships/fighter.glb",
+    "path": "templates/ships/space-fighter-comrade1280/mesh.glb",
     "scope": null
   }
 }
@@ -102,15 +102,15 @@ Per ADR-0013 (no silent fallbacks), all errors are hard failures:
 
 - **Asset not found in any root**: Panic with both roots and path
   ```
-  fatal: asset not found: glTF/ships/fighter.glb
+  fatal: asset not found: templates/ships/space-fighter-comrade1280/mesh.glb
   Searched:
-    - /home/user/.local/share/delta-v-beyond-sector-3-26/glTF/ships/fighter.glb
-    - /usr/share/delta-v-beyond-sector-3-26/assets/glTF/ships/fighter.glb
+    - /home/user/.local/share/delta-v-beyond-sector-3-26/templates/ships/space-fighter-comrade1280/mesh.glb
+    - /usr/share/delta-v-beyond-sector-3-26/assets/templates/ships/space-fighter-comrade1280/mesh.glb
   ```
 
 - **Asset violates scope constraint**: Panic with explanation
   ```
-  fatal: asset scope violation for glTF/ships/fighter.glb
+  fatal: asset scope violation for templates/ships/space-fighter-comrade1280/mesh.glb
   Required scope: shipped_only
   Found: user root only
   Solution: Create the asset in shipped root or remove scope constraint
@@ -121,8 +121,8 @@ Per ADR-0013 (no silent fallbacks), all errors are hard failures:
 All asset loads are logged at DEBUG level with source root:
 
 ```
-[DEBUG] Loaded glTF/ships/fighter.glb from user root
-        /home/user/.local/share/delta-v-beyond-sector-3-26/glTF/ships/fighter.glb
+[DEBUG] Loaded templates/ships/space-fighter-comrade1280/mesh.glb from user root
+        /home/user/.local/share/delta-v-beyond-sector-3-26/templates/ships/space-fighter-comrade1280/mesh.glb
 ```
 
 A diagnostic command (future work) lists effective content and origins.
@@ -205,7 +205,7 @@ Follow-up work:
     {
       "type": "local_player_ship",
       "mesh": {
-        "path": "glTF/ships/fighter.glb"
+        "path": "templates/ships/space-fighter-comrade1280/mesh.glb"
         // scope omitted → uses shipped fighter if available
       }
     }
@@ -214,8 +214,8 @@ Follow-up work:
 ```
 
 When recipient loads this world:
-- Loader searches `user_root/glTF/ships/fighter.glb` (not found)
-- Falls back to `shipped_root/glTF/ships/fighter.glb` (found)
+- Loader searches `user_root/templates/ships/space-fighter-comrade1280/mesh.glb` (not found)
+- Falls back to `shipped_root/templates/ships/space-fighter-comrade1280/mesh.glb` (found)
 - World loads successfully
 
 **Scenario 2: User shares world with custom ship mesh**
@@ -226,7 +226,7 @@ When recipient loads this world:
   "ships": [
     {
       "mesh": {
-        "path": "glTF/ships/custom_fighter.glb",
+        "path": "templates/ships/custom-fighter/mesh.glb",
         "scope": "user_only"
       }
     }
@@ -242,7 +242,7 @@ explicit error: "asset scope violation: custom_fighter.glb required in user root
 ```json
 {
   "mesh": {
-    "path": "glTF/ships/official_fighter.glb",
+    "path": "templates/ships/space-fighter-comrade1280/mesh.glb",
     "scope": "shipped_only"
   }
 }
