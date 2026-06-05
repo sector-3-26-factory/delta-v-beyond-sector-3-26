@@ -1,0 +1,109 @@
+{
+    "entity_type": "player_controlled_ship",
+    "cameras": {
+        "cockpit": {
+            "position": {
+                "x": 0.0,
+                "y": 0.2,
+                "z": -2.0
+            },
+            "target": {
+                "x": 0.0,
+                "y": 0.2,
+                "z": -3.0
+            },
+            "available": true
+        },
+        "chase": {
+            "position": {
+                "x": 0.0,
+                "y": 0.5,
+                "z": 6.0
+            },
+            "target": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "available": true
+        },
+        "rear": {
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 2.0
+            },
+            "target": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": -3.0
+            },
+            "available": true
+        },
+        "front": {
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": -2.0
+            },
+            "target": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": -3.0
+            },
+            "available": true
+        },
+        "left": {
+            "position": {
+                "x": -0.5,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "target": {
+                "x": -1.0,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "available": true
+        },
+        "right": {
+            "position": {
+                "x": 0.5,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "target": {
+                "x": 1.0,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "available": true
+        },
+        "top": {
+            "position": {
+                "x": 0.0,
+                "y": 0.5,
+                "z": 0.0
+            },
+            "target": {
+                "x": 0.0,
+                "y": -1.0,
+                "z": 0.0
+            },
+            "available": true
+        },
+        "bottom": {
+            "position": {
+                "x": 0.0,
+                "y": -0.5,
+                "z": 0.0
+            },
+            "target": {
+                "x": 0.0,
+                "y": -2.0,
+                "z": 0.0
+            },
+            "available": true
+        }
+    }
+}

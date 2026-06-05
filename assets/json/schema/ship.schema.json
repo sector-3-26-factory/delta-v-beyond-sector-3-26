@@ -8,7 +8,8 @@
     "required": [
         "entity_type",
         "mass",
-        "propulsion"
+        "propulsion",
+        "bounding_box"
     ],
     "properties": {
         "entity_type": {
@@ -25,6 +26,25 @@
             "type": "number",
             "exclusiveMinimum": 0.0,
             "default": 1.0
+        },
+        "bounding_box": {
+            "description": "Axis-aligned bounding box of the mesh in ship-local coordinates (metres). Computed once from glTF mesh. Used for camera position defaults, debug axes, and spatial calculations. Min and max are opposite corners of the box.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "min",
+                "max"
+            ],
+            "properties": {
+                "min": {
+                    "description": "Minimum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "max": {
+                    "description": "Maximum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
         },
         "propulsion": {
             "description": "Propulsion system configuration. Defines main thrusters (forward/backward) and maneuvering thrusters (rotation + strafe). Required per ADR-0014 (gameplay values in JSON).",
@@ -177,6 +197,30 @@
                 "max_strafe_thrust": {
                     "description": "Maximum strafe thrust in Newtons applied along each lateral/vertical axis (left/right=X, up/down=Y). Same value for all strafe directions.",
                     "$ref": "#/$defs/physical_quantity_force"
+                }
+            }
+        },
+        "vec3": {
+            "description": "3-component vector (x, y, z) in metres.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "x",
+                "y",
+                "z"
+            ],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "X component (metres)."
+                },
+                "y": {
+                    "type": "number",
+                    "description": "Y component (metres)."
+                },
+                "z": {
+                    "type": "number",
+                    "description": "Z component (metres)."
                 }
             }
         }

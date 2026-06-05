@@ -55,8 +55,8 @@ pub mod spawn_sets;
 pub mod state;
 
 pub use camera::{
-    spawn_chase_camera, CameraFollow, ChaseCameraOffset, PlayerShipEntity, ShipCamerasTemplate,
-    Vec3Json,
+    spawn_chase_camera, CameraDefinition, CameraFollow, ChaseCameraOffset, PlayerShipEntity,
+    ShipCamerasTemplate, Vec3Json,
 };
 pub use debug_axes::{
     mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_positions,
@@ -66,9 +66,9 @@ pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::SpawnEntity;
 pub use flight_assist::{
-    FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate, PhysicalQuantity,
-    PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate, ShipTemplate, ThrustCommand,
-    TorqueCommand,
+    BoundingBox, FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate,
+    PhysicalQuantity, PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate,
+    ShipTemplate, ThrustCommand, TorqueCommand,
 };
 pub use input::{ActiveActions, InputSet, LogicalAction};
 pub use keybindings_resource::KeybindingsResource;

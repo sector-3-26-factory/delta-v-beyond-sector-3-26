@@ -40,12 +40,16 @@ fn create_test_app() -> App {
 /// Builds a minimal `SpawnEntity` event for a player-controlled ship.
 ///
 /// Uses a template JSON that matches the merged `player_controlled_ship`
-/// structure (ship properties + cameras).
+/// structure (ship properties + cameras + `bounding_box`).
 fn make_player_ship_event() -> SpawnEntity {
     let template = serde_json::json!({
         "entity_type": "player_controlled_ship",
         "mass": { "value": 10_000.0, "unit": "kg" },
         "inertia_scale": 1.0,
+        "bounding_box": {
+            "min": { "x": -1.0, "y": -1.0, "z": -1.0 },
+            "max": { "x": 1.0, "y": 1.0, "z": 1.0 }
+        },
         "propulsion": {
             "main_thrusters": [{
                 "id": "main",
@@ -60,7 +64,46 @@ fn make_player_ship_event() -> SpawnEntity {
             }
         },
         "cameras": {
-            "cockpit": { "x": 0.0, "y": 0.5, "z": -0.2 }
+            "cockpit": {
+                "position": { "x": 0.0, "y": 0.5, "z": -0.2 },
+                "target": { "x": 0.0, "y": 0.5, "z": -10.0 },
+                "available": true
+            },
+            "chase": {
+                "position": { "x": 0.0, "y": 2.0, "z": 5.0 },
+                "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+                "available": true
+            },
+            "rear": {
+                "position": { "x": 0.0, "y": 1.0, "z": 4.0 },
+                "target": { "x": 0.0, "y": 1.0, "z": -10.0 },
+                "available": true
+            },
+            "front": {
+                "position": { "x": 0.0, "y": 0.5, "z": -2.0 },
+                "target": { "x": 0.0, "y": 0.5, "z": -10.0 },
+                "available": true
+            },
+            "left": {
+                "position": { "x": -3.0, "y": 1.0, "z": 0.0 },
+                "target": { "x": 10.0, "y": 1.0, "z": 0.0 },
+                "available": true
+            },
+            "right": {
+                "position": { "x": 3.0, "y": 1.0, "z": 0.0 },
+                "target": { "x": -10.0, "y": 1.0, "z": 0.0 },
+                "available": true
+            },
+            "top": {
+                "position": { "x": 0.0, "y": 2.0, "z": 0.0 },
+                "target": { "x": 0.0, "y": -10.0, "z": 0.0 },
+                "available": true
+            },
+            "bottom": {
+                "position": { "x": 0.0, "y": -2.0, "z": 0.0 },
+                "target": { "x": 0.0, "y": 10.0, "z": 0.0 },
+                "available": true
+            }
         }
     });
 

@@ -1,10 +1,10 @@
 ---
-description: "Download and integrate a new ship/mesh asset from Sketchfab or local source"
+description: "Download and integrate a new mesh asset from Sketchfab or local source"
 ---
 
-# /download-mesh — Ship & Mesh Asset Ingestion Workflow
+# /download-mesh — Mesh Asset Ingestion Workflow
 
-This command automates the full workflow for importing a new 3D ship or mesh asset
+This command automates the full workflow for importing a new 3D mesh asset
 into the delta-v project. It follows ADR-0041 (third-party asset acquisition),
 ADR-0019 (asset pipeline), ADR-0038 (entity template system), and ADR-0040
 (delta-v-json for JSON validation).
@@ -66,7 +66,7 @@ Convention: lowercase, hyphen-separated, include creator name for disambiguation
 Format: `<type>-<creator>` or `<descriptive-name>-<creator>`
 
 The asset is placed in a unified entity directory under `assets/templates/<type>/<name>/`
-containing both the mesh file (`mesh.glb`) and the template (`template.json`).
+containing both the mesh file (`mesh.glb`) and the template JSON file.
 
 Examples:
 - `assets/templates/ships/space-fighter-rauv/mesh.glb`
@@ -150,9 +150,9 @@ and computing world-space transforms by walking the node hierarchy.
 
 ```python
 #!/usr/bin/env python3
-"""Analyze a binary glTF (.glb) file: nodes, materials, bounding boxes, cockpit detection."""
+"""Analyze a binary glTF (.glb) file: bounding box extraction."""
 
-import struct, json, sys, os
+import struct, json, sys
 
 def analyze_glb(filepath):
     with open(filepath, 'rb') as f:
@@ -165,142 +165,8 @@ def analyze_glb(filepath):
         json_data = f.read(chunk_length)
         gltf = json.loads(json_data)
 
-    nodes = gltf.get('nodes', [])
-    meshes = gltf.get('meshes', [])
+    # Get overall bounds from accessors
     accessors = gltf.get('accessors', [])
-    materials = gltf.get('materials', [])
-
-    # --- Materials ---
-    print("=== MATERIALS ===")
-    glass_like = []
-    for i, mat in enumerate(materials):
-        name = mat.get('name', '<unnamed>')
-        alpha = mat.get('alphaMode', 'OPAQUE')
-        dbl = mat.get('doubleSided', False)
-        pbr = mat.get('pbrMetallicRoughness', {})
-        bc = pbr.get('baseColorFactor', [])
-        print(f"  [{i}] name={name}, alpha={alpha}, double_sided={dbl}, base_color={bc}")
-        # Detect glass/canopy-like materials
-        if alpha in ('BLEND', 'MASK') or (len(bc) == 4 and bc[3] < 1.0):
-            glass_like.append((i, name, alpha, bc))
-        if any(kw in name.lower() for kw in ['glass', 'canopy', 'window', 'transparent', 'windshield']):
-            glass_like.append((i, name, alpha, bc))
-
-    if glass_like:
-        print("\n  GLASS-LIKE MATERIALS FOUND:")
-        for idx, name, alpha, bc in glass_like:
-            print(f"    [{idx}] {name} (alpha={alpha}, color={bc})")
-
-    # --- Node hierarchy ---
-    parent_of = {}
-    for i, n in enumerate(nodes):
-        for c in n.get('children', []):
-            parent_of[c] = i
-
-    # --- Matrix math (pure Python, no numpy) ---
-    def mat4_mul(a, b):
-        r = [[0]*4 for _ in range(4)]
-        for i in range(4):
-            for j in range(4):
-                for k in range(4):
-                    r[i][j] += a[i][k] * b[k][j]
-        return r
-
-    def quat_to_mat4(qx, qy, qz, qw):
-        return [
-            [1-2*(qy*qy+qz*qz), 2*(qx*qy-qw*qz), 2*(qx*qz+qw*qy), 0],
-            [2*(qx*qy+qw*qz), 1-2*(qx*qx+qz*qz), 2*(qy*qz-qw*qx), 0],
-            [2*(qx*qz-qw*qy), 2*(qy*qz+qw*qx), 1-2*(qx*qx+qy*qy), 0],
-            [0, 0, 0, 1]
-        ]
-
-    def get_local_matrix(node):
-        if 'matrix' in node:
-            m = node['matrix']
-            return [m[i:i+4] for i in range(0, 16, 4)]
-        t = node.get('translation', [0,0,0])
-        r = node.get('rotation', [0,0,0,1])
-        s = node.get('scale', [1,1,1])
-        rot = quat_to_mat4(r[0], r[1], r[2], r[3])
-        for i in range(3):
-            for j in range(3):
-                rot[i][j] *= s[j]
-        for i in range(3):
-            rot[i][3] = t[i]
-        return rot
-
-    world_mats = [None] * len(nodes)
-    def get_world(idx):
-        if world_mats[idx] is not None:
-            return world_mats[idx]
-        local = get_local_matrix(nodes[idx])
-        if idx in parent_of:
-            pw = get_world(parent_of[idx])
-            world_mats[idx] = mat4_mul(pw, local)
-        else:
-            world_mats[idx] = [row[:] for row in local]
-        return world_mats[idx]
-
-    def transform_point(m, p):
-        return tuple(sum(m[i][j]*p[j] for j in range(3)) + m[i][3] for i in range(3))
-
-    # --- Search for cockpit-related nodes ---
-    print("\n=== COCKPIT DETECTION ===")
-    cockpit_nodes = []
-    for i, node in enumerate(nodes):
-        name = node.get('name', '').lower()
-        if any(kw in name for kw in ['cockpit', 'canopy', 'glass', 'interior',
-                                       'cabin', 'deck', 'bridge', 'window',
-                                       'screen', 'hud', 'nose']):
-            w = get_world(i)
-            pos = (w[0][3], w[1][3], w[2][3])
-            cockpit_nodes.append((i, node.get('name',''), pos))
-            print(f"  FOUND: [{i}] '{node.get('name','')}' world_pos=({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})")
-
-    if not cockpit_nodes:
-        print("  No explicitly named cockpit/canopy nodes found.")
-
-    # --- Per-mesh bounding boxes in world space ---
-    print("\n=== PER-MESH BOUNDING BOXES (world space) ===")
-    mesh_info = []
-    for i, node in enumerate(nodes):
-        if 'mesh' not in node:
-            continue
-        mesh_idx = node['mesh']
-        if mesh_idx >= len(meshes):
-            continue
-        mesh = meshes[mesh_idx]
-        w = get_world(i)
-        parent_name = nodes[parent_of[i]].get('name', '') if i in parent_of else ''
-        node_name = node.get('name', '<unnamed>')
-        mesh_name = mesh.get('name', '?')
-
-        for prim in mesh.get('primitives', []):
-            pos_acc_idx = prim.get('attributes', {}).get('POSITION')
-            if pos_acc_idx is None or pos_acc_idx >= len(accessors):
-                continue
-            acc = accessors[pos_acc_idx]
-            if 'min' not in acc or 'max' not in acc:
-                continue
-            lmin, lmax = acc['min'], acc['max']
-            corners = [(lmin[a], lmin[b], lmin[c]) for a in (0,1) for b in (0,1) for c in (0,1)]
-            wc = [transform_point(w, c) for c in corners]
-            wmin = [min(c[j] for c in wc) for j in range(3)]
-            wmax = [max(c[j] for c in wc) for j in range(3)]
-            center = [(wmin[j]+wmax[j])/2 for j in range(3)]
-            info = {
-                'node_idx': i, 'node_name': node_name, 'parent_name': parent_name,
-                'mesh_idx': mesh_idx, 'mesh_name': mesh_name,
-                'wmin': wmin, 'wmax': wmax, 'center': center
-            }
-            mesh_info.append(info)
-            print(f"  '{parent_name}' -> '{node_name}':")
-            print(f"    bbox min=({wmin[0]:.2f}, {wmin[1]:.2f}, {wmin[2]:.2f})")
-            print(f"    bbox max=({wmax[0]:.2f}, {wmax[1]:.2f}, {wmax[2]:.2f})")
-            print(f"    center =({center[0]:.2f}, {center[1]:.2f}, {center[2]:.2f})")
-
-    # --- Overall model bounds ---
-    print("\n=== OVERALL MODEL BOUNDS ===")
     fmin = [float('inf')]*3
     fmax = [float('-inf')]*3
     for acc in accessors:
@@ -308,72 +174,15 @@ def analyze_glb(filepath):
             for j in range(3):
                 fmin[j] = min(fmin[j], acc['min'][j])
                 fmax[j] = max(fmax[j], acc['max'][j])
-    print(f"  min=({fmin[0]:.2f}, {fmin[1]:.2f}, {fmin[2]:.2f})")
-    print(f"  max=({fmax[0]:.2f}, {fmax[1]:.2f}, {fmax[2]:.2f})")
     extent = [fmax[j]-fmin[j] for j in range(3)]
-    print(f"  extent=({extent[0]:.2f}, {extent[1]:.2f}, {extent[2]:.2f})")
-
-    # --- Cockpit position estimation ---
-    print("\n=== COCKPIT POSITION ESTIMATE ===")
-    cockpit_pos = None
-
-    # Strategy 1: Use explicitly named cockpit node
-    if cockpit_nodes:
-        # Prefer the one closest to the front (most negative Z)
-        cockpit_nodes.sort(key=lambda x: x[2][2])
-        _, name, pos = cockpit_nodes[0]
-        cockpit_pos = pos
-        print(f"  Strategy 1 (named node): '{name}' at ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})")
-
-    # Strategy 2: Find mesh with glass-like material in front-half of model
-    if cockpit_pos is None and glass_like:
-        for gi, gname, galpha, gbc in glass_like:
-            # Find meshes using this material
-            for info in mesh_info:
-                m_idx = info['mesh_idx']
-                for prim in meshes[m_idx].get('primitives', []):
-                    if prim.get('material') == gi:
-                        c = info['center']
-                        if c[2] < 0:  # front half (negative Z = forward per ADR-0006)
-                            cockpit_pos = c
-                            print(f"  Strategy 2 (glass material): '{gname}' on mesh '{info['parent_name']}' at ({c[0]:.2f}, {c[1]:.2f}, {c[2]:.2f})")
-                            break
-                if cockpit_pos:
-                    break
-            if cockpit_pos:
-                break
-
-    # Strategy 3: Heuristic — front-upper-center of bounding box
-    if cockpit_pos is None:
-        # Cockpit is typically in the front 30-40% of the ship, upper half, centered X
-        z_nose = fmin[2]  # most negative Z (front)
-        z_tail = fmax[2]  # most positive Z (back)
-        z_range = z_tail - z_nose
-        # Place at ~30% from nose, upper quarter of Y, centered X
-        est_x = (fmin[0] + fmax[0]) / 2.0
-        est_y = fmax[1] - (fmax[1] - fmin[1]) * 0.25  # upper quarter
-        est_z = z_nose + z_range * 0.30  # 30% from nose
-        cockpit_pos = (est_x, est_y, est_z)
-        print(f"  Strategy 3 (heuristic): front-upper-center estimate at ({est_x:.2f}, {est_y:.2f}, {est_z:.2f})")
-        print(f"    NOTE: This is a rough estimate. Verify visually and adjust.")
-
-    print(f"\n  RECOMMENDED COCKPIT POSITION: ({cockpit_pos[0]:.2f}, {cockpit_pos[1]:.2f}, {cockpit_pos[2]:.2f})")
-    print(f"    In ship template coords (metres): x={cockpit_pos[0]:.2f}, y={cockpit_pos[1]:.2f}, z={cockpit_pos[2]:.2f}")
-
-    return {
-        'cockpit_pos': cockpit_pos,
-        'model_min': fmin,
-        'model_max': fmax,
-        'model_extent': extent,
-        'cockpit_nodes': cockpit_nodes,
-        'glass_materials': glass_like,
-    }
+    return {'min': fmin, 'max': fmax, 'extent': extent}
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <path-to-glb>")
         sys.exit(1)
     result = analyze_glb(sys.argv[1])
+    print(json.dumps(result, indent=2))
 ```
 
 Save this script to a temporary path (e.g., `/tmp/analyze_glb.py`) and run:
@@ -382,8 +191,7 @@ Save this script to a temporary path (e.g., `/tmp/analyze_glb.py`) and run:
 python3 /tmp/analyze_glb.py assets/templates/<type>/<asset-name>/mesh.glb
 ```
 
-Capture the output. The key result is the **RECOMMENDED COCKPIT POSITION** in glTF
-local space (= metres, right-handed, +Y up, -Z forward per ADR-0006).
+Capture the output. The key result is the **bounding box** (min/max in glTF local space, metres).
 
 ---
 
@@ -393,28 +201,25 @@ Based on the asset type from Step 2c, create the appropriate JSON template file.
 
 ### 6a. For `ships/` type — create a ship template
 
-Create `assets/templates/<type>/<asset-name>/template.json` following the
+Create `assets/templates/ships/<asset-name>/ship.json` following the
 [`ship.schema.json`](../assets/json/schema/ship.schema.json) schema.
 
-Use [`space-fighter-comrade1280/template.json`](../assets/templates/ships/space-fighter-comrade1280/template.json) as a reference.
-
-Required fields:
+**Required fields:**
 - `entity_type`: `"ship"`
-- `mass`: prompt the user for mass in kg (or use a sensible default based on ship size)
+- `mass`: prompt the user for mass in kg
 - `inertia_scale`: default `1.0`
-- `propulsion`: prompt the user or use reasonable defaults:
-  - `main_thrusters[0].id`: `"main"`
-  - `main_thrusters[0].type`: `"chemical"`
-  - `main_thrusters[0].max_forward_thrust`: `{"value": 100000, "unit": "N"}`
-  - `main_thrusters[0].max_backward_thrust`: `{"value": 40000, "unit": "N"}`
-  - `maneuvering_thruster.type`: `"rcs"`
-  - `maneuvering_thruster.max_torque`: `{"value": 50000, "unit": "N⋅m"}`
-  - `maneuvering_thruster.max_strafe_thrust`: `{"value": 50000, "unit": "N"}`
+- `bounding_box`: computed from mesh analysis (Step 5)
+- `propulsion`: see existing templates for reference
 
-### 6b. For other types — check for existing schema
+### 6b. For other types (asteroids, stations, celestial, misc)
 
-Look for `assets/json/schema/<type>.schema.json` or similar. If no schema exists,
-note that a new schema and possibly a new ADR may be needed. Ask the user.
+Create `assets/templates/<type>/<asset-name>/<entity_type>.json` following the
+appropriate schema (e.g., `asteroid.schema.json`, `station.schema.json`).
+
+**Required fields:**
+- `entity_type`: the entity type discriminator
+- `bounding_box`: computed from mesh analysis (Step 5)
+- Other type-specific fields as defined in the schema
 
 ### 6c. Validate the template
 
@@ -423,35 +228,28 @@ JSON Schema validator. Ensure it passes before proceeding.
 
 ---
 
-## Step 7 — Generate Player Ship Template (if applicable)
+## Step 7 — Generate Player Ship Template (ships only)
 
 If the asset is a `ships/` type and intended for player use, create a
-`player_controlled_ship` template referencing the ship template.
+`player_controlled_ship` template.
 
-Create `assets/templates/ships/<asset-name>-player/template.json` following the
+Create `assets/templates/ships/<asset-name>/player_controlled_ship.json` following the
 [`player_controlled_ship.schema.json`](../assets/json/schema/player_controlled_ship.schema.json) schema.
 
-Use [`player_ship/template.json`](../assets/templates/ships/player_ship/template.json) as a reference.
+**Required fields:**
+- `entity_type`: `"player_controlled_ship"`
+- `cameras`: 8 cameras with position, target, and availability, computed from bounding box
 
-The `cameras.cockpit` position should use the **RECOMMENDED COCKPIT POSITION**
-from Step 5 analysis:
+Camera positions and targets are computed from the bounding box dimensions:
+- Cockpit: near front-top of bounding box, looking forward
+- Chase: behind and above, looking at ship center
+- Rear/front: along Z axis
+- Left/right: along X axis
+- Top/bottom: along Y axis
 
-```json
-{
-    "entity_type": "player_controlled_ship",
-    "ship_template": "ships/<asset-name>",
-    "cameras": {
-        "cockpit": {
-            "x": <cockpit_x>,
-            "y": <cockpit_y>,
-            "z": <cockpit_z>
-        }
-    }
-}
-```
+### 7c. Validate the template
 
-If the analysis used Strategy 3 (heuristic), add a comment noting that the
-position should be verified visually and adjusted.
+Validate the generated JSON against its schema.
 
 ---
 
@@ -486,15 +284,15 @@ Present a complete summary to the user:
 Asset ingestion complete for "<Asset Name>":
 
 Files created:
-  - assets/templates/<type>/<asset-name>/mesh.glb
-  - assets/templates/<type>/<asset-name>/template.json
-  - assets/templates/ships/<asset-name>-player/template.json (if applicable)
+   - assets/templates/<type>/<asset-name>/mesh.glb
+   - assets/templates/<type>/<asset-name>/<entity_type>.json
+   - assets/templates/ships/<asset-name>/player_controlled_ship.json (if applicable)
 
-Cockpit position: (x, y, z) [from Strategy 1/2/3]
-  Note: <any caveats about the estimation method>
+Bounding box: min=(x, y, z), max=(x, y, z)
+Cameras: 8 cameras with position and target computed from bounding box (ships only)
 
 CREDITS.md entry:
-  <exact text of the entry>
+   <exact text of the entry>
 
 License: <license> ✅ compatible
 Copyright/trademark check: ✅ passed
@@ -521,3 +319,6 @@ before committing. Please review the entry above and confirm.
 - Never commit without human approval for CREDITS.md (ADR-0041 §7)
 - Never commit any changes (AGENTS.md rule 7 — humans commit only)
 - The glTF analysis script uses only Python 3 standard library (no numpy dependency)
+- **Bounding box** is computed from the mesh and stored in the template JSON (single source of truth)
+- **Cameras** are computed from the bounding box and stored in player_controlled_ship.json (ships only)
+- **Debug axes** use the bounding box from JSON, not computed from glTF at runtime

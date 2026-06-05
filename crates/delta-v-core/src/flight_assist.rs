@@ -16,6 +16,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 use crate::camera::ShipCamerasTemplate;
+use crate::camera::Vec3Json;
 
 /// Marker component for entities that use flight assist (inertial damping).
 ///
@@ -84,6 +85,21 @@ pub struct PlayerShipTemplate {
     pub propulsion: ShipPropulsionTemplate,
     /// Camera definitions (cockpit required, chase optional).
     pub cameras: ShipCamerasTemplate,
+    /// Axis-aligned bounding box in ship-local coordinates (metres).
+    /// Used for debug axes and spatial calculations.
+    pub bounding_box: BoundingBox,
+}
+
+/// Axis-aligned bounding box in ship-local coordinates (metres).
+///
+/// Computed once from the glTF mesh and stored in the template JSON.
+/// Used for camera position defaults, debug axes, and spatial calculations.
+#[derive(Debug, Deserialize)]
+pub struct BoundingBox {
+    /// Minimum corner (x, y, z in metres).
+    pub min: Vec3Json,
+    /// Maximum corner (x, y, z in metres).
+    pub max: Vec3Json,
 }
 
 /// Physical quantity with value and unit (ADR-0008).

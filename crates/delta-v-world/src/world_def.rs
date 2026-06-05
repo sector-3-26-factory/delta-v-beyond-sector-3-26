@@ -39,7 +39,7 @@ pub struct WorldDef {
 /// The entity type is derived from the template's `entity_type` field at load time.
 #[derive(Debug, Deserialize)]
 pub struct EntitySpawn {
-    /// Short path to the template (e.g., `ships/player_ship`). Resolved internally to `templates/<path>/template.json`.
+    /// Short path to the template (e.g., `ships/debug-ship-cube`). Resolved internally to `templates/<path>/<entity_type>.json`.
     pub template: String,
     /// Unique identifier for this entity instance.
     /// Used to reference the entity throughout the game (UI panels, save/load, networking, etc.).
@@ -53,6 +53,11 @@ pub struct EntitySpawn {
     /// Scale factor (x, y, z).
     /// Filled by schema defaults if not provided; never absent after loading.
     pub scale: Vec3Json,
+    /// If true, this entity is player-controlled. The loader will load
+    /// `player_controlled_ship.json` and merge with the co-located `ship.json`.
+    /// Only valid for ship templates. Default: false (from schema).
+    /// Filled by schema defaults; never absent after loading (ADR-0039, ADR-0040).
+    pub player_controlled: bool,
     /// The loaded template JSON (populated by loader).
     /// Not present in JSON; filled by `delta-v-world` loader.
     #[serde(skip)]
