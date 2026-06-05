@@ -123,13 +123,16 @@ fn load_world_system(
         // the raw JSON first, then validating against the correct schema.
         // If template loading fails, this is a hard error (ADR-0013).
         #[allow(clippy::panic, clippy::indexing_slicing)]
-        let (entity_type, template) = load_template_and_extract_type(&entity_spawn.template)
-            .unwrap_or_else(|e| {
-                panic!(
+        let template_path = crate::template_loader::resolve_template_path(&entity_spawn.template);
+        #[allow(clippy::panic)]
+        let (entity_type, template, mesh_template_path) =
+            match load_template_and_extract_type(&template_path) {
+                Ok(result) => result,
+                Err(e) => panic!(
                     "fatal: failed to load template '{}': {}",
                     entity_spawn.template, e
-                );
-            });
+                ),
+            };
 
         let pos = Vec3::new(
             entity_spawn.position.x,
@@ -148,9 +151,16 @@ fn load_world_system(
             entity_spawn.scale.z,
         );
 
-        let spawn_event = SpawnEntity::new(entity_spawn.id.clone(), entity_type, template, pos)
-            .with_rotation(rot)
-            .with_scale(scale);
+        let spawn_event = SpawnEntity::new(
+            entity_spawn.id.clone(),
+            entity_type,
+            template,
+            template_path,
+            mesh_template_path,
+            pos,
+        )
+        .with_rotation(rot)
+        .with_scale(scale);
 
         events.send(spawn_event);
     }
@@ -166,7 +176,7 @@ fn load_world_system(
 /// against the schema matching its declared type. Unknown entity types
 /// are a hard error (ADR-0013 — no silent fallbacks).
 ///
-/// Returns a tuple of (`entity_type`, `template_value`).
+/// Returns a tuple of (`entity_type`, `template_value`, `mesh_template_path`).
 ///
 /// # Errors
 ///
@@ -178,7 +188,7 @@ fn load_world_system(
 #[allow(clippy::expect_used)] // INVARIANT: CARGO_MANIFEST_DIR always set by cargo; workspace structure fixed
 fn load_template_and_extract_type(
     template_path: &str,
-) -> Result<(String, serde_json::Value), WorldError> {
+) -> Result<(String, serde_json::Value, String), WorldError> {
     // Read the raw JSON to determine entity_type before validation.
     // Per ADR-0038, the template declares its own entity_type.
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -214,9 +224,26 @@ fn load_template_and_extract_type(
     // Validate against the correct schema based on the declared entity_type.
     // Unknown entity types are a hard error — no silent fallbacks (ADR-0013).
     match entity_type.as_str() {
-        "player_controlled_ship" | "ship" => {
+        "player_controlled_ship" => {
+            // Extract the ship_template path from the raw JSON and resolve it to a full path.
+            let ship_template_short = raw_value
+                .get("ship_template")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| WorldError::Schema {
+                    path: template_file.clone(),
+                    pointer: "/ship_template".to_string(),
+                    reason: "player_controlled_ship template missing 'ship_template' field"
+                        .to_string(),
+                })?;
+            let mesh_template_path =
+                crate::template_loader::resolve_template_path(ship_template_short);
             let template = load_template(template_path, &entity_type)?;
-            Ok((entity_type, template))
+            Ok((entity_type, template, mesh_template_path))
+        }
+        "ship" => {
+            let template = load_template(template_path, &entity_type)?;
+            // For standalone ships, the mesh is in the template's own directory.
+            Ok((entity_type, template, template_path.to_string()))
         }
         other => Err(WorldError::Schema {
             path: template_file,

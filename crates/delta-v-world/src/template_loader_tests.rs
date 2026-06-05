@@ -17,7 +17,10 @@ use crate::template_loader::load_template;
 #[test]
 fn test_load_ship_template() {
     // load_template expects a path relative to the assets directory.
-    let result = load_template("templates/ships/fighter.json", "ship");
+    let result = load_template(
+        "templates/ships/space-fighter-comrade1280/template.json",
+        "ship",
+    );
     assert!(
         result.is_ok(),
         "failed to load fighter template: {result:?}"
@@ -25,7 +28,6 @@ fn test_load_ship_template() {
     let template = result.unwrap();
     assert_eq!(template["entity_type"], "ship");
     assert!(template.get("mass").is_some());
-    assert!(template.get("mesh").is_some());
     assert!(template.get("propulsion").is_some());
     // Ship template should NOT have cameras.
     assert!(template.get("cameras").is_none());
@@ -34,7 +36,10 @@ fn test_load_ship_template() {
 #[test]
 fn test_load_player_controlled_ship_template() {
     // load_template expects a path relative to the assets directory.
-    let result = load_template("templates/ships/player_ship.json", "player_controlled_ship");
+    let result = load_template(
+        "templates/ships/player_ship/template.json",
+        "player_controlled_ship",
+    );
     assert!(
         result.is_ok(),
         "failed to load player_ship template: {result:?}"
@@ -42,9 +47,8 @@ fn test_load_player_controlled_ship_template() {
     let template = result.unwrap();
     // Merged template should have entity_type player_controlled_ship.
     assert_eq!(template["entity_type"], "player_controlled_ship");
-    // Should have ship properties from fighter.json.
+    // Should have ship properties from space-fighter-comrade1280 template.
     assert!(template.get("mass").is_some());
-    assert!(template.get("mesh").is_some());
     assert!(template.get("propulsion").is_some());
     // Should have cameras from player_ship.json.
     assert!(template.get("cameras").is_some());
@@ -53,9 +57,12 @@ fn test_load_player_controlled_ship_template() {
 #[test]
 fn test_debug_ship_templates() {
     for (path, name) in [
-        ("templates/ships/debug-ship-cube.json", "cube"),
-        ("templates/ships/debug-ship-sphere.json", "sphere"),
-        ("templates/ships/debug-ship-capsule.json", "capsule"),
+        ("templates/ships/debug-ship-cube/template.json", "cube"),
+        ("templates/ships/debug-ship-sphere/template.json", "sphere"),
+        (
+            "templates/ships/debug-ship-capsule/template.json",
+            "capsule",
+        ),
     ] {
         // load_template expects a path relative to the assets directory.
         let result = load_template(path, "ship");

@@ -47,6 +47,7 @@ pub mod camera;
 pub mod debug_axes;
 pub mod debug_config;
 pub mod diagnostics;
+pub mod events;
 pub mod flight_assist;
 pub mod input;
 pub mod keybindings_resource;
@@ -63,6 +64,7 @@ pub use debug_axes::{
 };
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
+pub use events::SpawnEntity;
 pub use flight_assist::{
     FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate, PhysicalQuantity,
     PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate, ShipTemplate, ThrustCommand,

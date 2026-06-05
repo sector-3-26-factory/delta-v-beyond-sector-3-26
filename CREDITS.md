@@ -14,5 +14,5 @@ For license text, see the LICENSE file at the repository root.
 - **Source:** [Sketchfab](https://sketchfab.com/3d-models/space-fighter-e766136d4871441289d37d44a4bbcd3b)
 - **License:** CC Attribution 4.0 (CC BY 4.0)
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
-- **File:** `assets/glTF/ships/space-fighter-comrade1280.glb`
+- **File:** `assets/templates/ships/space-fighter-comrade1280/mesh.glb`
 - **Modifications:** *None*

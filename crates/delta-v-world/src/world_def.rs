@@ -24,21 +24,22 @@ pub struct WorldDef {
     pub name: String,
     /// Array of entities to spawn (per ADR-0038).
     /// Each entry specifies a template and instance data.
-    #[serde(default)]
+    /// The schema provides `"default": []`, so this field is always present
+    /// after the delta-v-json load pipeline (ADR-0039, ADR-0040).
     pub entities: Vec<EntitySpawn>,
 }
 
 /// Template-based entity spawn descriptor.
 ///
 /// Per ADR-0038, each entity in the world is described by:
-/// - A reference to a template file (e.g., `templates/ships/player_ship.json`)
+/// - A reference to a template file (e.g., `templates/ships/player_ship/template.json`)
 /// - Instance data (position, rotation, scale)
 /// - A unique identifier for entity referencing (UI panels, save/load, etc.)
 ///
 /// The entity type is derived from the template's `entity_type` field at load time.
 #[derive(Debug, Deserialize)]
 pub struct EntitySpawn {
-    /// Path to the template file (e.g., `templates/ships/player_ship.json`).
+    /// Short path to the template (e.g., `ships/player_ship`). Resolved internally to `templates/<path>/template.json`.
     pub template: String,
     /// Unique identifier for this entity instance.
     /// Used to reference the entity throughout the game (UI panels, save/load, networking, etc.).

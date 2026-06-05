@@ -27,7 +27,7 @@ We split the ship template into two levels:
 ```
 ship.schema.json (base ship)
 ├── entity_type: "ship" (const)
-├── mass, inertia_scale, mesh, propulsion
+├── mass, inertia_scale, propulsion
 └── $defs: physical_quantity_mass, physical_quantity_force, etc.
 
 player_controlled_ship.schema.json (player ship)
@@ -40,12 +40,12 @@ player_controlled_ship.schema.json (player ship)
 ### Template Structure
 
 ```
-templates/ships/fighter.json (entity_type: "ship")
-├── mass, inertia_scale, mesh, propulsion
+ships/space-fighter-comrade1280 (entity_type: "ship")
+├── mass, inertia_scale, propulsion
 └── NO cameras
 
-templates/ships/player_ship.json (entity_type: "player_controlled_ship")
-├── ship_template: "templates/ships/fighter.json"
+ships/player_ship (entity_type: "player_controlled_ship")
+├── ship_template: "ships/space-fighter-comrade1280"
 └── cameras: { cockpit: { x, y, z } }
 ```
 

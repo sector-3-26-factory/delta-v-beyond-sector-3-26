@@ -17,6 +17,18 @@ use serde_json::Value;
 
 use crate::error::WorldError;
 
+/// Resolves a short template path to the full template file path.
+///
+/// Short format: `"ships/player_ship"` → `"templates/ships/player_ship/template.json"`
+/// If the path already looks like a full path (contains `templates/` and ends with
+/// `template.json`), it is returned as-is.
+pub fn resolve_template_path(short_path: &str) -> String {
+    if short_path.starts_with("templates/") && short_path.ends_with("template.json") {
+        return short_path.to_string();
+    }
+    format!("templates/{short_path}/template.json")
+}
+
 /// Loads and validates a template file.
 ///
 /// For `player_controlled_ship` templates, the `ship_template` field is
@@ -24,7 +36,7 @@ use crate::error::WorldError;
 ///
 /// # Arguments
 ///
-/// * `template_path` - Relative path to the template (e.g., `templates/ships/player_ship.json`)
+/// * `template_path` - Relative path to the template (e.g., `templates/ships/player_ship/template.json`)
 /// * `entity_type` - The entity type discriminator (e.g., `"player_controlled_ship"`)
 ///
 /// # Returns
@@ -124,8 +136,10 @@ fn merge_ship_template(player_template: &Value, root: &Path) -> Result<Value, Wo
             reason: "player_controlled_ship template missing 'ship_template' field".to_string(),
         })?;
 
+    // Resolve short path (e.g., "ships/space-fighter-comrade1280") to full path.
+    let ship_template_full = resolve_template_path(ship_template_path);
     // Load the referenced ship template.
-    let ship_template_file = root.join(ship_template_path);
+    let ship_template_file = root.join(&ship_template_full);
     let ship_schema_file = root.join("json/schema/ship.schema.json");
     let ship_template = json_loader::load_validated(&ship_template_file, &ship_schema_file)
         .map_err(|e| map_json_error(e, &ship_template_file))?;

@@ -19,7 +19,7 @@
 //! Ship types and ship-specific systems.
 //!
 //! Manages the spawning and lifecycle of ship entities. Listens for
-//! [`delta_v_world::SpawnEntity`] events and spawns ships from templates.
+//! [`delta_v_core::SpawnEntity`] events and spawns ships from templates.
 //!
 //! The input → forces pipeline (D3) runs in `FixedUpdate`:
 //! 1. Input reader: [`ActiveActions`] → [`ThrustCommand`] + [`TorqueCommand`]
@@ -64,7 +64,7 @@ use systems::{
 
 /// Ships plugin for managing player and NPC vessels.
 ///
-/// Listens for [`delta_v_world::SpawnEntity`] events during
+/// Listens for [`delta_v_core::SpawnEntity`] events during
 /// [`AppState::SpawningEntities`] and spawns ship entities based on
 /// their `entity_type` field.
 ///
@@ -151,7 +151,7 @@ impl Plugin for ShipsPlugin {
 ///
 /// This runs in the same `Update` tick as the spawn systems, but after
 /// them (via `.after(WorldSpawnSet::SpawnShips)`). Because all
-/// [`delta_v_world::SpawnEntity`] events are emitted synchronously on
+/// [`delta_v_core::SpawnEntity`] events are emitted synchronously on
 /// [`AppState::SpawningEntities`] entry, a single `Update` tick is
 /// sufficient to process them all before advancing.
 fn advance_to_in_game(mut next: ResMut<'_, NextState<AppState>>) {

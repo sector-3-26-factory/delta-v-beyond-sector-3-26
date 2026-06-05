@@ -3,7 +3,7 @@
 //! Ship entity spawning from templates.
 //!
 //! Per ADR-0038 (entity template system), ships are spawned from templates
-//! loaded and validated by delta-v-json. Templates define mesh paths (glTF),
+//! loaded and validated by delta-v-json. Templates define
 //! cameras, physical properties (mass, inertia), and propulsion configuration.
 //! All meshes come from glTF files (ADR-0019).
 //!
@@ -18,10 +18,9 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Mesh, VertexAttributeValues};
 use delta_v_core::{
     CameraFollow, ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipPropulsionConfig,
+    PlayerShipTemplate, ShipPropulsionConfig, SpawnEntity,
 };
 use delta_v_physics::RigidBody;
-use delta_v_world::SpawnEntity;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
@@ -158,11 +157,13 @@ fn spawn_player_ship(
     let main = &template.propulsion.main_thrusters[active_index];
     let maneuvering = &template.propulsion.maneuvering_thruster;
 
-    // Extract mesh path from validated template JSON (owned String for 'static lifetime).
-    let mesh_path = event.template["mesh"]["path"]
-        .as_str()
-        .expect("mesh.path must be a string")
-        .to_string();
+    // Derive mesh path from the mesh template path (always mesh.glb in the template directory).
+    // The mesh_template_path points to the template that contains the mesh, which for
+    // player_controlled_ship is the referenced ship_template, and for standalone ships
+    // is the template itself.
+    let mesh_path = event
+        .mesh_template_path
+        .replace("template.json", "mesh.glb");
 
     // Extract camera positions from the typed template struct.
     let cockpit = &template.cameras.cockpit;
