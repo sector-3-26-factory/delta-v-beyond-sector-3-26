@@ -5,10 +5,9 @@
 //! Loads entity templates from files and validates them against their
 //! schemas per ADR-0038.
 //!
-//! For `player_controlled_ship` templates, the loader additionally resolves
-//! the `ship_template` reference: it loads the referenced ship template,
-//! merges the two (ship properties + player cameras), and validates the
-//! merged result against `ship.schema.json`.
+//! The loader now loads a single template file. Merging of `player_controlled_ship`
+//! templates is done in the world loader (lib.rs)
+//! since it needs to know the `player_controlled` flag from the world definition.
 
 use std::path::{Path, PathBuf};
 
@@ -19,29 +18,26 @@ use crate::error::WorldError;
 
 /// Resolves a short template path to the full template file path.
 ///
-/// Short format: `"ships/player_ship"` → `"templates/ships/player_ship/template.json"`
-/// If the path already looks like a full path (contains `templates/` and ends with
-/// `template.json`), it is returned as-is.
-pub fn resolve_template_path(short_path: &str) -> String {
-    if short_path.starts_with("templates/") && short_path.ends_with("template.json") {
+/// Short format: `"ships/debug-ship-cube"` + `entity_type` `"ship"` → `"templates/ships/debug-ship-cube/ship.json"`
+/// If the path already looks like a full path (starts with `templates/`), it is returned as-is.
+pub fn resolve_template_path(short_path: &str, entity_type: &str) -> String {
+    if short_path.starts_with("templates/") {
+        // Already a full path like "templates/ships/debug-ship-cube/ship.json"
         return short_path.to_string();
     }
-    format!("templates/{short_path}/template.json")
+    format!("templates/{short_path}/{entity_type}.json")
 }
 
 /// Loads and validates a template file.
 ///
-/// For `player_controlled_ship` templates, the `ship_template` field is
-/// resolved and the referenced ship template is merged in before validation.
-///
 /// # Arguments
 ///
-/// * `template_path` - Relative path to the template (e.g., `templates/ships/player_ship/template.json`)
-/// * `entity_type` - The entity type discriminator (e.g., `"player_controlled_ship"`)
+/// * `template_path` - Relative path to the template (e.g., `templates/ships/debug-ship-cube/ship.json`)
+/// * `entity_type` - The entity type discriminator (e.g., `"ship"` or `"player_controlled_ship"`)
 ///
 /// # Returns
 ///
-/// The loaded, merged (if applicable), and validated template JSON.
+/// The loaded and validated template JSON.
 ///
 /// # Errors
 ///
@@ -64,14 +60,7 @@ pub fn load_template(template_path: &str, entity_type: &str) -> Result<Value, Wo
     let template_file = assets_root.join(template_path);
     let schema_file = assets_root.join(format!("json/schema/{entity_type}.schema.json"));
 
-    let template = load_template_from_paths(&template_file, &schema_file, entity_type)?;
-
-    // For player_controlled_ship, resolve and merge the referenced ship template.
-    if entity_type == "player_controlled_ship" {
-        return merge_ship_template(&template, &assets_root);
-    }
-
-    Ok(template)
+    load_template_from_paths(&template_file, &schema_file, entity_type)
 }
 
 /// Loads and validates a template from explicit paths.
@@ -112,78 +101,6 @@ fn load_template_from_paths(
     }
 
     Ok(template)
-}
-
-/// Loads and merges a referenced ship template into the player template.
-///
-/// The `player_controlled_ship` template references a base ship template via
-/// the `ship_template` field. This function:
-/// 1. Reads the `ship_template` path from the player template
-/// 2. Loads and validates the referenced ship template
-/// 3. Merges: ship template provides base properties, player template adds cameras
-/// 4. Sets `entity_type` to `player_controlled_ship` on the merged result
-///
-/// # Errors
-///
-/// Returns [`WorldError`] if the ship template cannot be loaded or validated.
-fn merge_ship_template(player_template: &Value, root: &Path) -> Result<Value, WorldError> {
-    let ship_template_path = player_template
-        .get("ship_template")
-        .and_then(Value::as_str)
-        .ok_or_else(|| WorldError::Schema {
-            path: PathBuf::from("<player_controlled_ship template>"),
-            pointer: "/ship_template".to_string(),
-            reason: "player_controlled_ship template missing 'ship_template' field".to_string(),
-        })?;
-
-    // Resolve short path (e.g., "ships/space-fighter-comrade1280") to full path.
-    let ship_template_full = resolve_template_path(ship_template_path);
-    // Load the referenced ship template.
-    let ship_template_file = root.join(&ship_template_full);
-    let ship_schema_file = root.join("json/schema/ship.schema.json");
-    let ship_template = json_loader::load_validated(&ship_template_file, &ship_schema_file)
-        .map_err(|e| map_json_error(e, &ship_template_file))?;
-
-    // Verify the referenced template is a ship.
-    let ship_type = ship_template
-        .get("entity_type")
-        .and_then(Value::as_str)
-        .ok_or_else(|| WorldError::Schema {
-            path: ship_template_file.clone(),
-            pointer: "/entity_type".to_string(),
-            reason: "referenced ship template missing 'entity_type' field".to_string(),
-        })?;
-
-    if ship_type != "ship" {
-        return Err(WorldError::Schema {
-            path: ship_template_file,
-            pointer: "/entity_type".to_string(),
-            reason: format!(
-                "referenced ship template must have entity_type 'ship', found '{ship_type}'"
-            ),
-        });
-    }
-
-    // Merge: start with ship template properties, then overlay player-specific fields.
-    let mut merged = ship_template;
-
-    if let (Some(merged_obj), Some(player_obj)) =
-        (merged.as_object_mut(), player_template.as_object())
-    {
-        for (key, value) in player_obj {
-            // Skip entity_type (we set it below) and ship_template (metadata, not a ship property).
-            if key != "entity_type" && key != "ship_template" {
-                merged_obj.insert(key.clone(), value.clone());
-            }
-        }
-        // Set entity_type to player_controlled_ship.
-        merged_obj.insert(
-            "entity_type".to_string(),
-            Value::String("player_controlled_ship".to_string()),
-        );
-    }
-
-    Ok(merged)
 }
 
 /// Maps a `delta-v-json` error to a `WorldError`.

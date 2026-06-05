@@ -31,6 +31,11 @@ mod tests {
             .to_owned()
     }
 
+    /// Returns the path to the test fixtures directory.
+    fn fixtures_path() -> std::path::PathBuf {
+        workspace_root().join("crates/delta-v-world/tests/fixtures")
+    }
+
     /// The shipped default world file must load without errors.
     #[test]
     fn test_loads_default_world_ok() {
@@ -57,9 +62,12 @@ mod tests {
             !world.entities.is_empty(),
             "world must have at least one entity"
         );
-        // The first entity should reference the player_ship template.
+        // The first entity should reference a valid ship template.
         let player_entity = &world.entities[0];
-        assert_eq!(player_entity.template, "ships/player_ship");
+        assert!(
+            player_entity.template.starts_with("ships/"),
+            "entity template should reference a ship"
+        );
     }
 
     /// Pointing the loader at a nonexistent path must produce
@@ -93,5 +101,21 @@ mod tests {
             matches!(result, Err(WorldError::Schema { .. })),
             "expected WorldError::Schema, got: {result:?}"
         );
+    }
+
+    /// Test world loading with isolated test fixtures.
+    #[test]
+    fn test_loads_test_world_ok() {
+        let fixtures = fixtures_path();
+        let world = load_world_from_paths(
+            &fixtures.join("test.world.json"),
+            &fixtures.join("world.schema.json"),
+        )
+        .expect("test world should load without error");
+        assert_eq!(world.format_version, 1);
+        assert_eq!(world.name, "Test World");
+        assert_eq!(world.entities.len(), 1);
+        assert_eq!(world.entities[0].template, "ships/test-ship");
+        assert!(world.entities[0].player_controlled);
     }
 }

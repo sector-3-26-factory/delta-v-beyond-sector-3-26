@@ -40,7 +40,7 @@
       ],
       "properties": {
         "template": {
-          "description": "Path to the template file (e.g., templates/ships/player_ship/template.json). The template's entity_type field determines the entity type.",
+          "description": "Short path to the template directory (e.g., ships/debug-ship-cube). The loader resolves this to templates/<path>/<entity_type>.json based on player_controlled flag.",
           "type": "string"
         },
         "id": {
@@ -69,6 +69,11 @@
             "y": 1.0,
             "z": 1.0
           }
+        },
+        "player_controlled": {
+          "description": "If true, the entity is player-controlled. Loads player_controlled_ship.json instead of ship.json and merges with the co-located ship.json. Only valid for ship templates. Exactly one entity in the world must have this set to true.",
+          "type": "boolean",
+          "default": false
         }
       }
     },

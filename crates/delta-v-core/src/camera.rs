@@ -39,17 +39,40 @@ pub struct CameraFollow {
     pub offset: Vec3,
 }
 
-/// Camera positions from the ship template.
+/// A single camera definition with position, target (look-at point), and availability.
+#[derive(Debug, Deserialize)]
+pub struct CameraDefinition {
+    /// Camera position relative to ship center (metres).
+    pub position: Vec3Json,
+    /// Point the camera looks at, relative to ship center (metres).
+    /// Direction = normalize(target - position).
+    pub target: Vec3Json,
+    /// If true, this camera is physically present and accessible.
+    /// If false, the position/target are computed but not available to the player.
+    pub available: bool,
+}
+
+/// Camera definitions from the ship template.
 ///
-/// The chase camera position is optional — if omitted, it is computed
-/// automatically from the glTF mesh bounding box when the mesh loads.
+/// All 8 cameras are required in the schema. Each has a position, target, and availability flag.
 #[derive(Debug, Deserialize)]
 pub struct ShipCamerasTemplate {
-    /// Cockpit camera position relative to ship center (metres).
-    pub cockpit: Vec3Json,
-    /// Chase camera position relative to ship center (metres).
-    /// If omitted, computed automatically from the glTF bounding box.
-    pub chase: Option<Vec3Json>,
+    /// Cockpit camera (inside the cockpit, typically front-upper-center).
+    pub cockpit: CameraDefinition,
+    /// Chase camera (behind and above the ship).
+    pub chase: CameraDefinition,
+    /// Rear view camera (behind at cockpit height).
+    pub rear: CameraDefinition,
+    /// Front/nose camera (forward view).
+    pub front: CameraDefinition,
+    /// Left side view camera.
+    pub left: CameraDefinition,
+    /// Right side view camera.
+    pub right: CameraDefinition,
+    /// Top-down view camera.
+    pub top: CameraDefinition,
+    /// Bottom-up view camera.
+    pub bottom: CameraDefinition,
 }
 
 /// A 3-component vector deserialized from JSON `{"x": N, "y": N, "z": N}`.

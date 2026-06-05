@@ -5,6 +5,18 @@
         "unit": "kg"
     },
     "inertia_scale": 1.0,
+    "bounding_box": {
+        "min": {
+            "x": -0.5,
+            "y": -0.5,
+            "z": -0.5
+        },
+        "max": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5
+        }
+    },
     "propulsion": {
         "main_thrusters": [
             {

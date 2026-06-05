@@ -18,7 +18,7 @@ use crate::template_loader::load_template;
 fn test_load_ship_template() {
     // load_template expects a path relative to the assets directory.
     let result = load_template(
-        "templates/ships/space-fighter-comrade1280/template.json",
+        "templates/ships/space-fighter-comrade1280/ship.json",
         "ship",
     );
     assert!(
@@ -35,34 +35,30 @@ fn test_load_ship_template() {
 
 #[test]
 fn test_load_player_controlled_ship_template() {
-    // load_template expects a path relative to the assets directory.
+    // load_template for player_controlled_ship loads the player_controlled_ship.json
+    // which only has cameras. The merging with ship.json happens in lib.rs.
     let result = load_template(
-        "templates/ships/player_ship/template.json",
+        "templates/ships/debug-ship-sphere/player_controlled_ship.json",
         "player_controlled_ship",
     );
     assert!(
         result.is_ok(),
-        "failed to load player_ship template: {result:?}"
+        "failed to load player_controlled_ship template: {result:?}"
     );
     let template = result.unwrap();
-    // Merged template should have entity_type player_controlled_ship.
+    // player_controlled_ship.json has entity_type player_controlled_ship.
     assert_eq!(template["entity_type"], "player_controlled_ship");
-    // Should have ship properties from space-fighter-comrade1280 template.
-    assert!(template.get("mass").is_some());
-    assert!(template.get("propulsion").is_some());
-    // Should have cameras from player_ship.json.
+    // player_controlled_ship.json only has cameras, not mass/propulsion.
+    // The merging with ship.json happens in the world loader.
     assert!(template.get("cameras").is_some());
 }
 
 #[test]
 fn test_debug_ship_templates() {
     for (path, name) in [
-        ("templates/ships/debug-ship-cube/template.json", "cube"),
-        ("templates/ships/debug-ship-sphere/template.json", "sphere"),
-        (
-            "templates/ships/debug-ship-capsule/template.json",
-            "capsule",
-        ),
+        ("templates/ships/debug-ship-cube/ship.json", "cube"),
+        ("templates/ships/debug-ship-sphere/ship.json", "sphere"),
+        ("templates/ships/debug-ship-capsule/ship.json", "capsule"),
     ] {
         // load_template expects a path relative to the assets directory.
         let result = load_template(path, "ship");

@@ -1,0 +1,110 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "world.schema.json",
+    "title": "World Definition",
+    "description": "A world definition file. See AGENTS.md.",
+    "type": "object",
+    "required": [
+        "format_version",
+        "name",
+        "entities"
+    ],
+    "properties": {
+        "format_version": {
+            "type": "integer",
+            "description": "Schema version number"
+        },
+        "name": {
+            "type": "string",
+            "description": "Human-readable world name"
+        },
+        "entities": {
+            "type": "array",
+            "description": "List of entities in the world",
+            "items": {
+                "$ref": "#/$defs/entity_spawn"
+            }
+        }
+    },
+    "$defs": {
+        "entity_spawn": {
+            "type": "object",
+            "required": [
+                "template"
+            ],
+            "properties": {
+                "template": {
+                    "type": "string",
+                    "description": "Path to the entity template"
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier for this entity"
+                },
+                "player_controlled": {
+                    "type": "boolean",
+                    "description": "Whether this entity is player-controlled",
+                    "default": false
+                },
+                "position": {
+                    "$ref": "#/$defs/vec3"
+                },
+                "rotation": {
+                    "$ref": "#/$defs/quat"
+                },
+                "scale": {
+                    "$ref": "#/$defs/vec3"
+                }
+            }
+        },
+        "vec3": {
+            "type": "object",
+            "required": [
+                "x",
+                "y",
+                "z"
+            ],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "X component"
+                },
+                "y": {
+                    "type": "number",
+                    "description": "Y component"
+                },
+                "z": {
+                    "type": "number",
+                    "description": "Z component"
+                }
+            }
+        },
+        "quat": {
+            "type": "object",
+            "required": [
+                "x",
+                "y",
+                "z",
+                "w"
+            ],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "X component"
+                },
+                "y": {
+                    "type": "number",
+                    "description": "Y component"
+                },
+                "z": {
+                    "type": "number",
+                    "description": "Z component"
+                },
+                "w": {
+                    "type": "number",
+                    "description": "W component"
+                }
+            }
+        }
+    }
+}

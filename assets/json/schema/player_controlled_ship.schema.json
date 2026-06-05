@@ -2,12 +2,11 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://delta-v-beyond-sector-3-26/schema/player_controlled_ship",
     "title": "Player-controlled ship template",
-    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines the player-controlled ship entity type. References a base ship template for physical properties (mass, mesh, propulsion) and adds camera definitions for cockpit and chase views. Per ADR-0038, templates are loaded and validated independently of the world definition.\n\nPhysical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines the player-controlled ship entity type. The base ship template is always co-located in the same directory (ship.json). This template adds camera definitions for all 8 camera views. Per ADR-0038, templates are loaded and validated independently of the world definition.\n\nPhysical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).",
     "type": "object",
     "additionalProperties": false,
     "required": [
         "entity_type",
-        "ship_template",
         "cameras"
     ],
     "properties": {
@@ -16,30 +15,81 @@
             "type": "string",
             "const": "player_controlled_ship"
         },
-        "ship_template": {
-            "description": "Path to the base ship template file (e.g., templates/ships/space-fighter-comrade1280/template.json). Loaded and merged at spawn time. The referenced template must have entity_type 'ship'.",
-            "type": "string"
-        },
         "cameras": {
-            "description": "Camera definitions for cockpit and chase views. Cockpit is always required. If chase is omitted, the chase camera position is computed automatically from the glTF mesh bounding box.",
+            "description": "Camera definitions for all 8 camera views. Each camera has a position (relative to ship center in metres), a target point to look at, and an availability flag. All 8 cameras are defined, but only those with available=true are accessible to the player. This allows advanced designs (e.g., windowless ships) to have computed positions but mark them unavailable. Right-handed coordinates: +Y up, -Z forward per ADR-0006. Camera direction is derived from (target - position) normalized.",
             "type": "object",
             "additionalProperties": false,
             "required": [
-                "cockpit"
+                "cockpit",
+                "chase",
+                "rear",
+                "front",
+                "left",
+                "right",
+                "top",
+                "bottom"
             ],
             "properties": {
                 "cockpit": {
-                    "description": "Cockpit camera position relative to ship center (metres). Right-handed coordinates: +Y up, -Z forward per ADR-0006.",
-                    "$ref": "#/$defs/vec3"
+                    "description": "Cockpit camera (inside the cockpit, typically front-upper-center).",
+                    "$ref": "#/$defs/camera"
                 },
                 "chase": {
-                    "description": "Chase camera position relative to ship center (metres). Right-handed coordinates: +Y up, -Z forward per ADR-0006. If omitted, the position is computed automatically from the glTF mesh bounding box.",
-                    "$ref": "#/$defs/vec3"
+                    "description": "Chase camera (behind and above the ship).",
+                    "$ref": "#/$defs/camera"
+                },
+                "rear": {
+                    "description": "Rear view camera (behind at cockpit height).",
+                    "$ref": "#/$defs/camera"
+                },
+                "front": {
+                    "description": "Front/nose camera (forward view).",
+                    "$ref": "#/$defs/camera"
+                },
+                "left": {
+                    "description": "Left side view camera.",
+                    "$ref": "#/$defs/camera"
+                },
+                "right": {
+                    "description": "Right side view camera.",
+                    "$ref": "#/$defs/camera"
+                },
+                "top": {
+                    "description": "Top-down view camera.",
+                    "$ref": "#/$defs/camera"
+                },
+                "bottom": {
+                    "description": "Bottom-up view camera.",
+                    "$ref": "#/$defs/camera"
                 }
             }
         }
     },
     "$defs": {
+        "camera": {
+            "description": "Camera definition with position, target (look-at point), and availability flag.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "position",
+                "target",
+                "available"
+            ],
+            "properties": {
+                "position": {
+                    "description": "Camera position relative to ship center (metres).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "target": {
+                    "description": "Point the camera looks at, relative to ship center (metres). Direction = normalize(target - position).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "available": {
+                    "description": "If true, this camera is physically present and accessible. If false, the position/target are computed but the camera is not available to the player.",
+                    "type": "boolean"
+                }
+            }
+        },
         "vec3": {
             "description": "3-component vector (x, y, z) in metres.",
             "type": "object",
