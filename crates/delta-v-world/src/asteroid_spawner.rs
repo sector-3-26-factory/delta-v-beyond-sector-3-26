@@ -78,6 +78,8 @@ pub fn spawn_asteroid_system(
                 .with_rotation(event.rotation)
                 .with_scale(scale),
             GlobalTransform::default(),
+            Visibility::default(),
+            InheritedVisibility::default(),
             Name::new(event.id.clone()),
             PendingAsteroidMesh { gltf_handle },
             DebugAxesEligible::new(event.id.clone(), axis_length),

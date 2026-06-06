@@ -64,8 +64,8 @@ pub use camera::{
     PlayerShipEntity, ShipCamerasTemplate, Vec3Json,
 };
 pub use debug_axes::{
-    mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_positions,
-    DebugAxes, DebugAxesEligible, DebugAxisRoot, DebugAxisTarget,
+    mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_rotation,
+    DebugAxes, DebugAxesEligible, DebugAxisRootMarker,
 };
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
@@ -167,11 +167,11 @@ impl Plugin for CorePlugin {
             debug_axes::update_debug_axes_on_change.run_if(in_state(AppState::InGame)),
         );
 
-        // Debug axes position update: keeps axis roots at the target's position
-        // while maintaining world-aligned (identity) rotation.
+        // Debug axes rotation update: keeps axis roots world-aligned by applying
+        // the inverse of the target's rotation each frame.
         app.add_systems(
             Update,
-            debug_axes::update_debug_axes_positions.run_if(in_state(AppState::InGame)),
+            debug_axes::update_debug_axes_rotation.run_if(in_state(AppState::InGame)),
         );
 
         // Input pipeline (ADR-0011, ADR-0017).

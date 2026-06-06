@@ -48,7 +48,10 @@ pub fn spawn_ship_from_template(
                 // NPC ships: future implementation
                 log::warn!("NPC ship spawning not yet implemented");
             }
-            other => log::warn!("Unknown entity_type: {other}"),
+            // Other entity types (e.g. "asteroid") are handled by other plugins.
+            // Silently skip — a single plugin cannot know whether another plugin
+            // will handle the event.
+            _ => {}
         }
     }
 }
@@ -119,6 +122,8 @@ fn spawn_player_ship(
                 scale: event.scale,
             },
             GlobalTransform::default(),
+            Visibility::default(),
+            InheritedVisibility::default(),
             PendingShipMesh { gltf_handle },
             DebugAxesEligible::new(event.id.clone(), axis_length),
             // Physics components: mass and inertia from template JSON (ADR-0014)
