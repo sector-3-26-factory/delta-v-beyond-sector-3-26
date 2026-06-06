@@ -189,10 +189,13 @@ fn spawn_player_ship(
 /// Attaches loaded glTF meshes to pending ship entities.
 ///
 /// Once the glTF asset finishes loading, this system extracts the first scene
-/// from the glTF and attaches it to the ship entity with a `SceneBundle`.
+/// from the glTF and attaches it to the ship entity.
 ///
 /// Debug axes are already configured with the correct length from the template JSON
 /// (per ADR-0014: bounding box is the single source of truth).
+///
+/// Note: We only insert the `Handle<Scene>` to avoid overwriting the entity's
+/// existing `Transform` and `GlobalTransform` that were set during spawning.
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn attach_ship_meshes(
     mut commands: Commands<'_, '_>,
@@ -212,15 +215,9 @@ pub(crate) fn attach_ship_meshes(
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
             // Get the first scene from the glTF (should contain the mesh).
             if let Some(scene_handle) = gltf.scenes.first().cloned() {
-                // Attach the scene as a child to the ship entity.
-                commands.entity(entity).insert(SceneBundle {
-                    scene: scene_handle,
-                    transform: Transform::default(),
-                    global_transform: GlobalTransform::default(),
-                    visibility: Visibility::default(),
-                    inherited_visibility: InheritedVisibility::default(),
-                    view_visibility: ViewVisibility::default(),
-                });
+                // Insert only the scene handle to preserve the entity's existing transform.
+                // The entity already has Transform/GlobalTransform from spawning.
+                commands.entity(entity).insert(scene_handle);
 
                 // Debug axes are already configured from the template JSON.
                 // No need to recompute from glTF.

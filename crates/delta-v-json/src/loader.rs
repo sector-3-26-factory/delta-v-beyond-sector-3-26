@@ -275,20 +275,63 @@ fn fill_defaults_recursive(value: &mut Value, schema: &Value, root: &Value) {
     // Resolve $ref before processing.
     let resolved = resolve_ref(schema, root);
 
-    let Value::Object(obj) = value else {
-        return;
-    };
-    let Some(properties) = resolved.get("properties").and_then(Value::as_object) else {
-        return;
-    };
-    for (key, prop_schema) in properties {
-        if !obj.contains_key(key) {
-            if let Some(default) = prop_schema.get("default") {
-                obj.insert(key.clone(), default.clone());
+    match value {
+        Value::Object(obj) => {
+            let Some(properties) = resolved.get("properties").and_then(Value::as_object) else {
+                return;
+            };
+            for (key, prop_schema) in properties {
+                if !obj.contains_key(key) {
+                    // First check for a top-level default on the property schema.
+                    if let Some(default) = prop_schema.get("default") {
+                        obj.insert(key.clone(), default.clone());
+                    } else {
+                        // If no top-level default, check if the property schema has a $ref
+                        // that points to a definition with property-level defaults.
+                        // In that case, create an object with those defaults.
+                        let resolved_prop = resolve_ref(prop_schema, root);
+                        if let Some(prop_defaults) = get_property_defaults(resolved_prop) {
+                            obj.insert(key.clone(), Value::Object(prop_defaults));
+                        }
+                    }
+                } else if let Some(child) = obj.get_mut(key) {
+                    fill_defaults_recursive(child, prop_schema, root);
+                }
             }
-        } else if let Some(child) = obj.get_mut(key) {
-            fill_defaults_recursive(child, prop_schema, root);
         }
+        Value::Array(arr) => {
+            // For arrays, we need to find the schema for array items.
+            // The schema should have an "items" property that describes the items.
+            if let Some(items_schema) = resolved.get("items") {
+                for item in arr.iter_mut() {
+                    fill_defaults_recursive(item, items_schema, root);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Extracts default values for all properties from a schema.
+///
+/// Returns a `Map` of property names to their default values,
+/// or `None` if the schema has no properties with defaults.
+fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value>> {
+    let properties = schema.get("properties")?.as_object()?;
+    let mut defaults = serde_json::Map::new();
+    let mut has_defaults = false;
+
+    for (prop_name, prop_def) in properties {
+        if let Some(default) = prop_def.get("default") {
+            defaults.insert(prop_name.clone(), default.clone());
+            has_defaults = true;
+        }
+    }
+
+    if has_defaults {
+        Some(defaults)
+    } else {
+        None
     }
 }
 

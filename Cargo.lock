@@ -1823,6 +1823,7 @@ version = "0.0.1"
 dependencies = [
  "avian3d",
  "bevy",
+ "delta-v-core",
  "log",
 ]
 
@@ -1868,6 +1869,7 @@ dependencies = [
  "bevy",
  "delta-v-core",
  "delta-v-json",
+ "delta-v-physics",
  "log",
  "serde",
  "serde_json",

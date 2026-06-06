@@ -34,15 +34,22 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod collision;
 pub mod constants;
+pub mod floating_origin_systems;
 pub mod rigid_body;
 pub mod systems;
 
+pub use collision::{
+    CollisionDetected, CollisionLayers, CollisionShape, CollisionShapeType, DynamicBody, StaticBody,
+};
 pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
 pub use rigid_body::{MassSource, RigidBody};
 pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
+use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig};
+use floating_origin_systems::{check_and_recenter_origin_system, mark_new_entities_system};
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
     integrate_position_system, integrate_velocity_system,
@@ -57,6 +64,8 @@ use systems::{
 /// - Provides the [`RigidBody`] component for Newtonian dynamics.
 /// - Integrates forces and torques each tick (F=ma, tau=I*alpha).
 /// - Computes gravity from [`MassSource`] entities (ADR-0009).
+/// - Manages floating origin recentering (ADR-0007).
+/// - Integrates avian3d for collision detection (M3).
 ///
 /// See ADR-0017 (Fixed timestep and determinism) and ADR-0009 (Newtonian physics).
 pub struct PhysicsPlugin;
@@ -68,7 +77,12 @@ impl Plugin for PhysicsPlugin {
         // Configure the fixed timestep schedule at 60 Hz.
         // FixedUpdate runs at this rate; render frames run independently at display rate.
         // Per ADR-0017, catch-up is bounded to prevent runaway.
-        app.insert_resource(Time::<Fixed>::from_hz(f64::from(FIXED_TIMESTEP_HZ)));
+        app.insert_resource(Time::<Fixed>::from_hz(f64::from(FIXED_TIMESTEP_HZ)))
+            .add_event::<CollisionDetected>();
+
+        // Initialize floating origin resources
+        app.init_resource::<FloatingOrigin>()
+            .init_resource::<FloatingOriginConfig>();
 
         // Configure physics system sets for ordered execution.
         app.configure_sets(
@@ -95,6 +109,88 @@ impl Plugin for PhysicsPlugin {
                 clear_accumulators_system.in_set(PhysicsSet::ClearAccumulators),
             ),
         );
+
+        // Floating origin recentering runs in FixedUpdate, before physics.
+        // This ensures positions are relative to the current origin before forces are applied.
+        app.add_systems(
+            FixedUpdate,
+            check_and_recenter_origin_system.run_if(in_state(AppState::InGame)),
+        );
+
+        // Mark new entities as eligible for floating origin translation.
+        // Runs in Update during SpawningEntities state, after all domain spawning.
+        app.add_systems(
+            Update,
+            mark_new_entities_system.run_if(in_state(AppState::SpawningEntities)),
+        );
+
+        // Collision detection using avian3d.
+        // Runs in FixedUpdate after physics integration.
+        app.add_systems(
+            FixedUpdate,
+            collision_detection_system.run_if(in_state(AppState::InGame)),
+        );
+    }
+}
+
+/// System that detects collisions and emits [`CollisionDetected`] events.
+///
+/// This is a placeholder that will be expanded when avian3d collision
+/// is fully integrated. For now, it checks for overlapping bounding boxes
+/// as a simple collision test.
+#[allow(clippy::needless_pass_by_value)]
+fn collision_detection_system(
+    mut events: EventWriter<'_, CollisionDetected>,
+    bodies: Query<'_, '_, (Entity, &RigidBody, &Transform, &CollisionShape)>,
+) {
+    let bodies_vec: Vec<_> = bodies.iter().collect();
+    let len = bodies_vec.len();
+
+    for i in 0..len {
+        for j in (i + 1)..len {
+            // SAFETY: i and j are valid indices from the loop bounds
+            #[allow(clippy::indexing_slicing)]
+            let (entity_a, body_a, transform_a, shape_a) = bodies_vec[i];
+            #[allow(clippy::indexing_slicing)]
+            let (entity_b, body_b, transform_b, shape_b) = bodies_vec[j];
+
+            let delta = transform_b.translation - transform_a.translation;
+            let distance = delta.length();
+
+            // Get radii from collision shapes
+            let radius_a = get_collision_radius(shape_a);
+            let radius_b = get_collision_radius(shape_b);
+
+            if distance < radius_a + radius_b {
+                let normal = delta.normalize_or_zero();
+                let relative_velocity = body_b.velocity - body_a.velocity;
+
+                events.send(CollisionDetected {
+                    target: entity_a,
+                    other: entity_b,
+                    point: transform_a.translation + normal * radius_a,
+                    normal,
+                    relative_velocity,
+                });
+            }
+        }
+    }
+}
+
+/// Extracts the collision radius from a [`CollisionShape`].
+///
+/// For sphere shapes, returns the radius directly.
+/// For box shapes, returns the maximum half-extent as an approximation.
+const fn get_collision_radius(shape: &CollisionShape) -> f32 {
+    match shape.shape_type {
+        CollisionShapeType::Sphere { radius } => radius,
+        CollisionShapeType::Box { half_extents } => {
+            half_extents.x.max(half_extents.y).max(half_extents.z)
+        }
+        CollisionShapeType::ConvexHull => {
+            // TODO: Implement convex hull radius calculation
+            1.0
+        }
     }
 }
 

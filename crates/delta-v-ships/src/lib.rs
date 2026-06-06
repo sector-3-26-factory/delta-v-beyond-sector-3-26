@@ -55,7 +55,10 @@ pub use spawn::{setup_scene_lighting, spawn_ship_from_template};
 mod spawn_tests;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, InputSet, ThrustCommand, TorqueCommand, WorldSpawnSet};
+use delta_v_core::{
+    check_sector_boundary_system, AppState, InputSet, SectorBoundaryResource, ThrustCommand,
+    TorqueCommand, WorldSpawnSet,
+};
 use delta_v_physics::PhysicsSet;
 use systems::{
     clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
@@ -79,7 +82,8 @@ impl Plugin for ShipsPlugin {
         // These are per-tick command buffers, not configuration.
         app.init_resource::<ThrustCommand>()
             .init_resource::<TorqueCommand>()
-            .init_resource::<PreviousActions>();
+            .init_resource::<PreviousActions>()
+            .init_resource::<SectorBoundaryResource>();
 
         // Configure WorldSpawnSet ordering (ADR-0038).
         app.configure_sets(
@@ -112,6 +116,16 @@ impl Plugin for ShipsPlugin {
         .add_systems(
             Update,
             spawn::attach_ship_meshes.run_if(in_state(AppState::InGame)),
+        )
+        // Boundary checking during InGame.
+        .add_systems(
+            Update,
+            check_sector_boundary_system.run_if(in_state(AppState::InGame)),
+        )
+        // Debug: log positions each frame (can be disabled in production).
+        .add_systems(
+            Update,
+            delta_v_core::debug_camera_positions.run_if(in_state(AppState::InGame)),
         );
 
         // Input → Forces pipeline in FixedUpdate (ADR-0017).

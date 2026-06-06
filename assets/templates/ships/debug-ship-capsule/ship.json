@@ -17,6 +17,14 @@
             "z": 1.5
         }
     },
+    "collision_shape": {
+        "type": "box",
+        "half_extents": {
+            "x": 0.3,
+            "y": 0.2,
+            "z": 1.9
+        }
+    },
     "propulsion": {
         "main_thrusters": [
             {

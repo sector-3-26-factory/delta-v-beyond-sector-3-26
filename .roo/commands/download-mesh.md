@@ -209,6 +209,7 @@ Create `assets/templates/ships/<asset-name>/ship.json` following the
 - `mass`: prompt the user for mass in kg
 - `inertia_scale`: default `1.0`
 - `bounding_box`: computed from mesh analysis (Step 5)
+- `collision_shape`: derived from bounding box (box shape with half_extents = bounding_box/2)
 - `propulsion`: see existing templates for reference
 
 ### 6b. For other types (asteroids, stations, celestial, misc)
@@ -219,6 +220,7 @@ appropriate schema (e.g., `asteroid.schema.json`, `station.schema.json`).
 **Required fields:**
 - `entity_type`: the entity type discriminator
 - `bounding_box`: computed from mesh analysis (Step 5)
+- `collision_shape`: derived from bounding box (for asteroids, use sphere with radius = bounding_box extent/2)
 - Other type-specific fields as defined in the schema
 
 ### 6c. Validate the template
@@ -320,5 +322,6 @@ before committing. Please review the entry above and confirm.
 - Never commit any changes (AGENTS.md rule 7 — humans commit only)
 - The glTF analysis script uses only Python 3 standard library (no numpy dependency)
 - **Bounding box** is computed from the mesh and stored in the template JSON (single source of truth)
+- **Collision shape** is derived from bounding box: for ships use box shape with half_extents = bounding_box/2; for asteroids use sphere with radius = bounding_box extent/2
 - **Cameras** are computed from the bounding box and stored in player_controlled_ship.json (ships only)
 - **Debug axes** use the bounding box from JSON, not computed from glTF at runtime

@@ -145,3 +145,25 @@ pub fn chase_camera_system(
         cam_transform.look_at(target_transform.translation, ship_up);
     }
 }
+
+/// Debug system that logs positions of ship, camera, and asteroids each frame.
+///
+/// This is useful for diagnosing camera and entity positioning issues.
+/// Can be disabled in production builds.
+#[allow(clippy::needless_pass_by_value)]
+pub fn debug_camera_positions(
+    camera_query: Query<'_, '_, (&Transform, &CameraFollow)>,
+    target_query: Query<'_, '_, (&Transform, &Name)>,
+) {
+    for (cam_transform, follow) in &camera_query {
+        if let Ok((target_transform, target_name)) = target_query.get(follow.target) {
+            log::debug!(
+                "Camera: pos={:?}, looking at ship '{}' at {:?}, offset={:?}",
+                cam_transform.translation,
+                target_name.as_ref(),
+                target_transform.translation,
+                cam_transform.translation - target_transform.translation
+            );
+        }
+    }
+}

@@ -43,20 +43,25 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod boundary;
+pub mod boundary_systems;
 pub mod camera;
 pub mod debug_axes;
 pub mod debug_config;
 pub mod diagnostics;
 pub mod events;
 pub mod flight_assist;
+pub mod floating_origin;
 pub mod input;
 pub mod keybindings_resource;
 pub mod spawn_sets;
 pub mod state;
 
+pub use boundary::{BoundaryBehavior, SectorBoundary, SectorBoundaryResource};
+pub use boundary_systems::check_sector_boundary_system;
 pub use camera::{
-    spawn_chase_camera, CameraDefinition, CameraFollow, ChaseCameraOffset, PlayerShipEntity,
-    ShipCamerasTemplate, Vec3Json,
+    debug_camera_positions, spawn_chase_camera, CameraDefinition, CameraFollow, ChaseCameraOffset,
+    PlayerShipEntity, ShipCamerasTemplate, Vec3Json,
 };
 pub use debug_axes::{
     mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_positions,
@@ -69,6 +74,9 @@ pub use flight_assist::{
     BoundingBox, FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate,
     PhysicalQuantity, PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate,
     ShipTemplate, ThrustCommand, TorqueCommand,
+};
+pub use floating_origin::{
+    FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
 pub use input::{ActiveActions, InputSet, LogicalAction};
 pub use keybindings_resource::KeybindingsResource;
@@ -86,6 +94,10 @@ mod diagnostics_tests;
 #[cfg(test)]
 #[path = "input_tests.rs"]
 mod input_tests;
+
+#[cfg(test)]
+#[path = "boundary_tests.rs"]
+mod boundary_tests;
 
 #[cfg(test)]
 #[path = "camera_tests.rs"]

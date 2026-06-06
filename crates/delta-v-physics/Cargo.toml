@@ -11,6 +11,7 @@ license = "GPL-3.0-or-later"
 bevy = { workspace = true }
 avian3d = { workspace = true }
 log = { workspace = true }
+delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
 
 [lints]
 rust.unsafe_code = "warn"

@@ -39,6 +39,7 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod asteroid_spawner;
 pub mod error;
 pub mod events;
 pub mod loader;
@@ -59,17 +60,20 @@ pub use events::SpawnEntity;
 pub use resources::WorldDefResource;
 pub use world_def::WorldDef;
 
+use asteroid_spawner::{attach_asteroid_meshes, spawn_asteroid_system};
 use bevy::prelude::*;
-use delta_v_core::AppState;
+use delta_v_core::{AppState, WorldSpawnSet};
+use serde_json::Value;
 
 use crate::loader::load_default_world;
 use crate::template_loader::load_template;
 use crate::template_loader::resolve_template_path;
+use world_def::EntitySpawn;
 
 /// World plugin: loads and validates the world definition.
 ///
 /// Systems run in [`AppState::LoadingWorld`]. On success the plugin
-/// inserts [`WorldDefResource`] and transitions to [`AppState::InGame`].
+/// inserts [`WorldDefResource`] and transitions to [`AppState::SpawningEntities`].
 /// On failure the application panics with a descriptive message
 /// (ADR-0013).
 pub struct WorldPlugin;
@@ -77,7 +81,19 @@ pub struct WorldPlugin;
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnEntity>()
-            .add_systems(OnEnter(AppState::LoadingWorld), load_world_system);
+            .add_systems(OnEnter(AppState::LoadingWorld), load_world_system)
+            // Asteroid spawning runs in Update during SpawningEntities
+            .add_systems(
+                Update,
+                spawn_asteroid_system
+                    .in_set(WorldSpawnSet::SpawnAsteroids)
+                    .run_if(in_state(AppState::SpawningEntities)),
+            )
+            // Attach asteroid meshes in InGame once glTF assets are loaded.
+            .add_systems(
+                Update,
+                attach_asteroid_meshes.run_if(in_state(AppState::InGame)),
+            );
     }
 }
 
@@ -128,94 +144,127 @@ fn load_world_system(
     // Per ADR-0038, domain plugins listen for these events and spawn
     // entities based on `entity_type`, in dependency order via WorldSpawnSet.
     for entity_spawn in &world.entities {
-        // Determine entity_type based on player_controlled flag.
-        // If player_controlled is true, load player_controlled_ship.json and merge with ship.json.
-        // If false, load ship.json directly.
-        let template_short = &entity_spawn.template;
-        let entity_type = if entity_spawn.player_controlled {
-            "player_controlled_ship"
-        } else {
-            "ship"
-        };
-
-        // Resolve template path: templates/<short_path>/<entity_type>.json
-        let template_path = resolve_template_path(template_short, entity_type);
-
-        // Load the template
-        #[allow(clippy::panic)]
-        let template = match load_template(&template_path, entity_type) {
-            Ok(t) => t,
-            Err(e) => panic!("fatal: failed to load template '{template_short}': {e}"),
-        };
-
-        // For player_controlled_ship, also load and merge the co-located ship.json
-        let merged_template = if entity_spawn.player_controlled {
-            // Load the co-located ship.json
-            let ship_template_path = resolve_template_path(template_short, "ship");
-            #[allow(clippy::panic)]
-            let ship_template = match load_template(&ship_template_path, "ship") {
-                Ok(t) => t,
-                Err(e) => {
-                    panic!("fatal: failed to load co-located ship template '{template_short}': {e}")
-                }
-            };
-
-            // Merge: start with ship template, overlay cameras from player_controlled_ship
-            let mut merged = ship_template;
-            if let (Some(merged_obj), Some(player_obj)) =
-                (merged.as_object_mut(), template.as_object())
-            {
-                for (key, value) in player_obj {
-                    // Skip entity_type (we keep it as player_controlled_ship)
-                    if key != "entity_type" {
-                        merged_obj.insert(key.clone(), value.clone());
-                    }
-                }
-                // Ensure entity_type is player_controlled_ship
-                merged_obj.insert(
-                    "entity_type".to_string(),
-                    serde_json::Value::String("player_controlled_ship".to_string()),
-                );
-            }
-            merged
-        } else {
-            template
-        };
-
-        // Mesh is always alongside ship.json
-        let mesh_template_path = resolve_template_path(template_short, "ship");
-
-        let pos = Vec3::new(
-            entity_spawn.position.x,
-            entity_spawn.position.y,
-            entity_spawn.position.z,
-        );
-        let rot = Quat::from_xyzw(
-            entity_spawn.rotation.x,
-            entity_spawn.rotation.y,
-            entity_spawn.rotation.z,
-            entity_spawn.rotation.w,
-        );
-        let scale = Vec3::new(
-            entity_spawn.scale.x,
-            entity_spawn.scale.y,
-            entity_spawn.scale.z,
-        );
-
-        let spawn_event = SpawnEntity::new(
-            entity_spawn.id.clone(),
-            entity_type.to_string(),
-            merged_template,
-            template_path,
-            mesh_template_path,
-            pos,
-        )
-        .with_rotation(rot)
-        .with_scale(scale);
-
+        let spawn_event = build_spawn_event(entity_spawn);
         events.send(spawn_event);
     }
 
     commands.insert_resource(WorldDefResource(world));
     next.set(AppState::SpawningEntities);
+}
+
+/// Builds a `SpawnEntity` event for a world entity spawn definition.
+fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
+    let template_short = &entity_spawn.template;
+
+    // Determine entity_type and load template.
+    // For player_controlled ships: load player_controlled_ship.json and merge with ship.json.
+    // For asteroids: load asteroid.json directly.
+    // For other ships: load ship.json directly.
+    let (entity_type, template_path, merged_template, mesh_template_path) =
+        if entity_spawn.player_controlled {
+            load_player_controlled_ship(template_short)
+        } else if template_short.starts_with("asteroids/") {
+            load_asteroid(template_short)
+        } else {
+            load_ship(template_short)
+        };
+
+    let pos = Vec3::new(
+        entity_spawn.position.x,
+        entity_spawn.position.y,
+        entity_spawn.position.z,
+    );
+    let rot = Quat::from_xyzw(
+        entity_spawn.rotation.x,
+        entity_spawn.rotation.y,
+        entity_spawn.rotation.z,
+        entity_spawn.rotation.w,
+    );
+    let scale = Vec3::new(
+        entity_spawn.scale.x,
+        entity_spawn.scale.y,
+        entity_spawn.scale.z,
+    );
+
+    SpawnEntity::new(
+        entity_spawn.id.clone(),
+        entity_type,
+        merged_template,
+        template_path,
+        mesh_template_path,
+        pos,
+    )
+    .with_rotation(rot)
+    .with_scale(scale)
+}
+
+/// Loads a player-controlled ship template by merging `player_controlled_ship.json` with `ship.json`.
+fn load_player_controlled_ship(template_short: &str) -> (String, String, Value, String) {
+    let entity_type = "player_controlled_ship";
+    let template_path = resolve_template_path(template_short, entity_type);
+    #[allow(clippy::panic)]
+    let template = match load_template(&template_path, entity_type) {
+        Ok(t) => t,
+        Err(e) => panic!("fatal: failed to load template '{template_short}': {e}"),
+    };
+
+    // Load the co-located ship.json for mesh and base properties
+    let ship_template_path = resolve_template_path(template_short, "ship");
+    #[allow(clippy::panic)]
+    let ship_template = match load_template(&ship_template_path, "ship") {
+        Ok(t) => t,
+        Err(e) => {
+            panic!("fatal: failed to load co-located ship template '{template_short}': {e}")
+        }
+    };
+
+    // Merge: start with ship template, overlay from player_controlled_ship
+    let mut merged = ship_template;
+    if let (Some(merged_obj), Some(player_obj)) = (merged.as_object_mut(), template.as_object()) {
+        for (key, value) in player_obj {
+            // Skip entity_type (we keep it as player_controlled_ship)
+            if key != "entity_type" {
+                merged_obj.insert(key.clone(), value.clone());
+            }
+        }
+        // Ensure entity_type is player_controlled_ship
+        merged_obj.insert(
+            "entity_type".to_string(),
+            serde_json::Value::String("player_controlled_ship".to_string()),
+        );
+    }
+
+    (
+        entity_type.to_string(),
+        template_path,
+        merged,
+        ship_template_path,
+    )
+}
+
+/// Loads an asteroid template.
+fn load_asteroid(template_short: &str) -> (String, String, Value, String) {
+    let entity_type = "asteroid";
+    let template_path = resolve_template_path(template_short, entity_type);
+    // Mesh is at mesh.glb in the same directory as the template
+    let mesh_path = template_path.replace("asteroid.json", "mesh.glb");
+    #[allow(clippy::panic)]
+    let template = match load_template(&template_path, entity_type) {
+        Ok(t) => t,
+        Err(e) => panic!("fatal: failed to load template '{template_short}': {e}"),
+    };
+    (entity_type.to_string(), template_path, template, mesh_path)
+}
+
+/// Loads a regular ship template.
+fn load_ship(template_short: &str) -> (String, String, Value, String) {
+    let entity_type = "ship";
+    let template_path = resolve_template_path(template_short, entity_type);
+    #[allow(clippy::panic)]
+    let template = match load_template(&template_path, entity_type) {
+        Ok(t) => t,
+        Err(e) => panic!("fatal: failed to load template '{template_short}': {e}"),
+    };
+    let mesh_path = template_path.clone();
+    (entity_type.to_string(), template_path, template, mesh_path)
 }

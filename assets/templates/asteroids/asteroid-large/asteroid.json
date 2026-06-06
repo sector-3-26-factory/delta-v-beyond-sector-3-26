@@ -1,0 +1,26 @@
+{
+    "entity_type": "asteroid",
+    "mass": {
+        "value": 10000,
+        "unit": "kg"
+    },
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 50,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": -50,
+            "y": -50,
+            "z": -50
+        },
+        "max": {
+            "x": 50,
+            "y": 50,
+            "z": 50
+        }
+    }
+}
