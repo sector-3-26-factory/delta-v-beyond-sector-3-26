@@ -1,4 +1,4 @@
-// See AGENTS.md
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
@@ -45,7 +45,10 @@ pub mod error;
 pub mod loader;
 
 pub use error::JsonError;
-pub use loader::{fill_defaults, load_validated, load_validated_with_units, read_json, validate};
+pub use loader::{
+    fill_defaults, load_validated, load_validated_with_units, read_json, validate,
+    validate_with_registry,
+};
 
 #[cfg(test)]
 #[path = "loader_tests.rs"]

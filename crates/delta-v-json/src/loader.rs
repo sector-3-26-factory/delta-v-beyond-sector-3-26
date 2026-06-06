@@ -18,9 +18,11 @@
 //!
 //! The fill-defaults pass resolves local `$defs` references
 //! (`"$ref": "#/$defs/<name>"`) so that defaults declared inside
-//! `$defs` sub-schemas are applied. Only fragment-only, `$defs`-path
-//! references are supported; external or complex refs are forbidden by
-//! ADR-0012.
+//! `$defs` sub-schemas are applied.
+//!
+//! Cross-schema references use the `$id` URI scheme:
+//! `"$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"`.
+//! The validator uses a `referencing::Registry` to resolve these in-memory.
 
 use std::path::Path;
 
@@ -82,6 +84,86 @@ pub fn validate(value: &Value, schema_path: &Path, data_path: &Path) -> Result<(
     Ok(())
 }
 
+/// Validates `value` against the JSON Schema at `schema_path` with cross-schema support.
+///
+/// This version uses a `referencing::Registry` to resolve cross-schema `$ref`s
+/// by their `$id` URIs. The units schema is automatically registered.
+///
+/// Returns the **first** validation error as [`JsonError::Schema`].
+///
+/// # Errors
+/// Returns [`JsonError::SchemaLoad`] if the schema cannot be loaded.
+/// Returns [`JsonError::Schema`] if validation fails.
+pub fn validate_with_registry(
+    value: &Value,
+    schema_path: &Path,
+    data_path: &Path,
+    units_schema_path: &Path,
+) -> Result<(), JsonError> {
+    // Load the main schema
+    let schema_text = std::fs::read_to_string(schema_path).map_err(|e| JsonError::SchemaLoad {
+        path: schema_path.to_owned(),
+        reason: e.to_string(),
+    })?;
+    let schema_value: Value =
+        serde_json::from_str(&schema_text).map_err(|e| JsonError::SchemaLoad {
+            path: schema_path.to_owned(),
+            reason: e.to_string(),
+        })?;
+
+    // Load the units schema and register it
+    let units_text =
+        std::fs::read_to_string(units_schema_path).map_err(|e| JsonError::SchemaLoad {
+            path: units_schema_path.to_owned(),
+            reason: e.to_string(),
+        })?;
+    let units_value: Value =
+        serde_json::from_str(&units_text).map_err(|e| JsonError::SchemaLoad {
+            path: units_schema_path.to_owned(),
+            reason: e.to_string(),
+        })?;
+
+    // Build a registry with the units schema
+    let units_id = units_value
+        .get("$id")
+        .and_then(Value::as_str)
+        .ok_or_else(|| JsonError::SchemaLoad {
+            path: units_schema_path.to_owned(),
+            reason: "units schema missing $id".to_string(),
+        })?
+        .to_string();
+    let registry = jsonschema::Registry::new()
+        .add(&units_id, units_value)
+        .map_err(|e| JsonError::SchemaLoad {
+            path: units_schema_path.to_owned(),
+            reason: e.to_string(),
+        })?
+        .prepare()
+        .map_err(|e| JsonError::SchemaLoad {
+            path: units_schema_path.to_owned(),
+            reason: e.to_string(),
+        })?;
+
+    // Build validator with the registry for cross-schema $ref resolution
+    let validator = jsonschema::options()
+        .with_registry(&registry)
+        .build(&schema_value)
+        .map_err(|e| JsonError::SchemaLoad {
+            path: schema_path.to_owned(),
+            reason: e.to_string(),
+        })?;
+
+    let errors: Vec<_> = validator.iter_errors(value).collect();
+    if let Some(err) = errors.into_iter().next() {
+        return Err(JsonError::Schema {
+            path: data_path.to_owned(),
+            pointer: err.instance_path().to_string(),
+            reason: err.to_string(),
+        });
+    }
+    Ok(())
+}
+
 /// Reads a schema file and recursively fills `default` values into `value`
 /// for any absent fields.
 ///
@@ -124,9 +206,8 @@ pub fn load_validated(json_path: &Path, schema_path: &Path) -> Result<Value, Jso
 
 /// Full pipeline: read, validate, fill defaults, and validate units.
 ///
-/// After the standard [`load_validated`] pipeline, this additionally
-/// walks the JSON value tree and validates every `{"value": N, "unit": "..."}`
-/// object against the central units registry at `units_schema_path`.
+/// This version uses `validate_with_registry` to properly resolve cross-schema
+/// `$ref`s (e.g., `"$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"`).
 ///
 /// Per ADR-0008, all numeric physical quantities MUST use the
 /// `{"value": N, "unit": "..."}` format with a unit from the registry.
@@ -139,8 +220,18 @@ pub fn load_validated_with_units(
     schema_path: &Path,
     units_schema_path: &Path,
 ) -> Result<Value, JsonError> {
-    let value = load_validated(json_path, schema_path)?;
+    // Read the JSON file
+    let mut value = read_json(json_path)?;
+
+    // Validate with registry to resolve cross-schema $refs
+    validate_with_registry(&value, schema_path, json_path, units_schema_path)?;
+
+    // Fill defaults
+    fill_defaults(&mut value, schema_path)?;
+
+    // Validate units against the allowed units list
     validate_units(&value, json_path, units_schema_path)?;
+
     Ok(value)
 }
 
@@ -337,21 +428,20 @@ fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value
 
 /// Resolves a local `$ref` of the form `"#/$defs/<name>"`.
 ///
-/// If `schema` has a `"$ref"` key whose value starts with `"#/$defs/"`,
-/// returns the referenced sub-schema from `root["$defs"][<name>]`.
+/// Returns the referenced sub-schema from `root["$defs"][<name>]`.
 /// If the reference cannot be resolved, returns `schema` unchanged
 /// (which will produce a parse error downstream — the correct failure).
-///
-/// Only `#/$defs/<name>` references are supported. All other forms are
-/// forbidden by ADR-0012 rule 8.
 fn resolve_ref<'a>(schema: &'a Value, root: &'a Value) -> &'a Value {
     let Some(ref_str) = schema.get("$ref").and_then(Value::as_str) else {
         return schema;
     };
+
+    // Only local refs are supported for default-filling.
+    // Cross-schema refs are handled by the jsonschema library during validation.
     let Some(def_name) = ref_str.strip_prefix("#/$defs/") else {
-        // Non-local ref: return unchanged; downstream error is correct.
         return schema;
     };
+
     root.get("$defs")
         .and_then(|defs| defs.get(def_name))
         .unwrap_or(schema)

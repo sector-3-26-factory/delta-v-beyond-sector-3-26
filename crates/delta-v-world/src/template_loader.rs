@@ -16,6 +16,9 @@ use serde_json::Value;
 
 use crate::error::WorldError;
 
+/// Path to the units schema file (relative to assets root).
+const UNITS_SCHEMA_PATH: &str = "json/schema/units.schema.json";
+
 /// Resolves a short template path to the full template file path.
 ///
 /// Short format: `"ships/debug-ship-cube"` + `entity_type` `"ship"` → `"templates/ships/debug-ship-cube/ship.json"`
@@ -59,8 +62,14 @@ pub fn load_template(template_path: &str, entity_type: &str) -> Result<Value, Wo
 
     let template_file = assets_root.join(template_path);
     let schema_file = assets_root.join(format!("json/schema/{entity_type}.schema.json"));
+    let units_schema_file = assets_root.join(UNITS_SCHEMA_PATH);
 
-    load_template_from_paths(&template_file, &schema_file, entity_type)
+    load_template_from_paths(
+        &template_file,
+        &schema_file,
+        entity_type,
+        &units_schema_file,
+    )
 }
 
 /// Loads and validates a template from explicit paths.
@@ -74,10 +83,12 @@ fn load_template_from_paths(
     template_path: &Path,
     schema_path: &Path,
     entity_type: &str,
+    units_schema_path: &Path,
 ) -> Result<Value, WorldError> {
-    // Load and validate template against its schema.
-    let template = json_loader::load_validated(template_path, schema_path)
-        .map_err(|e| map_json_error(e, template_path))?;
+    // Load and validate template against its schema with unit validation.
+    let template =
+        json_loader::load_validated_with_units(template_path, schema_path, units_schema_path)
+            .map_err(|e| map_json_error(e, template_path))?;
 
     // Verify entity_type field matches the expected type (ADR-0013: hard error).
     let type_in_template = template

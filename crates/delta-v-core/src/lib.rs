@@ -1,4 +1,4 @@
-// See AGENTS.md
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey

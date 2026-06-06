@@ -18,14 +18,33 @@
             "type": "string",
             "enum": [
                 "kg",
+                "t",
+                "M_earth",
+                "M_sun",
                 "N",
+                "kN",
+                "MN",
                 "N⋅m",
                 "m",
+                "km",
+                "Mm",
+                "Gm",
+                "AU",
+                "ly",
+                "pc",
+                "kpc",
+                "Mpc",
                 "m/s",
+                "km/s",
                 "m/s²",
                 "rad",
+                "deg",
                 "rad/s",
                 "s",
+                "min",
+                "h",
+                "d",
+                "a",
                 "dimensionless"
             ]
         }
@@ -39,8 +58,23 @@
                 "kg": {
                     "description": "Kilograms — unit of mass."
                 },
+                "t": {
+                    "description": "Tonnes — unit of mass (1000 kg)."
+                },
+                "M_earth": {
+                    "description": "Earth masses — unit of mass."
+                },
+                "M_sun": {
+                    "description": "Solar masses — unit of mass."
+                },
                 "N": {
                     "description": "Newtons — unit of force (kg⋅m/s²)."
+                },
+                "kN": {
+                    "description": "Kilonewtons — unit of force (1000 N)."
+                },
+                "MN": {
+                    "description": "Meganewtons — unit of force (10^6 N)."
                 },
                 "N⋅m": {
                     "description": "Newton-meters — unit of torque."
@@ -48,8 +82,35 @@
                 "m": {
                     "description": "Meters — unit of length/distance."
                 },
+                "km": {
+                    "description": "Kilometers — unit of length (1000 m)."
+                },
+                "Mm": {
+                    "description": "Megameters — unit of length (10^6 m)."
+                },
+                "Gm": {
+                    "description": "Gigameters — unit of length (10^9 m)."
+                },
+                "AU": {
+                    "description": "Astronomical Units — unit of length (≈1.5e11 m)."
+                },
+                "ly": {
+                    "description": "Light-years — unit of length (≈9.46e15 m)."
+                },
+                "pc": {
+                    "description": "Parsecs — unit of length (≈3.09e16 m)."
+                },
+                "kpc": {
+                    "description": "Kiloparsecs — unit of length (1000 pc)."
+                },
+                "Mpc": {
+                    "description": "Megaparsecs — unit of length (10^6 pc)."
+                },
                 "m/s": {
                     "description": "Meters per second — unit of velocity."
+                },
+                "km/s": {
+                    "description": "Kilometers per second — unit of velocity (1000 m/s)."
                 },
                 "m/s²": {
                     "description": "Meters per second squared — unit of acceleration."
@@ -57,14 +118,224 @@
                 "rad": {
                     "description": "Radians — unit of angle."
                 },
+                "deg": {
+                    "description": "Degrees — unit of angle (π/180 rad)."
+                },
                 "rad/s": {
                     "description": "Radians per second — unit of angular velocity."
                 },
                 "s": {
                     "description": "Seconds — unit of time."
                 },
+                "min": {
+                    "description": "Minutes — unit of time (60 s)."
+                },
+                "h": {
+                    "description": "Hours — unit of time (3600 s)."
+                },
+                "d": {
+                    "description": "Days — unit of time (86400 s)."
+                },
+                "a": {
+                    "description": "Julian years — unit of time (≈31557600 s)."
+                },
                 "dimensionless": {
                     "description": "Dimensionless quantity (pure ratio, no physical unit)."
+                }
+            }
+        },
+        "length": {
+            "description": "Physical quantity with length unit. Per ADR-0008, all length values use value+unit format. Units: m, km, Mm, Gm, AU, ly, pc, kpc, Mpc. Converted to meters at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Length value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of length. Must be one of the allowed length units.",
+                    "type": "string",
+                    "enum": [
+                        "m",
+                        "km",
+                        "Mm",
+                        "Gm",
+                        "AU",
+                        "ly",
+                        "pc",
+                        "kpc",
+                        "Mpc"
+                    ]
+                }
+            }
+        },
+        "mass": {
+            "description": "Physical quantity with mass unit. Per ADR-0008, all mass values use value+unit format. Units: kg, t, M_earth, M_sun. Converted to kilograms at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Mass value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of mass. Must be one of the allowed mass units.",
+                    "type": "string",
+                    "enum": [
+                        "kg",
+                        "t",
+                        "M_earth",
+                        "M_sun"
+                    ]
+                }
+            }
+        },
+        "time": {
+            "description": "Physical quantity with time unit. Per ADR-0008, all time values use value+unit format. Units: s, min, h, d, a. Converted to seconds at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Time value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of time. Must be one of the allowed time units.",
+                    "type": "string",
+                    "enum": [
+                        "s",
+                        "min",
+                        "h",
+                        "d",
+                        "a"
+                    ]
+                }
+            }
+        },
+        "velocity": {
+            "description": "Physical quantity with velocity unit. Per ADR-0008, all velocity values use value+unit format. Units: m/s, km/s. Converted to m/s at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Velocity value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of velocity. Must be one of the allowed velocity units.",
+                    "type": "string",
+                    "enum": [
+                        "m/s",
+                        "km/s"
+                    ]
+                }
+            }
+        },
+        "acceleration": {
+            "description": "Physical quantity with acceleration unit. Per ADR-0008, all acceleration values use value+unit format. Units: m/s². Converted to m/s² at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Acceleration value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of acceleration. Must be one of the allowed acceleration units.",
+                    "type": "string",
+                    "enum": [
+                        "m/s²"
+                    ]
+                }
+            }
+        },
+        "force": {
+            "description": "Physical quantity with force unit. Per ADR-0008, all force values use value+unit format. Units: N, kN, MN. Converted to Newtons at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Force value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of force. Must be one of the allowed force units.",
+                    "type": "string",
+                    "enum": [
+                        "N",
+                        "kN",
+                        "MN"
+                    ]
+                }
+            }
+        },
+        "torque": {
+            "description": "Physical quantity with torque unit. Per ADR-0008, all torque values use value+unit format. Units: N⋅m. Converted to N⋅m at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Torque value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of torque. Must be one of the allowed torque units.",
+                    "type": "string",
+                    "enum": [
+                        "N⋅m"
+                    ]
+                }
+            }
+        },
+        "angle": {
+            "description": "Physical quantity with angle unit. Per ADR-0008, all angle values use value+unit format. Units: rad, deg. Converted to radians at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Angle value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of angle. Must be one of the allowed angle units.",
+                    "type": "string",
+                    "enum": [
+                        "rad",
+                        "deg"
+                    ]
                 }
             }
         }

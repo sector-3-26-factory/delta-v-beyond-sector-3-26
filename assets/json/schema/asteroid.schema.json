@@ -19,7 +19,7 @@
         },
         "mass": {
             "description": "Asteroid mass in kilograms. Required per ADR-0009 (every rigid body MUST have mass) and ADR-0014 (gameplay values in JSON).",
-            "$ref": "#/$defs/physical_quantity_mass"
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         },
         "collision_shape": {
             "description": "Collision shape for the asteroid. Defines how it interacts with other objects.",
@@ -38,7 +38,7 @@
                 },
                 "radius": {
                     "description": "Radius of the sphere in metres (for sphere shape type).",
-                    "$ref": "#/$defs/physical_quantity_length"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
                 }
             }
         },
@@ -63,48 +63,6 @@
         }
     },
     "$defs": {
-        "physical_quantity_mass": {
-            "description": "Physical quantity with mass unit (kg). Per ADR-0008. See units.schema.json for the central unit registry.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "unit"
-            ],
-            "properties": {
-                "value": {
-                    "description": "Mass value. Must be positive and finite.",
-                    "type": "number",
-                    "exclusiveMinimum": 0.0
-                },
-                "unit": {
-                    "description": "Unit of mass. Must be 'kg' (see units.schema.json).",
-                    "type": "string",
-                    "const": "kg"
-                }
-            }
-        },
-        "physical_quantity_length": {
-            "description": "Physical quantity with length unit (m). Per ADR-0008. See units.schema.json for the central unit registry.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "unit"
-            ],
-            "properties": {
-                "value": {
-                    "description": "Length value. Must be positive and finite.",
-                    "type": "number",
-                    "exclusiveMinimum": 0.0
-                },
-                "unit": {
-                    "description": "Unit of length. Must be 'm' (see units.schema.json).",
-                    "type": "string",
-                    "const": "m"
-                }
-            }
-        },
         "vec3": {
             "description": "3-component vector (x, y, z) in metres.",
             "type": "object",

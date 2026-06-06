@@ -1804,6 +1804,7 @@ name = "delta-v-json"
 version = "0.0.1"
 dependencies = [
  "jsonschema",
+ "referencing",
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",
