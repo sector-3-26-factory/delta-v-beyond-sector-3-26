@@ -208,9 +208,13 @@ fn test_fill_defaults_with_ref_to_definition() {
 #[test]
 fn test_fill_defaults_with_world_schema() {
     // Load the actual world schema
-    let schema_path =
-        std::path::Path::new("/workspaces/delta-v/assets/json/schema/world.schema.json");
-    let schema_text = std::fs::read_to_string(schema_path).unwrap();
+    let schema_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("assets/json/schema/world.schema.json");
+    let schema_text = std::fs::read_to_string(&schema_path).unwrap();
     let _schema: Value = serde_json::from_str(&schema_text).unwrap();
 
     // Create a value with an entity missing rotation and scale
@@ -226,7 +230,7 @@ fn test_fill_defaults_with_world_schema() {
         ]
     });
 
-    fill_defaults(&mut value, schema_path).unwrap();
+    fill_defaults(&mut value, &schema_path).unwrap();
 
     // Check that rotation and scale were filled in
     let entities = value.get("entities").unwrap().as_array().unwrap();

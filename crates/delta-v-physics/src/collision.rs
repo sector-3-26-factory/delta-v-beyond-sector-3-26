@@ -74,7 +74,7 @@ impl CollisionShape {
 /// Per avian3d conventions, we use a u32 bitmask where each bit
 /// represents a layer. Entities on different layers don't collide
 /// unless their masks overlap.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct CollisionLayers {
     /// Which layers this entity belongs to.
     pub layers: u32,

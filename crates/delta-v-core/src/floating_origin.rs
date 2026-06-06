@@ -34,6 +34,7 @@ use bevy::prelude::*;
 /// and this offset is updated.
 ///
 /// All positions in the game are stored relative to this offset.
+// allow-default: FloatingOrigin is runtime state tracking the current origin offset, not JSON-backed config
 #[derive(Resource, Default, Debug, Clone, Copy)]
 pub struct FloatingOrigin {
     /// Current offset from absolute world origin (in metres).
@@ -64,20 +65,11 @@ impl FloatingOrigin {
 /// The threshold distance from the current origin before recentering.
 ///
 /// Per ADR-0007, the origin is recentered when the player ship exceeds
-/// this distance from the current origin. Default is 5km.
+/// this distance from the current origin. Loaded from world definition.
 #[derive(Resource, Debug, Clone, Copy)]
 pub struct OriginThreshold {
     /// Distance in metres before origin is recentered.
     pub threshold: f32,
-}
-
-impl Default for OriginThreshold {
-    fn default() -> Self {
-        Self {
-            // 5km threshold per ADR-0007
-            threshold: 5_000.0,
-        }
-    }
 }
 
 impl OriginThreshold {
@@ -100,6 +92,7 @@ pub struct FloatingOriginEligible;
 ///
 /// This resource holds runtime configuration for the floating origin system.
 /// It can be modified via the config system (ADR-0010).
+// allow-default: Bevy Resource trait bound requires Default
 #[derive(Resource, Debug, Clone)]
 pub struct FloatingOriginConfig {
     /// Distance in metres before origin is recentered.

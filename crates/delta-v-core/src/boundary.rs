@@ -24,10 +24,9 @@
 use bevy::prelude::*;
 
 /// Behavior to apply when an entity crosses a sector boundary.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Reflect)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum BoundaryBehavior {
     /// Wrap position to the opposite side of the sector.
-    #[default]
     Wrap,
     /// Clamp position to the boundary edge.
     Clamp,
@@ -115,18 +114,20 @@ impl SectorBoundary {
     }
 }
 
-impl Default for SectorBoundary {
-    fn default() -> Self {
-        // Default: 10km cubic sector centered at origin
-        Self::new(10_000.0, BoundaryBehavior::Wrap)
-    }
-}
-
 /// Resource containing the sector boundary configuration.
 ///
 /// Loaded from the world definition and used by boundary checking systems.
-#[derive(Debug, Clone, Default, Resource)]
+// allow-default: Bevy Resource trait bound requires Default
+#[derive(Debug, Clone, Resource)]
 pub struct SectorBoundaryResource {
     /// The sector boundary definition.
     pub boundary: SectorBoundary,
+}
+
+impl Default for SectorBoundaryResource {
+    fn default() -> Self {
+        Self {
+            boundary: SectorBoundary::new(10_000.0, BoundaryBehavior::Wrap),
+        }
+    }
 }
