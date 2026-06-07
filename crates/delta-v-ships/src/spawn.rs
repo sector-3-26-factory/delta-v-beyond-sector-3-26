@@ -17,7 +17,7 @@ use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
     ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig, SpawnEntity,
+    PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig, SpawnEntity, StaticShipTemplate,
 };
 use delta_v_physics::{CollisionShape, RigidBody};
 
@@ -32,6 +32,7 @@ pub(crate) struct PendingShipMesh {
 ///
 /// Listens for events with `entity_type` matching known ship types:
 /// - `"player_controlled_ship"`: Player-controlled ship
+/// - `"ship"`: Non-player ship (static/NPC)
 /// - `"npc_ship"`: NPC-controlled ship (future)
 ///
 /// The event's `template` field contains validated template JSON from delta-v-json.
@@ -44,6 +45,7 @@ pub fn spawn_ship_from_template(
     for event in events.read() {
         match event.entity_type.as_str() {
             "player_controlled_ship" => spawn_player_ship(&mut commands, &asset_server, event),
+            "ship" => spawn_static_ship(&mut commands, &asset_server, event),
             "npc_ship" => {
                 // NPC ships: future implementation
                 log::warn!("NPC ship spawning not yet implemented");
@@ -217,6 +219,73 @@ fn spawn_player_ship(
         template.mass.value,
         main.max_forward_thrust.value,
         main.max_backward_thrust.value,
+    );
+}
+
+/// Spawns a non-player ship from a template event.
+///
+/// This is for `entity_type: "ship"` templates — ships that don't require
+/// player input, cameras, or propulsion configuration.
+///
+/// Template is validated by delta-v-json; structure is guaranteed.
+#[allow(
+    clippy::option_if_let_else,
+    clippy::indexing_slicing,
+    clippy::expect_used,
+    clippy::cast_possible_truncation
+)]
+fn spawn_static_ship(
+    commands: &mut Commands<'_, '_>,
+    asset_server: &Res<'_, AssetServer>,
+    event: &SpawnEntity,
+) {
+    // Deserialize template JSON into typed struct (ADR-0040 one-liner).
+    let template: StaticShipTemplate = serde_json::from_value(event.template.clone())
+        .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)");
+
+    // Derive mesh path from the mesh template path (always mesh.glb in the template directory).
+    let mesh_path = event.mesh_template_path.replace("ship.json", "mesh.glb");
+
+    // Queue glTF mesh load.
+    let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
+
+    // Compute debug axes length from the bounding box in the template JSON.
+    let half_extent = Vec3::new(
+        (template.bounding_box.max.x - template.bounding_box.min.x) / 2.0,
+        (template.bounding_box.max.y - template.bounding_box.min.y) / 2.0,
+        (template.bounding_box.max.z - template.bounding_box.min.z) / 2.0,
+    );
+    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0;
+
+    log::debug!("spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template");
+
+    // Build the ship entity spawn command.
+    let collision_shape = create_collision_shape(&template.collision_shape);
+
+    commands.spawn((
+        Transform {
+            translation: event.position,
+            rotation: event.rotation,
+            scale: event.scale,
+        },
+        GlobalTransform::default(),
+        Visibility::default(),
+        InheritedVisibility::default(),
+        PendingShipMesh { gltf_handle },
+        DebugAxesEligible::new(event.id.clone(), axis_length),
+        // Physics components: mass and inertia from template JSON (ADR-0014)
+        RigidBody::new(template.mass.value, template.inertia_scale),
+        FlightAssist,
+        collision_shape,
+    ));
+
+    log::info!(
+        "static ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",
+        event.position.x,
+        event.position.y,
+        event.position.z,
+        mesh_path,
+        template.mass.value,
     );
 }
 

@@ -54,6 +54,7 @@ pub mod flight_assist;
 pub mod floating_origin;
 pub mod input;
 pub mod keybindings_resource;
+pub mod ship_templates;
 pub mod spawn_sets;
 pub mod state;
 
@@ -70,16 +71,17 @@ pub use debug_axes::{
 pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::SpawnEntity;
-pub use flight_assist::{
-    BoundingBox, FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate,
-    PhysicalQuantity, PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig,
-    ShipPropulsionTemplate, ShipTemplate, ThrustCommand, TorqueCommand,
-};
+pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
 pub use input::{ActiveActions, InputSet, LogicalAction};
 pub use keybindings_resource::KeybindingsResource;
+pub use ship_templates::{
+    BoundingBox, MainThrusterTemplate, PhysicalQuantity, PlayerShipTemplate, ShipCollisionShape,
+    ShipPropulsionConfig, ShipPropulsionTemplate, ShipTemplate, StaticShipTemplate, ThrustCommand,
+    TorqueCommand,
+};
 pub use spawn_sets::WorldSpawnSet;
 pub use state::AppState;
 

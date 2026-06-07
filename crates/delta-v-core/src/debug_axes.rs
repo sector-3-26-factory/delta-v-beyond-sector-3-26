@@ -19,9 +19,9 @@
 //! The axis root has `Visibility`, `InheritedVisibility`, and `ViewVisibility`
 //! to ensure proper visibility propagation to its children.
 //!
-//! - X axis: red line with "X" label
-//! - Y axis: green line with "Y" label
-//! - Z axis: blue line with "Z" label
+//! - X axis: red line with "X (right)" label
+//! - Y axis: green line with "Y (up)" label
+//! - Z axis: blue line with "Z (backward)" label
 //!
 //! Length is calculated as 2× the entity's longest expansion along any axis.
 //! When the axis length changes (e.g. after a glTF mesh finishes loading and
@@ -317,7 +317,7 @@ fn add_debug_axes_to_entity(
         });
         spawn_axis_label(
             axis_parent,
-            "X",
+            "X (right)",
             length * LABEL_POSITION_FRACTION,
             0.0,
             0.0,
@@ -325,7 +325,7 @@ fn add_debug_axes_to_entity(
             length,
         );
 
-        // Y axis (green) with "Y" label
+        // Y axis (green) with "Y (up)" label
         axis_parent.spawn(PbrBundle {
             mesh: meshes.add(y_axis_mesh),
             material: y_material,
@@ -333,7 +333,7 @@ fn add_debug_axes_to_entity(
         });
         spawn_axis_label(
             axis_parent,
-            "Y",
+            "Y (up)",
             0.0,
             length * LABEL_POSITION_FRACTION,
             0.0,
@@ -341,7 +341,7 @@ fn add_debug_axes_to_entity(
             length,
         );
 
-        // Z axis (blue) with "Z" label
+        // Z axis (blue) with "Z (back)" label
         axis_parent.spawn(PbrBundle {
             mesh: meshes.add(z_axis_mesh),
             material: z_material,
@@ -349,7 +349,7 @@ fn add_debug_axes_to_entity(
         });
         spawn_axis_label(
             axis_parent,
-            "Z",
+            "Z (back)",
             0.0,
             0.0,
             length * LABEL_POSITION_FRACTION,
