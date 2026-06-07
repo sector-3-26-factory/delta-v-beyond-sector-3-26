@@ -107,6 +107,26 @@ pub struct PlayerShipTemplate {
     pub collision_shape: ShipCollisionShape,
 }
 
+/// Deserialized non-player ship template JSON.
+///
+/// Contains all ship properties except camera definitions.
+/// Used for `entity_type` `ship` (non-player ships).
+#[derive(Debug, Deserialize)]
+pub struct StaticShipTemplate {
+    /// Ship mass in kilograms.
+    pub mass: PhysicalQuantity,
+    /// Dimensionless inertia multiplier.
+    pub inertia_scale: f32,
+    /// Propulsion system configuration.
+    pub propulsion: ShipPropulsionTemplate,
+    /// Axis-aligned bounding box in ship-local coordinates (metres).
+    /// Used for debug axes and spatial calculations.
+    pub bounding_box: BoundingBox,
+    /// Collision shape for the ship.
+    /// Used for collision detection with asteroids.
+    pub collision_shape: ShipCollisionShape,
+}
+
 /// Axis-aligned bounding box in ship-local coordinates (metres).
 ///
 /// Computed once from the glTF mesh and stored in the template JSON.
