@@ -66,12 +66,6 @@ informational and must be aligned with.
 
 [ADR-0029]: `Cargo.lock` is committed; CI builds use `--locked`. Rust toolchain is pinned via `rust-toolchain.toml`. `cargo deny check` runs in CI enforcing: licence allow-list, RUSTSEC advisories, source restrictions. A scheduled weekly CI run re-runs `cargo deny` against `dev`. NEVER commit secrets, tokens, keys, or credentials. `unsafe` in our code requires an ADR or inline rationale comment plus a test.
 
-[ADR-0030]: (Proposed) Multiplayer model is peer-to-peer with "player as server" semantics (host is authoritative simulator). Design physics, state, and input NOW so that the wire-side surface is a small, well-defined module (`delta-v-net`) swappable without touching the rest. Do NOT implement lockstep simulation. Until M7, `delta-v-net` is a stub only.
-
-[ADR-0031]: (Proposed) Do NOT commit to a network library yet. Keep `delta-v-net` as a stub. Ensure architectural decisions (fixed timestep, plugin isolation, no wall-clock in simulation) keep all candidates (lightyear, bevy_replicon, bevy_quinnet) viable. Steam MUST be a transport option behind a feature flag, NOT the only matchmaking story.
-
-[ADR-0032]: (Proposed) Replicated components MUST be explicitly marked — no "all components replicated" default. Each replicated component declares its fields and quantisation. Positions on the wire are in a stable sector-relative frame (not per-client floating-origin frame). Snapshots are reliable; per-tick deltas are unreliable but timestamped and idempotent.
-
 [ADR-0033]: EVERY source file we author that supports comments MUST contain a one-line header pointing at AGENTS.md: `// AGENTS: before modifying this file, read AGENTS.md at the repository root.` (or language-appropriate equivalent). JSON Schemas use the top-level `description` field for this pointer. Plain JSON content files without a `description` slot are exempt. The pointer MUST NOT name individual ADRs — only point at AGENTS.md.
 
 [ADR-0034]: ZERO warnings policy. `cargo build --workspace --all-targets` MUST emit zero warnings. `cargo clippy --workspace --all-targets -- -D warnings` MUST pass. CI sets `RUSTFLAGS="-D warnings"`. Any unavoidable warning MUST be suppressed with the NARROWEST possible `#[allow(...)]` WITH an inline comment explaining why. Blanket `#![allow(...)]` at crate level requires an ADR amendment. `cargo deny check` warnings also count as violations.
@@ -92,6 +86,19 @@ informational and must be aligned with.
 
 [ADR-0043]: Ship templates use a two-level pattern: base ship templates (`entity_type: "ship"`) define common properties (mass, inertia_scale, propulsion) with an implicit mesh at `mesh.glb` in the template directory. Player-controlled ship templates (`entity_type: "player_controlled_ship"`) reference a base ship template via `ship_template` and add camera definitions. The template loader merges the two at load time. The `entity_type` is derived from the template, not from the world definition. Switching ships requires changing only the `ship_template` reference.
 
+[ADR-0044]: NO visual data generation or handling within Rust code. All visual data (textures, meshes, shaders, render targets, materials, animations) MUST come from external files loaded via the asset pipeline. 3D models MUST be glTF 2.0 (`.glb` files) in `assets/templates/<type>/<name>/mesh.glb`. Domain plugins use the spawn/marker/attachment pattern: spawn systems queue glTF loading, marker components track loading state, attachment systems attach loaded scenes in `InGame` state. This ensures separation of concerns between simulation and rendering, faster compile times, smaller binaries, and proper asset attribution. **Exception**: Debug/diagnostic visual data (debug axes, collision visualization) is exempt per ADR-0044 Notes.
+
+[ADR-0045]: Anti-cheat measures for client-side JSON configuration: (1) Schema validation with strict bounds on gameplay values (mass, thrust, collision shapes). (2) Collision shape containment validation (shape must fit within bounding box). (3) Server-authoritative game state in multiplayer (host validates all client inputs). (4) Optional cryptographic signing for official templates. (5) Hard errors for validation failures (ADR-0013). This provides defense-in-depth against cheating via JSON modification.
+
+---
+
+<!-- Proposed ADRs - informational only, not strict rules -->
+[ADR-0030] (Proposed): Multiplayer model is peer-to-peer with "player as server" semantics (host is authoritative simulator). Design physics, state, and input NOW so that the wire-side surface is a small, well-defined module (`delta-v-net`) swappable without touching the rest. Do NOT implement lockstep simulation. Until M7, `delta-v-net` is a stub only.
+
+[ADR-0031] (Proposed): Do NOT commit to a network library yet. Keep `delta-v-net` as a stub. Ensure architectural decisions (fixed timestep, plugin isolation, no wall-clock in simulation) keep all candidates (lightyear, bevy_replicon, bevy_quinnet) viable. Steam MUST be a transport option behind a feature flag, NOT the only matchmaking story.
+
+[ADR-0032] (Proposed): Replicated components MUST be explicitly marked — no "all components replicated" default. Each replicated component declares its fields and quantisation. Positions on the wire are in a stable sector-relative frame (not per-client floating-origin frame). Snapshots are reliable; per-tick deltas are unreliable but timestamped and idempotent.
+
 ---
 
 ## Summary of Absolute Prohibitions
@@ -110,3 +117,4 @@ informational and must be aligned with.
 - ❌ No cross-domain function calls between plugin internals (use events/components)
 - ❌ No runtime string-key translation lookups
 - ❌ No CREDITS.md commits without explicit human approval
+- ❌ No visual data generation or handling in Rust code (textures, meshes, shaders, render targets, materials, animations) **except debug/diagnostic visualizations**

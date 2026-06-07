@@ -10,6 +10,7 @@ license = "GPL-3.0-or-later"
 [dependencies]
 serde_json = { workspace = true }
 jsonschema = { workspace = true }
+referencing = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

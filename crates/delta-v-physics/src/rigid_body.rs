@@ -108,6 +108,14 @@ impl RigidBody {
         self.torque_accumulator += torque;
     }
 
+    /// Applies an impulse to this body (instantaneous velocity change).
+    ///
+    /// Impulse is force applied over an infinitesimal time interval.
+    /// The velocity change is: `delta_v = impulse / mass`.
+    pub fn apply_impulse(&mut self, impulse: Vec3) {
+        self.velocity += impulse / self.mass;
+    }
+
     /// Clears accumulated forces and torques (called after integration each tick).
     #[allow(clippy::missing_const_for_fn)]
     pub fn clear_accumulators(&mut self) {

@@ -3,13 +3,13 @@
   "name": "Sector 3.26 — Development Default",
   "entities": [
     {
-      "template": "ships/space-fighter-comrade1280",
+      "template": "ships/debug-ship-capsule",
       "id": "player_ship",
       "player_controlled": true,
       "position": {
-        "x": 0.0,
+        "x": 500.0,
         "y": 0.0,
-        "z": 0.0
+        "z": 1020.0
       },
       "rotation": {
         "x": 0.0,
@@ -21,6 +21,51 @@
         "x": 1.0,
         "y": 1.0,
         "z": 1.0
+      }
+    },
+    {
+      "template": "asteroids/asteroid-large",
+      "id": "asteroid_1",
+      "position": {
+        "x": 500.0,
+        "y": 0.0,
+        "z": 1000.0
+      }
+    },
+    {
+      "template": "asteroids/asteroid-medium",
+      "id": "asteroid_2",
+      "position": {
+        "x": -300.0,
+        "y": 100.0,
+        "z": 800.0
+      }
+    },
+    {
+      "template": "asteroids/asteroid-small",
+      "id": "asteroid_3",
+      "position": {
+        "x": 200.0,
+        "y": -50.0,
+        "z": 1500.0
+      }
+    },
+    {
+      "template": "asteroids/asteroid-small",
+      "id": "asteroid_4",
+      "position": {
+        "x": -100.0,
+        "y": 200.0,
+        "z": 2000.0
+      }
+    },
+    {
+      "template": "asteroids/asteroid-medium",
+      "id": "asteroid_5",
+      "position": {
+        "x": 800.0,
+        "y": 50.0,
+        "z": 1200.0
       }
     }
   ]

@@ -17,9 +17,9 @@ use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
     ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipPropulsionConfig, SpawnEntity,
+    PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig, SpawnEntity,
 };
-use delta_v_physics::RigidBody;
+use delta_v_physics::{CollisionShape, RigidBody};
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
@@ -48,7 +48,10 @@ pub fn spawn_ship_from_template(
                 // NPC ships: future implementation
                 log::warn!("NPC ship spawning not yet implemented");
             }
-            other => log::warn!("Unknown entity_type: {other}"),
+            // Other entity types (e.g. "asteroid") are handled by other plugins.
+            // Silently skip — a single plugin cannot know whether another plugin
+            // will handle the event.
+            _ => {}
         }
     }
 }
@@ -62,6 +65,32 @@ pub fn spawn_ship_from_template(
 fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
     serde_json::from_value(event.template.clone())
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
+}
+
+/// Creates a [`CollisionShape`] from a [`ShipCollisionShape`] template.
+///
+/// Supports sphere and box shapes. Panics on unknown shape types per ADR-0013.
+#[allow(clippy::expect_used, clippy::panic)]
+fn create_collision_shape(shape: &ShipCollisionShape) -> CollisionShape {
+    match shape.shape_type.as_str() {
+        "sphere" => {
+            let radius = shape
+                .radius
+                .as_ref()
+                .expect("sphere collision_shape must have radius")
+                .value;
+            CollisionShape::sphere(radius)
+        }
+        "box" => {
+            let he = shape
+                .half_extents
+                .as_ref()
+                .expect("box collision_shape must have half_extents");
+            let half_extents = Vec3::new(he.x, he.y, he.z);
+            CollisionShape::box_shape(half_extents)
+        }
+        _ => panic!("unsupported collision shape type: {}", shape.shape_type),
+    }
 }
 
 /// Spawns the player-controlled ship from a template event.
@@ -111,6 +140,8 @@ fn spawn_player_ship(
     log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template");
 
     // Build the ship entity spawn command.
+    let collision_shape = create_collision_shape(&template.collision_shape);
+
     let ship_entity = commands
         .spawn((
             Transform {
@@ -119,11 +150,14 @@ fn spawn_player_ship(
                 scale: event.scale,
             },
             GlobalTransform::default(),
+            Visibility::default(),
+            InheritedVisibility::default(),
             PendingShipMesh { gltf_handle },
             DebugAxesEligible::new(event.id.clone(), axis_length),
             // Physics components: mass and inertia from template JSON (ADR-0014)
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
+            collision_shape,
         ))
         .id();
 
@@ -189,10 +223,13 @@ fn spawn_player_ship(
 /// Attaches loaded glTF meshes to pending ship entities.
 ///
 /// Once the glTF asset finishes loading, this system extracts the first scene
-/// from the glTF and attaches it to the ship entity with a `SceneBundle`.
+/// from the glTF and attaches it to the ship entity.
 ///
 /// Debug axes are already configured with the correct length from the template JSON
 /// (per ADR-0014: bounding box is the single source of truth).
+///
+/// Note: We only insert the `Handle<Scene>` to avoid overwriting the entity's
+/// existing `Transform` and `GlobalTransform` that were set during spawning.
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn attach_ship_meshes(
     mut commands: Commands<'_, '_>,
@@ -212,15 +249,9 @@ pub(crate) fn attach_ship_meshes(
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
             // Get the first scene from the glTF (should contain the mesh).
             if let Some(scene_handle) = gltf.scenes.first().cloned() {
-                // Attach the scene as a child to the ship entity.
-                commands.entity(entity).insert(SceneBundle {
-                    scene: scene_handle,
-                    transform: Transform::default(),
-                    global_transform: GlobalTransform::default(),
-                    visibility: Visibility::default(),
-                    inherited_visibility: InheritedVisibility::default(),
-                    view_visibility: ViewVisibility::default(),
-                });
+                // Insert only the scene handle to preserve the entity's existing transform.
+                // The entity already has Transform/GlobalTransform from spawning.
+                commands.entity(entity).insert(scene_handle);
 
                 // Debug axes are already configured from the template JSON.
                 // No need to recompute from glTF.

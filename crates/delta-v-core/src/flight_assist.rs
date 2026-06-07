@@ -69,6 +69,20 @@ pub struct ShipTemplate {
     pub propulsion: ShipPropulsionTemplate,
 }
 
+/// Collision shape for a ship, deserialized from template JSON.
+///
+/// Supports sphere and box shapes. The shape is defined in ship-local coordinates.
+#[derive(Debug, Deserialize)]
+pub struct ShipCollisionShape {
+    /// The shape type: "sphere" or "box".
+    #[serde(rename = "type")]
+    pub shape_type: String,
+    /// Radius for sphere shapes (metres).
+    pub radius: Option<PhysicalQuantity>,
+    /// Half-extents for box shapes (metres).
+    pub half_extents: Option<Vec3Json>,
+}
+
 /// Deserialized player-controlled ship template JSON.
 ///
 /// Extends [`ShipTemplate`] with camera definitions.
@@ -88,6 +102,9 @@ pub struct PlayerShipTemplate {
     /// Axis-aligned bounding box in ship-local coordinates (metres).
     /// Used for debug axes and spatial calculations.
     pub bounding_box: BoundingBox,
+    /// Collision shape for the ship.
+    /// Used for collision detection with asteroids.
+    pub collision_shape: ShipCollisionShape,
 }
 
 /// Axis-aligned bounding box in ship-local coordinates (metres).

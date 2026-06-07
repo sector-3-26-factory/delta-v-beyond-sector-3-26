@@ -9,7 +9,8 @@
         "entity_type",
         "mass",
         "propulsion",
-        "bounding_box"
+        "bounding_box",
+        "collision_shape"
     ],
     "properties": {
         "entity_type": {
@@ -19,7 +20,7 @@
         },
         "mass": {
             "description": "Ship mass in kilograms. Required per ADR-0009 (every rigid body MUST have mass) and ADR-0014 (gameplay values in JSON).",
-            "$ref": "#/$defs/physical_quantity_mass"
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         },
         "inertia_scale": {
             "description": "Dimensionless multiplier on the default spherical inertia tensor. 1.0 = sphere with radius 1m. Higher values simulate mass concentrated farther from center.",
@@ -68,72 +69,35 @@
                     "$ref": "#/$defs/maneuvering_thruster"
                 }
             }
+        },
+        "collision_shape": {
+            "description": "Collision shape for the ship. Defines how it interacts with other objects. Derived from bounding_box per ADR-0044.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Collision shape type. 'sphere' or 'box' are supported for M3.",
+                    "type": "string",
+                    "enum": [
+                        "sphere",
+                        "box"
+                    ]
+                },
+                "radius": {
+                    "description": "Radius of the sphere in metres (for sphere shape type).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "half_extents": {
+                    "description": "Half-extents of the box (for box shape type).",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
         }
     },
     "$defs": {
-        "physical_quantity_mass": {
-            "description": "Physical quantity with mass unit (kg). Per ADR-0008. See units.schema.json for the central unit registry.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "unit"
-            ],
-            "properties": {
-                "value": {
-                    "description": "Mass value. Must be positive and finite.",
-                    "type": "number",
-                    "exclusiveMinimum": 0.0
-                },
-                "unit": {
-                    "description": "Unit of mass. Must be 'kg' (see units.schema.json).",
-                    "type": "string",
-                    "const": "kg"
-                }
-            }
-        },
-        "physical_quantity_force": {
-            "description": "Physical quantity with force unit (Newtons). Per ADR-0008. See units.schema.json for the central unit registry.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "unit"
-            ],
-            "properties": {
-                "value": {
-                    "description": "Force value. Must be non-negative and finite.",
-                    "type": "number",
-                    "minimum": 0.0
-                },
-                "unit": {
-                    "description": "Unit of force. Must be 'N' (see units.schema.json).",
-                    "type": "string",
-                    "const": "N"
-                }
-            }
-        },
-        "physical_quantity_torque": {
-            "description": "Physical quantity with torque unit (Newton-meters). Per ADR-0008. See units.schema.json for the central unit registry.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "value",
-                "unit"
-            ],
-            "properties": {
-                "value": {
-                    "description": "Torque value. Must be non-negative and finite.",
-                    "type": "number",
-                    "minimum": 0.0
-                },
-                "unit": {
-                    "description": "Unit of torque. Must be 'N⋅m' (see units.schema.json).",
-                    "type": "string",
-                    "const": "N⋅m"
-                }
-            }
-        },
         "main_thruster": {
             "description": "A main thruster configuration. Produces forward and backward linear force along the ship's longitudinal axis (-Z forward per ADR-0006).",
             "type": "object",
@@ -162,11 +126,11 @@
                 },
                 "max_forward_thrust": {
                     "description": "Maximum forward thrust in Newtons (applied along -Z local axis).",
-                    "$ref": "#/$defs/physical_quantity_force"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
                 },
                 "max_backward_thrust": {
                     "description": "Maximum backward/reverse thrust in Newtons (applied along +Z local axis). Typically lower than forward thrust.",
-                    "$ref": "#/$defs/physical_quantity_force"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
                 }
             }
         },
@@ -192,11 +156,11 @@
                 },
                 "max_torque": {
                     "description": "Maximum torque in Newton-meters applied around each rotation axis (pitch=X, yaw=Y, roll=Z per ADR-0006).",
-                    "$ref": "#/$defs/physical_quantity_torque"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/torque"
                 },
                 "max_strafe_thrust": {
                     "description": "Maximum strafe thrust in Newtons applied along each lateral/vertical axis (left/right=X, up/down=Y). Same value for all strafe directions.",
-                    "$ref": "#/$defs/physical_quantity_force"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
                 }
             }
         },

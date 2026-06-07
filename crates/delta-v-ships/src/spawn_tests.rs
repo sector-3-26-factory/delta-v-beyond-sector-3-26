@@ -50,6 +50,10 @@ fn make_player_ship_event() -> SpawnEntity {
             "min": { "x": -1.0, "y": -1.0, "z": -1.0 },
             "max": { "x": 1.0, "y": 1.0, "z": 1.0 }
         },
+        "collision_shape": {
+            "type": "box",
+            "half_extents": { "x": 1.0, "y": 1.0, "z": 1.0 }
+        },
         "propulsion": {
             "main_thrusters": [{
                 "id": "main",

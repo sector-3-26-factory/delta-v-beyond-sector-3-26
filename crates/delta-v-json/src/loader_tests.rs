@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use crate::error::JsonError;
-use crate::loader::{load_allowed_units, validate_units};
+use crate::loader::{fill_defaults, load_allowed_units, validate_units};
 use serde_json::Value;
 
 // ---------------------------------------------------------------------------
@@ -160,4 +160,86 @@ fn test_load_allowed_units() {
     assert!(allowed.contains(&"N⋅m".to_string()));
     assert!(allowed.contains(&"dimensionless".to_string()));
     assert!(!allowed.contains(&"pounds".to_string()));
+}
+
+// ---------------------------------------------------------------------------
+// Tests: fill_defaults
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_fill_defaults_with_ref_to_definition() {
+    // Schema with a $ref to a definition that has property-level defaults
+    let schema = serde_json::json!({
+        "$defs": {
+            "quat": {
+                "type": "object",
+                "properties": {
+                    "x": { "type": "number", "default": 0.0 },
+                    "y": { "type": "number", "default": 0.0 },
+                    "z": { "type": "number", "default": 0.0 },
+                    "w": { "type": "number", "default": 1.0 }
+                }
+            }
+        },
+        "type": "object",
+        "properties": {
+            "rotation": { "$ref": "#/$defs/quat" }
+        }
+    });
+
+    // Value missing the rotation field
+    let mut value = serde_json::json!({
+        "name": "test"
+    });
+
+    let schema_path = std::env::temp_dir().join("test_fill_defaults_schema.json");
+    std::fs::write(&schema_path, schema.to_string()).unwrap();
+
+    fill_defaults(&mut value, &schema_path).unwrap();
+
+    // rotation should now have defaults
+    let rotation = value.get("rotation").unwrap();
+    assert!(rotation.get("x").is_some());
+    assert!(rotation.get("y").is_some());
+    assert!(rotation.get("z").is_some());
+    assert!(rotation.get("w").is_some());
+}
+
+#[test]
+fn test_fill_defaults_with_world_schema() {
+    // Load the actual world schema
+    let schema_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("assets/json/schema/world.schema.json");
+    let schema_text = std::fs::read_to_string(&schema_path).unwrap();
+    let _schema: Value = serde_json::from_str(&schema_text).unwrap();
+
+    // Create a value with an entity missing rotation and scale
+    let mut value = serde_json::json!({
+        "format_version": 1,
+        "name": "Test Sector",
+        "entities": [
+            {
+                "template": "ships/test",
+                "id": "test_ship",
+                "position": { "x": 0.0, "y": 0.0, "z": 0.0 }
+            }
+        ]
+    });
+
+    fill_defaults(&mut value, &schema_path).unwrap();
+
+    // Check that rotation and scale were filled in
+    let entities = value.get("entities").unwrap().as_array().unwrap();
+    let entity = entities.first().unwrap();
+    println!("Entity after fill_defaults: {entity:?}");
+
+    assert!(
+        entity.get("rotation").is_some(),
+        "rotation should be present"
+    );
+    assert!(entity.get("scale").is_some(), "scale should be present");
 }

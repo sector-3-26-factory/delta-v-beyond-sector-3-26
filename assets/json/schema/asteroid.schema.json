@@ -1,0 +1,91 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/asteroid",
+    "title": "Asteroid template",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines an asteroid entity: a static obstacle with mass and collision shape. Per ADR-0009, every rigid body MUST have mass. Per ADR-0008, physical quantities use value+unit objects.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "entity_type",
+        "mass",
+        "collision_shape",
+        "bounding_box"
+    ],
+    "properties": {
+        "entity_type": {
+            "description": "Entity type discriminator. Must be 'asteroid'.",
+            "type": "string",
+            "const": "asteroid"
+        },
+        "mass": {
+            "description": "Asteroid mass in kilograms. Required per ADR-0009 (every rigid body MUST have mass) and ADR-0014 (gameplay values in JSON).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
+        },
+        "collision_shape": {
+            "description": "Collision shape for the asteroid. Defines how it interacts with other objects.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Collision shape type. 'sphere' is supported for M3.",
+                    "type": "string",
+                    "enum": [
+                        "sphere"
+                    ]
+                },
+                "radius": {
+                    "description": "Radius of the sphere in metres (for sphere shape type).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                }
+            }
+        },
+        "bounding_box": {
+            "description": "Axis-aligned bounding box of the mesh in asteroid-local coordinates (metres). Computed once from glTF mesh. Used for debug axes and spatial calculations. Min and max are opposite corners of the box.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "min",
+                "max"
+            ],
+            "properties": {
+                "min": {
+                    "description": "Minimum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "max": {
+                    "description": "Maximum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
+        }
+    },
+    "$defs": {
+        "vec3": {
+            "description": "3-component vector (x, y, z) in metres.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "x",
+                "y",
+                "z"
+            ],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "X component (metres)."
+                },
+                "y": {
+                    "type": "number",
+                    "description": "Y component (metres)."
+                },
+                "z": {
+                    "type": "number",
+                    "description": "Z component (metres)."
+                }
+            }
+        }
+    }
+}
