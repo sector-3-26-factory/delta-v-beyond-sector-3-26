@@ -17,6 +17,18 @@ use crate::{error::WorldError, world_def::WorldDef};
 // Public API
 // ---------------------------------------------------------------------------
 
+/// Loads and validates a world definition from the given path.
+///
+/// Reads the world JSON, validates it against `assets/json/schema/world.schema.json`,
+/// fills in schema defaults, and deserialises into [`WorldDef`].
+///
+/// # Errors
+/// Returns [`WorldError`] if the file cannot be read, parsed, or validated.
+pub fn load_world(json_path: &Path) -> Result<WorldDef, WorldError> {
+    let schema_path = PathBuf::from("assets/json/schema/world.schema.json");
+    load_world_from_paths(json_path, &schema_path)
+}
+
 /// Loads and validates the default world definition.
 ///
 /// Reads `assets/worlds/default.world.json`, validates it against
@@ -27,8 +39,7 @@ use crate::{error::WorldError, world_def::WorldDef};
 /// Returns [`WorldError`] if the file cannot be read, parsed, or validated.
 pub fn load_default_world() -> Result<WorldDef, WorldError> {
     let json_path = PathBuf::from("assets/worlds/default.world.json");
-    let schema_path = PathBuf::from("assets/json/schema/world.schema.json");
-    load_world_from_paths(&json_path, &schema_path)
+    load_world(&json_path)
 }
 
 /// Loads and validates a world definition from explicit paths.

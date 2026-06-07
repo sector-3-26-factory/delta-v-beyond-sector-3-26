@@ -58,6 +58,7 @@ mod template_loader_tests;
 pub use error::WorldError;
 pub use events::SpawnEntity;
 pub use resources::WorldDefResource;
+pub use resources::WorldPath;
 pub use world_def::WorldDef;
 
 use asteroid_spawner::{attach_asteroid_meshes, spawn_asteroid_system};
@@ -65,7 +66,7 @@ use bevy::prelude::*;
 use delta_v_core::{AppState, WorldSpawnSet};
 use serde_json::Value;
 
-use crate::loader::load_default_world;
+use crate::loader::load_world;
 use crate::template_loader::load_template;
 use crate::template_loader::resolve_template_path;
 use world_def::EntitySpawn;
@@ -101,10 +102,11 @@ impl Plugin for WorldPlugin {
 // Systems
 // ---------------------------------------------------------------------------
 
-/// Loads the default world definition and emits `SpawnEntity` events.
+/// Loads the world definition and emits `SpawnEntity` events.
 ///
-/// Reads the world JSON, validates it, inserts [`WorldDefResource`],
-/// and emits a `SpawnEntity` event for each entity in the world.
+/// Reads the world JSON (from [`WorldPath`] resource), validates it,
+/// inserts [`WorldDefResource`], and emits a `SpawnEntity` event for
+/// each entity in the world.
 ///
 /// The `entity_type` is derived from the template's `entity_type` field
 /// (per ADR-0038, the template declares its own type).
@@ -116,7 +118,9 @@ impl Plugin for WorldPlugin {
 ///
 /// Panics if the world file or any template file cannot be loaded or validated.
 /// This is intentional per ADR-0013 (no silent fallbacks).
+#[allow(clippy::needless_pass_by_value)]
 fn load_world_system(
+    world_path: Res<'_, WorldPath>,
     mut commands: Commands<'_, '_>,
     mut events: EventWriter<'_, SpawnEntity>,
     mut next: ResMut<'_, NextState<AppState>>,
@@ -124,7 +128,7 @@ fn load_world_system(
     // INVARIANT: a missing or invalid world file is a hard startup
     // error (ADR-0013). The panic is intentional; no recovery is possible.
     #[allow(clippy::panic)]
-    let world = load_default_world().unwrap_or_else(|e| {
+    let world = load_world(world_path.as_ref()).unwrap_or_else(|e| {
         panic!("fatal: failed to load world: {e}");
     });
     log::info!("world loaded: {}", world.name);

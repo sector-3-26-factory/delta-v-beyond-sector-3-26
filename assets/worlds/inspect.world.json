@@ -1,0 +1,36 @@
+{
+    "format_version": 1,
+    "name": "Inspect World — Ship and Asteroid Inspection",
+    "entities": [
+        {
+            "template": "ships/debug-ship-capsule",
+            "id": "player_ship",
+            "player_controlled": true,
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "rotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+            }
+        },
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "inspect_item",
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": -550.0
+            }
+        }
+    ]
+}

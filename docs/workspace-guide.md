@@ -54,6 +54,12 @@ RUST_LOG=debug cargo run --bin delta-v
 # Run tests across all crates
 cargo test --workspace
 
+# Run the game with a specific world
+cargo run --bin delta-v -- --world inspect
+# or with a custom world file
+cargo run --bin delta-v -- --world assets/worlds/my-world.json
+```
+
 # Run tests for a specific crate
 cargo test -p delta-v-physics
 ```
