@@ -3,7 +3,7 @@
     "name": "Inspect World — Ship and Asteroid Inspection",
     "entities": [
         {
-            "template": "ships/debug-ship-capsule",
+            "template": "ships/space-fighter-comrade1280",
             "id": "player_ship",
             "player_controlled": true,
             "position": {
@@ -29,7 +29,7 @@
             "position": {
                 "x": 0.0,
                 "y": 0.0,
-                "z": -550.0
+                "z": -25.0
             }
         }
     ]
