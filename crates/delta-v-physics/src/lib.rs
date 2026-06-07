@@ -125,19 +125,29 @@ impl Plugin for PhysicsPlugin {
         );
 
         // Collision detection using avian3d.
-        // Runs in FixedUpdate after physics integration.
+        // Runs in FixedUpdate BEFORE physics integration, so we can respond to collisions.
         app.add_systems(
             FixedUpdate,
-            collision_detection_system.run_if(in_state(AppState::InGame)),
+            collision_detection_system
+                .in_set(PhysicsSet::AccumulateForces)
+                .run_if(in_state(AppState::InGame)),
+        );
+
+        // Collision response applies impulses to dynamic bodies.
+        // Runs in FixedUpdate BEFORE velocity integration, so impulses affect current frame.
+        app.add_systems(
+            FixedUpdate,
+            collision_response_system
+                .in_set(PhysicsSet::AccumulateForces)
+                .run_if(in_state(AppState::InGame)),
         );
     }
 }
 
 /// System that detects collisions and emits [`CollisionDetected`] events.
 ///
-/// This is a placeholder that will be expanded when avian3d collision
-/// is fully integrated. For now, it checks for overlapping bounding boxes
-/// as a simple collision test.
+/// Uses sphere-based collision detection. When two entities with collision
+/// shapes overlap, emits a `CollisionDetected` event.
 #[allow(clippy::needless_pass_by_value)]
 fn collision_detection_system(
     mut events: EventWriter<'_, CollisionDetected>,
@@ -165,6 +175,16 @@ fn collision_detection_system(
                 let normal = delta.normalize_or_zero();
                 let relative_velocity = body_b.velocity - body_a.velocity;
 
+                log::debug!(
+                    "Collision detected: entities {:?} and {:?}, distance={:.2}, radii={:.2}+{:.2}={:.2}",
+                    entity_a,
+                    entity_b,
+                    distance,
+                    radius_a,
+                    radius_b,
+                    radius_a + radius_b
+                );
+
                 events.send(CollisionDetected {
                     target: entity_a,
                     other: entity_b,
@@ -174,6 +194,88 @@ fn collision_detection_system(
                 });
             }
         }
+    }
+}
+
+/// System that responds to collision events by applying impulses.
+///
+/// When a dynamic body (ship) collides with a static body (asteroid),
+/// applies an impulse to the dynamic body to simulate a bounce.
+///
+/// Runs in `FixedUpdate` BEFORE velocity integration, so impulses affect current frame.
+#[allow(clippy::needless_pass_by_value)]
+fn collision_response_system(
+    mut events: EventReader<'_, '_, CollisionDetected>,
+    mut dynamic_bodies: Query<'_, '_, (&mut RigidBody, &Transform), Without<StaticBody>>,
+    static_bodies: Query<'_, '_, &RigidBody, With<StaticBody>>,
+    static_markers: Query<'_, '_, Entity, With<StaticBody>>,
+) {
+    for collision in events.read() {
+        // Check if one body is static (asteroid) and the other is dynamic (ship)
+        let target_is_static = static_markers.get(collision.target).is_ok();
+        let other_is_static = static_markers.get(collision.other).is_ok();
+
+        if !target_is_static && !other_is_static {
+            // Both are dynamic - skip (or could implement for NPC ships)
+            continue;
+        }
+
+        // Determine which is the dynamic body
+        let dynamic_entity = if target_is_static {
+            collision.other
+        } else {
+            collision.target
+        };
+
+        // Get the static body's velocity
+        let static_entity = if target_is_static {
+            collision.target
+        } else {
+            collision.other
+        };
+        let Ok(static_body) = static_bodies.get(static_entity) else {
+            continue;
+        };
+        let static_velocity = static_body.velocity;
+
+        // Get the dynamic body (mutable for applying impulse)
+        let Ok((mut dynamic_body, _)) = dynamic_bodies.get_mut(dynamic_entity) else {
+            continue;
+        };
+
+        // Compute impulse based on relative velocity and restitution.
+        // Impulse formula: j = -(1 + e) * m * (v_rel · n)
+        // where e = coefficient of restitution, m = mass of dynamic body,
+        // v_rel = v_dynamic - v_static, n = normal (pointing from static to dynamic)
+        // The velocity change is: delta_v = j / m = -(1 + e) * (v_rel · n)
+        //
+        // The normal in the collision event points from target to other.
+        // We need the normal pointing from static body to dynamic body.
+        let restitution = 0.5;
+
+        // Relative velocity of dynamic body with respect to static body
+        let relative_velocity = dynamic_body.velocity - static_velocity;
+
+        // Normal points from target to other. We need the normal pointing from
+        // static body to dynamic body to push the dynamic body away.
+        let normal = if target_is_static {
+            collision.normal // normal points from static (target) to dynamic (other)
+        } else {
+            -collision.normal // normal points from dynamic (target) to static (other)
+        };
+
+        // Impulse magnitude includes mass for correct physics
+        let impulse =
+            normal * (-(1.0 + restitution) * dynamic_body.mass * relative_velocity.dot(normal));
+
+        log::debug!(
+            "Collision response: entity={:?}, impulse={:?}, mass={}",
+            dynamic_entity,
+            impulse,
+            dynamic_body.mass
+        );
+
+        dynamic_body.apply_impulse(impulse);
     }
 }
 

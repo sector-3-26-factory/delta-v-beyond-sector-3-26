@@ -7,20 +7,20 @@
     "collision_shape": {
         "type": "sphere",
         "radius": {
-            "value": 25,
+            "value": 0.5,
             "unit": "m"
         }
     },
     "bounding_box": {
         "min": {
-            "x": -25,
-            "y": -25,
-            "z": -25
+            "x": -0.5,
+            "y": -0.5,
+            "z": -0.5
         },
         "max": {
-            "x": 25,
-            "y": 25,
-            "z": 25
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5
         }
     }
 }

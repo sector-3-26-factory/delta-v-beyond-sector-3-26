@@ -72,8 +72,8 @@ pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::SpawnEntity;
 pub use flight_assist::{
     BoundingBox, FlightAssist, FlightAssistConfig, FlightAssistState, MainThrusterTemplate,
-    PhysicalQuantity, PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate,
-    ShipTemplate, ThrustCommand, TorqueCommand,
+    PhysicalQuantity, PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig,
+    ShipPropulsionTemplate, ShipTemplate, ThrustCommand, TorqueCommand,
 };
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,

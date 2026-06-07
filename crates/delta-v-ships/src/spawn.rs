@@ -17,9 +17,9 @@ use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
     ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipPropulsionConfig, SpawnEntity,
+    PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig, SpawnEntity,
 };
-use delta_v_physics::RigidBody;
+use delta_v_physics::{CollisionShape, RigidBody};
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
@@ -65,6 +65,32 @@ pub fn spawn_ship_from_template(
 fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
     serde_json::from_value(event.template.clone())
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
+}
+
+/// Creates a [`CollisionShape`] from a [`ShipCollisionShape`] template.
+///
+/// Supports sphere and box shapes. Panics on unknown shape types per ADR-0013.
+#[allow(clippy::expect_used, clippy::panic)]
+fn create_collision_shape(shape: &ShipCollisionShape) -> CollisionShape {
+    match shape.shape_type.as_str() {
+        "sphere" => {
+            let radius = shape
+                .radius
+                .as_ref()
+                .expect("sphere collision_shape must have radius")
+                .value;
+            CollisionShape::sphere(radius)
+        }
+        "box" => {
+            let he = shape
+                .half_extents
+                .as_ref()
+                .expect("box collision_shape must have half_extents");
+            let half_extents = Vec3::new(he.x, he.y, he.z);
+            CollisionShape::box_shape(half_extents)
+        }
+        _ => panic!("unsupported collision shape type: {}", shape.shape_type),
+    }
 }
 
 /// Spawns the player-controlled ship from a template event.
@@ -114,6 +140,8 @@ fn spawn_player_ship(
     log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template");
 
     // Build the ship entity spawn command.
+    let collision_shape = create_collision_shape(&template.collision_shape);
+
     let ship_entity = commands
         .spawn((
             Transform {
@@ -129,6 +157,7 @@ fn spawn_player_ship(
             // Physics components: mass and inertia from template JSON (ADR-0014)
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
+            collision_shape,
         ))
         .id();
 

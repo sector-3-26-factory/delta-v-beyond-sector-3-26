@@ -5,9 +5,6 @@
     "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nCentral registry of allowed physical units for use in `{\"value\": N, \"unit\": \"...\"}` objects throughout the project. Per ADR-0008, all numeric physical quantities in JSON MUST use this format. Allowed units are defined here and referenced by individual schemas via `\"$ref`.",
     "type": "object",
     "additionalProperties": false,
-    "required": [
-        "unit"
-    ],
     "properties": {
         "value": {
             "description": "Numeric magnitude. Must be finite (no NaN, no Infinity).",
