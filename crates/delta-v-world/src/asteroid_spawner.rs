@@ -3,12 +3,14 @@
 //! Asteroid spawning system.
 //!
 //! Listens for [`SpawnEntity`] events with `entity_type: "asteroid"` and spawns
-//! static rigid body asteroids with collision shapes.
+//! dynamic rigid body asteroids with collision shapes. Asteroids are affected
+//! by collisions based on their mass: heavy asteroids barely move when struck
+//! by a ship, while lightweight asteroids are displaced realistically.
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{DebugAxesEligible, SpawnEntity};
-use delta_v_physics::{CollisionShape, RigidBody, StaticBody};
+use delta_v_physics::{CollisionShape, DynamicBody, RigidBody};
 use serde_json::Value;
 
 /// Marker component for a pending asteroid mesh waiting for its glTF to load.
@@ -68,10 +70,11 @@ pub fn spawn_asteroid_system(
         // Queue glTF mesh load.
         let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
 
-        // Spawn the asteroid as a static body with a pending mesh marker.
+        // Spawn the asteroid as a dynamic body with a pending mesh marker.
         // The mesh will be attached asynchronously once the glTF is loaded.
+        // Dynamic asteroids respond to collisions based on their mass.
         commands.spawn((
-            StaticBody,
+            DynamicBody,
             RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
             collision_shape,
             Transform::from_translation(event.position)
