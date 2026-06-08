@@ -16,6 +16,7 @@ fn test_show_axis_indicators_false_blocks_all() {
     let config = DebugConfig {
         show_axis_indicators: false,
         axis_indicator_entities: vec!["ship_1".to_string()],
+        show_collision_shapes: false,
     };
 
     assert!(!config.should_show_axes_for("ship_1"));
@@ -30,6 +31,7 @@ fn test_show_axis_indicators_true_empty_list_shows_all() {
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec![],
+        show_collision_shapes: false,
     };
 
     assert!(config.should_show_axes_for("ship_1"));
@@ -45,6 +47,7 @@ fn test_show_axis_indicators_true_selective_list() {
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec!["ship_1".to_string(), "station_main".to_string()],
+        show_collision_shapes: false,
     };
 
     // Entities in the list should show axes
@@ -63,6 +66,7 @@ fn test_axis_indicator_entity_matching_is_exact() {
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec!["ship_1".to_string()],
+        show_collision_shapes: false,
     };
 
     assert!(config.should_show_axes_for("ship_1"));
@@ -77,6 +81,7 @@ fn test_axis_indicator_entities_case_sensitive() {
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec!["ship_1".to_string()],
+        show_collision_shapes: false,
     };
 
     assert!(config.should_show_axes_for("ship_1"));

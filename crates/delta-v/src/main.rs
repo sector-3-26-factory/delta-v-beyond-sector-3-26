@@ -24,8 +24,11 @@
 //!
 //! See ADR-0005 (plugin architecture).
 
+use std::path::PathBuf;
+
 use bevy::prelude::*;
 use bevy_mod_billboard::prelude::*;
+use clap::Parser;
 use delta_v_assets::AssetsPlugin;
 use delta_v_config::ConfigPlugin;
 use delta_v_core::CorePlugin;
@@ -36,9 +39,46 @@ use delta_v_propulsion::PropulsionPlugin;
 use delta_v_ships::ShipsPlugin;
 use delta_v_stations::StationsPlugin;
 use delta_v_weapons::WeaponsPlugin;
-use delta_v_world::WorldPlugin;
+use delta_v_world::{WorldPath, WorldPlugin};
+
+/// Command-line arguments for Delta-V.
+#[derive(Parser, Debug)]
+#[command(name = "delta-v")]
+#[command(
+    about = "Delta-V beyond Sector 3.26 - a space simulation game",
+    version
+)]
+struct Args {
+    /// World name or path to load.
+    ///
+    /// If the value ends with `.world.json`, it's treated as a full path.
+    /// Otherwise, it's treated as a short name and looked up in `assets/worlds/`.
+    ///
+    /// Examples:
+    ///   - `inspect` → `assets/worlds/inspect.world.json`
+    ///   - `default` → `assets/worlds/default.world.json`
+    ///   - `custom` → `assets/worlds/custom.world.json`
+    ///   - `path/to/my.world.json` → `path/to/my.world.json`
+    #[arg(short, long, default_value = "assets/worlds/default.world.json")]
+    world: String,
+}
 
 fn main() {
+    // Parse command-line arguments.
+    let args = Args::parse();
+
+    // Resolve the world path.
+    // If the argument doesn't end with ".world.json", treat it as a short name
+    // and look for it in the worlds directory.
+    let world_path = if args.world.ends_with(".world.json") {
+        WorldPath(PathBuf::from(args.world))
+    } else {
+        WorldPath(PathBuf::from(format!(
+            "assets/worlds/{}.world.json",
+            args.world
+        )))
+    };
+
     // Print a display-forwarding hint before Bevy initialises the window.
     // If X11 is not reachable, Bevy will panic with XOpenDisplayFailed
     // immediately after; the hint tells the developer what to check.
@@ -46,6 +86,7 @@ fn main() {
     print_x11_hint();
 
     App::new()
+        .insert_resource(world_path)
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {

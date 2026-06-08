@@ -69,11 +69,15 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
 }
 
-/// Creates a [`CollisionShape`] from a [`ShipCollisionShape`] template.
+/// Creates a [`CollisionShape`] from a [`ShipCollisionShape`] template, scaled by the given factor.
 ///
 /// Supports sphere and box shapes. Panics on unknown shape types per ADR-0013.
 #[allow(clippy::expect_used, clippy::panic)]
-fn create_collision_shape(shape: &ShipCollisionShape) -> CollisionShape {
+fn create_collision_shape(shape: &ShipCollisionShape, scale: f32) -> CollisionShape {
+    let offset = shape
+        .offset
+        .as_ref()
+        .map_or(Vec3::ZERO, |o| Vec3::new(o.x, o.y, o.z) * scale);
     match shape.shape_type.as_str() {
         "sphere" => {
             let radius = shape
@@ -81,15 +85,15 @@ fn create_collision_shape(shape: &ShipCollisionShape) -> CollisionShape {
                 .as_ref()
                 .expect("sphere collision_shape must have radius")
                 .value;
-            CollisionShape::sphere(radius)
+            CollisionShape::sphere(radius * scale, offset)
         }
         "box" => {
             let he = shape
                 .half_extents
                 .as_ref()
                 .expect("box collision_shape must have half_extents");
-            let half_extents = Vec3::new(he.x, he.y, he.z);
-            CollisionShape::box_shape(half_extents)
+            let half_extents = Vec3::new(he.x, he.y, he.z) * scale;
+            CollisionShape::box_shape(half_extents, offset)
         }
         _ => panic!("unsupported collision shape type: {}", shape.shape_type),
     }
@@ -130,19 +134,22 @@ fn spawn_player_ship(
     // Queue glTF mesh load.
     let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
 
-    // Compute debug axes length from the bounding box in the template JSON.
+    // Extract uniform scale from event (use max of x, y, z for uniform scaling).
+    let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
+
+    // Compute debug axes length from the bounding box in the template JSON, scaled.
     // The bounding_box is already in the template JSON (computed by tooling).
     let half_extent = Vec3::new(
         (template.bounding_box.max.x - template.bounding_box.min.x) / 2.0,
         (template.bounding_box.max.y - template.bounding_box.min.y) / 2.0,
         (template.bounding_box.max.z - template.bounding_box.min.z) / 2.0,
     );
-    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0;
+    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template");
+    log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
 
     // Build the ship entity spawn command.
-    let collision_shape = create_collision_shape(&template.collision_shape);
+    let collision_shape = create_collision_shape(&template.collision_shape, scale);
 
     let ship_entity = commands
         .spawn((
@@ -163,7 +170,7 @@ fn spawn_player_ship(
         ))
         .id();
 
-    // Spawn cameras for each available camera definition.
+    // Spawn cameras for each available camera definition, scaled by the entity scale.
     for (name, camera) in [
         ("cockpit", &template.cameras.cockpit),
         ("chase", &template.cameras.chase),
@@ -175,8 +182,9 @@ fn spawn_player_ship(
         ("bottom", &template.cameras.bottom),
     ] {
         if camera.available {
-            let position = Vec3::new(camera.position.x, camera.position.y, camera.position.z);
-            let target = Vec3::new(camera.target.x, camera.target.y, camera.target.z);
+            let position =
+                Vec3::new(camera.position.x, camera.position.y, camera.position.z) * scale;
+            let target = Vec3::new(camera.target.x, camera.target.y, camera.target.z) * scale;
             commands.entity(ship_entity).with_children(|parent| {
                 let _camera_entity = parent.spawn((
                     Transform::from_translation(position).looking_at(target, Vec3::Y),
@@ -191,12 +199,12 @@ fn spawn_player_ship(
     }
 
     // Store player ship ID and chase camera offset for camera tracking.
-    // Use the chase camera's position and target to compute the offset.
+    // Use the chase camera's position and target to compute the offset, scaled.
     let chase_offset = Vec3::new(
         template.cameras.chase.position.x,
         template.cameras.chase.position.y,
         template.cameras.chase.position.z,
-    );
+    ) * scale;
     commands.insert_resource(PlayerShipEntity(ship_entity));
     commands.insert_resource(ChaseCameraOffset(chase_offset));
 
@@ -249,18 +257,21 @@ fn spawn_static_ship(
     // Queue glTF mesh load.
     let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
 
-    // Compute debug axes length from the bounding box in the template JSON.
+    // Extract uniform scale from event (use max of x, y, z for uniform scaling).
+    let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
+
+    // Compute debug axes length from the bounding box in the template JSON, scaled.
     let half_extent = Vec3::new(
         (template.bounding_box.max.x - template.bounding_box.min.x) / 2.0,
         (template.bounding_box.max.y - template.bounding_box.min.y) / 2.0,
         (template.bounding_box.max.z - template.bounding_box.min.z) / 2.0,
     );
-    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0;
+    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!("spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template");
+    log::debug!("spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
 
     // Build the ship entity spawn command.
-    let collision_shape = create_collision_shape(&template.collision_shape);
+    let collision_shape = create_collision_shape(&template.collision_shape, scale);
 
     commands.spawn((
         Transform {

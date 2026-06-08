@@ -1,4 +1,5 @@
 {
     "show_axis_indicators": false,
-    "axis_indicator_entities": []
+    "axis_indicator_entities": [],
+    "show_collision_shapes": false
 }

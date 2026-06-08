@@ -15,4 +15,6 @@ For license text, see the LICENSE file at the repository root.
 - **License:** CC Attribution 4.0 (CC BY 4.0)
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/ships/space-fighter-comrade1280/mesh.glb`
-- **Modifications:** *None*
+- **Modifications:** 
+  - Mesh rotated 180° around Y axis to align ship's nose with -Z (ADR-0006 coordinate convention). Original asset had +Z as forward.
+  - Mesh scaled by factor of 0.05 (from ~300m to ~15m) to match realistic fighter size.

@@ -3,7 +3,7 @@
   "name": "Sector 3.26 — Development Default",
   "entities": [
     {
-      "template": "ships/debug-ship-capsule",
+      "template": "ships/space-fighter-comrade1280",
       "id": "player_ship",
       "player_controlled": true,
       "position": {
@@ -21,6 +21,15 @@
         "x": 1.0,
         "y": 1.0,
         "z": 1.0
+      }
+    },
+    {
+      "template": "ships/space-fighter-comrade1280",
+      "id": "ship_1",
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -25.0
       }
     },
     {

@@ -41,6 +41,9 @@ pub struct ShipCollisionShape {
     pub radius: Option<PhysicalQuantity>,
     /// Half-extents for box shapes (metres).
     pub half_extents: Option<Vec3Json>,
+    /// Offset of the collision shape center from the entity origin in metres.
+    /// Default (0,0,0) from schema. Use this to align collision shape with visual mesh.
+    pub offset: Option<Vec3Json>,
 }
 
 /// Deserialized player-controlled ship template JSON.
