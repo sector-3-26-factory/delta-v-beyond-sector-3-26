@@ -74,6 +74,10 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
 /// Supports sphere and box shapes. Panics on unknown shape types per ADR-0013.
 #[allow(clippy::expect_used, clippy::panic)]
 fn create_collision_shape(shape: &ShipCollisionShape, scale: f32) -> CollisionShape {
+    let offset = shape
+        .offset
+        .as_ref()
+        .map_or(Vec3::ZERO, |o| Vec3::new(o.x, o.y, o.z) * scale);
     match shape.shape_type.as_str() {
         "sphere" => {
             let radius = shape
@@ -81,7 +85,7 @@ fn create_collision_shape(shape: &ShipCollisionShape, scale: f32) -> CollisionSh
                 .as_ref()
                 .expect("sphere collision_shape must have radius")
                 .value;
-            CollisionShape::sphere(radius * scale)
+            CollisionShape::sphere(radius * scale, offset)
         }
         "box" => {
             let he = shape
@@ -89,7 +93,7 @@ fn create_collision_shape(shape: &ShipCollisionShape, scale: f32) -> CollisionSh
                 .as_ref()
                 .expect("box collision_shape must have half_extents");
             let half_extents = Vec3::new(he.x, he.y, he.z) * scale;
-            CollisionShape::box_shape(half_extents)
+            CollisionShape::box_shape(half_extents, offset)
         }
         _ => panic!("unsupported collision shape type: {}", shape.shape_type),
     }

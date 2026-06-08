@@ -18,11 +18,10 @@
         }
     },
     "collision_shape": {
-        "type": "box",
-        "half_extents": {
-            "x": 0.5,
-            "y": 0.5,
-            "z": 0.5
+        "type": "sphere",
+        "radius": {
+            "value": 0.5,
+            "unit": "m"
         }
     },
     "propulsion": {

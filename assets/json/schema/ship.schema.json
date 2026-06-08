@@ -93,6 +93,15 @@
                 "half_extents": {
                     "description": "Half-extents of the box (for box shape type).",
                     "$ref": "#/$defs/vec3"
+                },
+                "offset": {
+                    "description": "Offset of the collision shape center from the entity origin in metres. Default (0,0,0) centers the collision shape on the entity. Use this to align the collision shape with the visual mesh when the mesh is not centered at the entity origin.",
+                    "$ref": "#/$defs/vec3",
+                    "default": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                    }
                 }
             }
         }

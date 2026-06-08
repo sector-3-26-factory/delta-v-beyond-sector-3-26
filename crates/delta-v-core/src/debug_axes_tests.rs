@@ -51,6 +51,7 @@ fn test_mark_debug_axes_decision_show_false_blocks_all() {
     let config = DebugConfig {
         show_axis_indicators: false,
         axis_indicator_entities: vec!["ship_1".to_string()],
+        show_collision_shapes: false,
     };
 
     assert!(!config.should_show_axes_for("ship_1"));
@@ -65,6 +66,7 @@ fn test_mark_debug_axes_decision_show_true_empty_list() {
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec![],
+        show_collision_shapes: false,
     };
 
     assert!(config.should_show_axes_for("ship_1"));
@@ -79,6 +81,7 @@ fn test_mark_debug_axes_decision_show_true_selective() {
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec!["ship_1".to_string(), "station_main".to_string()],
+        show_collision_shapes: false,
     };
 
     assert!(config.should_show_axes_for("ship_1"));
@@ -94,16 +97,19 @@ fn test_spawn_debug_axes_uses_config_decision() {
     let config_disabled = DebugConfig {
         show_axis_indicators: false,
         axis_indicator_entities: vec![],
+        show_collision_shapes: false,
     };
 
     let config_enabled_all = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec![],
+        show_collision_shapes: false,
     };
 
     let config_enabled_selective = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec!["ship_1".to_string()],
+        show_collision_shapes: false,
     };
 
     // Test entity ID: "ship_1"

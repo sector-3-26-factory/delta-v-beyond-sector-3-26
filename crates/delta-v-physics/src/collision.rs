@@ -32,6 +32,8 @@ use bevy::prelude::*;
 pub struct CollisionShape {
     /// The shape type and its parameters.
     pub shape_type: CollisionShapeType,
+    /// Offset of the collision shape center from the entity origin in metres.
+    pub offset: Vec3,
 }
 
 /// Supported collision shape types.
@@ -54,17 +56,19 @@ pub enum CollisionShapeType {
 impl CollisionShape {
     /// Creates a new sphere collision shape.
     #[must_use]
-    pub const fn sphere(radius: f32) -> Self {
+    pub const fn sphere(radius: f32, offset: Vec3) -> Self {
         Self {
             shape_type: CollisionShapeType::Sphere { radius },
+            offset,
         }
     }
 
     /// Creates a new box collision shape.
     #[must_use]
-    pub const fn box_shape(half_extents: Vec3) -> Self {
+    pub const fn box_shape(half_extents: Vec3, offset: Vec3) -> Self {
         Self {
             shape_type: CollisionShapeType::Box { half_extents },
+            offset,
         }
     }
 }
@@ -123,10 +127,12 @@ pub struct CollisionDetected {
     pub other: Entity,
     /// The point of impact in world coordinates.
     pub point: Vec3,
-    /// The normal at the point of impact.
+    /// The normal at the point of impact (points from target to other).
     pub normal: Vec3,
-    /// The relative velocity at impact.
+    /// The relative velocity at impact (other - target).
     pub relative_velocity: Vec3,
+    /// The penetration depth (how much the shapes overlap).
+    pub penetration_depth: f32,
 }
 
 /// Marker component for static (non-moving) collision objects.

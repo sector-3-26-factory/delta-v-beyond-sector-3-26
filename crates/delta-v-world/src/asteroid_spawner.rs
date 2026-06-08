@@ -164,7 +164,7 @@ fn get_collision_shape_from_template(template: &Value) -> CollisionShape {
                 .and_then(serde_json::Value::as_f64)
                 .map(|v| v as f32)
                 .expect("sphere collision_shape must have radius.value");
-            CollisionShape::sphere(radius)
+            CollisionShape::sphere(radius, Vec3::ZERO)
         }
         _ => panic!("unsupported collision shape type: {shape_type}"),
     }

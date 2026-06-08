@@ -17,8 +17,8 @@ mod debug_config_tests;
 
 /// Debug configuration loaded from `debug.json`.
 ///
-/// Controls debug features like axis indicators and profiling.
-/// Loaded as a resource during `LoadingDefaults` state.
+/// Controls debug features like axis indicators, collision shape visualization,
+/// and profiling. Loaded as a resource during `LoadingDefaults` state.
 /// Supports hot-reload in dev builds (ADR-0035).
 #[derive(Debug, Deserialize, Clone, Resource)]
 pub struct DebugConfig {
@@ -31,6 +31,11 @@ pub struct DebugConfig {
     /// If empty and `show_axis_indicators` is true, axes are shown for all entities.
     /// If non-empty, axes are shown ONLY for these IDs (selective debugging).
     pub axis_indicator_entities: Vec<String>,
+
+    /// Master switch for collision shape visualization.
+    /// When true, renders wireframe boxes/spheres around entities with collision
+    /// shapes. Green = no collision, red = collision detected this frame.
+    pub show_collision_shapes: bool,
 }
 
 impl DebugConfig {
