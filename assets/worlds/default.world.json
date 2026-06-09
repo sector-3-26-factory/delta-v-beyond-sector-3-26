@@ -51,7 +51,7 @@
       }
     },
     {
-      "template": "asteroids/asteroid-small",
+      "template": "asteroids/asteroid-low-poly-pasquill",
       "id": "asteroid_3",
       "position": {
         "x": 200.0,
@@ -60,7 +60,7 @@
       }
     },
     {
-      "template": "asteroids/asteroid-small",
+      "template": "asteroids/asteroid-low-poly-pasquill",
       "id": "asteroid_4",
       "position": {
         "x": -100.0,

@@ -144,17 +144,64 @@ Create the directory if it does not exist.
 
 ## Step 5 — Analyze the Mesh (glTF Inspection)
 
-Run the following pure-Python analysis script to extract mesh metadata. This uses
-the proven technique of parsing the binary GLB header, extracting the JSON chunk,
-and computing world-space transforms by walking the node hierarchy.
+> **⚠️ CRITICAL: Always apply node hierarchy transforms to vertex data.**
+>
+> Raw accessor `min`/`max` values describe bounds in the **original export coordinate
+> space** and do NOT account for transforms applied by the glTF node hierarchy. Many
+> assets (especially from Sketchfab) contain node-level scale/rotation matrices that
+> significantly change the final world-space size. For example, a Sketchfab export with
+> a 0.01 (cm→m) FBX import scale combined with a 12.54 model scale produces a net 0.125
+> scale factor — raw accessor bounds would overestimate size by ~8×.
+>
+> **You MUST:**
+> 1. Walk the node hierarchy from each mesh node up to the root
+> 2. Accumulate the combined world transform (multiply matrices column-major)
+> 3. Transform actual vertex positions (or all 8 bounding box corners) through the world transform
+> 4. Use the resulting world-space bounds for the template JSON
+>
+> **NEVER use raw accessor min/max as the bounding box without verifying that no node
+> transforms affect the mesh.**
+
+Run the following pure-Python analysis script to extract world-space mesh metadata.
+It reads the binary GLB, walks the node hierarchy, computes world transforms, and
+transforms actual vertex positions to get correct bounds.
 
 ```python
 #!/usr/bin/env python3
-"""Analyze a binary glTF (.glb) file: bounding box extraction."""
+"""Analyze a binary glTF (.glb) file: world-space bounding box extraction.
 
-import struct, json, sys
+Walks the node hierarchy, computes combined world transforms, and transforms
+actual vertex positions to produce correct world-space bounds.
+"""
+
+import struct, json, sys, math
+
+
+def mat4_mul_mat4(a, b):
+    """Multiply two 4x4 matrices (column-major)."""
+    result = [0] * 16
+    for col in range(4):
+        for row in range(4):
+            s = 0
+            for k in range(4):
+                s += a[k * 4 + row] * b[col * 4 + k]
+            result[col * 4 + row] = s
+    return result
+
+
+def mat4_mul_vec4(m, v):
+    """Multiply 4x4 matrix (column-major) by vec4."""
+    return [
+        m[0] * v[0] + m[1] * v[1] + m[2] * v[2] + m[3] * v[3],
+        m[4] * v[0] + m[5] * v[1] + m[6] * v[2] + m[7] * v[3],
+        m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11] * v[3],
+        m[12] * v[0] + m[13] * v[1] + m[14] * v[2] + m[15] * v[3],
+    ]
+
 
 def analyze_glb(filepath):
+    IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+
     with open(filepath, 'rb') as f:
         magic = f.read(4)
         assert magic == b'glTF', f"Not a GLB file: {magic}"
@@ -164,18 +211,91 @@ def analyze_glb(filepath):
         chunk_type = struct.unpack('<I', f.read(4))[0]
         json_data = f.read(chunk_length)
         gltf = json.loads(json_data)
+        # Read binary chunk(s)
+        bin_data = b''
+        while True:
+            header = f.read(8)
+            if len(header) < 8:
+                break
+            c_len = struct.unpack('<I', header[:4])[0]
+            c_type = struct.unpack('<I', header[4:])[0]
+            bin_data += f.read(c_len)
 
-    # Get overall bounds from accessors
+    nodes = gltf.get('nodes', [])
+
+    # Build parent map
+    parent_map = {}
+    for i, node in enumerate(nodes):
+        for child_idx in node.get('children', []):
+            parent_map[child_idx] = i
+
+    # Compute world transform for each node
+    world_transforms = [None] * len(nodes)
+
+    def get_world_transform(node_idx):
+        if world_transforms[node_idx] is not None:
+            return world_transforms[node_idx]
+        node = nodes[node_idx]
+        local = node.get('matrix', IDENTITY)
+        parent_idx = parent_map.get(node_idx)
+        if parent_idx is not None:
+            parent_world = get_world_transform(parent_idx)
+            world_transforms[node_idx] = mat4_mul_mat4(parent_world, local)
+        else:
+            world_transforms[node_idx] = local
+        return world_transforms[node_idx]
+
+    for i in range(len(nodes)):
+        get_world_transform(i)
+
+    # Find mesh nodes and their world transforms
+    # Also collect all POSITION accessors with their world transforms
     accessors = gltf.get('accessors', [])
-    fmin = [float('inf')]*3
-    fmax = [float('-inf')]*3
-    for acc in accessors:
-        if 'min' in acc and 'max' in acc and acc.get('type') == 'VEC3':
-            for j in range(3):
-                fmin[j] = min(fmin[j], acc['min'][j])
-                fmax[j] = max(fmax[j], acc['max'][j])
-    extent = [fmax[j]-fmin[j] for j in range(3)]
-    return {'min': fmin, 'max': fmax, 'extent': extent}
+    buffer_views = gltf.get('bufferViews', [])
+
+    world_min = [float('inf')] * 3
+    world_max = [float('-inf')] * 3
+    vertices_transformed = 0
+
+    for node_idx, node in enumerate(nodes):
+        mesh_idx = node.get('mesh')
+        if mesh_idx is None:
+            continue
+        mesh = gltf['meshes'][mesh_idx]
+        wt = world_transforms[node_idx]
+
+        for prim in mesh.get('primitives', []):
+            pos_idx = prim.get('attributes', {}).get('POSITION')
+            if pos_idx is None:
+                continue
+            acc = accessors[pos_idx]
+            if acc.get('type') != 'VEC3' or acc.get('componentType') != 5126:
+                continue
+
+            bv = buffer_views[acc['bufferView']]
+            base = bv['byteOffset'] + acc.get('byteOffset', 0)
+            count = acc['count']
+
+            for v in range(count):
+                off = base + v * 12
+                x, y, z = struct.unpack_from('<fff', bin_data, off)
+                wx, wy, wz, _ = mat4_mul_vec4(wt, [x, y, z, 1.0])
+                world_min[0] = min(world_min[0], wx)
+                world_min[1] = min(world_min[1], wy)
+                world_min[2] = min(world_min[2], wz)
+                world_max[0] = max(world_max[0], wx)
+                world_max[1] = max(world_max[1], wy)
+                world_max[2] = max(world_max[2], wz)
+                vertices_transformed += 1
+
+    extent = [world_max[j] - world_min[j] for j in range(3)]
+    return {
+        'min': world_min,
+        'max': world_max,
+        'extent': extent,
+        'vertices_transformed': vertices_transformed,
+    }
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -191,7 +311,9 @@ Save this script to a temporary path (e.g., `/tmp/analyze_glb.py`) and run:
 python3 /tmp/analyze_glb.py assets/templates/<type>/<asset-name>/mesh.glb
 ```
 
-Capture the output. The key result is the **bounding box** (min/max in glTF local space, metres).
+Capture the output. The key result is the **world-space bounding box** (min/max in metres, after all node transforms).
+
+**Sanity check:** Compare the world-space bounds against the raw accessor bounds. If the node hierarchy contains non-identity scale transforms, the world-space bounds will differ significantly from the raw accessor bounds. Always use the world-space bounds for the template JSON.
 
 ---
 

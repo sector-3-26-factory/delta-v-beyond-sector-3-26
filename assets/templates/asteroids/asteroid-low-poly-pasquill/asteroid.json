@@ -1,0 +1,26 @@
+{
+    "entity_type": "asteroid",
+    "mass": {
+        "value": 1881330000,
+        "unit": "kg"
+    },
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 15.610337,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": -13.050750,
+            "y": -12.566806,
+            "z": -11.467724
+        },
+        "max": {
+            "x": 16.169923,
+            "y": 12.062529,
+            "z": 9.431745
+        }
+    }
+}
