@@ -35,4 +35,7 @@ For license text, see the LICENSE file at the repository root.
 - **License:** CC Attribution 4.0 (CC BY 4.0)
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/asteroids/daphne-planetoid-sebastiansosnowski/mesh.glb`
-- **Modifications:** *None*
+- **Modifications:**
+  No artwork changed. Just technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, inverted UV Y-scale, and applied all transforms
+

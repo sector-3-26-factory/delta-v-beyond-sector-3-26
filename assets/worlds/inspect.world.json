@@ -13,12 +13,12 @@
             }
         },
         {
-            "template": "asteroids/asteroid-low-poly-pasquill",
+            "template": "asteroids/daphne-planetoid-sebastiansosnowski",
             "id": "inspect_item",
             "position": {
                 "x": 0.0,
                 "y": 0.0,
-                "z": -100.0
+                "z": -500.0
             }
         },
         {
@@ -36,9 +36,9 @@
                 "w": 1.0
             },
             "scale": {
-                "x": 7.0,
-                "y": 7.0,
-                "z": 7.0
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
             }
         }
     ]
