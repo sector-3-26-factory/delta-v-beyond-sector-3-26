@@ -37,5 +37,74 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/templates/asteroids/daphne-planetoid-sebastiansosnowski/mesh.glb`
 - **Modifications:**
   No artwork changed. Just technical optimizations to get the mesh.glb loaded.
-  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, inverted UV Y-scale, and applied all transforms
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, inverted UV Y-scale and applied all transforms
 
+### Archimedes (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-archimedes/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Cargo-1 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-cargo-1/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Asteroid (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/asteroids/meshy-asteroid-2/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled and applied all transforms
+
+### Asteroid 1 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/asteroids/meshy-asteroid-1/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled and applied all transforms
+
+### Sci-Fi Spaceship 400 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-sci-fi-spaceship-0400/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Sci-Fi Spaceship 2033 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-sci-fi-spaceship-2033/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Organic 1 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-organic-1/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms

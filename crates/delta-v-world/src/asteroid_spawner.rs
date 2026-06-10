@@ -169,6 +169,33 @@ fn get_collision_shape_from_template(template: &Value) -> CollisionShape {
                 .expect("sphere collision_shape must have radius.value");
             CollisionShape::sphere(radius, Vec3::ZERO)
         }
+        "box" => {
+            let half_extents = shape
+                .get("half_extents")
+                .and_then(|he| {
+                    let x = he.get("x").and_then(serde_json::Value::as_f64)? as f32;
+                    let y = he.get("y").and_then(serde_json::Value::as_f64)? as f32;
+                    let z = he.get("z").and_then(serde_json::Value::as_f64)? as f32;
+                    Some(Vec3::new(x, y, z))
+                })
+                .expect("box collision_shape must have half_extents.x/y/z");
+            let offset = shape.get("offset").map_or(Vec3::ZERO, |o| {
+                let x = o
+                    .get("x")
+                    .and_then(serde_json::Value::as_f64)
+                    .unwrap_or(0.0) as f32;
+                let y = o
+                    .get("y")
+                    .and_then(serde_json::Value::as_f64)
+                    .unwrap_or(0.0) as f32;
+                let z = o
+                    .get("z")
+                    .and_then(serde_json::Value::as_f64)
+                    .unwrap_or(0.0) as f32;
+                Vec3::new(x, y, z)
+            });
+            CollisionShape::box_shape(half_extents, offset)
+        }
         _ => panic!("unsupported collision shape type: {shape_type}"),
     }
 }

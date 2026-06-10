@@ -13,12 +13,17 @@
             }
         },
         {
-            "template": "asteroids/daphne-planetoid-sebastiansosnowski",
+            "template": "asteroids/meshy-asteroid-1",
             "id": "inspect_item",
             "position": {
                 "x": 0.0,
                 "y": 0.0,
-                "z": -500.0
+                "z": -30.0
+            },
+            "scale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
             }
         },
         {
