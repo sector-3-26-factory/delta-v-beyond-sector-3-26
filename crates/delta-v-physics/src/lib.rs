@@ -42,7 +42,7 @@ pub mod rigid_body;
 pub mod systems;
 
 pub use collision::{
-    CollisionDetected, CollisionLayers, CollisionShape, CollisionShapeType, DynamicBody, StaticBody,
+    CollisionDetected, CollisionShape, CollisionShapeType, DynamicBody, StaticBody,
 };
 pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
 pub use rigid_body::{MassSource, RigidBody};

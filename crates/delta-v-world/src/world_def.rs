@@ -11,6 +11,8 @@
 use serde::Deserialize;
 use serde_json::Value;
 
+use delta_v_types::{QuatJson, Vec3Json};
+
 /// Top-level world definition loaded from `*.world.json`.
 ///
 /// Per ADR-0038 (entity template system), the world definition contains
@@ -62,28 +64,4 @@ pub struct EntitySpawn {
     /// Not present in JSON; filled by `delta-v-world` loader.
     #[serde(skip)]
     pub template_data: Option<Value>,
-}
-
-/// A 3-component position in metres.
-#[derive(Debug, Deserialize)]
-pub struct Vec3Json {
-    /// X coordinate in metres.
-    pub x: f32,
-    /// Y coordinate in metres.
-    pub y: f32,
-    /// Z coordinate in metres.
-    pub z: f32,
-}
-
-/// A 4-component unit quaternion (x, y, z, w).
-#[derive(Debug, Deserialize)]
-pub struct QuatJson {
-    /// X component.
-    pub x: f32,
-    /// Y component.
-    pub y: f32,
-    /// Z component.
-    pub z: f32,
-    /// W component (scalar).
-    pub w: f32,
 }

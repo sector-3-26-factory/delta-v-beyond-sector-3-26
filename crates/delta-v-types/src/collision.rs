@@ -10,6 +10,51 @@ use serde::Deserialize;
 use crate::physics::PhysicalQuantity;
 use crate::spatial::Vec3Json;
 
+/// Collision layers for categorizing entities.
+///
+/// Per avian3d conventions, we use a u32 bitmask where each bit
+/// represents a layer. Entities on different layers don't collide
+/// unless their masks overlap.
+#[derive(Debug, Clone, Copy)]
+pub struct CollisionLayers {
+    /// Which layers this entity belongs to.
+    pub layers: u32,
+    /// Which layers this entity can collide with.
+    pub mask: u32,
+}
+
+impl CollisionLayers {
+    /// Creates new collision layers.
+    #[must_use]
+    pub const fn new(layers: u32, mask: u32) -> Self {
+        Self { layers, mask }
+    }
+}
+
+/// Layer constants for collision categories.
+#[allow(clippy::mixed_attributes_style)]
+pub mod layers {
+    //! Collision layer constants.
+
+    /// Layer for ships (player and NPCs).
+    ///
+    /// Ships are on layer 1 and can collide with asteroids (`ASTEROID_LAYER`).
+    pub const SHIP_LAYER: u32 = 1;
+
+    /// Layer for asteroids (static obstacles).
+    ///
+    /// Asteroids are on layer 2 and can collide with ships (`SHIP_LAYER`).
+    pub const ASTEROID_LAYER: u32 = 2;
+
+    /// Collision layers for ships: on `SHIP_LAYER`, can collide with `ASTEROID_LAYER`.
+    pub const SHIP: super::CollisionLayers =
+        super::CollisionLayers::new(SHIP_LAYER, ASTEROID_LAYER);
+
+    /// Collision layers for asteroids: on `ASTEROID_LAYER`, can collide with `SHIP_LAYER`.
+    pub const ASTEROID: super::CollisionLayers =
+        super::CollisionLayers::new(ASTEROID_LAYER, SHIP_LAYER);
+}
+
 /// Collision shape deserialized from template JSON.
 ///
 /// This is the single JSON collision shape type for ALL entity types

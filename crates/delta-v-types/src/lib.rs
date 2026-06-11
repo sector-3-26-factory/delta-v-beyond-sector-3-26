@@ -32,7 +32,7 @@ pub mod physics;
 pub mod spatial;
 
 // Re-exports for convenience
-pub use collision::CollisionShapeJson;
+pub use collision::{CollisionLayers, CollisionShapeJson};
 pub use ids::{EntityId, TemplatePath};
 pub use physics::PhysicalQuantity;
 pub use spatial::{BoundingBox, QuatJson, Vec3Json};

@@ -10,7 +10,7 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::camera::ShipCamerasTemplate;
+use delta_v_core::camera::ShipCamerasTemplate;
 use delta_v_types::{BoundingBox, PhysicalQuantity};
 
 /// Base deserialized ship template JSON.

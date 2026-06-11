@@ -16,15 +16,16 @@
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipPropulsionConfig, SpawnEntity, StaticShipTemplate,
+    ChaseCameraOffset, DebugAxesEligible, FlightAssist, PlayerShipEntity, SpawnEntity,
 };
 use delta_v_physics::RigidBody;
 use delta_v_spawn::collision::shape_from_json;
 
+use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
+
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
-pub(crate) struct PendingShipMesh {
+pub struct PendingShipMesh {
     /// Handle to the glTF asset being loaded.
     gltf_handle: Handle<Gltf>,
 }
@@ -279,82 +280,4 @@ fn spawn_static_ship(
         mesh_path,
         template.mass.value,
     );
-}
-
-/// Attaches loaded glTF meshes to pending ship entities.
-///
-/// Once the glTF asset finishes loading, this system extracts the first scene
-/// from the glTF and attaches it to the ship entity.
-///
-/// Debug axes are already configured with the correct length from the template JSON
-/// (per ADR-0014: bounding box is the single source of truth).
-///
-/// Note: We only insert the `Handle<Scene>` to avoid overwriting the entity's
-/// existing `Transform` and `GlobalTransform` that were set during spawning.
-#[allow(clippy::needless_pass_by_value)]
-pub(crate) fn attach_ship_meshes(
-    mut commands: Commands<'_, '_>,
-    gltf_assets: Res<'_, Assets<Gltf>>,
-    query: Query<
-        '_,
-        '_,
-        (
-            Entity,
-            &PendingShipMesh,
-            &DebugAxesEligible,
-            Option<&DebugAxes>,
-        ),
-    >,
-) {
-    for (entity, pending, debug_eligible, _debug_axes) in query.iter() {
-        if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
-            // Check if the glTF has scenes
-            if !gltf.scenes.is_empty() {
-                commands.entity(entity).with_children(|parent| {
-                    // Loop over ALL scenes in the GLTF file
-                    for scene_handle in &gltf.scenes {
-                        // In Bevy 0.14, use SceneBundle to spawn a scene as child
-                        parent.spawn(SceneBundle {
-                            scene: scene_handle.clone(),
-                            ..Default::default()
-                        });
-                    }
-                });
-
-                log::debug!(
-                    "Attached ALL glTF scenes to ship entity (debug axes from template: entity_id={}, axis_length={:.1})",
-                    debug_eligible.entity_id,
-                    debug_eligible.axis_length
-                );
-
-                // Remove the marker now that scene is attached
-                commands.entity(entity).remove::<PendingShipMesh>();
-            }
-        }
-    }
-}
-
-/// Spawns lighting for the 3-D scene.
-///
-/// Runs once per world load. Creates:
-/// - A directional light simulating a distant sun.
-/// - Ambient light for general illumination.
-pub fn setup_scene_lighting(mut commands: Commands<'_, '_>) {
-    // Directional light (sun-like): rotated to create interesting shadows.
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            illuminance: 10_000.0,
-            ..default()
-        },
-        transform: Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.8, 0.5, 0.0)),
-        ..default()
-    });
-
-    // Ambient light for general scene fill.
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 200.0,
-    });
-
-    log::info!("scene lighting initialized");
 }

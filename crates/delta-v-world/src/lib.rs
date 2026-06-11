@@ -58,7 +58,7 @@ pub use world_def::WorldDef;
 use bevy::prelude::*;
 use delta_v_assets::template::{load_asteroid, load_player_controlled_ship, load_ship};
 use delta_v_core::{AppState, WorldSpawnSet};
-use spawn::{attach_asteroid_meshes, spawn_asteroid_system};
+use spawn::spawn_asteroid_system;
 
 use crate::loader::load_world;
 use world_def::EntitySpawn;
@@ -83,9 +83,11 @@ impl Plugin for WorldPlugin {
                     .run_if(in_state(AppState::SpawningEntities)),
             )
             // Attach asteroid meshes in InGame once glTF assets are loaded.
+            // Uses the generic attach_meshes system from delta-v-spawn (ADR-0047).
             .add_systems(
                 Update,
-                attach_asteroid_meshes.run_if(in_state(AppState::InGame)),
+                delta_v_spawn::mesh_attachment::attach_meshes::<spawn::PendingAsteroidMesh>
+                    .run_if(in_state(AppState::InGame)),
             );
     }
 }

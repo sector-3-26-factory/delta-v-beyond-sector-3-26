@@ -55,9 +55,6 @@ pub mod input;
 pub mod spawn;
 pub mod state;
 
-// Flat modules (kept for backward compatibility, to be migrated)
-pub mod ship_templates;
-
 // Re-exports from subdirectories
 pub use boundary::{
     check_sector_boundary_system, BoundaryBehavior, SectorBoundary, SectorBoundaryResource,
@@ -77,10 +74,6 @@ pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
 pub use input::{ActiveActions, InputSet, KeybindingsResource, LogicalAction};
-pub use ship_templates::{
-    MainThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate,
-    ShipTemplate, StaticShipTemplate, ThrustCommand, TorqueCommand,
-};
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;
 

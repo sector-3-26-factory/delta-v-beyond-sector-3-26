@@ -2,13 +2,30 @@
 
 //! Scene lighting setup utilities.
 
-use bevy::prelude::{Commands, DirectionalLight};
+use bevy::prelude::{
+    default, AmbientLight, Color, Commands, DirectionalLight, DirectionalLightBundle, EulerRot,
+    Quat, Transform,
+};
 
 /// Sets up scene lighting (directional + ambient). Called once per world load.
+///
+/// Creates:
+/// - A directional light simulating a distant sun, rotated to create interesting shadows.
+/// - Ambient light for general scene fill.
 pub fn setup_scene_lighting(commands: &mut Commands<'_, '_>) {
-    // Main directional light
-    commands.spawn((DirectionalLight {
-        illuminance: 15000.0,
-        ..Default::default()
-    },));
+    // Directional light (sun-like): rotated to create interesting shadows.
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            illuminance: 10_000.0,
+            ..default()
+        },
+        transform: Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.8, 0.5, 0.0)),
+        ..default()
+    });
+
+    // Ambient light for general scene fill.
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 200.0,
+    });
 }

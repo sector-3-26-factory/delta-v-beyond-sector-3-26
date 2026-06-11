@@ -14,8 +14,11 @@ use std::collections::BTreeSet;
 use bevy::prelude::*;
 
 pub mod keybindings_resource;
+/// Input system set ordering (`InputSet`).
+pub mod sets;
 
 pub use keybindings_resource::{ActionBindings, KeybindingsResource};
+pub use sets::InputSet;
 
 // ---------------------------------------------------------------------------
 // Logical action enum
@@ -115,19 +118,6 @@ impl LogicalAction {
 // resource starts empty and is populated each tick; it is not a config type.
 #[derive(Resource, Default, Debug)]
 pub struct ActiveActions(pub BTreeSet<LogicalAction>);
-
-// ---------------------------------------------------------------------------
-// System sets
-// ---------------------------------------------------------------------------
-
-/// System set ordering for input systems that run in `FixedUpdate`.
-#[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum InputSet {
-    /// Translate raw key events to [`LogicalAction`]s.
-    Translate,
-    /// Log the active actions at DEBUG level (M1 proof-of-pipeline).
-    Log,
-}
 
 // ---------------------------------------------------------------------------
 // Systems
