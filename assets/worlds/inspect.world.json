@@ -13,12 +13,12 @@
             }
         },
         {
-            "template": "asteroids/meshy-asteroid-1",
+            "template": "asteroids/meshy-asteroid-2",
             "id": "inspect_item",
             "position": {
                 "x": 0.0,
                 "y": 0.0,
-                "z": -30.0
+                "z": -1600.0
             },
             "scale": {
                 "x": 1.0,

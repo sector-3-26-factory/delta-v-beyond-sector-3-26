@@ -7,8 +7,7 @@ Enhanced GLB Mesh Processing Pipeline for Bevy Engine (v0.14)
 This script performs the following corrections on glTF/glb 3D models:
 1. Geometry Analysis & Transform Baking
 2. Texture Transcoding (JPEG to PNG)
-3. PBR Material Correction (Metallic/Roughness)
-4. Tangent Generation for Normal Shader
+3. Tangent Generation for Normal Shader
 
 Technical Approach:
 - Uses pygltflib for loading and material manipulation
@@ -168,20 +167,6 @@ def transcode_textures_to_png(gltf: GLTF2) -> list:
     return processed_images
 
 
-def correct_pbr_materials(gltf: GLTF2) -> None:
-    """Correct metallic and roughness factors."""
-    for mat in gltf.materials:
-        if mat.pbrMetallicRoughness:
-            pbr = mat.pbrMetallicRoughness
-            if pbr.metallicFactor == 1.0:
-                pbr.metallicFactor = 0.0
-                print(f"  Set metallicFactor to 0.0")
-            
-            if pbr.roughnessFactor == 1.0:
-                pbr.roughnessFactor = 0.5
-                print(f"  Set roughnessFactor to 0.5")
-
-
 def generate_tangents(gltf: GLTF2, scene: trimesh.Scene) -> np.ndarray:
     """Generate tangent vectors for meshes with normal textures."""
     geom = list(scene.geometry.values())[0]
@@ -234,19 +219,15 @@ def process_mesh(input_path: str, output_path: str) -> int:
     processed_images = [(img_data, mime_type) for img_data, mime_type in processed_images if img_data is not None]
     print(f"  Processed {len(processed_images)} texture(s)")
     
-    # Step 3: Correct PBR materials
-    print("\n=== Step 3: PBR Material Correction ===")
-    correct_pbr_materials(gltf)
-    
-    # Step 4: Generate tangents
-    print("\n=== Step 4: Tangent Generation ===")
+    # Step 3: Tangent Generation (PBR Material Correction removed for comparison)
+    print("\n=== Step 3: Tangent Generation ===")
     tangents = generate_tangents(gltf, scene)
     if tangents is None:
         tangents = np.zeros((len(vertices), 4), dtype=np.float32)
         tangents[:, 3] = 1.0
     
-    # Step 5: Build new GLTF structure using pygltflib
-    print("\n=== Step 5: Building GLTF Structure ===")
+    # Step 4: Build new GLTF structure using pygltflib
+    print("\n=== Step 4: Building GLTF Structure ===")
     
     # Create new GLTF2 object
     new_gltf = GLTF2()
@@ -327,7 +308,7 @@ def process_mesh(input_path: str, output_path: str) -> int:
         current_offset += len(img_data)
     
     # Material Setup - preserve original texture connections
-    pbr = PbrMetallicRoughness(metallicFactor=0.0, roughnessFactor=0.5)
+    pbr = PbrMetallicRoughness()
     
     # Connect textures: baseColorTexture=0, metallicRoughnessTexture=1
     if len(processed_images) >= 1:

@@ -59,23 +59,13 @@ For license text, see the LICENSE file at the repository root.
 - **Modifications:** Technical optimizations to get the mesh.glb loaded.
   Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
 
-### Asteroid (Meshy AI)
+### Asteroid 2 (Meshy AI)
 
 - **Creator:** [Meshy AI](https://www.meshy.ai)
 - **Source:** Meshy AI texture generation
 - **License:** CC Attribution 4.0 (CC BY 4.0)
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/asteroids/meshy-asteroid-2/mesh.glb`
-- **Modifications:** Technical optimizations to get the mesh.glb loaded.
-  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled and applied all transforms
-
-### Asteroid 1 (Meshy AI)
-
-- **Creator:** [Meshy AI](https://www.meshy.ai)
-- **Source:** Meshy AI texture generation
-- **License:** CC Attribution 4.0 (CC BY 4.0)
-- **License URL:** https://creativecommons.org/licenses/by/4.0/
-- **File:** `assets/templates/asteroids/meshy-asteroid-1/mesh.glb`
 - **Modifications:** Technical optimizations to get the mesh.glb loaded.
   Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled and applied all transforms
 
