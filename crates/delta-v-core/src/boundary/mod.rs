@@ -23,6 +23,11 @@
 
 use bevy::prelude::*;
 
+pub mod systems;
+
+// Re-export the system for convenience
+pub use systems::check_sector_boundary_system;
+
 /// Behavior to apply when an entity crosses a sector boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum BoundaryBehavior {

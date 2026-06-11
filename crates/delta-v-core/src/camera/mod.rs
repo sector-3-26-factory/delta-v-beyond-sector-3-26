@@ -13,6 +13,8 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
+use delta_v_types::Vec3Json;
+
 /// Stores the entity ID of the player-controlled ship.
 ///
 /// Inserted by `ShipsPlugin` when the player ship is spawned.
@@ -73,17 +75,6 @@ pub struct ShipCamerasTemplate {
     pub top: CameraDefinition,
     /// Bottom-up view camera.
     pub bottom: CameraDefinition,
-}
-
-/// A 3-component vector deserialized from JSON `{"x": N, "y": N, "z": N}`.
-#[derive(Debug, Deserialize)]
-pub struct Vec3Json {
-    /// X component in metres.
-    pub x: f32,
-    /// Y component in metres.
-    pub y: f32,
-    /// Z component in metres.
-    pub z: f32,
 }
 
 /// Spawns the 3-D chase camera after the player ship entity exists.

@@ -26,7 +26,7 @@ pub fn spawn_collision_shape_debug(
     mut commands: Commands<'_, '_>,
     mut meshes: ResMut<'_, Assets<Mesh>>,
     mut materials: ResMut<'_, Assets<StandardMaterial>>,
-    debug_config: Res<'_, delta_v_core::debug_config::DebugConfig>,
+    debug_config: Res<'_, delta_v_core::debug::debug_config::DebugConfig>,
     query: Query<
         '_,
         '_,
@@ -87,7 +87,7 @@ pub fn spawn_collision_shape_debug(
 pub fn update_collision_shape_debug_color(
     mut events: EventReader<'_, '_, CollisionDetected>,
     mut materials: ResMut<'_, Assets<StandardMaterial>>,
-    debug_config: Res<'_, delta_v_core::debug_config::DebugConfig>,
+    debug_config: Res<'_, delta_v_core::debug::debug_config::DebugConfig>,
     mesh_query: Query<'_, '_, (&Handle<StandardMaterial>, &Parent), With<CollisionShapeDebugMesh>>,
     aabb_query: Query<'_, '_, (Entity, &Aabb, &GlobalTransform)>,
     collision_debug_query: Query<'_, '_, (Entity, &CollisionShapeDebug)>,

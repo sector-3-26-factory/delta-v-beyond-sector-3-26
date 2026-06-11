@@ -13,7 +13,9 @@ use std::collections::BTreeSet;
 
 use bevy::prelude::*;
 
-use crate::KeybindingsResource;
+pub mod keybindings_resource;
+
+pub use keybindings_resource::{ActionBindings, KeybindingsResource};
 
 // ---------------------------------------------------------------------------
 // Logical action enum

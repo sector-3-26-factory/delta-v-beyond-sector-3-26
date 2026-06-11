@@ -6,7 +6,7 @@
 //! the `show_axis_indicators` master switch and `axis_indicator_entities` filtering.
 //! Per ADR-0021 (testing strategy), unit tests live in sibling `_tests.rs` files.
 
-use crate::debug_config::DebugConfig;
+use crate::debug::debug_config::DebugConfig;
 
 #[test]
 fn test_show_axis_indicators_false_blocks_all() {

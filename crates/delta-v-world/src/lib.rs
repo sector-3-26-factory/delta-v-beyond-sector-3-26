@@ -41,7 +41,6 @@
 
 pub mod asteroid_spawner;
 pub mod error;
-pub mod events;
 pub mod loader;
 pub mod resources;
 pub mod template_loader;
@@ -55,8 +54,8 @@ mod loader_tests;
 #[path = "template_loader_tests.rs"]
 mod template_loader_tests;
 
+pub use delta_v_core::SpawnEntity;
 pub use error::WorldError;
-pub use events::SpawnEntity;
 pub use resources::WorldDefResource;
 pub use resources::WorldPath;
 pub use world_def::WorldDef;

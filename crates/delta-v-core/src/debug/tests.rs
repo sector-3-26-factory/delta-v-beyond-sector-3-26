@@ -11,8 +11,8 @@
 //! System behavior (`mark_debug_axes`, `spawn_debug_axes`) is tested indirectly via
 //! `DebugConfig` filtering logic, which is the decision point for visibility.
 
-use crate::debug_axes::{DebugAxes, DebugAxesEligible};
-use crate::debug_config::DebugConfig;
+use super::debug_config::DebugConfig;
+use super::{DebugAxes, DebugAxesEligible};
 
 #[test]
 fn test_debug_axes_eligible_creation() {

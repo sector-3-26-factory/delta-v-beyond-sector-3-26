@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+//! Loaded and validated keybindings.
+//!
 //! [`KeybindingsResource`] is defined in `delta-v-core` (not in
 //! `delta-v-config`) so that [`crate::input::input_translation_system`]
 //! can read it without creating a crate-dependency cycle.

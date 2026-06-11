@@ -17,9 +17,10 @@ use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
     ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig, SpawnEntity, StaticShipTemplate,
+    PlayerShipTemplate, ShipPropulsionConfig, SpawnEntity, StaticShipTemplate,
 };
 use delta_v_physics::{CollisionShape, RigidBody};
+use delta_v_types::CollisionShapeJson;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
@@ -69,11 +70,11 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
 }
 
-/// Creates a [`CollisionShape`] from a [`ShipCollisionShape`] template, scaled by the given factor.
+/// Creates a [`CollisionShape`] from a [`CollisionShapeJson`] template, scaled by the given factor.
 ///
 /// Supports sphere and box shapes. Panics on unknown shape types per ADR-0013.
 #[allow(clippy::expect_used, clippy::panic)]
-fn create_collision_shape(shape: &ShipCollisionShape, scale: f32) -> CollisionShape {
+fn create_collision_shape(shape: &CollisionShapeJson, scale: f32) -> CollisionShape {
     let offset = shape
         .offset
         .as_ref()

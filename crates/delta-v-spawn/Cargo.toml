@@ -14,6 +14,7 @@ serde_json = { workspace = true }
 bevy = { workspace = true }
 delta-v-types = { workspace = true }
 delta-v-json = { workspace = true }
+delta-v-physics = { workspace = true }
 
 [lints]
 workspace = true

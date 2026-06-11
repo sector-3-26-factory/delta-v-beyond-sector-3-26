@@ -32,11 +32,13 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy_mod_billboard::prelude::*;
 
-use crate::debug_config::DebugConfig;
+pub mod debug_config;
 
 #[cfg(test)]
-#[path = "debug_axes_tests.rs"]
+#[path = "tests.rs"]
 mod tests;
+
+pub use debug_config::DebugConfig;
 
 /// Marker component for entities eligible to have debug axes rendered.
 ///

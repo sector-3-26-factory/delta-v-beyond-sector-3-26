@@ -43,66 +43,68 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+// Subdirectory modules (ADR-0048)
 pub mod boundary;
-pub mod boundary_systems;
 pub mod camera;
-pub mod debug_axes;
-pub mod debug_config;
+pub mod debug;
 pub mod diagnostics;
 pub mod events;
 pub mod flight_assist;
 pub mod floating_origin;
 pub mod input;
-pub mod keybindings_resource;
-pub mod ship_templates;
-pub mod spawn_sets;
+pub mod spawn;
 pub mod state;
 
-pub use boundary::{BoundaryBehavior, SectorBoundary, SectorBoundaryResource};
-pub use boundary_systems::check_sector_boundary_system;
+// Flat modules (kept for backward compatibility, to be migrated)
+pub mod ship_templates;
+
+// Re-exports from subdirectories
+pub use boundary::{
+    check_sector_boundary_system, BoundaryBehavior, SectorBoundary, SectorBoundaryResource,
+};
 pub use camera::{
     debug_camera_positions, spawn_chase_camera, CameraDefinition, CameraFollow, ChaseCameraOffset,
-    PlayerShipEntity, ShipCamerasTemplate, Vec3Json,
+    PlayerShipEntity, ShipCamerasTemplate,
 };
-pub use debug_axes::{
+pub use debug::{
     mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_rotation,
-    DebugAxes, DebugAxesEligible, DebugAxisRootMarker,
+    DebugAxes, DebugAxesEligible, DebugAxisRootMarker, DebugConfig,
 };
-pub use debug_config::DebugConfig;
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::SpawnEntity;
 pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
-pub use input::{ActiveActions, InputSet, LogicalAction};
-pub use keybindings_resource::KeybindingsResource;
+pub use input::{ActiveActions, InputSet, KeybindingsResource, LogicalAction};
 pub use ship_templates::{
-    BoundingBox, MainThrusterTemplate, PhysicalQuantity, PlayerShipTemplate, ShipCollisionShape,
-    ShipPropulsionConfig, ShipPropulsionTemplate, ShipTemplate, StaticShipTemplate, ThrustCommand,
-    TorqueCommand,
+    MainThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate,
+    ShipTemplate, StaticShipTemplate, ThrustCommand, TorqueCommand,
 };
-pub use spawn_sets::WorldSpawnSet;
+pub use spawn::WorldSpawnSet;
 pub use state::AppState;
 
+// Re-exports from delta-v-types for shared types (ADR-0046)
+pub use delta_v_types::{BoundingBox, CollisionShapeJson, PhysicalQuantity, Vec3Json};
+
 #[cfg(test)]
-#[path = "state_tests.rs"]
+#[path = "state/tests.rs"]
 mod state_tests;
 
 #[cfg(test)]
-#[path = "diagnostics_tests.rs"]
+#[path = "diagnostics/tests.rs"]
 mod diagnostics_tests;
 
 #[cfg(test)]
-#[path = "input_tests.rs"]
+#[path = "input/tests.rs"]
 mod input_tests;
 
 #[cfg(test)]
-#[path = "boundary_tests.rs"]
+#[path = "boundary/tests.rs"]
 mod boundary_tests;
 
 #[cfg(test)]
-#[path = "camera_tests.rs"]
+#[path = "camera/tests.rs"]
 mod camera_tests;
 
 use bevy::prelude::*;
@@ -150,7 +152,7 @@ impl Plugin for CorePlugin {
         // Both run in Update during SpawningEntities, after all domain spawn systems.
         app.add_systems(
             Update,
-            (debug_axes::mark_debug_axes, spawn_debug_axes)
+            (debug::mark_debug_axes, spawn_debug_axes)
                 .chain()
                 .in_set(WorldSpawnSet::MarkDebugAxes),
         );
@@ -166,14 +168,14 @@ impl Plugin for CorePlugin {
         // Runs in InGame after attach_ship_meshes updates DebugAxes.
         app.add_systems(
             Update,
-            debug_axes::update_debug_axes_on_change.run_if(in_state(AppState::InGame)),
+            debug::update_debug_axes_on_change.run_if(in_state(AppState::InGame)),
         );
 
         // Debug axes rotation update: keeps axis roots world-aligned by applying
         // the inverse of the target's rotation each frame.
         app.add_systems(
             Update,
-            debug_axes::update_debug_axes_rotation.run_if(in_state(AppState::InGame)),
+            debug::update_debug_axes_rotation.run_if(in_state(AppState::InGame)),
         );
 
         // Input pipeline (ADR-0011, ADR-0017).
