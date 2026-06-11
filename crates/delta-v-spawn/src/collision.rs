@@ -5,7 +5,7 @@
 use bevy::prelude::{Component, Vec3};
 use delta_v_types::CollisionShapeJson;
 
-/// Converts a CollisionShapeJson into a physics CollisionShape.
+/// Converts a `CollisionShapeJson` into a physics `CollisionShape`.
 ///
 /// This is the SINGLE function that handles sphere/box conversion for ALL entity types.
 /// See ADR-0046 for the `Json` suffix naming convention.
@@ -19,7 +19,7 @@ pub fn shape_from_json(json: &CollisionShapeJson, _scale: f32) -> Result<Collisi
             let radius = json.radius.as_ref().map_or(0.5, |r| r.value);
             Ok(CollisionShape::Sphere {
                 radius,
-                offset: json.offset.map_or(Vec3::ZERO, |o| Vec3::from(o)),
+                offset: json.offset.map_or(Vec3::ZERO, Vec3::from),
             })
         }
         "box" => {
@@ -29,7 +29,7 @@ pub fn shape_from_json(json: &CollisionShapeJson, _scale: f32) -> Result<Collisi
                 .map_or(Vec3::new(0.5, 0.5, 0.5), |h| Vec3::from(*h));
             Ok(CollisionShape::Box {
                 half_extents,
-                offset: json.offset.map_or(Vec3::ZERO, |o| Vec3::from(o)),
+                offset: json.offset.map_or(Vec3::ZERO, Vec3::from),
             })
         }
         _ => Err(format!("Unknown collision shape type: {}", json.shape_type)),

@@ -13,11 +13,13 @@ use delta_v_types::TemplatePath;
 /// let path = resolve_template_path("ships", "meshy-cargo-1");
 /// // Returns: "templates/ships/meshy-cargo-1/"
 /// ```
+#[must_use]
 pub fn resolve_template_path(category: &str, name: &str) -> String {
-    format!("templates/{}/{}/", category, name)
+    format!("templates/{category}/{name}/")
 }
 
-/// Resolves a template path from a TemplatePath struct.
+/// Resolves a template path from a `TemplatePath` struct.
+#[must_use]
 pub fn resolve_template_path_from(template: &TemplatePath) -> String {
     format!("templates/{}/{}/", template.category, template.name)
 }

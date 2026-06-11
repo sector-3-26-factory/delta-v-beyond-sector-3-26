@@ -98,7 +98,11 @@ fn main() {
                     ..default()
                 })
                 .set(bevy::asset::AssetPlugin {
+                    // SAFETY: This is a simple path transformation. If the env var is not set,
+                    // we fall back to "assets" which is the expected relative path.
+                    #[allow(clippy::map_unwrap_or)]
                     file_path: std::env::var("CARGO_MANIFEST_DIR")
+                        .ok()
                         .map(|dir| {
                             std::path::PathBuf::from(dir)
                                 .join("../..")
@@ -106,7 +110,7 @@ fn main() {
                                 .to_string_lossy()
                                 .to_string()
                         })
-                        .unwrap_or_else(|_| "assets".to_string()),
+                        .unwrap_or_else(|| "assets".to_string()),
                     ..default()
                 })
                 .set(bevy::log::LogPlugin {

@@ -14,7 +14,6 @@
 #![warn(unreachable_pub)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
-#![warn(clippy::cargo)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]

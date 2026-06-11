@@ -15,6 +15,7 @@ pub trait PendingMesh {
 /// Generic system that attaches loaded glTF scenes to entities with a pending marker.
 ///
 /// The marker component type is generic — each domain defines its own.
+#[allow(clippy::missing_const_for_fn)]
 pub fn attach_meshes<T: Component + PendingMesh>(
     mut _commands: Commands<'_, '_>,
     _gltf_assets: Res<'_, Assets<Gltf>>,
