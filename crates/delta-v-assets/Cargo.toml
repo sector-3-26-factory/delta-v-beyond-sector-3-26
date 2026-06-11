@@ -12,8 +12,8 @@ categories = ["game-development"]
 [dependencies]
 serde_json = { workspace = true }
 bevy = { workspace = true }
-delta-v-json = { path = "../delta-v-json" }
-delta-v-types = { path = "../delta-v-types" }
+delta-v-json = { workspace = true }
+delta-v-types = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]
