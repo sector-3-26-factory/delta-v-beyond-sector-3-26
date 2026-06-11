@@ -3,6 +3,7 @@
     "$id": "https://delta-v-beyond-sector-3-26/schema/asteroid",
     "title": "Asteroid template",
     "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines an asteroid entity: a static obstacle with mass and collision shape. Per ADR-0009, every rigid body MUST have mass. Per ADR-0008, physical quantities use value+unit objects.",
+    "$comment": "AGENTS: before modifying this file, read AGENTS.md at the repository root.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -30,15 +31,24 @@
             ],
             "properties": {
                 "type": {
-                    "description": "Collision shape type. 'sphere' is supported for M3.",
+                    "description": "Collision shape type. 'sphere' or 'box' are supported.",
                     "type": "string",
                     "enum": [
-                        "sphere"
+                        "sphere",
+                        "box"
                     ]
                 },
                 "radius": {
                     "description": "Radius of the sphere in metres (for sphere shape type).",
                     "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "half_extents": {
+                    "description": "Half-extents of the box (for box shape type).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "offset": {
+                    "description": "Offset of the box center from the mesh center (for box shape type).",
+                    "$ref": "#/$defs/vec3"
                 }
             }
         },

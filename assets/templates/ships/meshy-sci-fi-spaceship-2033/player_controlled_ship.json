@@ -1,0 +1,149 @@
+{
+    "entity_type": "player_controlled_ship",
+    "cameras": [
+        {
+            "id": "cockpit",
+            "position": {
+                "x": 0,
+                "y": 0.15,
+                "z": 0.35
+            },
+            "target": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+            },
+            "fov": 60,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        },
+        {
+            "id": "chase",
+            "position": {
+                "x": 0,
+                "y": 0.45,
+                "z": -2.5
+            },
+            "target": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+            },
+            "fov": 45,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        },
+        {
+            "id": "rear",
+            "position": {
+                "x": 0,
+                "y": 0,
+                "z": -2
+            },
+            "target": {
+                "x": 0,
+                "y": 0,
+                "z": 1
+            },
+            "fov": 60,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        },
+        {
+            "id": "front",
+            "position": {
+                "x": 0,
+                "y": 0,
+                "z": 2
+            },
+            "target": {
+                "x": 0,
+                "y": 0,
+                "z": -1
+            },
+            "fov": 60,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        },
+        {
+            "id": "left",
+            "position": {
+                "x": -2,
+                "y": 0,
+                "z": 0
+            },
+            "target": {
+                "x": 1,
+                "y": 0,
+                "z": 0
+            },
+            "fov": 60,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        },
+        {
+            "id": "right",
+            "position": {
+                "x": 2,
+                "y": 0,
+                "z": 0
+            },
+            "target": {
+                "x": -1,
+                "y": 0,
+                "z": 0
+            },
+            "fov": 60,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        },
+        {
+            "id": "top",
+            "position": {
+                "x": 0,
+                "y": 2,
+                "z": 0
+            },
+            "target": {
+                "x": 0,
+                "y": -1,
+                "z": 0
+            },
+            "fov": 60,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        },
+        {
+            "id": "bottom",
+            "position": {
+                "x": 0,
+                "y": -2,
+                "z": 0
+            },
+            "target": {
+                "x": 0,
+                "y": 1,
+                "z": 0
+            },
+            "fov": 60,
+            "aspect": 1.333,
+            "near": 0.1,
+            "far": 1000,
+            "available": true
+        }
+    ]
+}

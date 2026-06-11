@@ -327,21 +327,26 @@ pub(crate) fn attach_ship_meshes(
 ) {
     for (entity, pending, debug_eligible, _debug_axes) in query.iter() {
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
-            // Get the first scene from the glTF (should contain the mesh).
-            if let Some(scene_handle) = gltf.scenes.first().cloned() {
-                // Insert only the scene handle to preserve the entity's existing transform.
-                // The entity already has Transform/GlobalTransform from spawning.
-                commands.entity(entity).insert(scene_handle);
+            // Überprüfung: Hat die Datei überhaupt Szenen?
+            if !gltf.scenes.is_empty() {
+                commands.entity(entity).with_children(|parent| {
+                    // Schleife über ALLE Szenen in der GLTF-Datei
+                    for scene_handle in &gltf.scenes {
+                        // In Bevy 0.14 nutzt man das SceneBundle, um eine Szene als Child zu spawnen
+                        parent.spawn(SceneBundle {
+                            scene: scene_handle.clone(),
+                            ..Default::default()
+                        });
+                    }
+                });
 
-                // Debug axes are already configured from the template JSON.
-                // No need to recompute from glTF.
                 log::debug!(
-                    "attached glTF mesh to ship entity (debug axes from template: entity_id={}, axis_length={:.1})",
+                    "Attached ALL glTF scenes to ship entity (debug axes from template: entity_id={}, axis_length={:.1})",
                     debug_eligible.entity_id,
                     debug_eligible.axis_length
                 );
 
-                // Remove the pending marker now that mesh is attached.
+                // Entferne den Marker, da wir fertig sind
                 commands.entity(entity).remove::<PendingShipMesh>();
             }
         }

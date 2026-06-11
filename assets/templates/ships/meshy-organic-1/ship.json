@@ -1,0 +1,60 @@
+{
+    "entity_type": "ship",
+    "mass": {
+        "value": 45000,
+        "unit": "kg"
+    },
+    "inertia_scale": 1.0,
+    "bounding_box": {
+        "min": {
+            "x": -9.520226418972015,
+            "y": -5.1770125332494475,
+            "z": -15.0
+        },
+        "max": {
+            "x": 9.520226418972015,
+            "y": 5.1770125332494475,
+            "z": 15.0
+        }
+    },
+    "collision_shape": {
+        "type": "box",
+        "half_extents": {
+            "x": 9.520226418972015,
+            "y": 5.1770125332494475,
+            "z": 15.0
+        },
+        "offset": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    "propulsion": {
+        "main_thrusters": [
+            {
+                "id": "main",
+                "type": "chemical",
+                "max_forward_thrust": {
+                    "value": 120000,
+                    "unit": "N"
+                },
+                "max_backward_thrust": {
+                    "value": 48000,
+                    "unit": "N"
+                }
+            }
+        ],
+        "maneuvering_thruster": {
+            "type": "rcs",
+            "max_torque": {
+                "value": 45000,
+                "unit": "N⋅m"
+            },
+            "max_strafe_thrust": {
+                "value": 45000,
+                "unit": "N"
+            }
+        }
+    }
+}

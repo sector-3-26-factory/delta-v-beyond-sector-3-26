@@ -18,3 +18,83 @@ For license text, see the LICENSE file at the repository root.
 - **Modifications:** 
   - Mesh rotated 180° around Y axis to align ship's nose with -Z (ADR-0006 coordinate convention). Original asset had +Z as forward.
   - Mesh scaled by factor of 0.05 (from ~300m to ~15m) to match realistic fighter size.
+
+### Asteroid low poly
+
+- **Creator:** [pasquill](https://sketchfab.com/pasquill)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/asteroid-low-poly-9a43ef48a70647188576ccb5987b7e64)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/asteroids/asteroid-low-poly-pasquill/mesh.glb`
+- **Modifications:** *None*
+
+### Daphne planetoid
+
+- **Creator:** [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/daphne-planetoid-d7dd7ff088b04813ae26798a67d11c58)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/asteroids/daphne-planetoid-sebastiansosnowski/mesh.glb`
+- **Modifications:**
+  No artwork changed. Just technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, inverted UV Y-scale and applied all transforms
+
+### Archimedes (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-archimedes/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Cargo-1 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-cargo-1/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Asteroid 2 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/asteroids/meshy-asteroid-2/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled and applied all transforms
+
+### Sci-Fi Spaceship 400 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-sci-fi-spaceship-0400/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Sci-Fi Spaceship 2033 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-sci-fi-spaceship-2033/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+### Organic 1 (Meshy AI)
+
+- **Creator:** [Meshy AI](https://www.meshy.ai)
+- **Source:** Meshy AI texture generation
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/ships/meshy-organic-1/mesh.glb`
+- **Modifications:** Technical optimizations to get the mesh.glb loaded.
+  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms

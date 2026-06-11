@@ -13,21 +13,37 @@
             }
         },
         {
-            "template": "ships/space-fighter-comrade1280",
+            "template": "asteroids/meshy-asteroid-2",
             "id": "inspect_item",
             "position": {
                 "x": 0.0,
                 "y": 0.0,
-                "z": -25.0
+                "z": -1600.0
+            },
+            "scale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
             }
         },
         {
-            "template": "asteroids/asteroid-small",
-            "id": "asteroid_3",
+            "template": "asteroids/asteroid-low-poly-pasquill",
+            "id": "asteroid_2",
             "position": {
-                "x": 10.0,
+                "x": 500.0,
                 "y": 0.0,
-                "z": -23.0
+                "z": -500.0
+            },
+            "rotation": {
+                "x": 0.5,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
             }
         }
     ]
