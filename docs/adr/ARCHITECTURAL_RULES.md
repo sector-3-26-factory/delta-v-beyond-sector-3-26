@@ -90,6 +90,18 @@ informational and must be aligned with.
 
 [ADR-0045]: Anti-cheat measures for client-side JSON configuration: (1) Schema validation with strict bounds on gameplay values (mass, thrust, collision shapes). (2) Collision shape containment validation (shape must fit within bounding box). (3) Server-authoritative game state in multiplayer (host validates all client inputs). (4) Optional cryptographic signing for official templates. (5) Hard errors for validation failures (ADR-0013). This provides defense-in-depth against cheating via JSON modification.
 
+[ADR-0046]: The `delta-v-types` crate is the canonical source for shared domain types. ALL plain data types and serde deserialization structs used by 2+ crates MUST live in `delta-v-types`. This crate MUST NOT depend on any other `delta-v-*` crate. It MUST NOT contain systems, plugins, Bevy resources, or Bevy `Component` derives — only plain types and serde structs. `delta-v-types` MAY depend on `serde` and `bevy` (math types only: `Vec3`, `Quat`). JSON deserialization value types MUST use the `Json` suffix (e.g., `Vec3Json`, `QuatJson`, `CollisionShapeJson`). The corresponding runtime type MUST NOT use the `Json` suffix. FORBIDDEN: defining shared types in any crate other than `delta-v-types`. FORBIDDEN: per-entity-type collision shape variants — use `CollisionShapeJson` for ALL entity types.
+
+[ADR-0047]: ALL entity spawning follows the centralized pattern. Every domain crate that spawns entities MUST have a `src/spawn.rs` module. Spawn systems are named `spawn_<entity_type>`. Mesh attachment functions are named `attach_<entity_type>_meshes`. Pending mesh markers are named `Pending<EntityType>Mesh`. Domain spawners MUST use `delta-v-spawn` utilities for template extraction, collision shape conversion, and mesh attachment. FORBIDDEN: manually parsing JSON template fields in domain spawners — use `delta-v-spawn::template_extraction`. FORBIDDEN: duplicating mesh attachment logic — use `delta-v-spawn::mesh_attachment`. FORBIDDEN: naming spawner files anything other than `spawn.rs` (e.g., `asteroid_spawner.rs` is forbidden).
+
+[ADR-0048]: `delta-v-core` uses a subdirectory structure. Modules are organized by concern: `state/`, `events/`, `input/`, `camera/`, `debug/`, `diagnostics/`, `boundary/`, `flight_assist/`, `floating_origin/`, `spawn/`. Each subdirectory has a `mod.rs` and optionally `tests.rs`. FORBIDDEN: adding new files directly to `delta-v-core/src/` without placing them in the appropriate subdirectory. Debug code goes in `debug/`, NOT at the crate root.
+
+[ADR-0049]: Template loading is split between two crates with clear responsibilities. `delta-v-json` owns the JSON pipeline (read, validate, fill defaults, deserialize). `delta-v-assets` owns asset path resolution, template loading, and template merging. FORBIDDEN: loading templates outside of `delta-v-assets`. FORBIDDEN: merging templates in domain crates — use `delta-v-assets`. `delta-v-world` uses `delta-v-assets` for template loading. `delta-v-config` uses `delta-v-json` directly for simple config files.
+
+[ADR-0050]: Strict naming conventions for crates and modules. Spawning logic: `src/spawn.rs` with `spawn_<entity_type>` systems. Components: no suffix (e.g., `FlightAssist`). Resources: no suffix (e.g., `WorldDefResource`). Events: past tense or imperative (e.g., `SpawnEntity`). Test files: `_tests.rs` suffix. FORBIDDEN: `asteroid_spawner.rs`, `station_spawner.rs`, or any spawner filename other than `spawn.rs`. FORBIDDEN: `spawn_station_system` — use `spawn_station`. Every domain crate uses the standard module structure: `lib.rs`, `components.rs`, `systems.rs`, `spawn.rs`, `resources.rs`, `error.rs`.
+
+[ADR-0051]: The crate architecture follows a strict dependency hierarchy. Technical crates (`delta-v-json`, `delta-v-types`, `delta-v-spawn`, `delta-v-assets`) MUST NOT depend on domain crates. Domain crates MUST NOT depend on other domain crates. `delta-v-core` MUST NOT depend on domain crates. Cross-domain communication uses events/components only (ADR-0005). The binary `delta-v` is the only crate that registers plugins. See the crate architecture decision tree in ADR-0051 for "where does this go?" guidance.
+
 ---
 
 <!-- Proposed ADRs - informational only, not strict rules -->
@@ -118,3 +130,11 @@ informational and must be aligned with.
 - ❌ No runtime string-key translation lookups
 - ❌ No CREDITS.md commits without explicit human approval
 - ❌ No visual data generation or handling in Rust code (textures, meshes, shaders, render targets, materials, animations) **except debug/diagnostic visualizations**
+- ❌ No shared types outside `delta-v-types` (including `Vec3Json`, `QuatJson`, `CollisionShapeJson`, `BoundingBox`, `PhysicalQuantity`)
+- ❌ No `ShipCollisionShape` or per-entity-type collision shape variants — use `CollisionShapeJson` for ALL entity types
+- ❌ No spawner files named anything other than `spawn.rs` (e.g., `asteroid_spawner.rs`)
+- ❌ No domain-to-domain crate dependencies (use events/components)
+- ❌ No loading templates outside `delta-v-assets`
+- ❌ No flat files in `delta-v-core/src/` — use subdirectories
+- ❌ No `CollisionShape` (Bevy Component) in `delta-v-types` — it stays in `delta-v-physics`
+- ❌ No JSON deserialization value types without the `Json` suffix in `delta-v-types`
