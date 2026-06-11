@@ -1,0 +1,18 @@
+[package]
+name = "delta-v-types"
+version.workspace = true
+edition = "2021"
+description = "Shared domain types for the delta-v game"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["gamedev", "spacesim", "types"]
+categories = ["game-development"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+bevy = { workspace = true }
+
+[lints]
+workspace = true

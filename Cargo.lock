@@ -1803,7 +1803,10 @@ name = "delta-v-assets"
 version = "0.0.1"
 dependencies = [
  "bevy",
- "log",
+ "delta-v-json",
+ "delta-v-types",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1889,11 +1892,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "delta-v-spawn"
+version = "0.0.1"
+dependencies = [
+ "bevy",
+ "delta-v-json",
+ "delta-v-types",
+ "serde_json",
+]
+
+[[package]]
 name = "delta-v-stations"
 version = "0.0.1"
 dependencies = [
  "bevy",
  "log",
+]
+
+[[package]]
+name = "delta-v-types"
+version = "0.0.1"
+dependencies = [
+ "bevy",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,18 +1,19 @@
-# See AGENTS.md
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
 [package]
 name = "delta-v-net"
-version = "0.0.1"
+version.workspace = true
 edition = "2021"
 rust-version = "1.88"
 description = "Networking (placeholder until ADR-0030/0031 are decided)"
-license = "GPL-3.0-or-later"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["networking", "multiplayer"]
+categories = ["game-development"]
 
 [dependencies]
 bevy = { workspace = true }
 log = { workspace = true }
 
 [lints]
-rust.unsafe_code = "warn"
-clippy.all = "warn"
-clippy.pedantic = "warn"
-clippy.nursery = "warn"
+workspace = true

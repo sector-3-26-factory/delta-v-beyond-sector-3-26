@@ -1,11 +1,15 @@
-# See AGENTS.md
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
 [package]
 name = "delta-v"
-version = "0.0.1"
+version.workspace = true
 edition = "2021"
 rust-version = "1.88"
 description = "Delta-V beyond Sector 3.26 - binary entrypoint"
-license = "GPL-3.0-or-later"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["spacesim", "gamedev"]
+categories = ["game-development"]
 
 [[bin]]
 name = "delta-v"
@@ -34,3 +38,6 @@ bevy_mod_billboard = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 clap = { workspace = true }
+
+[lints]
+workspace = true

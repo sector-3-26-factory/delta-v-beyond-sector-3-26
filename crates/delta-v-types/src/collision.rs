@@ -1,0 +1,65 @@
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
+
+//! Collision shape types for deserializing collision shapes from JSON.
+//!
+//! These types are used by `delta-v-spawn` to convert JSON collision shapes
+//! into physics `CollisionShape` components.
+
+use serde::Deserialize;
+
+use crate::physics::PhysicalQuantity;
+use crate::spatial::Vec3Json;
+
+/// Collision shape deserialized from template JSON.
+///
+/// This is the single JSON collision shape type for ALL entity types
+/// (ships, asteroids, planets, stations). See ADR-0046 for the `Json` suffix
+/// naming convention.
+///
+/// JSON format:
+/// ```json
+/// {
+///   "type": "sphere",
+///   "radius": {"value": 1.0, "unit": "m"}
+/// }
+/// ```
+/// or
+/// ```json
+/// {
+///   "type": "box",
+///   "half_extents": {"x": 1.0, "y": 1.0, "z": 1.0}
+/// }
+/// ```
+#[derive(Debug, Deserialize, Clone)]
+pub struct CollisionShapeJson {
+    /// The shape type: "sphere" or "box".
+    #[serde(rename = "type")]
+    pub shape_type: String,
+    /// Radius for sphere shapes (metres).
+    pub radius: Option<PhysicalQuantity>,
+    /// Half-extents for box shapes (metres).
+    pub half_extents: Option<Vec3Json>,
+    /// Offset of the collision shape center from the entity origin in metres.
+    /// Default (0,0,0) from schema.
+    pub offset: Option<Vec3Json>,
+}
+
+impl CollisionShapeJson {
+    /// Returns the shape type ("sphere" or "box").
+    #[must_use]
+    pub fn shape_type(&self) -> &str {
+        &self.shape_type
+    }
+
+    /// Returns true if this is a sphere shape.
+    #[must_use]
+    pub fn is_sphere(&self) -> bool {
+        self.shape_type == "sphere"
+    }
+
+    /// Returns true if this is a box shape.
+    #[must_use]
+    pub fn is_box(&self) -> bool {
+        self.shape_type == "box"
+    }
+}
