@@ -1,11 +1,15 @@
-# See AGENTS.md
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
 [package]
 name = "delta-v-config"
-version = "0.0.1"
+version.workspace = true
 edition = "2021"
 rust-version = "1.88"
 description = "JSON loading, schema validation, configuration management"
-license = "GPL-3.0-or-later"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["config", "settings"]
+categories = ["game-development"]
 
 [dependencies]
 bevy = { workspace = true }
@@ -24,7 +28,4 @@ dev = []
 tempfile = "3"
 
 [lints]
-rust.unsafe_code = "warn"
-clippy.all = "warn"
-clippy.pedantic = "warn"
-clippy.nursery = "warn"
+workspace = true

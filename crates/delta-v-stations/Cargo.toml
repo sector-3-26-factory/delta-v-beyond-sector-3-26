@@ -1,18 +1,19 @@
-# See AGENTS.md
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
 [package]
 name = "delta-v-stations"
-version = "0.0.1"
+version.workspace = true
 edition = "2021"
 rust-version = "1.88"
 description = "Space stations and station components"
-license = "GPL-3.0-or-later"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["stations", "space"]
+categories = ["game-development"]
 
 [dependencies]
 bevy = { workspace = true }
 log = { workspace = true }
 
 [lints]
-rust.unsafe_code = "warn"
-clippy.all = "warn"
-clippy.pedantic = "warn"
-clippy.nursery = "warn"
+workspace = true

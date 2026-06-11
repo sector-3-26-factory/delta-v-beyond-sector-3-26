@@ -1,11 +1,15 @@
-# See AGENTS.md
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
 [package]
 name = "delta-v-json"
-version = "0.0.1"
+version.workspace = true
 edition = "2021"
 rust-version = "1.88"
 description = "Shared JSON loading, schema validation and default-fill utilities"
-license = "GPL-3.0-or-later"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["json", "validation", "schema"]
+categories = ["game-development"]
 
 [dependencies]
 serde_json = { workspace = true }

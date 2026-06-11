@@ -1,20 +1,19 @@
 [package]
-name = "delta-v-assets"
+name = "delta-v-spawn"
 version.workspace = true
 edition = "2021"
-description = "Asset loading and template management for the delta-v game"
+description = "Spawning utilities for the delta-v game"
 license.workspace = true
 repository.workspace = true
 readme = "README.md"
-keywords = ["gamedev", "spacesim", "assets"]
+keywords = ["gamedev", "spacesim", "spawning"]
 categories = ["game-development"]
 
 [dependencies]
 serde_json = { workspace = true }
 bevy = { workspace = true }
-delta-v-json = { workspace = true }
 delta-v-types = { workspace = true }
-thiserror = { workspace = true }
+delta-v-json = { workspace = true }
 
 [lints]
 workspace = true

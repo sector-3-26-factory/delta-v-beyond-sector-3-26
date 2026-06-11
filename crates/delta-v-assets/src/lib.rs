@@ -1,33 +1,44 @@
-// See AGENTS.md
-//
-// Delta-V beyond Sector 3.26
-// Copyright (C) 2025  Cute-Donkey
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Asset loader extensions and glTF helpers.
+//! Asset loading and template management.
 //!
-//! See ADR-0019 (Asset pipeline and user content) and
-//! ADR-0020 (Save and load format).
+//! This crate owns:
+//! - Asset path resolution
+//! - Template loading
+//! - Template merging
+//!
+//! See ADR-0049 for the template system reorganization.
 
-use bevy::prelude::*;
+#![warn(missing_docs)]
+#![warn(rust_2018_idioms)]
+#![warn(unreachable_pub)]
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![deny(clippy::indexing_slicing)]
+#![deny(clippy::todo)]
+#![deny(clippy::unimplemented)]
+#![deny(clippy::dbg_macro)]
 
-/// Assets plugin for loading and managing game content.
+use bevy::app::Plugin;
+
+pub mod error;
+pub mod paths;
+pub mod template;
+
+// Re-exports for convenience
+pub use error::AssetError;
+pub use paths::resolve_template_path;
+pub use template::{load_asteroid, load_player_controlled_ship, load_ship, load_template};
+
+/// Plugin for asset loading and template management.
 pub struct AssetsPlugin;
 
 impl Plugin for AssetsPlugin {
-    fn build(&self, _app: &mut App) {
-        log::info!("AssetsPlugin initialized");
+    fn build(&self, _app: &mut bevy::app::App) {
+        // Asset plugin initialization
+        // Template loading is done on demand via the template module functions
     }
 }
