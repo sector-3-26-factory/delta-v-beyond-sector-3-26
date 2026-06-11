@@ -19,14 +19,20 @@ use delta_v_core::{
     ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
     PlayerShipTemplate, ShipPropulsionConfig, SpawnEntity, StaticShipTemplate,
 };
-use delta_v_physics::{CollisionShape, RigidBody};
-use delta_v_types::CollisionShapeJson;
+use delta_v_physics::RigidBody;
+use delta_v_spawn::collision::shape_from_json;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
 pub(crate) struct PendingShipMesh {
     /// Handle to the glTF asset being loaded.
     gltf_handle: Handle<Gltf>,
+}
+
+impl delta_v_spawn::mesh_attachment::PendingMesh for PendingShipMesh {
+    fn gltf_handle(&self) -> &Handle<Gltf> {
+        &self.gltf_handle
+    }
 }
 
 /// Spawns ship entities in response to `SpawnEntity` events.
@@ -68,36 +74,6 @@ pub fn spawn_ship_from_template(
 fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
     serde_json::from_value(event.template.clone())
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
-}
-
-/// Creates a [`CollisionShape`] from a [`CollisionShapeJson`] template, scaled by the given factor.
-///
-/// Supports sphere and box shapes. Panics on unknown shape types per ADR-0013.
-#[allow(clippy::expect_used, clippy::panic)]
-fn create_collision_shape(shape: &CollisionShapeJson, scale: f32) -> CollisionShape {
-    let offset = shape
-        .offset
-        .as_ref()
-        .map_or(Vec3::ZERO, |o| Vec3::new(o.x, o.y, o.z) * scale);
-    match shape.shape_type.as_str() {
-        "sphere" => {
-            let radius = shape
-                .radius
-                .as_ref()
-                .expect("sphere collision_shape must have radius")
-                .value;
-            CollisionShape::sphere(radius * scale, offset)
-        }
-        "box" => {
-            let he = shape
-                .half_extents
-                .as_ref()
-                .expect("box collision_shape must have half_extents");
-            let half_extents = Vec3::new(he.x, he.y, he.z) * scale;
-            CollisionShape::box_shape(half_extents, offset)
-        }
-        _ => panic!("unsupported collision shape type: {}", shape.shape_type),
-    }
 }
 
 /// Spawns the player-controlled ship from a template event.
@@ -150,7 +126,9 @@ fn spawn_player_ship(
     log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
 
     // Build the ship entity spawn command.
-    let collision_shape = create_collision_shape(&template.collision_shape, scale);
+    // Use delta-v-spawn for collision shape conversion (ADR-0047).
+    let collision_shape = shape_from_json(&template.collision_shape, scale)
+        .expect("collision shape must be valid (ADR-0013)");
 
     let ship_entity = commands
         .spawn((
@@ -272,7 +250,9 @@ fn spawn_static_ship(
     log::debug!("spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
 
     // Build the ship entity spawn command.
-    let collision_shape = create_collision_shape(&template.collision_shape, scale);
+    // Use delta-v-spawn for collision shape conversion (ADR-0047).
+    let collision_shape = shape_from_json(&template.collision_shape, scale)
+        .expect("collision shape must be valid (ADR-0013)");
 
     commands.spawn((
         Transform {
@@ -328,12 +308,12 @@ pub(crate) fn attach_ship_meshes(
 ) {
     for (entity, pending, debug_eligible, _debug_axes) in query.iter() {
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
-            // Überprüfung: Hat die Datei überhaupt Szenen?
+            // Check if the glTF has scenes
             if !gltf.scenes.is_empty() {
                 commands.entity(entity).with_children(|parent| {
-                    // Schleife über ALLE Szenen in der GLTF-Datei
+                    // Loop over ALL scenes in the GLTF file
                     for scene_handle in &gltf.scenes {
-                        // In Bevy 0.14 nutzt man das SceneBundle, um eine Szene als Child zu spawnen
+                        // In Bevy 0.14, use SceneBundle to spawn a scene as child
                         parent.spawn(SceneBundle {
                             scene: scene_handle.clone(),
                             ..Default::default()
@@ -347,7 +327,7 @@ pub(crate) fn attach_ship_meshes(
                     debug_eligible.axis_length
                 );
 
-                // Entferne den Marker, da wir fertig sind
+                // Remove the marker now that scene is attached
                 commands.entity(entity).remove::<PendingShipMesh>();
             }
         }

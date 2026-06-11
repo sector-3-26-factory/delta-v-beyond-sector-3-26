@@ -1888,6 +1888,7 @@ dependencies = [
  "bevy",
  "delta-v-core",
  "delta-v-physics",
+ "delta-v-spawn",
  "delta-v-types",
  "log",
  "serde_json",
@@ -1934,9 +1935,12 @@ name = "delta-v-world"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-assets",
  "delta-v-core",
  "delta-v-json",
  "delta-v-physics",
+ "delta-v-spawn",
+ "delta-v-types",
  "log",
  "serde",
  "serde_json",

@@ -13,21 +13,28 @@ use delta_v_types::CollisionShapeJson;
 ///
 /// # Errors
 ///
-/// Returns an error string if the shape type is unknown.
+/// Returns an error string if the shape type is unknown or required fields are missing.
 pub fn shape_from_json(json: &CollisionShapeJson, _scale: f32) -> Result<CollisionShape, String> {
     match json.shape_type.as_str() {
         "sphere" => {
-            let radius = json.radius.as_ref().map_or(0.5, |r| r.value);
-            Ok(CollisionShape::sphere(
-                radius,
-                json.offset.map_or(Vec3::ZERO, Vec3::from),
-            ))
+            // INVARIANT: radius is required for sphere shapes (ADR-0013 - no silent fallbacks)
+            let radius = json.radius.as_ref().map(|r| r.value).ok_or_else(|| {
+                "collision_shape.radius is required for sphere shapes".to_string()
+            })?;
+            // offset has a schema default, so it's safe to use unwrap_or
+            let offset = json.offset.map_or(Vec3::ZERO, Vec3::from);
+            Ok(CollisionShape::sphere(radius, offset))
         }
         "box" => {
+            // INVARIANT: half_extents is required for box shapes (ADR-0013 - no silent fallbacks)
             let half_extents = json
                 .half_extents
                 .as_ref()
-                .map_or(Vec3::new(0.5, 0.5, 0.5), |h| Vec3::from(*h));
+                .map(|h| Vec3::from(*h))
+                .ok_or_else(|| {
+                    "collision_shape.half_extents is required for box shapes".to_string()
+                })?;
+            // offset has a schema default, so it's safe to use unwrap_or
             let offset = json.offset.map_or(Vec3::ZERO, Vec3::from);
             Ok(CollisionShape::box_shape(half_extents, offset))
         }
