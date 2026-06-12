@@ -71,7 +71,8 @@ use delta_v_core::{
 use delta_v_physics::PhysicsSet;
 use systems::{
     clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
-    input_reader_system, thrust_system, torque_system, PreviousActions, ShipInputSet,
+    input_reader_system, thrust_system, torque_system, PreviousActions, RotationRampState,
+    ShipInputSet,
 };
 
 /// Wrapper system that calls `delta_v_spawn::lighting::setup_scene_lighting`.
@@ -100,6 +101,7 @@ impl Plugin for ShipsPlugin {
         app.init_resource::<ThrustCommand>()
             .init_resource::<TorqueCommand>()
             .init_resource::<PreviousActions>()
+            .init_resource::<RotationRampState>()
             .init_resource::<SectorBoundaryResource>();
 
         // Configure WorldSpawnSet ordering (ADR-0038).

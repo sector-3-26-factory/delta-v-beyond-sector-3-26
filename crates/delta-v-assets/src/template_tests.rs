@@ -36,7 +36,8 @@ fn test_template_merge_base_preserved() {
             "maneuvering_thruster": {
                 "type": "rcs",
                 "max_torque": { "value": 50_000.0, "unit": "N⋅m" },
-                "max_strafe_thrust": { "value": 50_000.0, "unit": "N" }
+                "max_strafe_thrust": { "value": 50_000.0, "unit": "N" },
+                "rotation_ramp_ticks": 60
             }
         }
     });

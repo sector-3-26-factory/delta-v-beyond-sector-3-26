@@ -178,6 +178,12 @@
                 "max_strafe_thrust": {
                     "description": "Maximum strafe thrust in Newtons applied along each lateral/vertical axis (left/right=X, up/down=Y). Same value for all strafe directions.",
                     "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
+                },
+                "rotation_ramp_ticks": {
+                    "description": "Number of ticks for torque to ramp from 0% to 100% when a rotation key is first pressed. 0 = instant full torque (no ramp). Default 60.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 60
                 }
             }
         },

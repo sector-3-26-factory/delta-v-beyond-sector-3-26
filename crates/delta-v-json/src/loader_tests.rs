@@ -53,7 +53,8 @@ fn test_validate_units_valid() {
             "maneuvering_thruster": {
                 "type": "rcs",
                 "max_torque": { "value": 50000, "unit": "N⋅m" },
-                "max_strafe_thrust": { "value": 50000, "unit": "N" }
+                "max_strafe_thrust": { "value": 50000, "unit": "N" },
+                "rotation_ramp_ticks": 60
             }
         }
     });

@@ -40,14 +40,16 @@
             }
         ],
         "maneuvering_thruster": {
+            "type": "rcs",
             "max_torque": {
                 "value": 100.0,
-                "unit": "N*m"
+                "unit": "N⋅m"
             },
             "max_strafe_thrust": {
                 "value": 500.0,
                 "unit": "N"
-            }
+            },
+            "rotation_ramp_ticks": 60
         }
     }
 }

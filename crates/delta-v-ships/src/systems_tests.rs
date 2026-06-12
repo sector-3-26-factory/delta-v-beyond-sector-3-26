@@ -18,7 +18,7 @@ use delta_v_physics::RigidBody;
 use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 use crate::systems::{
     clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
-    input_reader_system, thrust_system, torque_system, PreviousActions,
+    input_reader_system, thrust_system, torque_system, PreviousActions, RotationRampState,
 };
 
 // ---------------------------------------------------------------------------
@@ -35,12 +35,14 @@ fn build_input_app() -> App {
     app.init_resource::<TorqueCommand>();
     app.init_resource::<PreviousActions>();
     app.init_resource::<FlightAssistState>();
+    app.init_resource::<RotationRampState>();
     app.insert_resource(ShipPropulsionConfig {
         max_forward_thrust: 100_000.0,
         max_backward_thrust: 40_000.0,
         max_torque: 50_000.0,
         max_strafe_thrust: 50_000.0,
         active_main_thruster_index: 0,
+        rotation_ramp_ticks: 60,
     });
     app
 }
@@ -145,7 +147,8 @@ fn test_input_reader_strafe_right() {
 
 #[test]
 fn test_input_reader_pitch_up() {
-    let mut app = build_input_app();
+    // Use ramp_ticks=1 so first tick gives full torque
+    let mut app = build_ramp_app(1);
 
     {
         let mut active = app.world_mut().resource_mut::<ActiveActions>();
@@ -165,7 +168,8 @@ fn test_input_reader_pitch_up() {
 
 #[test]
 fn test_input_reader_yaw_left() {
-    let mut app = build_input_app();
+    // Use ramp_ticks=1 so first tick gives full torque
+    let mut app = build_ramp_app(1);
 
     {
         let mut active = app.world_mut().resource_mut::<ActiveActions>();
@@ -185,7 +189,8 @@ fn test_input_reader_yaw_left() {
 
 #[test]
 fn test_input_reader_roll_left() {
-    let mut app = build_input_app();
+    // Use ramp_ticks=1 so first tick gives full torque
+    let mut app = build_ramp_app(1);
 
     {
         let mut active = app.world_mut().resource_mut::<ActiveActions>();
@@ -205,7 +210,8 @@ fn test_input_reader_roll_left() {
 
 #[test]
 fn test_input_reader_multiple_actions() {
-    let mut app = build_input_app();
+    // Use ramp_ticks=1 so first tick gives full torque
+    let mut app = build_ramp_app(1);
 
     {
         let mut active = app.world_mut().resource_mut::<ActiveActions>();
@@ -531,4 +537,280 @@ fn test_torque_system_applies_torque_to_rigid_body() {
 
     let torque = app.world().resource::<TorqueCommand>();
     assert!(torque.torque.x > 0.0, "torque command should still be set");
+}
+
+// ---------------------------------------------------------------------------
+// rotation force ramp
+// ---------------------------------------------------------------------------
+
+/// Builds a minimal Bevy app with the input → forces pipeline resources
+/// and a custom rotation_ramp_ticks value.
+fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
+    let mut app = App::new();
+    app.add_plugins(TimePlugin);
+    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    app.init_resource::<ActiveActions>();
+    app.init_resource::<ThrustCommand>();
+    app.init_resource::<TorqueCommand>();
+    app.init_resource::<PreviousActions>();
+    app.init_resource::<FlightAssistState>();
+    app.init_resource::<RotationRampState>();
+    app.insert_resource(ShipPropulsionConfig {
+        max_forward_thrust: 100_000.0,
+        max_backward_thrust: 40_000.0,
+        max_torque: 50_000.0,
+        max_strafe_thrust: 50_000.0,
+        active_main_thruster_index: 0,
+        rotation_ramp_ticks,
+    });
+    app
+}
+
+/// Test: ramp starts at 1/N on first tick.
+#[test]
+fn test_ramp_first_tick() {
+    let mut app = build_ramp_app(10);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::YawLeft);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let torque = app.world().resource::<TorqueCommand>();
+    // First tick: 1/10 = 10% of 50000 = 5000
+    assert!(
+        (torque.torque.y - 5_000.0).abs() < 0.01,
+        "first tick torque should be 5000 (10%), got {}",
+        torque.torque.y
+    );
+
+    let ramp = app.world().resource::<RotationRampState>();
+    assert!(
+        (ramp.ramp_ticks.y - 1.0).abs() < 0.01,
+        "ramp counter should be 1 after first tick, got {}",
+        ramp.ramp_ticks.y
+    );
+}
+
+/// Test: ramp factor is 1/N for a single tick with rotation_ramp_ticks=N.
+#[test]
+fn test_ramp_factor_with_different_ticks() {
+    // With ramp_ticks=5, first tick should give 1/5 = 20% of max_torque
+    let mut app = build_ramp_app(5);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::YawLeft);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let torque = app.world().resource::<TorqueCommand>();
+    // 1/5 = 20% of 50000 = 10000
+    assert!(
+        (torque.torque.y - 10_000.0).abs() < 0.01,
+        "first tick with ramp=5 should give 10000 (20%), got {}",
+        torque.torque.y
+    );
+
+    let ramp = app.world().resource::<RotationRampState>();
+    assert!(
+        (ramp.ramp_ticks.y - 1.0).abs() < 0.01,
+        "ramp counter should be 1, got {}",
+        ramp.ramp_ticks.y
+    );
+}
+
+/// Test: ramp_ticks=1 means full torque on first tick (no effective ramp).
+#[test]
+fn test_ramp_ticks_one_is_full() {
+    let mut app = build_ramp_app(1);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::YawLeft);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let torque = app.world().resource::<TorqueCommand>();
+    // 1/1 = 100% of 50000 = 50000
+    assert!(
+        (torque.torque.y - 50_000.0).abs() < 0.01,
+        "ramp_ticks=1 should give full torque, got {}",
+        torque.torque.y
+    );
+}
+
+/// Test: no rotation actions produces zero torque and zero ramp.
+#[test]
+fn test_ramp_no_actions_zero() {
+    let mut app = build_ramp_app(10);
+
+    app.add_systems(FixedUpdate, input_reader_system);
+
+    // Run with no actions
+    run_fixed_update(&mut app);
+
+    let torque = app.world().resource::<TorqueCommand>();
+    let ramp = app.world().resource::<RotationRampState>();
+
+    assert_eq!(
+        torque.torque.y, 0.0,
+        "no actions should produce zero torque"
+    );
+    assert_eq!(
+        ramp.ramp_ticks.y, 0.0,
+        "no actions should produce zero ramp counter"
+    );
+}
+
+/// Test: pressing then releasing within the same system tick resets ramp.
+/// Verifies that the ramp counter is 1 during the tick when the key is pressed.
+#[test]
+fn test_ramp_active_then_inactive_same_tick() {
+    let mut app = build_ramp_app(10);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::YawLeft);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let ramp = app.world().resource::<RotationRampState>();
+    // Ramp should be 1 after one tick of YawLeft
+    assert!(
+        (ramp.ramp_ticks.y - 1.0).abs() < 0.01,
+        "ramp should be at 1 after one tick, got {}",
+        ramp.ramp_ticks.y
+    );
+
+    // Torque should be 10% (1/10 of max_torque)
+    let torque = app.world().resource::<TorqueCommand>();
+    assert!(
+        (torque.torque.y - 5_000.0).abs() < 0.01,
+        "torque should be 5000 (10%), got {}",
+        torque.torque.y
+    );
+}
+
+/// Test: opposite direction produces negative torque.
+#[test]
+fn test_ramp_opposite_direction() {
+    let mut app = build_ramp_app(10);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::YawRight);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let torque = app.world().resource::<TorqueCommand>();
+    // YawRight should produce negative Y torque
+    assert!(
+        torque.torque.y < 0.0,
+        "yaw right should produce negative torque, got {}",
+        torque.torque.y
+    );
+    // First tick: 1/10 = 10% of 50000 = 5000, negative
+    assert!(
+        (torque.torque.y - (-5_000.0)).abs() < 0.01,
+        "first tick of yaw right should be -5000, got {}",
+        torque.torque.y
+    );
+}
+
+/// Test: rotation_ramp_ticks = 0 means instant full torque (no ramp).
+#[test]
+fn test_ramp_zero_means_instant_full() {
+    let mut app = build_ramp_app(0);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::YawLeft);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let torque = app.world().resource::<TorqueCommand>();
+    // With ramp_ticks=0, should get full torque immediately
+    assert!(
+        (torque.torque.y - 50_000.0).abs() < 0.01,
+        "zero ramp ticks should give full torque instantly, got {}",
+        torque.torque.y
+    );
+}
+
+/// Test: thrust (non-rotation) is unaffected by ramp.
+#[test]
+fn test_ramp_does_not_affect_thrust() {
+    let mut app = build_ramp_app(10);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::ThrustForward);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let thrust = app.world().resource::<ThrustCommand>();
+    // Thrust should be full force regardless of ramp
+    assert!(
+        (thrust.force.z - (-100_000.0)).abs() < 0.01,
+        "thrust should be full force, got {}",
+        thrust.force.z
+    );
+}
+
+/// Test: pitch and yaw axes produce independent torque in a single tick.
+#[test]
+fn test_ramp_axes_independent() {
+    let mut app = build_ramp_app(10);
+
+    {
+        let mut active = app.world_mut().resource_mut::<ActiveActions>();
+        active.0.insert(LogicalAction::PitchUp);
+        active.0.insert(LogicalAction::YawLeft);
+    }
+
+    app.add_systems(FixedUpdate, input_reader_system);
+    run_fixed_update(&mut app);
+
+    let torque = app.world().resource::<TorqueCommand>();
+    let ramp = app.world().resource::<RotationRampState>();
+
+    // Both axes should have ramp counter = 1
+    assert!(
+        (ramp.ramp_ticks.x - 1.0).abs() < 0.01,
+        "pitch ramp should be at 1, got {}",
+        ramp.ramp_ticks.x
+    );
+    assert!(
+        (ramp.ramp_ticks.y - 1.0).abs() < 0.01,
+        "yaw ramp should be at 1, got {}",
+        ramp.ramp_ticks.y
+    );
+
+    // Both should produce 10% torque (1/10 of max_torque)
+    assert!(
+        (torque.torque.x - 5_000.0).abs() < 0.01,
+        "pitch torque should be 5000 (10%), got {}",
+        torque.torque.x
+    );
+    assert!(
+        (torque.torque.y - 5_000.0).abs() < 0.01,
+        "yaw torque should be 5000 (10%), got {}",
+        torque.torque.y
+    );
 }

@@ -65,7 +65,8 @@ fn make_player_ship_event() -> SpawnEntity {
             "maneuvering_thruster": {
                 "type": "rcs",
                 "max_torque": { "value": 50_000.0, "unit": "N⋅m" },
-                "max_strafe_thrust": { "value": 50_000.0, "unit": "N" }
+                "max_strafe_thrust": { "value": 50_000.0, "unit": "N" },
+                "rotation_ramp_ticks": 60
             }
         },
         "cameras": {
