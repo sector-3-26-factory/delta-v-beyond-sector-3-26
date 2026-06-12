@@ -1,8 +1,8 @@
 # ADR-0049: Template System Reorganization
 
-## Status
-
-Accepted
+- **Status**: Accepted
+- **Date**: 2026-06-06
+- **Deciders**: Cute-Donkey
 
 ## Context
 
@@ -138,7 +138,7 @@ World Definition (*.world.json)
   `delta-v-world/src/lib.rs`.
 - **Migration effort**: Moderate — moving functions between crates, updating imports.
 
-## Related
+## Notes
 
 - ADR-0019 (Asset pipeline)
 - ADR-0038 (Entity template system)

@@ -1,4 +1,4 @@
-"# ADR-0041: Third-party asset acquisition and licensing
+# ADR-0041: Third-party asset acquisition and licensing
 
 - **Status**: Accepted
 - **Date**: 2025-05-30

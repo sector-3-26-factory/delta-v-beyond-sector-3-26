@@ -1,8 +1,8 @@
 # ADR-0051: Crate Architecture Overview
 
-## Status
-
-Accepted
+- **Status**: Accepted
+- **Date**: 2026-06-06
+- **Deciders**: Cute-Donkey
 
 ## Context
 
@@ -142,7 +142,7 @@ Is it a physics simulation system?
 - **Positive**: Cross-domain dependencies are explicitly forbidden.
 - **Positive**: Each crate's purpose is a single sentence.
 
-## Related
+## Notes
 
 - ADR-0002 (Repository layout)
 - ADR-0005 (Plugin architecture)

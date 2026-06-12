@@ -1,8 +1,8 @@
 # ADR-0046: Shared Types Crate
 
-## Status
-
-Accepted
+- **Status**: Accepted
+- **Date**: 2026-06-06
+- **Deciders**: Cute-Donkey
 
 ## Context
 
@@ -136,7 +136,7 @@ pub fn shape_from_json(json: &CollisionShapeJson, scale: f32) -> CollisionShape 
 - **Negative**: One more crate in the workspace. Mitigated by it being small and stable.
 - **Migration effort**: Moderate. Rename `ShipCollisionShape` → `CollisionShapeJson`, deduplicate `Vec3Json`/`QuatJson`, update all imports.
 
-## Related
+## Notes
 
 - ADR-0002 (Repository layout and workspace)
 - ADR-0038 (Entity template system)

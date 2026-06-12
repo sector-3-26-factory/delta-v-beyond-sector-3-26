@@ -1,8 +1,8 @@
 # ADR-0047: Centralized Spawning Infrastructure
 
-## Status
-
-Accepted
+- **Status**: Accepted
+- **Date**: 2026-06-06
+- **Deciders**: Cute-Donkey
 
 ## Context
 
@@ -181,7 +181,7 @@ This means:
 - **Negative**: Moderate migration effort for existing spawners.
 - **Negative**: One more crate. Mitigated by it being a thin utility layer.
 
-## Related
+## Notes
 
 - ADR-0005 (Plugin architecture)
 - ADR-0038 (Entity template system)

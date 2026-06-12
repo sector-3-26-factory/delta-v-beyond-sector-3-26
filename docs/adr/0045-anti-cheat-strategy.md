@@ -1,16 +1,8 @@
 # ADR-0045: Anti-cheat strategy for client-side JSON configuration
 
-<!--
-Agents and contributors: read AGENTS.md at the repository root before
-working with this document. AGENTS.md links to the ADR index and to all
-rules that govern this project.
--->
-
 - **Status**: Proposed
 - **Date**: 2026-06-06
 - **Deciders**: Cute-Donkey
-- **Supersedes**: (optional, set when status is `Superseded`)
-- **Superseded by**: (optional, set when status is `Superseded`)
 
 ## Context
 

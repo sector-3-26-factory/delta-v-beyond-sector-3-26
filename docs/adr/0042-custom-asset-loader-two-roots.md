@@ -1,8 +1,7 @@
 # ADR-0042: Custom asset loader with two-root search
 
-- **Status**: Withdrawn
+- **Status**: Deprecated
 - **Date**: 2025-05-30
-- **Withdrawn**: 2026-06-04
 - **Deciders**: Cute-Donkey
 - **Supersedes**: None
 - **Relates to**: ADR-0019 (asset pipeline and user content), ADR-0013 (no silent fallbacks)
@@ -18,7 +17,7 @@ and meshes are glued together in unified entity directories
 
 ## Decision
 
-**Withdrawn.** None of the three proposed use cases are currently needed:
+**Withdrawn.** (2026-06-04) None of the three proposed use cases are currently needed:
 
 1. **User content overrides** (swapping only the mesh while keeping ship
    characteristics): Not a valid use case. A mesh swap changes the ship's
