@@ -1934,6 +1934,9 @@ name = "delta-v-weapons"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-core",
+ "delta-v-physics",
+ "delta-v-types",
  "log",
 ]
 

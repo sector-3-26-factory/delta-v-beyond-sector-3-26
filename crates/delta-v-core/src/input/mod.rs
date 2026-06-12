@@ -56,6 +56,8 @@ pub enum LogicalAction {
     StrafeDown,
     /// Toggle flight assist (inertial damping) on/off.
     ToggleFlightAssist,
+    /// Fire the primary weapon.
+    FirePrimary,
 }
 
 impl LogicalAction {
@@ -78,6 +80,7 @@ impl LogicalAction {
             Self::StrafeUp => "strafe_up",
             Self::StrafeDown => "strafe_down",
             Self::ToggleFlightAssist => "toggle_flight_assist",
+            Self::FirePrimary => "fire_primary",
         }
     }
 
@@ -100,6 +103,7 @@ impl LogicalAction {
             Self::StrafeUp,
             Self::StrafeDown,
             Self::ToggleFlightAssist,
+            Self::FirePrimary,
         ]
     }
 }
@@ -186,6 +190,7 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "ArrowDown" => Some(KeyCode::ArrowDown),
         "ArrowLeft" => Some(KeyCode::ArrowLeft),
         "ArrowRight" => Some(KeyCode::ArrowRight),
+        "Space" => Some(KeyCode::Space),
         _ => {
             log::warn!("keybindings: unknown key name '{name}' (ignored)");
             None

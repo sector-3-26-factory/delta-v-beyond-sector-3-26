@@ -9,7 +9,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::{DebugAxesEligible, SpawnEntity};
+use delta_v_core::{DebugAxesEligible, Health, SpawnEntity};
 use delta_v_physics::{CollisionShape, DynamicBody, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
 use delta_v_spawn::template_extraction::{
@@ -101,6 +101,8 @@ pub fn spawn_asteroid_system(
             Name::new(event.id.clone()),
             PendingAsteroidMesh { gltf_handle },
             DebugAxesEligible::new(event.id.clone(), axis_length),
+            // Health component for damage model (M4)
+            Health::new(50.0),
         ));
 
         info!("Spawned asteroid '{}' with mass {} kg", event.id, mass);

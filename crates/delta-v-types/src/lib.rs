@@ -12,6 +12,7 @@
 //! - `physics` — Physics types: `PhysicalQuantity`
 //! - `collision` — Collision types: `CollisionShapeJson`, `CollisionShapeData`, `CollisionShapeType`, `CollisionLayers`
 //! - `ids` — Identifier types: `EntityId`, `TemplatePath`
+//! - `weapons` — Weapon types: `WeaponTemplateJson`
 
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
@@ -30,12 +31,15 @@ pub mod collision;
 pub mod ids;
 pub mod physics;
 pub mod spatial;
+pub mod weapons;
 
 // Re-exports for convenience
+pub use collision::layers::PROJECTILE;
 pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType};
 pub use ids::{EntityId, TemplatePath};
 pub use physics::PhysicalQuantity;
 pub use spatial::{BoundingBox, QuatJson, Vec3Json};
+pub use weapons::WeaponTemplateJson;
 
 #[cfg(test)]
 #[path = "spatial_tests.rs"]

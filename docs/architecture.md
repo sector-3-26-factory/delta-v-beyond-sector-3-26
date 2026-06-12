@@ -59,7 +59,7 @@ The workspace contains 13 crates:
 **Domain (may depend on technical crates; dependency graph is acyclic):**
 - `crates/delta-v-ships/` -- Ship types and ship-specific systems.
 - `crates/delta-v-propulsion/` -- Thrusters, hyperdrive.
-- `crates/delta-v-weapons/` -- Projectiles, damage.
+- `crates/delta-v-weapons/` -- Projectiles, damage, weapon systems.
 - `crates/delta-v-stations/` -- Space stations, docking.
 - `crates/delta-v-items/` -- Collectables, inventory.
 - `crates/delta-v-world/` -- Sectors, boundaries, hyperspace gates.

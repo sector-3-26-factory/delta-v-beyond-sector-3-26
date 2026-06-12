@@ -1,0 +1,38 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/projectile",
+    "title": "Projectile template",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a projectile entity type. Physical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "entity_type",
+        "speed",
+        "damage",
+        "lifetime",
+        "radius"
+    ],
+    "properties": {
+        "entity_type": {
+            "description": "Entity type discriminator. Must be 'projectile'.",
+            "type": "string",
+            "const": "projectile"
+        },
+        "speed": {
+            "description": "Projectile speed in m/s.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/velocity"
+        },
+        "damage": {
+            "description": "Damage per hit.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/damage"
+        },
+        "lifetime": {
+            "description": "Projectile lifetime in seconds.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+        },
+        "radius": {
+            "description": "Collision shape radius in metres.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+        }
+    }
+}

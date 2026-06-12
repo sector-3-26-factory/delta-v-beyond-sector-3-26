@@ -54,6 +54,16 @@ pub mod layers {
     /// Collision layers for asteroids: on `ASTEROID_LAYER`, can collide with `SHIP_LAYER`.
     pub const ASTEROID: super::CollisionLayers =
         super::CollisionLayers::new(ASTEROID_LAYER, SHIP_LAYER);
+
+    /// Layer for projectiles (weapons fire).
+    ///
+    /// Projectiles are on layer 3 and can collide with ships (`SHIP_LAYER`)
+    /// and asteroids (`ASTEROID_LAYER`).
+    pub const PROJECTILE_LAYER: u32 = 3;
+
+    /// Collision layers for projectiles: on `PROJECTILE_LAYER`, can collide with `SHIP_LAYER` and `ASTEROID_LAYER`.
+    pub const PROJECTILE: super::CollisionLayers =
+        super::CollisionLayers::new(PROJECTILE_LAYER, SHIP_LAYER | ASTEROID_LAYER);
 }
 
 /// Supported collision shape types.

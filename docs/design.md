@@ -39,7 +39,7 @@ first-class long-term goal.
 
 Each milestone must end on a runnable, demoable build.
 
-### M0 -- Skeleton  *(current)*
+### M0 -- Skeleton
 - Project scaffolding, license, CI, dev container.
 - `cargo run` opens an empty Bevy window.
 

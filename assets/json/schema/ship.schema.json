@@ -104,6 +104,14 @@
                     }
                 }
             }
+        },
+        "weapons": {
+            "description": "Array of weapon configurations. Optional; ships may have no weapons.",
+            "type": "array",
+            "items": {
+                "$ref": "https://delta-v-beyond-sector-3-26/schema/weapon"
+            },
+            "default": []
         }
     },
     "$defs": {

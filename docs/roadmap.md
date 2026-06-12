@@ -69,6 +69,7 @@ Each milestone ends on a runnable, demoable build.
   ([ADR-0007](adr/0007-floating-origin.md)).
 
 ### M4 -- Weapons
+- Status: **complete**.
 - Projectile weapons that inherit the firing ship's velocity.
 - Damage model on rigid bodies.
 

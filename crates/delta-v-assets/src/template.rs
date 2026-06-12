@@ -19,6 +19,9 @@ use crate::paths::resolve_template_path;
 /// Path to the units schema file (relative to assets root).
 const UNITS_SCHEMA_PATH: &str = "json/schema/units.schema.json";
 
+/// Path to the schema directory (relative to assets root).
+const SCHEMA_DIR_PATH: &str = "json/schema";
+
 /// Loads a template from a path, validates it, and returns the JSON value.
 ///
 /// This is the SINGLE function for loading templates. All crates should use
@@ -28,8 +31,8 @@ const UNITS_SCHEMA_PATH: &str = "json/schema/units.schema.json";
 ///
 /// * `category` - The entity type category (e.g., "ships", "asteroids") used for schema lookup
 /// * `name` - The template name, which may include the category prefix (e.g., "ships/space-fighter-comrade1280")
-/// * `filename` - The specific JSON filename to load (e.g., "`ship.json`", "`player_controlled_ship.json`")
-/// * `schema_name` - The schema filename (e.g., "`ship.schema.json`", "`player_controlled_ship.schema.json`")
+/// * `filename` - The specific JSON filename to load (e.g., `ship.json`, `player_controlled_ship.json`)
+/// * `schema_name` - The schema filename (e.g., `ship.schema.json`, `player_controlled_ship.schema.json`)
 ///
 /// # Errors
 ///
@@ -48,10 +51,7 @@ pub fn load_template(
     filename: &str,
     schema_name: &str,
 ) -> Result<Value, AssetError> {
-    // name may already include the category prefix (e.g., "ships/space-fighter-comrade1280")
-    // so we need to handle both cases
     let template_path = if name.contains('/') {
-        // name already includes category prefix, append the specific filename
         format!("assets/templates/{name}/{filename}")
     } else {
         format!(
@@ -62,8 +62,9 @@ pub fn load_template(
     let full_path = get_workspace_root().join(&template_path);
     let schema_path = get_workspace_root().join(format!("assets/json/schema/{schema_name}"));
     let units_schema_path = get_workspace_root().join(format!("assets/{UNITS_SCHEMA_PATH}"));
+    let schema_dir = get_workspace_root().join(format!("assets/{SCHEMA_DIR_PATH}"));
 
-    load_template_from_paths(&full_path, &schema_path, &units_schema_path)
+    load_template_from_paths(&full_path, &schema_path, &schema_dir, &units_schema_path)
 }
 
 /// Loads a player-controlled ship template, merging base ship with player-specific data.
@@ -81,36 +82,27 @@ pub fn load_template(
 pub fn load_player_controlled_ship(
     ship_name: &str,
 ) -> Result<(String, String, Value, String), AssetError> {
-    // Load the player_controlled_ship template
-    // ship_name is like "ships/space-fighter-comrade1280"
     let player_template = load_template(
         "ships",
         ship_name,
         "player_controlled_ship.json",
         "player_controlled_ship.schema.json",
     )?;
-
-    // Load the base ship template from the same directory
-    // ship_name is like "ships/space-fighter-comrade1280"
     let base_ship = load_template("ships", ship_name, "ship.json", "ship.schema.json")?;
 
-    // Compute paths - ship_name already includes "ships/" prefix
     let template_path = format!("templates/{ship_name}/player_controlled_ship.json");
     let ship_template_path = format!("templates/{ship_name}/ship.json");
     let mesh_template_path = ship_template_path.replace("ship.json", "mesh.glb");
 
-    // Merge: start with base ship, overlay from player_controlled_ship
     let mut merged = base_ship;
     if let (Some(merged_obj), Some(player_obj)) =
         (merged.as_object_mut(), player_template.as_object())
     {
         for (key, value) in player_obj {
-            // Skip entity_type (we keep it as player_controlled_ship)
             if key != "entity_type" {
                 merged_obj.insert(key.clone(), value.clone());
             }
         }
-        // Ensure entity_type is player_controlled_ship
         merged_obj.insert(
             "entity_type".to_string(),
             Value::String("player_controlled_ship".to_string()),
@@ -134,7 +126,6 @@ pub fn load_player_controlled_ship(
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
 pub fn load_asteroid(name: &str) -> Result<(String, String, Value, String), AssetError> {
-    // name is like "asteroids/meshy-asteroid-2", extract just the template name
     let template_name = name.strip_prefix("asteroids/").unwrap_or(name);
     let template_path = format!("templates/asteroids/{template_name}/asteroid.json");
     let mesh_path = template_path.replace("asteroid.json", "mesh.glb");
@@ -151,7 +142,6 @@ pub fn load_asteroid(name: &str) -> Result<(String, String, Value, String), Asse
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
 pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetError> {
-    // name is like "ships/space-fighter-comrade1280", extract just the template name
     let template_name = name.strip_prefix("ships/").unwrap_or(name);
     let template_path = format!("templates/ships/{template_name}/ship.json");
     let mesh_path = template_path.replace("ship.json", "mesh.glb");
@@ -171,26 +161,28 @@ pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetErr
 fn load_template_from_paths(
     template_path: &Path,
     schema_path: &Path,
+    schema_dir: &Path,
     units_schema_path: &Path,
 ) -> Result<Value, AssetError> {
-    // Load and validate template against its schema with unit validation.
-    let template =
-        json_loader::load_validated_with_units(template_path, schema_path, units_schema_path)
-            .map_err(|e| map_json_error(e, template_path))?;
+    let template = json_loader::load_validated_with_registry(
+        template_path,
+        schema_path,
+        schema_dir,
+        units_schema_path,
+    )
+    .map_err(|e| map_json_error(e, template_path))?;
 
     Ok(template)
 }
 
 /// Returns the workspace root path.
-///
-/// The workspace root is the parent of `crates/delta-v-assets`.
 #[must_use]
-#[allow(clippy::expect_used)] // INVARIANT: CARGO_MANIFEST_DIR is always set by cargo; workspace structure is fixed
+#[allow(clippy::expect_used)]
 fn get_workspace_root() -> PathBuf {
     let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
     PathBuf::from(manifest_dir)
         .parent()
-        .expect("CARGO_MANIFEST_DIR parent (crates dir) must exist")
+        .expect("CARGO_MANIFEST_DIR parent must exist")
         .parent()
         .expect("workspace root must exist")
         .to_path_buf()

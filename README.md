@@ -5,9 +5,9 @@ A spiritual successor to the classic space combat game
 scratch in **Rust** with the **[Bevy](https://bevyengine.org/)** engine and
 **Newtonian** flight physics.
 
-> Status: **Pre-alpha (Milestone M0.5)**. Architecture foundation established.
-> See [`docs/roadmap.md`](docs/roadmap.md) for the current milestone and
-> [`AGENTS.md`](AGENTS.md) for development rules.
+> Status: **Pre-alpha (Milestone M4 - Weapons complete)**. Architecture foundation
+> established. See [`docs/roadmap.md`](docs/roadmap.md) for the current milestone
+> and [`AGENTS.md`](AGENTS.md) for development rules.
 
 If you wonder about the name of the game you may take a look at
 [`docs/the_name_of_the_game.md`](docs/the_name_of_the_game.md). Of course
