@@ -34,3 +34,11 @@ pub use mesh_attachment::{attach_meshes, PendingMesh};
 pub use template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_mass, extract_vec3,
 };
+
+#[cfg(test)]
+#[path = "collision_tests.rs"]
+mod collision_tests;
+
+#[cfg(test)]
+#[path = "extraction_tests.rs"]
+mod extraction_tests;

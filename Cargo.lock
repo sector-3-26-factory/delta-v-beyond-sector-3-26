@@ -1806,6 +1806,7 @@ dependencies = [
  "delta-v-json",
  "delta-v-types",
  "serde_json",
+ "tempfile",
  "thiserror 1.0.69",
 ]
 
@@ -1872,6 +1873,7 @@ dependencies = [
  "delta-v-core",
  "delta-v-types",
  "log",
+ "tempfile",
 ]
 
 [[package]]
@@ -1894,6 +1896,7 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 1.0.69",
 ]
 
@@ -1905,6 +1908,7 @@ dependencies = [
  "delta-v-json",
  "delta-v-types",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
@@ -1921,6 +1925,8 @@ version = "0.0.1"
 dependencies = [
  "bevy",
  "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

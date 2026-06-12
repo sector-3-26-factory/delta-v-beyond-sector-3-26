@@ -1,4 +1,4 @@
-// See AGENTS.md
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
@@ -60,6 +60,9 @@ pub use spawn::spawn_ship_from_template;
 #[cfg(test)]
 #[path = "spawn_tests.rs"]
 mod spawn_tests;
+#[cfg(test)]
+#[path = "systems_tests.rs"]
+mod systems_tests;
 
 use bevy::prelude::*;
 use delta_v_core::{

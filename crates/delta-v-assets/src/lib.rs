@@ -28,6 +28,10 @@ pub mod error;
 pub mod paths;
 pub mod template;
 
+#[cfg(test)]
+#[path = "template_tests.rs"]
+mod template_tests;
+
 // Re-exports for convenience
 pub use error::AssetError;
 pub use paths::resolve_template_path;

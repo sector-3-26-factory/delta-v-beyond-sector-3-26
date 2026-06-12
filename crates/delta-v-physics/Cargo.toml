@@ -18,5 +18,8 @@ log = { workspace = true }
 delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
 delta-v-types = { workspace = true }
 
+[dev-dependencies]
+tempfile = "3"
+
 [lints]
 workspace = true

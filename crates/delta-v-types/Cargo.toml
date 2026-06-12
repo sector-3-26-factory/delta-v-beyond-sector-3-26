@@ -13,5 +13,9 @@ categories = ["game-development"]
 serde = { workspace = true }
 bevy = { workspace = true }
 
+[dev-dependencies]
+tempfile = "3"
+serde_json = "1.0"
+
 [lints]
 workspace = true
