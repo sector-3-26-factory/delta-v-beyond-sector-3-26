@@ -1,4 +1,4 @@
-// See AGENTS.md
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
@@ -48,6 +48,10 @@ pub mod resources;
 #[cfg(test)]
 #[path = "loader_tests.rs"]
 mod loader_tests;
+
+#[cfg(test)]
+#[path = "deep_merge_tests.rs"]
+mod deep_merge_tests;
 
 pub use error::ConfigError;
 pub use keybindings::{ActionBindings, Keybindings};

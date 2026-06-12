@@ -1,8 +1,8 @@
 # ADR-0050: Crate and Module Naming Conventions
 
-## Status
-
-Accepted
+- **Status**: Accepted
+- **Date**: 2026-06-06
+- **Deciders**: Cute-Donkey
 
 ## Context
 
@@ -111,7 +111,7 @@ they test:
   entry point for spawning logic.
 - **Migration effort**: Low — mostly renaming files, not changing logic.
 
-## Related
+## Notes
 
 - ADR-0002 (Repository layout)
 - ADR-0021 (Test file naming)

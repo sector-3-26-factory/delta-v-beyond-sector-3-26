@@ -1,11 +1,5 @@
 # ADR-0044: Prohibit visual data handling within Rust code
 
-<!--
-Agents and contributors: read AGENTS.md at the repository root before
-working with this document. AGENTS.md links to the ADR index and to all
-rules that govern this project.
--->
-
 - **Status**: Accepted
 - **Date**: 2026-06-06
 - **Deciders**: Project maintainers

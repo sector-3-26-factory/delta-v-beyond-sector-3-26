@@ -1,8 +1,8 @@
 # ADR-0048: Delta-V Core Crate Restructuring
 
-## Status
-
-Accepted
+- **Status**: Accepted
+- **Date**: 2026-06-06
+- **Deciders**: Cute-Donkey
 
 ## Context
 
@@ -138,7 +138,7 @@ eventually move to `delta-v-ships` (they are ship-specific, not core).
 - **Migration effort**: Moderate — mostly moving files and updating `mod.rs` declarations.
   No logic changes needed.
 
-## Related
+## Notes
 
 - ADR-0002 (Repository layout)
 - ADR-0005 (Plugin architecture)

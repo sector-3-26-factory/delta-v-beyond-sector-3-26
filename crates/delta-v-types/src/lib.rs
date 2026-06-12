@@ -36,3 +36,11 @@ pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, Col
 pub use ids::{EntityId, TemplatePath};
 pub use physics::PhysicalQuantity;
 pub use spatial::{BoundingBox, QuatJson, Vec3Json};
+
+#[cfg(test)]
+#[path = "spatial_tests.rs"]
+mod spatial_tests;
+
+#[cfg(test)]
+#[path = "collision_type_tests.rs"]
+mod collision_type_tests;

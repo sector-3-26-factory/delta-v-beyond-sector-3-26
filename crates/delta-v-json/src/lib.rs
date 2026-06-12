@@ -53,3 +53,7 @@ pub use loader::{
 #[cfg(test)]
 #[path = "loader_tests.rs"]
 mod loader_tests;
+
+#[cfg(test)]
+#[path = "fill_defaults_array_tests.rs"]
+mod fill_defaults_array_tests;

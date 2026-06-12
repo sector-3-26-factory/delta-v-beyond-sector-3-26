@@ -1,4 +1,4 @@
-// See AGENTS.md
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
@@ -567,3 +567,15 @@ fn get_collision_radius(shape: &CollisionShape) -> f32 {
 #[cfg(test)]
 #[path = "systems_tests.rs"]
 mod systems_tests;
+
+#[cfg(test)]
+#[path = "collision_tests.rs"]
+mod collision_tests;
+
+#[cfg(test)]
+#[path = "integration_tests.rs"]
+mod integration_tests;
+
+#[cfg(test)]
+#[path = "rigid_body_panic_tests.rs"]
+mod rigid_body_panic_tests;
