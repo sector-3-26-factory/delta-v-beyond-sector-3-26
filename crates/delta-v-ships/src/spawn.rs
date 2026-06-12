@@ -18,7 +18,7 @@ use bevy::prelude::*;
 use delta_v_core::{
     ChaseCameraOffset, DebugAxesEligible, FlightAssist, PlayerShipEntity, SpawnEntity,
 };
-use delta_v_physics::RigidBody;
+use delta_v_physics::{CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
 
 use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
@@ -128,7 +128,7 @@ fn spawn_player_ship(
 
     // Build the ship entity spawn command.
     // Use delta-v-spawn for collision shape conversion (ADR-0047).
-    let collision_shape = shape_from_json(&template.collision_shape, scale)
+    let collision_shape_data = shape_from_json(&template.collision_shape, scale)
         .expect("collision shape must be valid (ADR-0013)");
 
     let ship_entity = commands
@@ -146,7 +146,7 @@ fn spawn_player_ship(
             // Physics components: mass and inertia from template JSON (ADR-0014)
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
-            collision_shape,
+            CollisionShape(collision_shape_data),
         ))
         .id();
 
@@ -252,7 +252,7 @@ fn spawn_static_ship(
 
     // Build the ship entity spawn command.
     // Use delta-v-spawn for collision shape conversion (ADR-0047).
-    let collision_shape = shape_from_json(&template.collision_shape, scale)
+    let collision_shape_data = shape_from_json(&template.collision_shape, scale)
         .expect("collision shape must be valid (ADR-0013)");
 
     commands.spawn((
@@ -269,7 +269,7 @@ fn spawn_static_ship(
         // Physics components: mass and inertia from template JSON (ADR-0014)
         RigidBody::new(template.mass.value, template.inertia_scale),
         FlightAssist,
-        collision_shape,
+        CollisionShape(collision_shape_data),
     ));
 
     log::info!(

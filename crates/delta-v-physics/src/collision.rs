@@ -25,51 +25,40 @@
 //! See ADR-0009 (Newtonian physics with gravity) for the physics model.
 //! See ADR-0044 for the prohibition on visual data in Rust code.
 
+use std::ops::Deref;
+
 use bevy::prelude::*;
 
-/// Collision shape types for physics bodies.
-#[derive(Component, Debug, Clone, Copy)]
-pub struct CollisionShape {
-    /// The shape type and its parameters.
-    pub shape_type: CollisionShapeType,
-    /// Offset of the collision shape center from the entity origin in metres.
-    pub offset: Vec3,
-}
+pub use delta_v_types::{CollisionShapeData, CollisionShapeType};
 
-/// Supported collision shape types.
-#[derive(Debug, Clone, Copy)]
-pub enum CollisionShapeType {
-    /// A sphere with a given radius.
-    Sphere {
-        /// Radius of the sphere in metres.
-        radius: f32,
-    },
-    /// A box with half-extents (width/2, height/2, depth/2).
-    Box {
-        /// Half-extents of the box in metres.
-        half_extents: Vec3,
-    },
-    /// A convex hull (not yet implemented).
-    ConvexHull,
+/// Collision shape component for physics bodies.
+///
+/// This is a newtype wrapper around [`CollisionShapeData`] (from `delta-v-types`)
+/// that adds the Bevy `Component` derive. Implements [`Deref`] for transparent
+/// access to the inner data — code using `CollisionShape` can access
+/// `shape_type` and `offset` fields directly.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct CollisionShape(pub CollisionShapeData);
+
+impl Deref for CollisionShape {
+    type Target = CollisionShapeData;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl CollisionShape {
     /// Creates a new sphere collision shape.
     #[must_use]
     pub const fn sphere(radius: f32, offset: Vec3) -> Self {
-        Self {
-            shape_type: CollisionShapeType::Sphere { radius },
-            offset,
-        }
+        Self(CollisionShapeData::sphere(radius, offset))
     }
 
     /// Creates a new box collision shape.
     #[must_use]
     pub const fn box_shape(half_extents: Vec3, offset: Vec3) -> Self {
-        Self {
-            shape_type: CollisionShapeType::Box { half_extents },
-            offset,
-        }
+        Self(CollisionShapeData::box_shape(half_extents, offset))
     }
 }
 

@@ -10,7 +10,7 @@
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{DebugAxesEligible, SpawnEntity};
-use delta_v_physics::{DynamicBody, RigidBody};
+use delta_v_physics::{CollisionShape, DynamicBody, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
 use delta_v_spawn::template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_mass,
@@ -67,7 +67,7 @@ pub fn spawn_asteroid_system(
             .expect("asteroid template must have collision_shape");
         let collision_shape_json: CollisionShapeJson = serde_json::from_value(shape.clone())
             .expect("collision_shape must be valid JSON (ADR-0013)");
-        let collision_shape = shape_from_json(&collision_shape_json, 1.0)
+        let collision_shape_data = shape_from_json(&collision_shape_json, 1.0)
             .expect("collision shape must be valid (ADR-0013)");
 
         // Extract bounding box (required) for debug axes computation using delta-v-spawn utilities
@@ -91,7 +91,7 @@ pub fn spawn_asteroid_system(
         commands.spawn((
             DynamicBody,
             RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
-            collision_shape,
+            CollisionShape(collision_shape_data),
             Transform::from_translation(event.position)
                 .with_rotation(event.rotation)
                 .with_scale(scale),

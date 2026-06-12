@@ -551,7 +551,7 @@ fn collision_response_system(
 ///
 /// For sphere shapes, returns the radius directly.
 /// For box shapes, returns the maximum half-extent as an approximation.
-const fn get_collision_radius(shape: &CollisionShape) -> f32 {
+fn get_collision_radius(shape: &CollisionShape) -> f32 {
     match shape.shape_type {
         CollisionShapeType::Sphere { radius } => radius,
         CollisionShapeType::Box { half_extents } => {

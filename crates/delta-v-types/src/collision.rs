@@ -5,6 +5,7 @@
 //! These types are used by `delta-v-spawn` to convert JSON collision shapes
 //! into physics `CollisionShape` components.
 
+use bevy::prelude::Vec3;
 use serde::Deserialize;
 
 use crate::physics::PhysicalQuantity;
@@ -53,6 +54,56 @@ pub mod layers {
     /// Collision layers for asteroids: on `ASTEROID_LAYER`, can collide with `SHIP_LAYER`.
     pub const ASTEROID: super::CollisionLayers =
         super::CollisionLayers::new(ASTEROID_LAYER, SHIP_LAYER);
+}
+
+/// Supported collision shape types.
+#[derive(Debug, Clone, Copy)]
+pub enum CollisionShapeType {
+    /// A sphere with a given radius.
+    Sphere {
+        /// Radius of the sphere in metres.
+        radius: f32,
+    },
+    /// A box with half-extents (width/2, height/2, depth/2).
+    Box {
+        /// Half-extents of the box in metres.
+        half_extents: Vec3,
+    },
+    /// A convex hull (not yet implemented).
+    ConvexHull,
+}
+
+/// Plain data for a collision shape (no Bevy `Component` derive).
+///
+/// This is the shared data type used across crates. The physics domain
+/// wraps it in a [`super::CollisionShape`] newtype (in `delta-v-physics`)
+/// that adds `#[derive(Component)]` and implements `Deref` for transparent access.
+#[derive(Debug, Clone, Copy)]
+pub struct CollisionShapeData {
+    /// The shape type and its parameters.
+    pub shape_type: CollisionShapeType,
+    /// Offset of the collision shape center from the entity origin in metres.
+    pub offset: Vec3,
+}
+
+impl CollisionShapeData {
+    /// Creates a new sphere collision shape.
+    #[must_use]
+    pub const fn sphere(radius: f32, offset: Vec3) -> Self {
+        Self {
+            shape_type: CollisionShapeType::Sphere { radius },
+            offset,
+        }
+    }
+
+    /// Creates a new box collision shape.
+    #[must_use]
+    pub const fn box_shape(half_extents: Vec3, offset: Vec3) -> Self {
+        Self {
+            shape_type: CollisionShapeType::Box { half_extents },
+            offset,
+        }
+    }
 }
 
 /// Collision shape deserialized from template JSON.
