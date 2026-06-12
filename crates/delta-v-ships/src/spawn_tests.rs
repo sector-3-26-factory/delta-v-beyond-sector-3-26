@@ -16,8 +16,9 @@ use bevy::app::App;
 use bevy::asset::AssetPlugin;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::{PlayerShipEntity, ShipPropulsionConfig, SpawnEntity};
+use delta_v_core::{PlayerShipEntity, SpawnEntity};
 
+use crate::ship_templates::ShipPropulsionConfig;
 use crate::spawn::spawn_ship_from_template;
 
 /// Creates a minimal Bevy app for testing ship spawning.

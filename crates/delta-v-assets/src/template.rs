@@ -1,63 +1,224 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 //! Template loading and merging utilities.
+//!
+//! This module provides the single source of truth for loading entity templates
+//! from JSON files. All template loading uses `delta-v-json` for validation
+//! (ADR-0038, ADR-0040).
+//!
+//! See ADR-0049 for the template system reorganization.
 
+use std::path::{Path, PathBuf};
+
+use delta_v_json::loader as json_loader;
 use serde_json::Value;
 
 use crate::error::AssetError;
 use crate::paths::resolve_template_path;
 
+/// Path to the units schema file (relative to assets root).
+const UNITS_SCHEMA_PATH: &str = "json/schema/units.schema.json";
+
 /// Loads a template from a path, validates it, and returns the JSON value.
+///
+/// This is the SINGLE function for loading templates. All crates should use
+/// this function instead of loading templates directly.
+///
+/// # Arguments
+///
+/// * `category` - The entity type category (e.g., "ships", "asteroids") used for schema lookup
+/// * `name` - The template name, which may include the category prefix (e.g., "ships/space-fighter-comrade1280")
+/// * `filename` - The specific JSON filename to load (e.g., "`ship.json`", "`player_controlled_ship.json`")
+/// * `schema_name` - The schema filename (e.g., "`ship.schema.json`", "`player_controlled_ship.schema.json`")
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
-pub fn load_template(category: &str, name: &str) -> Result<Value, AssetError> {
-    let path = resolve_template_path(category, name);
-    let template_path = format!("assets/{}.json", path.trim_end_matches('/'));
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+/// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
+///
+/// # Panics
+///
+/// Panics if `CARGO_MANIFEST_DIR` is not set or the workspace directory structure
+/// is unexpected. This should never happen in normal cargo builds.
+#[allow(clippy::expect_used)] // CARGO_MANIFEST_DIR is always set by cargo; workspace structure is fixed
+pub fn load_template(
+    category: &str,
+    name: &str,
+    filename: &str,
+    schema_name: &str,
+) -> Result<Value, AssetError> {
+    // name may already include the category prefix (e.g., "ships/space-fighter-comrade1280")
+    // so we need to handle both cases
+    let template_path = if name.contains('/') {
+        // name already includes category prefix, append the specific filename
+        format!("assets/templates/{name}/{filename}")
+    } else {
+        format!(
+            "assets/{}/{filename}",
+            resolve_template_path(category, name)
+        )
+    };
+    let full_path = get_workspace_root().join(&template_path);
+    let schema_path = get_workspace_root().join(format!("assets/json/schema/{schema_name}"));
+    let units_schema_path = get_workspace_root().join(format!("assets/{UNITS_SCHEMA_PATH}"));
 
-    let json_content = std::fs::read_to_string(&template_path).map_err(|_| {
-        AssetError::TemplateNotFound(format!("{name} (expected at {template_path})"))
-    })?;
-
-    let value: Value = serde_json::from_str(&json_content)?;
-    Ok(value)
+    load_template_from_paths(&full_path, &schema_path, &units_schema_path)
 }
 
 /// Loads a player-controlled ship template, merging base ship with player-specific data.
 ///
+/// Per ADR-0043, player-controlled ship templates are co-located with a base ship template
+/// in the same directory. This function loads the `player_controlled_ship.json` and merges
+/// it with the co-located `ship.json`.
+///
+/// Returns a tuple of (`entity_type`, `template_path`, `merged_template`, `mesh_template_path`).
+///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
-pub fn load_player_controlled_ship(ship_name: &str) -> Result<Value, AssetError> {
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+pub fn load_player_controlled_ship(
+    ship_name: &str,
+) -> Result<(String, String, Value, String), AssetError> {
     // Load the player_controlled_ship template
-    let player_path = resolve_template_path("ships", ship_name);
-    let player_template_path = format!("assets/{}.json", player_path.trim_end_matches('/'));
+    // ship_name is like "ships/space-fighter-comrade1280"
+    let player_template = load_template(
+        "ships",
+        ship_name,
+        "player_controlled_ship.json",
+        "player_controlled_ship.schema.json",
+    )?;
 
-    // For now, just load the player_controlled_ship template
-    // In a full implementation, this would merge with the base ship template
-    let json_content = std::fs::read_to_string(&player_template_path).map_err(|_| {
-        AssetError::TemplateNotFound(format!("{ship_name} (expected at {player_template_path})"))
-    })?;
+    // Load the base ship template from the same directory
+    // ship_name is like "ships/space-fighter-comrade1280"
+    let base_ship = load_template("ships", ship_name, "ship.json", "ship.schema.json")?;
 
-    let value: Value = serde_json::from_str(&json_content)?;
-    Ok(value)
+    // Compute paths - ship_name already includes "ships/" prefix
+    let template_path = format!("templates/{ship_name}/player_controlled_ship.json");
+    let ship_template_path = format!("templates/{ship_name}/ship.json");
+    let mesh_template_path = ship_template_path.replace("ship.json", "mesh.glb");
+
+    // Merge: start with base ship, overlay from player_controlled_ship
+    let mut merged = base_ship;
+    if let (Some(merged_obj), Some(player_obj)) =
+        (merged.as_object_mut(), player_template.as_object())
+    {
+        for (key, value) in player_obj {
+            // Skip entity_type (we keep it as player_controlled_ship)
+            if key != "entity_type" {
+                merged_obj.insert(key.clone(), value.clone());
+            }
+        }
+        // Ensure entity_type is player_controlled_ship
+        merged_obj.insert(
+            "entity_type".to_string(),
+            Value::String("player_controlled_ship".to_string()),
+        );
+    }
+
+    Ok((
+        "player_controlled_ship".to_string(),
+        template_path,
+        merged,
+        mesh_template_path,
+    ))
 }
 
 /// Loads an asteroid template.
 ///
+/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
-pub fn load_asteroid(name: &str) -> Result<Value, AssetError> {
-    load_template("asteroids", name)
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+pub fn load_asteroid(name: &str) -> Result<(String, String, Value, String), AssetError> {
+    // name is like "asteroids/meshy-asteroid-2", extract just the template name
+    let template_name = name.strip_prefix("asteroids/").unwrap_or(name);
+    let template_path = format!("templates/asteroids/{template_name}/asteroid.json");
+    let mesh_path = template_path.replace("asteroid.json", "mesh.glb");
+    let template = load_template("asteroids", name, "asteroid.json", "asteroid.schema.json")?;
+    Ok(("asteroid".to_string(), template_path, template, mesh_path))
 }
 
 /// Loads a ship template.
 ///
+/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
-pub fn load_ship(name: &str) -> Result<Value, AssetError> {
-    load_template("ships", name)
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetError> {
+    // name is like "ships/space-fighter-comrade1280", extract just the template name
+    let template_name = name.strip_prefix("ships/").unwrap_or(name);
+    let template_path = format!("templates/ships/{template_name}/ship.json");
+    let mesh_path = template_path.replace("ship.json", "mesh.glb");
+    let template = load_template("ships", name, "ship.json", "ship.schema.json")?;
+    Ok(("ship".to_string(), template_path, template, mesh_path))
+}
+
+/// Loads and validates a template from explicit paths.
+///
+/// Used by tests and future tooling.
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+/// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
+fn load_template_from_paths(
+    template_path: &Path,
+    schema_path: &Path,
+    units_schema_path: &Path,
+) -> Result<Value, AssetError> {
+    // Load and validate template against its schema with unit validation.
+    let template =
+        json_loader::load_validated_with_units(template_path, schema_path, units_schema_path)
+            .map_err(|e| map_json_error(e, template_path))?;
+
+    Ok(template)
+}
+
+/// Returns the workspace root path.
+///
+/// The workspace root is the parent of `crates/delta-v-assets`.
+#[must_use]
+#[allow(clippy::expect_used)] // INVARIANT: CARGO_MANIFEST_DIR is always set by cargo; workspace structure is fixed
+fn get_workspace_root() -> PathBuf {
+    let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
+    PathBuf::from(manifest_dir)
+        .parent()
+        .expect("CARGO_MANIFEST_DIR parent (crates dir) must exist")
+        .parent()
+        .expect("workspace root must exist")
+        .to_path_buf()
+}
+
+/// Maps a `delta-v-json` error to an `AssetError`.
+fn map_json_error(e: delta_v_json::error::JsonError, _context: &Path) -> AssetError {
+    use delta_v_json::error::JsonError;
+
+    match e {
+        JsonError::Io { path, source } => AssetError::Io { path, source },
+        JsonError::Parse { path, source } => AssetError::JsonParse { path, source },
+        JsonError::Schema {
+            path,
+            pointer,
+            reason,
+        } => AssetError::Validation(format!("{}:{}: {}", path.display(), pointer, reason)),
+        JsonError::SchemaLoad { path, reason } => AssetError::SchemaLoad { path, reason },
+        JsonError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        } => AssetError::InvalidUnit {
+            path,
+            pointer,
+            unit,
+            units_schema,
+        },
+    }
 }

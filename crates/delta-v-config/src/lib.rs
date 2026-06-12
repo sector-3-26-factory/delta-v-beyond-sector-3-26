@@ -54,7 +54,7 @@ pub use keybindings::{ActionBindings, Keybindings};
 pub use resources::KeybindingsResource;
 
 use bevy::prelude::*;
-use delta_v_core::{keybindings_resource, AppState, FlightAssistState};
+use delta_v_core::{AppState, FlightAssistState};
 
 use crate::loader::{load_debug, load_diagnostics, load_flight_assist, load_keybindings};
 
@@ -97,7 +97,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
         .map(|(name, b)| {
             (
                 name,
-                keybindings_resource::ActionBindings {
+                delta_v_core::input::keybindings_resource::ActionBindings {
                     keyboard: b.keyboard,
                     gamepad_button: b.gamepad_button,
                 },

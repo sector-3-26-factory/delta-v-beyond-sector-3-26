@@ -16,16 +16,24 @@
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    ChaseCameraOffset, DebugAxes, DebugAxesEligible, FlightAssist, PlayerShipEntity,
-    PlayerShipTemplate, ShipCollisionShape, ShipPropulsionConfig, SpawnEntity, StaticShipTemplate,
+    ChaseCameraOffset, DebugAxesEligible, FlightAssist, PlayerShipEntity, SpawnEntity,
 };
 use delta_v_physics::{CollisionShape, RigidBody};
+use delta_v_spawn::collision::shape_from_json;
+
+use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
-pub(crate) struct PendingShipMesh {
+pub struct PendingShipMesh {
     /// Handle to the glTF asset being loaded.
     gltf_handle: Handle<Gltf>,
+}
+
+impl delta_v_spawn::mesh_attachment::PendingMesh for PendingShipMesh {
+    fn gltf_handle(&self) -> &Handle<Gltf> {
+        &self.gltf_handle
+    }
 }
 
 /// Spawns ship entities in response to `SpawnEntity` events.
@@ -67,36 +75,6 @@ pub fn spawn_ship_from_template(
 fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
     serde_json::from_value(event.template.clone())
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
-}
-
-/// Creates a [`CollisionShape`] from a [`ShipCollisionShape`] template, scaled by the given factor.
-///
-/// Supports sphere and box shapes. Panics on unknown shape types per ADR-0013.
-#[allow(clippy::expect_used, clippy::panic)]
-fn create_collision_shape(shape: &ShipCollisionShape, scale: f32) -> CollisionShape {
-    let offset = shape
-        .offset
-        .as_ref()
-        .map_or(Vec3::ZERO, |o| Vec3::new(o.x, o.y, o.z) * scale);
-    match shape.shape_type.as_str() {
-        "sphere" => {
-            let radius = shape
-                .radius
-                .as_ref()
-                .expect("sphere collision_shape must have radius")
-                .value;
-            CollisionShape::sphere(radius * scale, offset)
-        }
-        "box" => {
-            let he = shape
-                .half_extents
-                .as_ref()
-                .expect("box collision_shape must have half_extents");
-            let half_extents = Vec3::new(he.x, he.y, he.z) * scale;
-            CollisionShape::box_shape(half_extents, offset)
-        }
-        _ => panic!("unsupported collision shape type: {}", shape.shape_type),
-    }
 }
 
 /// Spawns the player-controlled ship from a template event.
@@ -149,7 +127,9 @@ fn spawn_player_ship(
     log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
 
     // Build the ship entity spawn command.
-    let collision_shape = create_collision_shape(&template.collision_shape, scale);
+    // Use delta-v-spawn for collision shape conversion (ADR-0047).
+    let collision_shape_data = shape_from_json(&template.collision_shape, scale)
+        .expect("collision shape must be valid (ADR-0013)");
 
     let ship_entity = commands
         .spawn((
@@ -166,7 +146,7 @@ fn spawn_player_ship(
             // Physics components: mass and inertia from template JSON (ADR-0014)
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
-            collision_shape,
+            CollisionShape(collision_shape_data),
         ))
         .id();
 
@@ -271,7 +251,9 @@ fn spawn_static_ship(
     log::debug!("spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
 
     // Build the ship entity spawn command.
-    let collision_shape = create_collision_shape(&template.collision_shape, scale);
+    // Use delta-v-spawn for collision shape conversion (ADR-0047).
+    let collision_shape_data = shape_from_json(&template.collision_shape, scale)
+        .expect("collision shape must be valid (ADR-0013)");
 
     commands.spawn((
         Transform {
@@ -287,7 +269,7 @@ fn spawn_static_ship(
         // Physics components: mass and inertia from template JSON (ADR-0014)
         RigidBody::new(template.mass.value, template.inertia_scale),
         FlightAssist,
-        collision_shape,
+        CollisionShape(collision_shape_data),
     ));
 
     log::info!(
@@ -298,82 +280,4 @@ fn spawn_static_ship(
         mesh_path,
         template.mass.value,
     );
-}
-
-/// Attaches loaded glTF meshes to pending ship entities.
-///
-/// Once the glTF asset finishes loading, this system extracts the first scene
-/// from the glTF and attaches it to the ship entity.
-///
-/// Debug axes are already configured with the correct length from the template JSON
-/// (per ADR-0014: bounding box is the single source of truth).
-///
-/// Note: We only insert the `Handle<Scene>` to avoid overwriting the entity's
-/// existing `Transform` and `GlobalTransform` that were set during spawning.
-#[allow(clippy::needless_pass_by_value)]
-pub(crate) fn attach_ship_meshes(
-    mut commands: Commands<'_, '_>,
-    gltf_assets: Res<'_, Assets<Gltf>>,
-    query: Query<
-        '_,
-        '_,
-        (
-            Entity,
-            &PendingShipMesh,
-            &DebugAxesEligible,
-            Option<&DebugAxes>,
-        ),
-    >,
-) {
-    for (entity, pending, debug_eligible, _debug_axes) in query.iter() {
-        if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
-            // Überprüfung: Hat die Datei überhaupt Szenen?
-            if !gltf.scenes.is_empty() {
-                commands.entity(entity).with_children(|parent| {
-                    // Schleife über ALLE Szenen in der GLTF-Datei
-                    for scene_handle in &gltf.scenes {
-                        // In Bevy 0.14 nutzt man das SceneBundle, um eine Szene als Child zu spawnen
-                        parent.spawn(SceneBundle {
-                            scene: scene_handle.clone(),
-                            ..Default::default()
-                        });
-                    }
-                });
-
-                log::debug!(
-                    "Attached ALL glTF scenes to ship entity (debug axes from template: entity_id={}, axis_length={:.1})",
-                    debug_eligible.entity_id,
-                    debug_eligible.axis_length
-                );
-
-                // Entferne den Marker, da wir fertig sind
-                commands.entity(entity).remove::<PendingShipMesh>();
-            }
-        }
-    }
-}
-
-/// Spawns lighting for the 3-D scene.
-///
-/// Runs once per world load. Creates:
-/// - A directional light simulating a distant sun.
-/// - Ambient light for general illumination.
-pub fn setup_scene_lighting(mut commands: Commands<'_, '_>) {
-    // Directional light (sun-like): rotated to create interesting shadows.
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            illuminance: 10_000.0,
-            ..default()
-        },
-        transform: Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.8, 0.5, 0.0)),
-        ..default()
-    });
-
-    // Ambient light for general scene fill.
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 200.0,
-    });
-
-    log::info!("scene lighting initialized");
 }

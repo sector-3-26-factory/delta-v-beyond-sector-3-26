@@ -1830,6 +1830,7 @@ version = "0.0.1"
 dependencies = [
  "bevy",
  "bevy_mod_billboard",
+ "delta-v-types",
  "log",
  "serde",
  "serde_json",
@@ -1869,6 +1870,7 @@ dependencies = [
  "avian3d",
  "bevy",
  "delta-v-core",
+ "delta-v-types",
  "log",
 ]
 
@@ -1887,8 +1889,12 @@ dependencies = [
  "bevy",
  "delta-v-core",
  "delta-v-physics",
+ "delta-v-spawn",
+ "delta-v-types",
  "log",
+ "serde",
  "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1915,7 +1921,6 @@ version = "0.0.1"
 dependencies = [
  "bevy",
  "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -1931,9 +1936,12 @@ name = "delta-v-world"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-assets",
  "delta-v-core",
  "delta-v-json",
  "delta-v-physics",
+ "delta-v-spawn",
+ "delta-v-types",
  "log",
  "serde",
  "serde_json",

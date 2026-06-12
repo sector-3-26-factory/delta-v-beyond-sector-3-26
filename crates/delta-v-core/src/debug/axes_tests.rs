@@ -11,8 +11,8 @@
 //! System behavior (`mark_debug_axes`, `spawn_debug_axes`) is tested indirectly via
 //! `DebugConfig` filtering logic, which is the decision point for visibility.
 
-use crate::debug_axes::{DebugAxes, DebugAxesEligible};
-use crate::debug_config::DebugConfig;
+use super::axes::{DebugAxes, DebugAxesEligible};
+use super::debug_config::DebugConfig;
 
 #[test]
 fn test_debug_axes_eligible_creation() {
@@ -46,8 +46,6 @@ fn test_debug_axes_clone() {
 
 #[test]
 fn test_mark_debug_axes_decision_show_false_blocks_all() {
-    // When show_axis_indicators is false, should_show_axes_for() always returns false.
-    // This is the condition checked by mark_debug_axes() before adding DebugAxes.
     let config = DebugConfig {
         show_axis_indicators: false,
         axis_indicator_entities: vec!["ship_1".to_string()],
@@ -60,9 +58,6 @@ fn test_mark_debug_axes_decision_show_false_blocks_all() {
 
 #[test]
 fn test_mark_debug_axes_decision_show_true_empty_list() {
-    // When show_axis_indicators is true and axis_indicator_entities is empty,
-    // should_show_axes_for() returns true for all entities.
-    // This is the condition checked by mark_debug_axes() for the "debug all" case.
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec![],
@@ -75,9 +70,6 @@ fn test_mark_debug_axes_decision_show_true_empty_list() {
 
 #[test]
 fn test_mark_debug_axes_decision_show_true_selective() {
-    // When show_axis_indicators is true and axis_indicator_entities has entries,
-    // should_show_axes_for() returns true only for entities in the list.
-    // This is the condition checked by mark_debug_axes() for selective debugging.
     let config = DebugConfig {
         show_axis_indicators: true,
         axis_indicator_entities: vec!["ship_1".to_string(), "station_main".to_string()],
@@ -92,8 +84,6 @@ fn test_mark_debug_axes_decision_show_true_selective() {
 
 #[test]
 fn test_spawn_debug_axes_uses_config_decision() {
-    // spawn_debug_axes() calls config.should_show_axes_for() to decide
-    // whether to render axes. This test verifies the decision logic.
     let config_disabled = DebugConfig {
         show_axis_indicators: false,
         axis_indicator_entities: vec![],
@@ -112,28 +102,23 @@ fn test_spawn_debug_axes_uses_config_decision() {
         show_collision_shapes: false,
     };
 
-    // Test entity ID: "ship_1"
     let entity_id = "ship_1";
 
-    // Case 1: Master switch off
     assert!(
         !config_disabled.should_show_axes_for(entity_id),
         "spawn_debug_axes should not render when show_axis_indicators is false"
     );
 
-    // Case 2: Master switch on, empty list (render all)
     assert!(
         config_enabled_all.should_show_axes_for(entity_id),
         "spawn_debug_axes should render when show_axis_indicators is true and list is empty"
     );
 
-    // Case 3: Master switch on, selective list (entity in list)
     assert!(
         config_enabled_selective.should_show_axes_for(entity_id),
         "spawn_debug_axes should render when entity ID is in axis_indicator_entities"
     );
 
-    // Case 4: Master switch on, selective list (entity NOT in list)
     assert!(
         !config_enabled_selective.should_show_axes_for("ship_2"),
         "spawn_debug_axes should not render when entity ID is not in axis_indicator_entities"

@@ -10,7 +10,7 @@
 //!
 //! - `spatial` — Spatial types: `BoundingBox`, `Vec3Json`, `QuatJson`
 //! - `physics` — Physics types: `PhysicalQuantity`
-//! - `collision` — Collision types: `CollisionShapeJson`
+//! - `collision` — Collision types: `CollisionShapeJson`, `CollisionShapeData`, `CollisionShapeType`, `CollisionLayers`
 //! - `ids` — Identifier types: `EntityId`, `TemplatePath`
 
 #![warn(missing_docs)]
@@ -32,7 +32,7 @@ pub mod physics;
 pub mod spatial;
 
 // Re-exports for convenience
-pub use collision::CollisionShapeJson;
+pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType};
 pub use ids::{EntityId, TemplatePath};
 pub use physics::PhysicalQuantity;
 pub use spatial::{BoundingBox, QuatJson, Vec3Json};

@@ -23,9 +23,11 @@ use std::collections::BTreeSet;
 use bevy::prelude::*;
 use delta_v_core::{
     ActiveActions, FlightAssist, FlightAssistConfig, FlightAssistState, LogicalAction,
-    PlayerShipEntity, ShipPropulsionConfig, ThrustCommand, TorqueCommand,
+    PlayerShipEntity,
 };
 use delta_v_physics::RigidBody;
+
+use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 
 /// System set for the input → forces pipeline within `FixedUpdate`.
 ///

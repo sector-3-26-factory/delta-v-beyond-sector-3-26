@@ -45,10 +45,17 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod error;
+pub mod ship_templates;
 pub mod spawn;
 pub mod systems;
 
-pub use spawn::{setup_scene_lighting, spawn_ship_from_template};
+pub use error::ShipError;
+pub use ship_templates::{
+    MainThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate,
+    ShipTemplate, StaticShipTemplate, ThrustCommand, TorqueCommand,
+};
+pub use spawn::spawn_ship_from_template;
 
 #[cfg(test)]
 #[path = "spawn_tests.rs"]
@@ -56,14 +63,21 @@ mod spawn_tests;
 
 use bevy::prelude::*;
 use delta_v_core::{
-    check_sector_boundary_system, AppState, InputSet, SectorBoundaryResource, ThrustCommand,
-    TorqueCommand, WorldSpawnSet,
+    check_sector_boundary_system, AppState, InputSet, SectorBoundaryResource, WorldSpawnSet,
 };
 use delta_v_physics::PhysicsSet;
 use systems::{
     clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
     input_reader_system, thrust_system, torque_system, PreviousActions, ShipInputSet,
 };
+
+/// Wrapper system that calls `delta_v_spawn::lighting::setup_scene_lighting`.
+///
+/// This is a thin adapter because `setup_scene_lighting` takes `&mut Commands`
+/// which is not a valid Bevy system signature on its own.
+fn setup_scene_lighting(mut commands: Commands<'_, '_>) {
+    delta_v_spawn::lighting::setup_scene_lighting(&mut commands);
+}
 
 /// Ships plugin for managing player and NPC vessels.
 ///
@@ -113,9 +127,11 @@ impl Plugin for ShipsPlugin {
                 .run_if(in_state(AppState::SpawningEntities)),
         )
         // Attach glTF meshes during InGame once assets are loaded.
+        // Uses the generic attach_meshes system from delta-v-spawn (ADR-0047).
         .add_systems(
             Update,
-            spawn::attach_ship_meshes.run_if(in_state(AppState::InGame)),
+            delta_v_spawn::mesh_attachment::attach_meshes::<spawn::PendingShipMesh>
+                .run_if(in_state(AppState::InGame)),
         )
         // Boundary checking during InGame.
         .add_systems(

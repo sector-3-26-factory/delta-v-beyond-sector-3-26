@@ -1,99 +1,11 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Debug axis indicators: RGB arrows from entity centers.
-//!
-//! Per ADR-0022 (performance instrumentation), debug axes help visualize
-//! entity orientations and alignment during development.
-//!
-//! The spawning process is decoupled per ADR-0005 (plugin architecture):
-//! - Domain plugins (`ShipsPlugin`, etc.) mark entities with `DebugAxesEligible`.
-//! - `CorePlugin`'s `mark_debug_axes` system converts eligible entities to `DebugAxes`.
-//! - `CorePlugin`'s `spawn_debug_axes` system renders the axes and labels.
-//!
-//! Axes are spawned as CHILDREN of their target entity. Each axis root has a
-//! `DebugAxisRootMarker` component. The `update_debug_axes_rotation` system
-//! queries these markers, finds their parent's rotation, and sets the root's
-//! local rotation to the inverse, keeping axes world-aligned.
-//!
-//! The visibility chain is: target → axis root → axis (→ axis label?).
-//! The axis root has `Visibility`, `InheritedVisibility`, and `ViewVisibility`
-//! to ensure proper visibility propagation to its children.
-//!
-//! - X axis: red line with "X (right)" label
-//! - Y axis: green line with "Y (up)" label
-//! - Z axis: blue line with "Z (backward)" label
-//!
-//! Length is calculated as 2× the entity's longest expansion along any axis.
-//! When the axis length changes (e.g. after a glTF mesh finishes loading and
-//! the bounding box is computed), the old axis root is despawned and a new one
-//! is created with the updated length.
-
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy_mod_billboard::prelude::*;
 
-use crate::debug_config::DebugConfig;
-
-#[cfg(test)]
-#[path = "debug_axes_tests.rs"]
-mod tests;
-
-/// Marker component for entities eligible to have debug axes rendered.
-///
-/// Domain plugins (e.g., `ShipsPlugin`) spawn entities and mark them with this component.
-/// The `mark_debug_axes` system (in `CorePlugin`) reads this marker and adds `DebugAxes`
-/// if debug config enables visualization. Per ADR-0005, this decouples debug
-/// visualization from domain plugins.
-#[derive(Component, Debug, Clone)]
-pub struct DebugAxesEligible {
-    /// Entity type or name for debug filtering (e.g., `"player_controlled_ship"`).
-    pub entity_id: String,
-    /// Axis length in metres.
-    pub axis_length: f32,
-}
-
-impl DebugAxesEligible {
-    /// Creates a new debug axes eligibility marker.
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn new(entity_id: String, axis_length: f32) -> Self {
-        Self {
-            entity_id,
-            axis_length,
-        }
-    }
-}
-
-/// Component marking an entity that should have debug axes rendered.
-///
-/// The axes are spawned as CHILDREN of the target entity, with a [`DebugAxisRootMarker`]
-/// component on the root. The `update_debug_axes_rotation` system inverts the parent's
-/// rotation to keep the axes world-aligned.
-#[derive(Component, Debug, Clone)]
-pub struct DebugAxes {
-    /// Entity ID for selective axis targeting (from world definition).
-    pub entity_id: String,
-    /// Length of each axis line in metres.
-    pub axis_length: f32,
-}
-
-impl DebugAxes {
-    /// Creates a new debug axes marker with the given entity ID and axis length.
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn new(entity_id: String, axis_length: f32) -> Self {
-        Self {
-            entity_id,
-            axis_length,
-        }
-    }
-}
-
-/// Marker component on a debug axis root entity.
-///
-/// Used to identify axis root entities for the inverse rotation update system.
-/// The axis root is a child of the target entity, and this marker allows the
-/// update system to find it and set its rotation to the inverse of the parent's.
-#[derive(Component)]
-pub struct DebugAxisRootMarker;
+use super::axes::{DebugAxes, DebugAxesEligible, DebugAxisRootMarker};
+use super::debug_config::DebugConfig;
 
 /// Marks eligible entities with `DebugAxes` if debug config enables visualization.
 ///
@@ -255,14 +167,6 @@ pub fn update_debug_axes_rotation(
 /// Spawns an axis root as a child of the target entity, with axis meshes
 /// and labels as children of the root. The axis root is marked with
 /// `DebugAxisRootMarker` for the rotation update system.
-///
-/// # Arguments
-///
-/// * `commands` - Bevy commands buffer.
-/// * `meshes` - Mesh asset storage.
-/// * `materials` - Material asset storage.
-/// * `axes` - The `DebugAxes` component with entity ID and length.
-/// * `target` - The entity to add axes as children of.
 fn add_debug_axes_to_entity(
     commands: &mut Commands<'_, '_>,
     meshes: &mut Assets<Mesh>,
@@ -295,7 +199,6 @@ fn add_debug_axes_to_entity(
     });
 
     // Spawn axis root as a standalone entity first, then parent it to the target.
-    // This allows us to capture the root's entity ID correctly.
     let axis_root = commands
         .spawn((
             Transform::default(),
@@ -375,11 +278,6 @@ const LABEL_REFERENCE_LENGTH: f32 = 2.0;
 const LABEL_POSITION_FRACTION: f32 = 1.1;
 
 /// Helper function to spawn an axis label with size adapted to the ship scale.
-///
-/// The label is rendered as `BillboardTextBundle` so it always faces the camera.
-/// Font size and transform scale grow with the square root of the axis length,
-/// providing readable labels on both small and large ships without overwhelming
-/// the screen.
 fn spawn_axis_label(
     parent: &mut ChildBuilder<'_>,
     label: &str,

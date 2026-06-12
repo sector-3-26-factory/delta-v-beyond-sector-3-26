@@ -11,7 +11,11 @@
 //! See ADR-0005 (plugin architecture) and ADR-0018 (state management).
 
 use bevy::prelude::*;
-use serde::Deserialize;
+
+/// Camera template types for deserializing camera positions from ship template JSON.
+pub mod types;
+
+pub use types::{CameraDefinition, ShipCamerasTemplate};
 
 /// Stores the entity ID of the player-controlled ship.
 ///
@@ -37,53 +41,6 @@ pub struct CameraFollow {
     /// Offset from the target's position in the target's local space.
     /// Default: 20 m behind, 8 m above (Vec3 in target-local coords).
     pub offset: Vec3,
-}
-
-/// A single camera definition with position, target (look-at point), and availability.
-#[derive(Debug, Deserialize)]
-pub struct CameraDefinition {
-    /// Camera position relative to ship center (metres).
-    pub position: Vec3Json,
-    /// Point the camera looks at, relative to ship center (metres).
-    /// Direction = normalize(target - position).
-    pub target: Vec3Json,
-    /// If true, this camera is physically present and accessible.
-    /// If false, the position/target are computed but not available to the player.
-    pub available: bool,
-}
-
-/// Camera definitions from the ship template.
-///
-/// All 8 cameras are required in the schema. Each has a position, target, and availability flag.
-#[derive(Debug, Deserialize)]
-pub struct ShipCamerasTemplate {
-    /// Cockpit camera (inside the cockpit, typically front-upper-center).
-    pub cockpit: CameraDefinition,
-    /// Chase camera (behind and above the ship).
-    pub chase: CameraDefinition,
-    /// Rear view camera (behind at cockpit height).
-    pub rear: CameraDefinition,
-    /// Front/nose camera (forward view).
-    pub front: CameraDefinition,
-    /// Left side view camera.
-    pub left: CameraDefinition,
-    /// Right side view camera.
-    pub right: CameraDefinition,
-    /// Top-down view camera.
-    pub top: CameraDefinition,
-    /// Bottom-up view camera.
-    pub bottom: CameraDefinition,
-}
-
-/// A 3-component vector deserialized from JSON `{"x": N, "y": N, "z": N}`.
-#[derive(Debug, Deserialize)]
-pub struct Vec3Json {
-    /// X component in metres.
-    pub x: f32,
-    /// Y component in metres.
-    pub y: f32,
-    /// Z component in metres.
-    pub z: f32,
 }
 
 /// Spawns the 3-D chase camera after the player ship entity exists.

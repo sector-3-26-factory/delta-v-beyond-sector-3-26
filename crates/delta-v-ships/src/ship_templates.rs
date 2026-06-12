@@ -10,8 +10,8 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::camera::ShipCamerasTemplate;
-use crate::camera::Vec3Json;
+use delta_v_core::camera::ShipCamerasTemplate;
+use delta_v_types::{BoundingBox, PhysicalQuantity};
 
 /// Base deserialized ship template JSON.
 ///
@@ -27,23 +27,6 @@ pub struct ShipTemplate {
     pub inertia_scale: f32,
     /// Propulsion system configuration.
     pub propulsion: ShipPropulsionTemplate,
-}
-
-/// Collision shape for a ship, deserialized from template JSON.
-///
-/// Supports sphere and box shapes. The shape is defined in ship-local coordinates.
-#[derive(Debug, Deserialize)]
-pub struct ShipCollisionShape {
-    /// The shape type: "sphere" or "box".
-    #[serde(rename = "type")]
-    pub shape_type: String,
-    /// Radius for sphere shapes (metres).
-    pub radius: Option<PhysicalQuantity>,
-    /// Half-extents for box shapes (metres).
-    pub half_extents: Option<Vec3Json>,
-    /// Offset of the collision shape center from the entity origin in metres.
-    /// Default (0,0,0) from schema. Use this to align collision shape with visual mesh.
-    pub offset: Option<Vec3Json>,
 }
 
 /// Deserialized player-controlled ship template JSON.
@@ -67,7 +50,7 @@ pub struct PlayerShipTemplate {
     pub bounding_box: BoundingBox,
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
-    pub collision_shape: ShipCollisionShape,
+    pub collision_shape: delta_v_types::CollisionShapeJson,
 }
 
 /// Deserialized non-player ship template JSON.
@@ -87,31 +70,7 @@ pub struct StaticShipTemplate {
     pub bounding_box: BoundingBox,
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
-    pub collision_shape: ShipCollisionShape,
-}
-
-/// Axis-aligned bounding box in ship-local coordinates (metres).
-///
-/// Computed once from the glTF mesh and stored in the template JSON.
-/// Used for camera position defaults, debug axes, and spatial calculations.
-#[derive(Debug, Deserialize)]
-pub struct BoundingBox {
-    /// Minimum corner (x, y, z in metres).
-    pub min: Vec3Json,
-    /// Maximum corner (x, y, z in metres).
-    pub max: Vec3Json,
-}
-
-/// Physical quantity with value and unit (ADR-0008).
-///
-/// Deserialized from `{"value": N, "unit": "..."}` objects in template JSON.
-/// The unit field is validated by the JSON schema; we only read the value.
-#[derive(Debug, Deserialize)]
-pub struct PhysicalQuantity {
-    /// Numeric magnitude.
-    pub value: f32,
-    /// Unit identifier (e.g. "kg", "N", "N⋅m"). Validated by schema.
-    pub unit: String,
+    pub collision_shape: delta_v_types::CollisionShapeJson,
 }
 
 /// Propulsion configuration from the ship template.
