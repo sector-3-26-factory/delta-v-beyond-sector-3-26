@@ -544,7 +544,7 @@ fn test_torque_system_applies_torque_to_rigid_body() {
 // ---------------------------------------------------------------------------
 
 /// Builds a minimal Bevy app with the input → forces pipeline resources
-/// and a custom rotation_ramp_ticks value.
+/// and a custom `rotation_ramp_ticks` value.
 fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
@@ -595,7 +595,7 @@ fn test_ramp_first_tick() {
     );
 }
 
-/// Test: ramp factor is 1/N for a single tick with rotation_ramp_ticks=N.
+/// Test: ramp factor is 1/N for a single tick with `rotation_ramp_ticks=N`.
 #[test]
 fn test_ramp_factor_with_different_ticks() {
     // With ramp_ticks=5, first tick should give 1/5 = 20% of max_torque
@@ -625,7 +625,7 @@ fn test_ramp_factor_with_different_ticks() {
     );
 }
 
-/// Test: ramp_ticks=1 means full torque on first tick (no effective ramp).
+/// Test: `ramp_ticks=1` means full torque on first tick (no effective ramp).
 #[test]
 fn test_ramp_ticks_one_is_full() {
     let mut app = build_ramp_app(1);
@@ -729,7 +729,7 @@ fn test_ramp_opposite_direction() {
     );
 }
 
-/// Test: rotation_ramp_ticks = 0 means instant full torque (no ramp).
+/// Test: `rotation_ramp_ticks` = 0 means instant full torque (no ramp).
 #[test]
 fn test_ramp_zero_means_instant_full() {
     let mut app = build_ramp_app(0);

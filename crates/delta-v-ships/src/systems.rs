@@ -74,7 +74,7 @@ pub struct PreviousActions(pub BTreeSet<LogicalAction>);
 pub struct RotationRampState {
     /// Current ramp tick counter per axis (pitch=X, yaw=Y, roll=Z).
     /// 0 = no rotation input on this axis.
-    /// 1..rotation_ramp_ticks = ramping up.
+    /// `1..rotation_ramp_ticks` = ramping up.
     pub ramp_ticks: Vec3,
 }
 
@@ -96,7 +96,7 @@ pub fn input_reader_system(
     mut torque_cmd: ResMut<'_, TorqueCommand>,
     mut ramp: ResMut<'_, RotationRampState>,
 ) {
-    let ramp_ticks_max = propulsion.rotation_ramp_ticks as f32;
+    let ramp_ticks_max = propulsion.rotation_ramp_ticks;
 
     for action in &active.0 {
         match action {
@@ -124,89 +124,29 @@ pub fn input_reader_system(
             // Rotation: apply torque around local axes with linear ramp
             // Pitch around X: nose up = +X torque, nose down = -X torque
             LogicalAction::PitchUp => {
-                let r = &mut ramp.ramp_ticks.x;
-                if ramp_ticks_max > 0.0 && *r < ramp_ticks_max {
-                    *r += 1.0;
-                } else if ramp_ticks_max == 0.0 {
-                    *r = 1.0;
-                }
-                let factor = if ramp_ticks_max > 0.0 {
-                    (*r / ramp_ticks_max).min(1.0)
-                } else {
-                    1.0
-                };
+                let factor = ramp_factor(&mut ramp.ramp_ticks.x, ramp_ticks_max);
                 torque_cmd.torque.x += propulsion.max_torque * factor;
             }
             LogicalAction::PitchDown => {
-                let r = &mut ramp.ramp_ticks.x;
-                if ramp_ticks_max > 0.0 && *r < ramp_ticks_max {
-                    *r += 1.0;
-                } else if ramp_ticks_max == 0.0 {
-                    *r = 1.0;
-                }
-                let factor = if ramp_ticks_max > 0.0 {
-                    (*r / ramp_ticks_max).min(1.0)
-                } else {
-                    1.0
-                };
+                let factor = ramp_factor(&mut ramp.ramp_ticks.x, ramp_ticks_max);
                 torque_cmd.torque.x -= propulsion.max_torque * factor;
             }
             // Yaw around Y: left = +Y, right = -Y
             LogicalAction::YawLeft => {
-                let r = &mut ramp.ramp_ticks.y;
-                if ramp_ticks_max > 0.0 && *r < ramp_ticks_max {
-                    *r += 1.0;
-                } else if ramp_ticks_max == 0.0 {
-                    *r = 1.0;
-                }
-                let factor = if ramp_ticks_max > 0.0 {
-                    (*r / ramp_ticks_max).min(1.0)
-                } else {
-                    1.0
-                };
+                let factor = ramp_factor(&mut ramp.ramp_ticks.y, ramp_ticks_max);
                 torque_cmd.torque.y += propulsion.max_torque * factor;
             }
             LogicalAction::YawRight => {
-                let r = &mut ramp.ramp_ticks.y;
-                if ramp_ticks_max > 0.0 && *r < ramp_ticks_max {
-                    *r += 1.0;
-                } else if ramp_ticks_max == 0.0 {
-                    *r = 1.0;
-                }
-                let factor = if ramp_ticks_max > 0.0 {
-                    (*r / ramp_ticks_max).min(1.0)
-                } else {
-                    1.0
-                };
+                let factor = ramp_factor(&mut ramp.ramp_ticks.y, ramp_ticks_max);
                 torque_cmd.torque.y -= propulsion.max_torque * factor;
             }
             // Roll around Z: CCW = +Z, CW = -Z
             LogicalAction::RollLeft => {
-                let r = &mut ramp.ramp_ticks.z;
-                if ramp_ticks_max > 0.0 && *r < ramp_ticks_max {
-                    *r += 1.0;
-                } else if ramp_ticks_max == 0.0 {
-                    *r = 1.0;
-                }
-                let factor = if ramp_ticks_max > 0.0 {
-                    (*r / ramp_ticks_max).min(1.0)
-                } else {
-                    1.0
-                };
+                let factor = ramp_factor(&mut ramp.ramp_ticks.z, ramp_ticks_max);
                 torque_cmd.torque.z += propulsion.max_torque * factor;
             }
             LogicalAction::RollRight => {
-                let r = &mut ramp.ramp_ticks.z;
-                if ramp_ticks_max > 0.0 && *r < ramp_ticks_max {
-                    *r += 1.0;
-                } else if ramp_ticks_max == 0.0 {
-                    *r = 1.0;
-                }
-                let factor = if ramp_ticks_max > 0.0 {
-                    (*r / ramp_ticks_max).min(1.0)
-                } else {
-                    1.0
-                };
+                let factor = ramp_factor(&mut ramp.ramp_ticks.z, ramp_ticks_max);
                 torque_cmd.torque.z -= propulsion.max_torque * factor;
             }
             LogicalAction::ToggleFlightAssist | LogicalAction::FirePrimary => {
@@ -226,6 +166,28 @@ pub fn input_reader_system(
     if !active.0.contains(&LogicalAction::RollLeft) && !active.0.contains(&LogicalAction::RollRight)
     {
         ramp.ramp_ticks.z = 0.0;
+    }
+}
+
+/// Computes the linear ramp factor for a single rotation axis.
+///
+/// Increments the ramp counter and returns a value in `[0.0, 1.0]` representing
+/// the fraction of `max_torque` to apply. When `ramp_ticks_max` is 0, returns 1.0
+/// (instant full torque).
+// allow-precision-loss: rotation_ramp_ticks is a tick count (typically ≤60),
+// so u32→f32 precision loss is irrelevant in practice.
+#[allow(clippy::cast_precision_loss)]
+fn ramp_factor(ramp_counter: &mut f32, ramp_ticks_max: u32) -> f32 {
+    let max = ramp_ticks_max as f32;
+    if ramp_ticks_max > 0 && *ramp_counter < max {
+        *ramp_counter += 1.0;
+    } else if ramp_ticks_max == 0 {
+        *ramp_counter = 1.0;
+    }
+    if ramp_ticks_max > 0 {
+        (*ramp_counter / max).min(1.0)
+    } else {
+        1.0
     }
 }
 
