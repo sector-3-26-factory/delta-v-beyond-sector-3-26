@@ -47,9 +47,11 @@ the existing thrusters to null out residual motion.
 
 - A projectile inherits the firing ship's world velocity at the moment of
   firing: `v_projectile = v_ship + R_ship * v_muzzle_local`.
-- Projectiles are rigid bodies (or kinematic with raycast sweep for
-  performance, TBD) and obey the same physics rules.
+- Projectiles are rigid bodies and obey the same physics rules.
 - No drag in vacuum.
+- Projectiles can apply damage to other rigid bodies on collision.
+- Damage is applied via the `Health` component; entities are destroyed when
+  health reaches zero.
 
 ## Determinism
 
