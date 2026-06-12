@@ -35,13 +35,13 @@ mod tests {
         }
     }
 
-    /// `all()` must return all 13 variants (12 M1 actions + [`ToggleFlightAssist`]).
+    /// `all()` must return all 14 variants (12 M1 actions + [`ToggleFlightAssist`] + [`FirePrimary`]).
     #[test]
     fn test_logical_action_all_count() {
         assert_eq!(
             LogicalAction::all().len(),
-            13,
-            "expected 13 LogicalAction variants"
+            14,
+            "expected 14 LogicalAction variants"
         );
     }
 

@@ -46,7 +46,7 @@ pub mod loader;
 
 pub use error::JsonError;
 pub use loader::{
-    fill_defaults, load_validated, load_validated_with_units, read_json, validate,
+    fill_defaults, load_validated, load_validated_with_registry, read_json, validate,
     validate_with_registry,
 };
 

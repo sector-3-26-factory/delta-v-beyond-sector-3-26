@@ -109,7 +109,8 @@ fn make_player_ship_event() -> SpawnEntity {
                 "target": { "x": 0.0, "y": 10.0, "z": 0.0 },
                 "available": true
             }
-        }
+        },
+        "weapons": []
     });
 
     SpawnEntity::new(

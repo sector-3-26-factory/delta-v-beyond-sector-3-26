@@ -42,6 +42,8 @@
                 "h",
                 "d",
                 "a",
+                "hp",
+                "Hz",
                 "dimensionless"
             ]
         }
@@ -135,6 +137,12 @@
                 },
                 "a": {
                     "description": "Julian years — unit of time (≈31557600 s)."
+                },
+                "hp": {
+                    "description": "Hit points — unit of damage/health."
+                },
+                "Hz": {
+                    "description": "Hertz — unit of frequency (1/s)."
                 },
                 "dimensionless": {
                     "description": "Dimensionless quantity (pure ratio, no physical unit)."
@@ -332,6 +340,50 @@
                     "enum": [
                         "rad",
                         "deg"
+                    ]
+                }
+            }
+        },
+        "damage": {
+            "description": "Physical quantity with damage unit. Per ADR-0008, all damage values use value+unit format. Units: hp. Represents hit points of damage.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Damage value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of damage. Must be one of the allowed damage units.",
+                    "type": "string",
+                    "enum": [
+                        "hp"
+                    ]
+                }
+            }
+        },
+        "frequency": {
+            "description": "Physical quantity with frequency unit. Per ADR-0008, all frequency values use value+unit format. Units: Hz. Converted to Hz at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Frequency value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of frequency. Must be one of the allowed frequency units.",
+                    "type": "string",
+                    "enum": [
+                        "Hz"
                     ]
                 }
             }

@@ -116,8 +116,8 @@ pub fn input_reader_system(
             LogicalAction::RollRight => {
                 torque_cmd.torque.z -= propulsion.max_torque;
             }
-            LogicalAction::ToggleFlightAssist => {
-                // Handled by flight_assist_toggle_system
+            LogicalAction::ToggleFlightAssist | LogicalAction::FirePrimary => {
+                // Handled by other systems (flight_assist_toggle_system / weapons plugin)
             }
         }
     }

@@ -23,12 +23,79 @@
 //! Cross-schema references use the `$id` URI scheme:
 //! `"$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"`.
 //! The validator uses a `referencing::Registry` to resolve these in-memory.
+//! All schemas in `assets/json/schema/` are auto-discovered and registered
+//! by their `$id` at startup, so any cross-schema `$ref` is automatically
+//! resolvable without manual registration.
 
 use std::path::Path;
 
 use serde_json::Value;
 
 use crate::error::JsonError;
+
+// ---------------------------------------------------------------------------
+// Schema registry — auto-discovers all schemas in assets/json/schema/
+// ---------------------------------------------------------------------------
+
+/// Builds a `referencing::Registry` containing every `.schema.json` file
+/// found in `schema_dir`. Each schema is registered by its `$id` URI so
+/// that cross-schema `$ref`s resolve automatically.
+///
+/// # Errors
+/// Returns [`JsonError::SchemaLoad`] if any schema file cannot be read,
+/// parsed, or lacks a `$id`.
+fn build_schema_registry(schema_dir: &Path) -> Result<jsonschema::Registry<'_>, JsonError> {
+    let mut registry = jsonschema::Registry::new();
+
+    let entries = std::fs::read_dir(schema_dir).map_err(|e| JsonError::SchemaLoad {
+        path: schema_dir.to_owned(),
+        reason: format!("cannot read schema directory: {e}"),
+    })?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| JsonError::SchemaLoad {
+            path: schema_dir.to_owned(),
+            reason: format!("cannot read directory entry: {e}"),
+        })?;
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if !file_name.ends_with(".schema.json") {
+            continue;
+        }
+
+        let text = std::fs::read_to_string(&path).map_err(|e| JsonError::SchemaLoad {
+            path: path.clone(),
+            reason: e.to_string(),
+        })?;
+        let schema: Value = serde_json::from_str(&text).map_err(|e| JsonError::SchemaLoad {
+            path: path.clone(),
+            reason: e.to_string(),
+        })?;
+        let id = schema
+            .get("$id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| JsonError::SchemaLoad {
+                path: path.clone(),
+                reason: "schema missing $id".to_string(),
+            })?
+            .to_string();
+
+        registry = registry
+            .add(&id, schema)
+            .map_err(|e| JsonError::SchemaLoad {
+                path: path.clone(),
+                reason: e.to_string(),
+            })?;
+    }
+
+    registry.prepare().map_err(|e| JsonError::SchemaLoad {
+        path: schema_dir.to_owned(),
+        reason: e.to_string(),
+    })
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -86,8 +153,10 @@ pub fn validate(value: &Value, schema_path: &Path, data_path: &Path) -> Result<(
 
 /// Validates `value` against the JSON Schema at `schema_path` with cross-schema support.
 ///
-/// This version uses a `referencing::Registry` to resolve cross-schema `$ref`s
-/// by their `$id` URIs. The units schema is automatically registered.
+/// This version auto-discovers all `.schema.json` files in `schema_dir` and registers
+/// them by their `$id` into a `referencing::Registry`. This allows any cross-schema
+/// `$ref` (e.g., `"$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"`)
+/// to resolve automatically without manual per-schema registration.
 ///
 /// Returns the **first** validation error as [`JsonError::Schema`].
 ///
@@ -98,7 +167,7 @@ pub fn validate_with_registry(
     value: &Value,
     schema_path: &Path,
     data_path: &Path,
-    units_schema_path: &Path,
+    schema_dir: &Path,
 ) -> Result<(), JsonError> {
     // Load the main schema
     let schema_text = std::fs::read_to_string(schema_path).map_err(|e| JsonError::SchemaLoad {
@@ -111,38 +180,8 @@ pub fn validate_with_registry(
             reason: e.to_string(),
         })?;
 
-    // Load the units schema and register it
-    let units_text =
-        std::fs::read_to_string(units_schema_path).map_err(|e| JsonError::SchemaLoad {
-            path: units_schema_path.to_owned(),
-            reason: e.to_string(),
-        })?;
-    let units_value: Value =
-        serde_json::from_str(&units_text).map_err(|e| JsonError::SchemaLoad {
-            path: units_schema_path.to_owned(),
-            reason: e.to_string(),
-        })?;
-
-    // Build a registry with the units schema
-    let units_id = units_value
-        .get("$id")
-        .and_then(Value::as_str)
-        .ok_or_else(|| JsonError::SchemaLoad {
-            path: units_schema_path.to_owned(),
-            reason: "units schema missing $id".to_string(),
-        })?
-        .to_string();
-    let registry = jsonschema::Registry::new()
-        .add(&units_id, units_value)
-        .map_err(|e| JsonError::SchemaLoad {
-            path: units_schema_path.to_owned(),
-            reason: e.to_string(),
-        })?
-        .prepare()
-        .map_err(|e| JsonError::SchemaLoad {
-            path: units_schema_path.to_owned(),
-            reason: e.to_string(),
-        })?;
+    // Build registry from all schemas in the schema directory
+    let registry = build_schema_registry(schema_dir)?;
 
     // Build validator with the registry for cross-schema $ref resolution
     let validator = jsonschema::options()
@@ -204,10 +243,11 @@ pub fn load_validated(json_path: &Path, schema_path: &Path) -> Result<Value, Jso
     Ok(value)
 }
 
-/// Full pipeline: read, validate, fill defaults, and validate units.
+/// Full pipeline: read, validate with cross-schema registry, fill defaults,
+/// and validate units.
 ///
-/// This version uses `validate_with_registry` to properly resolve cross-schema
-/// `$ref`s (e.g., `"$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"`).
+/// This version uses `validate_with_registry` with auto-discovered schemas
+/// to properly resolve cross-schema `$ref`s.
 ///
 /// Per ADR-0008, all numeric physical quantities MUST use the
 /// `{"value": N, "unit": "..."}` format with a unit from the registry.
@@ -215,16 +255,17 @@ pub fn load_validated(json_path: &Path, schema_path: &Path) -> Result<Value, Jso
 /// # Errors
 /// Returns [`JsonError`] if any step fails, including
 /// [`JsonError::InvalidUnit`] if a unit is not in the registry.
-pub fn load_validated_with_units(
+pub fn load_validated_with_registry(
     json_path: &Path,
     schema_path: &Path,
+    schema_dir: &Path,
     units_schema_path: &Path,
 ) -> Result<Value, JsonError> {
     // Read the JSON file
     let mut value = read_json(json_path)?;
 
     // Validate with registry to resolve cross-schema $refs
-    validate_with_registry(&value, schema_path, json_path, units_schema_path)?;
+    validate_with_registry(&value, schema_path, json_path, schema_dir)?;
 
     // Fill defaults
     fill_defaults(&mut value, schema_path)?;

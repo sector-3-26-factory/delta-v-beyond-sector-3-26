@@ -64,6 +64,11 @@
       "keyboard": [
         "KeyC"
       ]
+    },
+    "fire_primary": {
+      "keyboard": [
+        "Space"
+      ]
     }
   }
 }

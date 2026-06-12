@@ -51,6 +51,7 @@ pub mod diagnostics;
 pub mod events;
 pub mod flight_assist;
 pub mod floating_origin;
+pub mod health;
 pub mod input;
 pub mod spawn;
 pub mod state;
@@ -68,11 +69,12 @@ pub use debug::{
     DebugAxes, DebugAxesEligible, DebugAxisRootMarker, DebugConfig,
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
-pub use events::SpawnEntity;
+pub use events::{FireWeapon, ProjectileHit, SpawnEntity};
 pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
+pub use health::{Health, Weapon};
 pub use input::{ActiveActions, InputSet, KeybindingsResource, LogicalAction};
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;

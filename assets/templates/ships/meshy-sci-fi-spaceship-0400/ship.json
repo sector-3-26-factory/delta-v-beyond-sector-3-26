@@ -49,12 +49,37 @@
             "type": "rcs",
             "max_torque": {
                 "value": 15000,
-                "unit": "N⋅m"
+                "unit": "N\u22c5m"
             },
             "max_strafe_thrust": {
                 "value": 15000,
                 "unit": "N"
             }
         }
-    }
+    },
+    "weapons": [
+        {
+            "type": "laser",
+            "projectile_speed": {
+                "value": 500.0,
+                "unit": "m/s"
+            },
+            "damage": {
+                "value": 10.0,
+                "unit": "hp"
+            },
+            "fire_rate": {
+                "value": 5.0,
+                "unit": "Hz"
+            },
+            "lifetime": {
+                "value": 2.0,
+                "unit": "s"
+            },
+            "projectile_radius": {
+                "value": 0.1,
+                "unit": "m"
+            }
+        }
+    ]
 }

@@ -1,0 +1,48 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/weapon",
+    "title": "Weapon template",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a weapon that can be mounted on a ship. Physical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "type",
+        "projectile_speed",
+        "damage",
+        "fire_rate",
+        "lifetime",
+        "projectile_radius"
+    ],
+    "properties": {
+        "type": {
+            "description": "Weapon type identifier.",
+            "type": "string",
+            "enum": [
+                "laser",
+                "railgun",
+                "plasma",
+                "missile"
+            ]
+        },
+        "projectile_speed": {
+            "description": "Projectile speed in m/s.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/velocity"
+        },
+        "damage": {
+            "description": "Damage per hit in hit points.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/damage"
+        },
+        "fire_rate": {
+            "description": "Fire rate in rounds per second.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/frequency"
+        },
+        "lifetime": {
+            "description": "Projectile lifetime in seconds.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+        },
+        "projectile_radius": {
+            "description": "Projectile collision shape radius in metres.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+        }
+    }
+}

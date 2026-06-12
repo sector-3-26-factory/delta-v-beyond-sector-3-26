@@ -13,15 +13,15 @@
 //!
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
+use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    ChaseCameraOffset, DebugAxesEligible, FlightAssist, PlayerShipEntity, SpawnEntity,
+    ChaseCameraOffset, DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, SpawnEntity,
+    Weapon,
 };
 use delta_v_physics::{CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
-
-use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
@@ -147,8 +147,24 @@ fn spawn_player_ship(
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
             CollisionShape(collision_shape_data),
+            // Health component for damage model (M4)
+            Health::new(100.0),
         ))
         .id();
+
+    // Add Weapon components from template (M4).
+    // Per ADR-0014, all gameplay values come from JSON.
+    for (i, weapon_json) in template.weapons.iter().enumerate() {
+        commands.entity(ship_entity).insert(Weapon {
+            slot: i as u32,
+            cooldown: 0.0,
+            projectile_speed: weapon_json.projectile_speed.value,
+            damage: weapon_json.damage.value,
+            fire_rate: weapon_json.fire_rate.value,
+            lifetime: weapon_json.lifetime.value,
+            projectile_radius: weapon_json.projectile_radius.value,
+        });
+    }
 
     // Spawn cameras for each available camera definition, scaled by the entity scale.
     for (name, camera) in [
@@ -255,22 +271,39 @@ fn spawn_static_ship(
     let collision_shape_data = shape_from_json(&template.collision_shape, scale)
         .expect("collision shape must be valid (ADR-0013)");
 
-    commands.spawn((
-        Transform {
-            translation: event.position,
-            rotation: event.rotation,
-            scale: event.scale,
-        },
-        GlobalTransform::default(),
-        Visibility::default(),
-        InheritedVisibility::default(),
-        PendingShipMesh { gltf_handle },
-        DebugAxesEligible::new(event.id.clone(), axis_length),
-        // Physics components: mass and inertia from template JSON (ADR-0014)
-        RigidBody::new(template.mass.value, template.inertia_scale),
-        FlightAssist,
-        CollisionShape(collision_shape_data),
-    ));
+    let ship_entity = commands
+        .spawn((
+            Transform {
+                translation: event.position,
+                rotation: event.rotation,
+                scale: event.scale,
+            },
+            GlobalTransform::default(),
+            Visibility::default(),
+            InheritedVisibility::default(),
+            PendingShipMesh { gltf_handle },
+            DebugAxesEligible::new(event.id.clone(), axis_length),
+            // Physics components: mass and inertia from template JSON (ADR-0014)
+            RigidBody::new(template.mass.value, template.inertia_scale),
+            FlightAssist,
+            CollisionShape(collision_shape_data),
+            // Health component for damage model (M4)
+            Health::new(100.0),
+        ))
+        .id();
+
+    // Add Weapon components from template (M4).
+    for (i, weapon_json) in template.weapons.iter().enumerate() {
+        commands.entity(ship_entity).insert(Weapon {
+            slot: i as u32,
+            cooldown: 0.0,
+            projectile_speed: weapon_json.projectile_speed.value,
+            damage: weapon_json.damage.value,
+            fire_rate: weapon_json.fire_rate.value,
+            lifetime: weapon_json.lifetime.value,
+            projectile_radius: weapon_json.projectile_radius.value,
+        });
+    }
 
     log::info!(
         "static ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",

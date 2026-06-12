@@ -51,6 +51,8 @@ pub struct PlayerShipTemplate {
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
+    /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
+    pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
 }
 
 /// Deserialized non-player ship template JSON.
@@ -71,6 +73,8 @@ pub struct StaticShipTemplate {
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
+    /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
+    pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
 }
 
 /// Propulsion configuration from the ship template.

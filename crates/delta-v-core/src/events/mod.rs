@@ -101,3 +101,31 @@ impl SpawnEntity {
         self
     }
 }
+
+/// Event emitted when the player triggers a weapon.
+///
+/// Emitted by the input system; consumed by the weapons plugin to
+/// spawn projectiles. The source entity must have a [`Weapon`] component.
+#[derive(Event, Debug)]
+pub struct FireWeapon {
+    /// The entity that is firing (e.g., the player ship).
+    pub source: Entity,
+    /// The weapon slot/index being fired.
+    pub weapon_index: u32,
+}
+
+/// Event emitted when a projectile hits another entity.
+///
+/// Emitted by the weapons plugin when a projectile collision is detected.
+/// Contains the projectile, target, damage, and hit point for VFX/sound.
+#[derive(Event, Debug)]
+pub struct ProjectileHit {
+    /// The projectile entity.
+    pub projectile: Entity,
+    /// The entity that was hit.
+    pub target: Entity,
+    /// The damage to apply.
+    pub damage: f32,
+    /// The hit point in world coordinates.
+    pub hit_point: Vec3,
+}
