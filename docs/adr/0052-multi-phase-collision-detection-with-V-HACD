@@ -1,0 +1,91 @@
+# ADR-0052: Use Multi-Phase Collision Detection with Automated Convex Decomposition
+
+- **Status**: Proposed
+- **Date**: 2026-06-12
+- **Deciders**: Cute-Donkey
+- **Supersedes**: None
+- **Superseded by**: None
+
+## Context
+
+We need a fast and precise 3D collision detection system for an open-source game project. The game assets are loaded from external, unvetted sources such as Sketchfab and AI generation tools (e.g., Meshy.ai). This introduces specific constraints:
+* **Asset Quality:** Input GLB meshes often contain "dirty" geometry, including excessive polygon counts, open holes, duplicate vertices, and non-manifold/intersecting faces.
+* **No Artist Pipeline:** We cannot enforce modeling guidelines at the source. The optimization and collision generation must be 100% automated.
+* **Performance & Precision:** The runtime physics engine must remain highly performant ($O(n)$ or $O(\log n)$ instead of $O(n^2)$ mesh checks) while accurately supporting concave structures (e.g., flying through the center hole of a torus).
+* **Environment:** The import pipeline runs as a Python script within an isolated Devcontainer.
+
+## Decision
+
+We implement an automated, multi-phase collision pipeline handled completely during the asset import stage via Python. For complex or concave meshes, we use Hierarchical Approximate Convex Decomposition (V-HACD) to break them down into a collection of optimized, simple convex shapes.
+
+We enforce the following rules and technical stack:
+* **Ingestion & Sanitization:** The Python import script utilizes `trimesh[easy]` to automatically clean meshes (remove duplicate vertices, close holes, split disjointed geometry) and heavily reduce polygon counts (`simplify_quadratic_decimation`) before generating physics shapes.
+* **Decomposition:** We use the `pyvacd` Python bindings directly inside `trimesh` to perform V-HACD programmatically, avoiding external C++ CLI dependencies in the Devcontainer.
+* **Separation of Concerns:** The asset pipeline outputs two distinct files per asset: a visual high-poly GLB (`*_visual.glb`) and a lean, pre-computed physics data file (`*_physics.bin`) representing the convex hulls.
+* **Runtime:** The engine utilizes Axis-Aligned Bounding Boxes (AABB) or Spheres for Mid-Phase filtering and the GJK/EPA algorithms to evaluate collisions against the pre-computed convex hulls in the Narrow-Phase.
+
+### Reference Pipeline Implementation
+
+The following Python script specifies the exact automated sanitization and decomposition workflow implemented in our Devcontainer asset pipeline:
+
+```python
+import trimesh
+
+def process_asset_pipeline(glb_path):
+    # 1. Load the incoming unvetted asset
+    scene = trimesh.load(glb_path)
+    
+    # If the GLB contains multiple sub-meshes, concatenate them into a single mesh
+    mesh = scene.dump(concatenate=True) if isinstance(scene, trimesh.Scene) else scene
+
+    # 2. Automated Sanitization (Crucial for AI-generated/unvetted geometry)
+    mesh.remove_duplicate_vertices()
+    mesh.remove_degenerate_faces()
+    mesh.fill_holes()  # Fills open gaps so V-HACD doesn't fail
+    
+    # 3. Mesh Decimation
+    # Reduce triangle count drastically (e.g., to 10%) to accelerate V-HACD processing
+    physics_mesh = mesh.simplify_quadratic_decimation(percent=0.1)
+
+    # 4. Programmatic V-HACD Execution via pyvacd bindings
+    # Tuning parameters can be exposed via a config file if needed
+    convex_hulls = physics_mesh.convex_decomposition(
+        max_convex_hulls=12,         # Limits total hulls (e.g., for a torus/donut)
+        resolution=100000,           # Voxel resolution for the decomposition scan
+        max_num_vertices_per_ch=32    # Complexity limit per generated hull
+    )
+    
+    return convex_hulls
+```
+
+### Considered Alternatives
+
+* **Option 1: Manual Collision Primitive Definition**
+  * *Disqualified:* Impossible to maintain, as we do not have dedicated 3D artists to manually place collision spheres or boxes around external/AI-generated models.
+* **Option 2: Raw Mesh-to-Mesh (Per-Triangle) Checks**
+  * *Pros:* Zero pre-computation needed.
+  * *Cons:* Destroys runtime performance. AI-generated meshes often have tens of thousands of triangles, making real-time narrow-phase checks mathematically unfeasible.
+* **Option 3: Automated Trimesh + pyvacd Pipeline (Chosen Option)**
+  * *Pros:* Fully automated, runs inside our existing Python Devcontainer setup, handles "dirty" geometry programmatically, and guarantees high runtime performance and precision.
+
+## Consequences
+
+- **Positive consequences:**
+  * **Zero Manual Effort:** Open-source contributors or automated systems can drop raw GLB files into the project; the pipeline automatically prepares them for the physics engine.
+  * **High Runtime Performance:** Complex meshes are stripped down to a low number of highly efficient convex shapes (e.g., max 12 hulls per object), drastically reducing CPU overhead.
+  * **Container Portability:** Including `trimesh[easy]` and `pyvacd` in `requirements.txt` ensures the entire pipeline builds out-of-the-box inside the Devcontainer without manual C++ toolchain installations.
+
+- **Negative consequences:**
+  * **Artifacts on Edge Cases:** Extremely distorted AI meshes might occasionally result in slightly inaccurate convex hulls if the automated hole-filling (`mesh.fill_holes()`) fails.
+  * **Increased Import/Build Time:** Processing complex meshes through V-HACD inside the container adds a few seconds of computation time per asset during the build/import step.
+  * **Higher Dependency Footprint:** The asset pipeline python environment grows in size due to heavy math dependencies (`scipy`, `numpy`, `pyvacd`).
+
+- **Follow-up work:**
+  * Update `requirements.txt` and Dockerfile to include `trimesh[easy]` and `pyvacd`.
+  * Write the automated python asset processing script that outputs visual and physics assets.
+  * Expose V-HACD tuning parameters (like `max_convex_hulls` or `resolution`) via a simple local configuration file for fine-tuning specific problematic assets.
+
+## Notes
+
+* Dependencies: [Trimesh GitHub](https://github.com/mikedh/trimesh)
+* Prior Art: Volumetric Hierarchical Approximate Convex Decomposition (V-HACD v4) Python Bindings (`pyvacd`).
