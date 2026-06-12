@@ -212,6 +212,7 @@ fn spawn_player_ship(
         max_torque: maneuvering.max_torque.value,
         max_strafe_thrust: maneuvering.max_strafe_thrust.value,
         active_main_thruster_index: active_index,
+        rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
     });
 
     log::info!(

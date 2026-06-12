@@ -58,19 +58,46 @@ pub enum ShipInputSet {
 #[derive(Resource, Default, Debug)]
 pub struct PreviousActions(pub BTreeSet<LogicalAction>);
 
+/// Rotation force ramp state per axis.
+///
+/// Tracks how many ticks each rotation axis (pitch=X, yaw=Y, roll=Z) has been
+/// actively held. When a rotation key is pressed, the ramp counter increments
+/// from 1 up to `rotation_ramp_ticks`, and the torque is scaled by
+/// `ramp_ticks / rotation_ramp_ticks`. When no rotation key is pressed on an
+/// axis, the counter resets to 0.
+///
+/// This provides fine-grained rotation control: short taps apply small impulses
+/// while holding the key still reaches full torque.
+// allow-default: Bevy requires Default on resources for init_resource.
+// This is per-tick state, not configuration.
+#[derive(Resource, Default, Debug)]
+pub struct RotationRampState {
+    /// Current ramp tick counter per axis (pitch=X, yaw=Y, roll=Z).
+    /// 0 = no rotation input on this axis.
+    /// `1..rotation_ramp_ticks` = ramping up.
+    pub ramp_ticks: Vec3,
+}
+
 /// Reads [`ActiveActions`] and accumulates thrust/torque commands.
 ///
 /// Runs in `FixedUpdate` after [`delta_v_core::InputSet::Translate`].
 /// For each active action, applies the corresponding force or torque
 /// direction. The magnitude is read from [`ShipPropulsionConfig`], which
 /// comes from the ship template JSON (ADR-0014).
+///
+/// Rotation actions use a linear ramp curve: torque starts at a fraction of
+/// `max_torque` on the first tick and ramps up over `rotation_ramp_ticks` ticks
+/// until reaching full torque. This allows fine-grained rotation control.
 #[allow(clippy::needless_pass_by_value)]
 pub fn input_reader_system(
     active: Res<'_, ActiveActions>,
     propulsion: Res<'_, ShipPropulsionConfig>,
     mut thrust_cmd: ResMut<'_, ThrustCommand>,
     mut torque_cmd: ResMut<'_, TorqueCommand>,
+    mut ramp: ResMut<'_, RotationRampState>,
 ) {
+    let ramp_ticks_max = propulsion.rotation_ramp_ticks;
+
     for action in &active.0 {
         match action {
             // Thrust: apply force in local frame
@@ -94,32 +121,73 @@ pub fn input_reader_system(
             LogicalAction::StrafeDown => {
                 thrust_cmd.force.y -= propulsion.max_strafe_thrust;
             }
-            // Rotation: apply torque around local axes
+            // Rotation: apply torque around local axes with linear ramp
             // Pitch around X: nose up = +X torque, nose down = -X torque
             LogicalAction::PitchUp => {
-                torque_cmd.torque.x += propulsion.max_torque;
+                let factor = ramp_factor(&mut ramp.ramp_ticks.x, ramp_ticks_max);
+                torque_cmd.torque.x += propulsion.max_torque * factor;
             }
             LogicalAction::PitchDown => {
-                torque_cmd.torque.x -= propulsion.max_torque;
+                let factor = ramp_factor(&mut ramp.ramp_ticks.x, ramp_ticks_max);
+                torque_cmd.torque.x -= propulsion.max_torque * factor;
             }
             // Yaw around Y: left = +Y, right = -Y
             LogicalAction::YawLeft => {
-                torque_cmd.torque.y += propulsion.max_torque;
+                let factor = ramp_factor(&mut ramp.ramp_ticks.y, ramp_ticks_max);
+                torque_cmd.torque.y += propulsion.max_torque * factor;
             }
             LogicalAction::YawRight => {
-                torque_cmd.torque.y -= propulsion.max_torque;
+                let factor = ramp_factor(&mut ramp.ramp_ticks.y, ramp_ticks_max);
+                torque_cmd.torque.y -= propulsion.max_torque * factor;
             }
             // Roll around Z: CCW = +Z, CW = -Z
             LogicalAction::RollLeft => {
-                torque_cmd.torque.z += propulsion.max_torque;
+                let factor = ramp_factor(&mut ramp.ramp_ticks.z, ramp_ticks_max);
+                torque_cmd.torque.z += propulsion.max_torque * factor;
             }
             LogicalAction::RollRight => {
-                torque_cmd.torque.z -= propulsion.max_torque;
+                let factor = ramp_factor(&mut ramp.ramp_ticks.z, ramp_ticks_max);
+                torque_cmd.torque.z -= propulsion.max_torque * factor;
             }
             LogicalAction::ToggleFlightAssist | LogicalAction::FirePrimary => {
                 // Handled by other systems (flight_assist_toggle_system / weapons plugin)
             }
         }
+    }
+
+    // Reset ramp counters for axes that are not actively rotating.
+    if !active.0.contains(&LogicalAction::PitchUp) && !active.0.contains(&LogicalAction::PitchDown)
+    {
+        ramp.ramp_ticks.x = 0.0;
+    }
+    if !active.0.contains(&LogicalAction::YawLeft) && !active.0.contains(&LogicalAction::YawRight) {
+        ramp.ramp_ticks.y = 0.0;
+    }
+    if !active.0.contains(&LogicalAction::RollLeft) && !active.0.contains(&LogicalAction::RollRight)
+    {
+        ramp.ramp_ticks.z = 0.0;
+    }
+}
+
+/// Computes the linear ramp factor for a single rotation axis.
+///
+/// Increments the ramp counter and returns a value in `[0.0, 1.0]` representing
+/// the fraction of `max_torque` to apply. When `ramp_ticks_max` is 0, returns 1.0
+/// (instant full torque).
+// allow-precision-loss: rotation_ramp_ticks is a tick count (typically ≤60),
+// so u32→f32 precision loss is irrelevant in practice.
+#[allow(clippy::cast_precision_loss)]
+fn ramp_factor(ramp_counter: &mut f32, ramp_ticks_max: u32) -> f32 {
+    let max = ramp_ticks_max as f32;
+    if ramp_ticks_max > 0 && *ramp_counter < max {
+        *ramp_counter += 1.0;
+    } else if ramp_ticks_max == 0 {
+        *ramp_counter = 1.0;
+    }
+    if ramp_ticks_max > 0 {
+        (*ramp_counter / max).min(1.0)
+    } else {
+        1.0
     }
 }
 

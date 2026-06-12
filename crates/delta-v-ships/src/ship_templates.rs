@@ -111,6 +111,9 @@ pub struct ManeuveringThrusterTemplate {
     pub max_torque: PhysicalQuantity,
     /// Maximum strafe thrust per lateral/vertical axis.
     pub max_strafe_thrust: PhysicalQuantity,
+    /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
+    /// is first pressed. 0 = instant full torque (no ramp).
+    pub rotation_ramp_ticks: u32,
 }
 
 /// Ship propulsion configuration read from the ship template JSON.
@@ -133,6 +136,9 @@ pub struct ShipPropulsionConfig {
     pub max_strafe_thrust: f32,
     /// Index of the currently active main thruster (for M3+ thruster switching).
     pub active_main_thruster_index: usize,
+    /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
+    /// is first pressed. 0 = instant full torque (no ramp).
+    pub rotation_ramp_ticks: u32,
 }
 
 /// Accumulated thrust command for the current fixed tick.
