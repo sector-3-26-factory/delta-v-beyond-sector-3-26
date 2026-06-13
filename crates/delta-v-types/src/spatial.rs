@@ -51,14 +51,14 @@ impl From<QuatJson> for Quat {
 /// Computed once from the glTF mesh and stored in the template JSON.
 /// Used for camera position defaults, debug axes, and spatial calculations.
 #[derive(Debug, Deserialize, Clone, Copy)]
-pub struct BoundingBox {
+pub struct BoundingBoxJson {
     /// Minimum corner (x, y, z in metres).
     pub min: Vec3Json,
     /// Maximum corner (x, y, z in metres).
     pub max: Vec3Json,
 }
 
-impl BoundingBox {
+impl BoundingBoxJson {
     /// Returns the size (extent) of the bounding box in metres.
     #[must_use]
     pub fn size(&self) -> Vec3 {

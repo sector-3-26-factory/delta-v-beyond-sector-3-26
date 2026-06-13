@@ -80,7 +80,7 @@ pub use spawn::WorldSpawnSet;
 pub use state::AppState;
 
 // Re-exports from delta-v-types for shared types (ADR-0046)
-pub use delta_v_types::{BoundingBox, CollisionShapeJson, PhysicalQuantity, Vec3Json};
+pub use delta_v_types::{BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, Vec3Json};
 
 #[cfg(test)]
 #[path = "state/tests.rs"]
@@ -130,14 +130,24 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::LoadingWorld), log_loading_world);
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
         app.add_systems(OnEnter(AppState::InGame), (log_in_game, spawn_chase_camera));
+        app.add_systems(OnEnter(AppState::SkirmishOver), log_skirmish_over);
 
         // Configure WorldSpawnSet ordering: MarkDebugAxes runs after all domain spawning.
         // Per ADR-0005 (plugin architecture), debug visualization is decoupled from domains.
         // Sets must be configured in Update schedule, not OnEnter (per Bevy system scheduling).
         app.configure_sets(
             Update,
-            WorldSpawnSet::MarkDebugAxes
-                .after(WorldSpawnSet::SpawnShips)
+            (
+                WorldSpawnSet::SpawnSuns,
+                WorldSpawnSet::SpawnPlanets,
+                WorldSpawnSet::SpawnMoons,
+                WorldSpawnSet::SpawnStations,
+                WorldSpawnSet::SpawnAsteroids,
+                WorldSpawnSet::SpawnShips,
+                WorldSpawnSet::SpawnNpcs,
+                WorldSpawnSet::MarkDebugAxes,
+            )
+                .chain()
                 .run_if(in_state(AppState::SpawningEntities)),
         );
 
@@ -152,10 +162,13 @@ impl Plugin for CorePlugin {
                 .in_set(WorldSpawnSet::MarkDebugAxes),
         );
 
-        // Chase camera follows the ship every frame during InGame.
+        // Chase camera follows the ship every frame during InGame and SkirmishOver.
+        // Runs in both states so the camera continues to follow the ship after the skirmish ends.
         app.add_systems(
             Update,
-            camera::chase_camera_system.run_if(in_state(AppState::InGame)),
+            camera::chase_camera_system.run_if(|state: Res<'_, State<AppState>>| {
+                *state.get() == AppState::InGame || *state.get() == AppState::SkirmishOver
+            }),
         );
 
         // Debug axes: re-spawn axes when length changes (e.g. after glTF load
@@ -219,6 +232,10 @@ fn log_spawning_entities() {
 
 fn log_in_game() {
     info!("AppState -> InGame");
+}
+
+fn log_skirmish_over() {
+    info!("AppState -> SkirmishOver");
 }
 
 // ---------------------------------------------------------------------------

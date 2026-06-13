@@ -1,4 +1,4 @@
-// See AGENTS.md
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
@@ -29,7 +29,7 @@ use std::ops::Deref;
 
 use bevy::prelude::*;
 
-pub use delta_v_types::{CollisionShapeData, CollisionShapeType};
+pub use delta_v_types::{CollisionLayers, CollisionShapeData, CollisionShapeType};
 
 /// Collision shape component for physics bodies.
 ///
@@ -86,3 +86,27 @@ pub struct StaticBody;
 /// Marker component for dynamic (moving) collision objects.
 #[derive(Component, Debug, Clone, Copy)]
 pub struct DynamicBody;
+
+/// Collision layers component for filtering collisions.
+///
+/// Per avian3d conventions, we use a u32 bitmask where each bit
+/// represents a layer. Entities on different layers don't collide
+/// unless their masks overlap.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct CollisionLayersComponent(pub CollisionLayers);
+
+impl Deref for CollisionLayersComponent {
+    type Target = CollisionLayers;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl CollisionLayersComponent {
+    /// Creates a new collision layers component.
+    #[must_use]
+    pub const fn new(layers: CollisionLayers) -> Self {
+        Self(layers)
+    }
+}

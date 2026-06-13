@@ -56,7 +56,9 @@ pub use resources::WorldPath;
 pub use world_def::WorldDef;
 
 use bevy::prelude::*;
-use delta_v_assets::template::{load_asteroid, load_player_controlled_ship, load_ship};
+use delta_v_assets::template::{
+    load_ai_controlled_ship, load_asteroid, load_player_controlled_ship, load_ship,
+};
 use delta_v_core::{AppState, WorldSpawnSet};
 use spawn::spawn_asteroid_system;
 
@@ -161,6 +163,7 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
 
     // Determine entity_type and load template.
     // For player_controlled ships: load player_controlled_ship.json and merge with ship.json.
+    // For AI-controlled ships: load ai_controlled_ship.json and merge with ship.json.
     // For asteroids: load asteroid.json directly.
     // For other ships: load ship.json directly.
     // INVARIANT: template loading must succeed (ADR-0013).
@@ -168,6 +171,9 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
         if entity_spawn.player_controlled {
             load_player_controlled_ship(template_short)
                 .expect("player_controlled_ship template must load successfully")
+        } else if entity_spawn.ai_task.is_some() {
+            load_ai_controlled_ship(template_short)
+                .expect("ai_controlled_ship template must load successfully")
         } else if template_short.starts_with("asteroids/") {
             load_asteroid(template_short).expect("asteroid template must load successfully")
         } else {
@@ -191,7 +197,7 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
         entity_spawn.scale.z,
     );
 
-    SpawnEntity::new(
+    let mut spawn_event = SpawnEntity::new(
         entity_spawn.id.clone(),
         entity_type,
         merged_template,
@@ -200,5 +206,15 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
         pos,
     )
     .with_rotation(rot)
-    .with_scale(scale)
+    .with_scale(scale);
+
+    // Pass through the AI task if present.
+    if let Some(ref ai_task) = entity_spawn.ai_task {
+        let task_str = match ai_task {
+            delta_v_types::AiTaskJson::Patrol => "patrol",
+        };
+        spawn_event = spawn_event.with_ai_task(task_str.to_string());
+    }
+
+    spawn_event
 }

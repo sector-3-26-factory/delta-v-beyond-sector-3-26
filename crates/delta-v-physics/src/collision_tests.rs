@@ -13,11 +13,12 @@ use bevy::prelude::*;
 use bevy::time::TimePlugin;
 
 use crate::collision::{
-    CollisionDetected, CollisionShape, CollisionShapeData, CollisionShapeType, DynamicBody,
-    StaticBody,
+    CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeData,
+    CollisionShapeType, DynamicBody, StaticBody,
 };
 use crate::rigid_body::RigidBody;
 use crate::systems::PhysicsSet;
+use delta_v_types::collision::layers;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -605,6 +606,7 @@ fn test_collision_response_dynamic_static() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::ZERO),
             sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::SHIP),
             DynamicBody,
         ))
         .id();
@@ -613,6 +615,7 @@ fn test_collision_response_dynamic_static() {
         RigidBody::new(1000.0, 1.0),
         Transform::from_translation(Vec3::new(3.0, 0.0, 0.0)),
         sphere_shape(2.0),
+        CollisionLayersComponent::new(layers::ASTEROID),
         StaticBody,
     ));
 
@@ -651,6 +654,7 @@ fn test_collision_response_dynamic_dynamic() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::ZERO),
             sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::PROJECTILE),
             DynamicBody,
         ))
         .id();
@@ -661,6 +665,7 @@ fn test_collision_response_dynamic_dynamic() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::new(3.0, 0.0, 0.0)),
             sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::PROJECTILE),
             DynamicBody,
         ))
         .id();
@@ -710,6 +715,7 @@ fn test_collision_response_separating_velocities_no_impulse() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::ZERO),
             sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::PROJECTILE),
             DynamicBody,
         ))
         .id();
@@ -720,6 +726,7 @@ fn test_collision_response_separating_velocities_no_impulse() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::new(3.0, 0.0, 0.0)),
             sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::PROJECTILE),
             DynamicBody,
         ))
         .id();
@@ -768,6 +775,7 @@ fn test_collision_response_position_correction() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::ZERO),
             sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::PROJECTILE),
             DynamicBody,
         ))
         .id();
@@ -778,6 +786,7 @@ fn test_collision_response_position_correction() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::new(3.0, 0.0, 0.0)),
             sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::PROJECTILE),
             DynamicBody,
         ))
         .id();
@@ -809,6 +818,7 @@ fn test_collision_response_static_static_skipped() {
         RigidBody::new(100.0, 1.0),
         Transform::from_translation(Vec3::ZERO),
         sphere_shape(2.0),
+        CollisionLayersComponent::new(layers::ASTEROID),
         StaticBody,
     ));
 
@@ -816,6 +826,7 @@ fn test_collision_response_static_static_skipped() {
         RigidBody::new(100.0, 1.0),
         Transform::from_translation(Vec3::new(3.0, 0.0, 0.0)),
         sphere_shape(2.0),
+        CollisionLayersComponent::new(layers::ASTEROID),
         StaticBody,
     ));
 

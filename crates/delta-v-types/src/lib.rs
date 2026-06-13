@@ -8,11 +8,12 @@
 //!
 //! # Module Structure
 //!
-//! - `spatial` — Spatial types: `BoundingBox`, `Vec3Json`, `QuatJson`
-//! - `physics` — Physics types: `PhysicalQuantity`
+//! - `spatial` — Spatial types: `BoundingBoxJson`, `Vec3Json`, `QuatJson`
+//! - `physics` — Physics types: `PhysicalQuantityJson`
 //! - `collision` — Collision types: `CollisionShapeJson`, `CollisionShapeData`, `CollisionShapeType`, `CollisionLayers`
 //! - `ids` — Identifier types: `EntityId`, `TemplatePath`
 //! - `weapons` — Weapon types: `WeaponTemplateJson`
+//! - `ai` — AI types: `AiConfigJson`, `AiTaskJson`
 
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
@@ -27,6 +28,7 @@
 #![deny(clippy::unimplemented)]
 #![deny(clippy::dbg_macro)]
 
+pub mod ai;
 pub mod collision;
 pub mod ids;
 pub mod physics;
@@ -34,11 +36,12 @@ pub mod spatial;
 pub mod weapons;
 
 // Re-exports for convenience
+pub use ai::{AiConfigJson, AiTaskJson};
 pub use collision::layers::PROJECTILE;
 pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType};
 pub use ids::{EntityId, TemplatePath};
-pub use physics::PhysicalQuantity;
-pub use spatial::{BoundingBox, QuatJson, Vec3Json};
+pub use physics::PhysicalQuantityJson;
+pub use spatial::{BoundingBoxJson, QuatJson, Vec3Json};
 pub use weapons::WeaponTemplateJson;
 
 #[cfg(test)]

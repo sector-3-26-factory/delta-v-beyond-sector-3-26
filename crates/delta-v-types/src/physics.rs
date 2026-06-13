@@ -9,14 +9,14 @@ use serde::Deserialize;
 /// Deserialized from `{"value": N, "unit": "..."}` objects in template JSON.
 /// The unit field is validated by the JSON schema; we only read the value.
 #[derive(Debug, Deserialize, Clone)]
-pub struct PhysicalQuantity {
+pub struct PhysicalQuantityJson {
     /// Numeric magnitude.
     pub value: f32,
     /// Unit identifier (e.g. "kg", "N", "N⋅m"). Validated by schema.
     pub unit: String,
 }
 
-impl PhysicalQuantity {
+impl PhysicalQuantityJson {
     /// Returns the numeric value.
     #[must_use]
     pub const fn value(&self) -> f32 {

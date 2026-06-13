@@ -1,0 +1,36 @@
+{
+    "format_version": 1,
+    "name": "Skirmish — AI Combat Test",
+    "entities": [
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "player_ship",
+            "player_controlled": true,
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+            }
+        },
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "enemy_1",
+            "ai_task": "patrol",
+            "position": {
+                "x": 500.0,
+                "y": 0.0,
+                "z": 1000.0
+            }
+        },
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "enemy_2",
+            "ai_task": "patrol",
+            "position": {
+                "x": -300.0,
+                "y": 100.0,
+                "z": 800.0
+            }
+        }
+    ]
+}

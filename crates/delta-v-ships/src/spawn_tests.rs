@@ -19,12 +19,12 @@ use bevy::prelude::*;
 use delta_v_core::{PlayerShipEntity, SpawnEntity};
 
 use crate::ship_templates::ShipPropulsionConfig;
-use crate::spawn::spawn_ship_from_template;
+use crate::spawn::spawn_ship;
 
 /// Creates a minimal Bevy app for testing ship spawning.
 ///
 /// Sets up the asset plugin (needed for glTF loading), registers
-/// the `SpawnEntity` event, and adds the `spawn_ship_from_template` system.
+/// the `SpawnEntity` event, and adds the `spawn_ship` system.
 fn create_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
@@ -34,14 +34,14 @@ fn create_test_app() -> App {
     });
     app.add_event::<SpawnEntity>();
     app.init_asset::<Gltf>();
-    app.add_systems(Update, spawn_ship_from_template);
+    app.add_systems(Update, spawn_ship);
     app
 }
 
 /// Builds a minimal `SpawnEntity` event for a player-controlled ship.
 ///
 /// Uses a template JSON that matches the merged `player_controlled_ship`
-/// structure (ship properties + cameras + `bounding_box`).
+/// structure (ship properties + cameras + `bounding_box` + `health`).
 fn make_player_ship_event() -> SpawnEntity {
     let template = serde_json::json!({
         "entity_type": "player_controlled_ship",
@@ -111,7 +111,8 @@ fn make_player_ship_event() -> SpawnEntity {
                 "available": true
             }
         },
-        "weapons": []
+        "weapons": [],
+        "health": { "value": 100.0, "unit": "hp" }
     });
 
     SpawnEntity::new(

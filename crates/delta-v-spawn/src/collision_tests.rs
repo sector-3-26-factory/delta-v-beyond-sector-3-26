@@ -16,7 +16,7 @@ use crate::collision::shape_from_json;
 fn test_shape_from_json_sphere() {
     let json = CollisionShapeJson {
         shape_type: "sphere".to_string(),
-        radius: Some(delta_v_types::PhysicalQuantity {
+        radius: Some(delta_v_types::PhysicalQuantityJson {
             value: 2.5,
             unit: "m".to_string(),
         }),
@@ -43,7 +43,7 @@ fn test_shape_from_json_sphere() {
 fn test_shape_from_json_sphere_with_offset() {
     let json = CollisionShapeJson {
         shape_type: "sphere".to_string(),
-        radius: Some(delta_v_types::PhysicalQuantity {
+        radius: Some(delta_v_types::PhysicalQuantityJson {
             value: 1.0,
             unit: "m".to_string(),
         }),

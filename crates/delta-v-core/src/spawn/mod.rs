@@ -16,7 +16,7 @@ use bevy::prelude::*;
 ///
 /// ```ignore
 /// SunSpawner -> PlanetSpawner -> MoonSpawner -> StationSpawner ->
-/// ShipSpawner -> MarkDebugAxes
+/// ShipSpawner -> NpcSpawner -> MarkDebugAxes
 /// ```
 ///
 /// All spawning and post-processing happens in `OnEnter(AppState::SpawningEntities)`.
@@ -41,6 +41,9 @@ pub enum WorldSpawnSet {
 
     /// Spawn player-controlled and NPC ships. Runs last in domain spawning.
     SpawnShips,
+
+    /// Spawn AI-driven NPC entities. Depends on: `SpawnShips`.
+    SpawnNpcs,
 
     /// Mark eligible entities with debug axes. Runs after all domain spawning.
     /// Per ADR-0005, this decouples debug visualization from domain plugins.

@@ -6,7 +6,7 @@
 
 use serde_json::Value;
 
-use delta_v_types::{BoundingBox, Vec3Json};
+use delta_v_types::{BoundingBoxJson, Vec3Json};
 
 use crate::template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_mass, extract_vec3,
@@ -143,7 +143,7 @@ fn test_extract_bounding_box_missing() {
 
 #[test]
 fn test_compute_debug_axis_length_cube() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: -1.0,
             y: -1.0,
@@ -165,7 +165,7 @@ fn test_compute_debug_axis_length_cube() {
 
 #[test]
 fn test_compute_debug_axis_length_rectangular() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: -5.0,
             y: -1.0,
@@ -187,7 +187,7 @@ fn test_compute_debug_axis_length_rectangular() {
 
 #[test]
 fn test_compute_debug_axis_length_unit() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: 0.0,
             y: 0.0,

@@ -4,7 +4,7 @@
 
 use serde::Deserialize;
 
-use crate::physics::PhysicalQuantity;
+use crate::physics::PhysicalQuantityJson;
 
 /// Weapon template deserialized from ship template JSON.
 ///
@@ -16,13 +16,13 @@ pub struct WeaponTemplateJson {
     #[serde(rename = "type")]
     pub weapon_type: String,
     /// Projectile speed in m/s.
-    pub projectile_speed: PhysicalQuantity,
+    pub projectile_speed: PhysicalQuantityJson,
     /// Damage per hit.
-    pub damage: PhysicalQuantity,
+    pub damage: PhysicalQuantityJson,
     /// Fire rate in rounds per second.
-    pub fire_rate: PhysicalQuantity,
+    pub fire_rate: PhysicalQuantityJson,
     /// Projectile lifetime in seconds.
-    pub lifetime: PhysicalQuantity,
+    pub lifetime: PhysicalQuantityJson,
     /// Projectile collision shape radius in metres.
-    pub projectile_radius: PhysicalQuantity,
+    pub projectile_radius: PhysicalQuantityJson,
 }

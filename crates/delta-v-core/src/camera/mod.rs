@@ -73,7 +73,7 @@ pub fn spawn_chase_camera(
 
 /// Moves the camera to maintain its offset behind the followed entity.
 ///
-/// Runs every frame in `Update` when `AppState::InGame`.
+/// Runs every frame in `Update` when `AppState::InGame` or `AppState::SkirmishOver`.
 /// Rotates the offset by the ship's current rotation so the camera
 /// stays behind the ship as it turns.
 ///

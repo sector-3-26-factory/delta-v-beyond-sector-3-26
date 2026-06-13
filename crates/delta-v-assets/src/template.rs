@@ -117,6 +117,54 @@ pub fn load_player_controlled_ship(
     ))
 }
 
+/// Loads an AI-controlled ship template, merging base ship with AI-specific data.
+///
+/// AI-controlled ship templates are co-located with a base ship template in the same
+/// directory. This function loads the `ai_controlled_ship.json` and merges it with
+/// the co-located `ship.json`.
+///
+/// Returns a tuple of (`entity_type`, `template_path`, `merged_template`, `mesh_template_path`).
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+pub fn load_ai_controlled_ship(
+    ship_name: &str,
+) -> Result<(String, String, Value, String), AssetError> {
+    let ai_template = load_template(
+        "ships",
+        ship_name,
+        "ai_controlled_ship.json",
+        "ai_controlled_ship.schema.json",
+    )?;
+    let base_ship = load_template("ships", ship_name, "ship.json", "ship.schema.json")?;
+
+    let template_path = format!("templates/{ship_name}/ai_controlled_ship.json");
+    let ship_template_path = format!("templates/{ship_name}/ship.json");
+    let mesh_template_path = ship_template_path.replace("ship.json", "mesh.glb");
+
+    let mut merged = base_ship;
+    if let (Some(merged_obj), Some(ai_obj)) = (merged.as_object_mut(), ai_template.as_object()) {
+        for (key, value) in ai_obj {
+            if key != "entity_type" {
+                merged_obj.insert(key.clone(), value.clone());
+            }
+        }
+        merged_obj.insert(
+            "entity_type".to_string(),
+            Value::String("ai_controlled_ship".to_string()),
+        );
+    }
+
+    Ok((
+        "ai_controlled_ship".to_string(),
+        template_path,
+        merged,
+        mesh_template_path,
+    ))
+}
+
 /// Loads an asteroid template.
 ///
 /// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).

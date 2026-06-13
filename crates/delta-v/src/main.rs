@@ -1,4 +1,4 @@
-// See AGENTS.md
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
@@ -29,6 +29,7 @@ use std::path::PathBuf;
 use bevy::prelude::*;
 use bevy_mod_billboard::prelude::*;
 use clap::Parser;
+use delta_v_ai::AiPlugin;
 use delta_v_assets::AssetsPlugin;
 use delta_v_config::ConfigPlugin;
 use delta_v_core::CorePlugin;
@@ -118,13 +119,13 @@ fn main() {
                     filter: "warn,delta_v=info,delta_v_core=info,delta_v_config=info,\
                              delta_v_physics=info,delta_v_assets=info,delta_v_ships=info,\
                              delta_v_propulsion=info,delta_v_weapons=info,delta_v_stations=info,\
-                             delta_v_items=info,delta_v_world=info"
+                             delta_v_items=info,delta_v_world=info,delta_v_ai=info"
                         .to_string(),
                     #[cfg(feature = "dev")]
                     filter: "warn,delta_v=debug,delta_v_core=debug,delta_v_config=debug,\
                              delta_v_physics=debug,delta_v_assets=debug,delta_v_ships=debug,\
                              delta_v_propulsion=debug,delta_v_weapons=debug,delta_v_stations=debug,\
-                             delta_v_items=debug,delta_v_world=debug"
+                             delta_v_items=debug,delta_v_world=debug,delta_v_ai=debug"
                         .to_string(),
                     level: bevy::log::Level::TRACE,
                     ..default()
@@ -145,6 +146,7 @@ fn main() {
         .add_plugins(StationsPlugin)
         .add_plugins(ItemsPlugin)
         .add_plugins(WorldPlugin)
+        .add_plugins(AiPlugin)
         .run();
 }
 

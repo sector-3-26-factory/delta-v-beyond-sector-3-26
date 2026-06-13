@@ -1,12 +1,12 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Tests for spatial types: [`Vec3Json`], [`QuatJson`], [`BoundingBox`].
+//! Tests for spatial types: [`Vec3Json`], [`QuatJson`], [`BoundingBoxJson`].
 
 #![allow(clippy::float_cmp)]
 
 use bevy::prelude::{Quat, Vec3};
 
-use crate::spatial::{BoundingBox, QuatJson, Vec3Json};
+use crate::spatial::{BoundingBoxJson, QuatJson, Vec3Json};
 
 // ---------------------------------------------------------------------------
 // Vec3Json
@@ -82,12 +82,12 @@ fn test_quat_json_to_quat_90_deg_y() {
 }
 
 // ---------------------------------------------------------------------------
-// BoundingBox
+// BoundingBoxJson
 // ---------------------------------------------------------------------------
 
 #[test]
 fn test_bounding_box_size_cube() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: -1.0,
             y: -1.0,
@@ -105,7 +105,7 @@ fn test_bounding_box_size_cube() {
 
 #[test]
 fn test_bounding_box_size_rectangular() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: 0.0,
             y: 0.0,
@@ -123,7 +123,7 @@ fn test_bounding_box_size_rectangular() {
 
 #[test]
 fn test_bounding_box_size_asymmetric() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: -3.0,
             y: -2.0,
@@ -141,7 +141,7 @@ fn test_bounding_box_size_asymmetric() {
 
 #[test]
 fn test_bounding_box_center_cube() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: -1.0,
             y: -1.0,
@@ -159,7 +159,7 @@ fn test_bounding_box_center_cube() {
 
 #[test]
 fn test_bounding_box_center_offset() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: 0.0,
             y: 0.0,
@@ -177,7 +177,7 @@ fn test_bounding_box_center_offset() {
 
 #[test]
 fn test_bounding_box_center_asymmetric() {
-    let bbox = BoundingBox {
+    let bbox = BoundingBoxJson {
         min: Vec3Json {
             x: -5.0,
             y: 0.0,

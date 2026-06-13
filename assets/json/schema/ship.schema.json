@@ -112,6 +112,14 @@
                 "$ref": "https://delta-v-beyond-sector-3-26/schema/weapon"
             },
             "default": []
+        },
+        "health": {
+            "description": "Ship health in hit points. Required per ADR-0014 (gameplay values in JSON).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/damage",
+            "default": {
+                "value": 100.0,
+                "unit": "hp"
+            }
         }
     },
     "$defs": {

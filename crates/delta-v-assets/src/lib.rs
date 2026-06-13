@@ -35,7 +35,6 @@ mod template_tests;
 // Re-exports for convenience
 pub use error::AssetError;
 pub use paths::resolve_template_path;
-pub use template::{load_asteroid, load_player_controlled_ship, load_ship, load_template};
 
 /// Plugin for asset loading and template management.
 pub struct AssetsPlugin;

@@ -85,43 +85,61 @@ pub fn process_fire_commands(
     }
 }
 
-/// Handles projectile collisions and applies damage.
+/// Handles projectile collisions: applies damage to targets with [`Health`]
+/// and despawns the projectile on any hit.
 ///
 /// Runs in `FixedUpdate`. When a projectile collides with another entity,
-/// applies damage to the target's [`Health`] component and emits a
-/// [`ProjectileHit`] event.
+/// the projectile is always despawned. If the target has a [`Health`] component,
+/// damage is applied. A [`ProjectileHit`] event is emitted for every hit
+/// (including hits on entities without health, e.g. asteroids).
+///
+/// This system consumes [`CollisionDetected`] events from the physics crate.
+/// It checks both entities in the collision to find the projectile, since
+/// the collision detection iterates all pairs without ordering guarantees.
 #[allow(clippy::needless_pass_by_value)]
 pub fn projectile_collision_system(
+    mut commands: Commands<'_, '_>,
     mut collision_events: EventReader<'_, '_, CollisionDetected>,
     projectile_query: Query<'_, '_, &Projectile>,
     mut health_query: Query<'_, '_, &mut Health>,
     mut hit_events: EventWriter<'_, ProjectileHit>,
 ) {
     for collision in collision_events.read() {
-        // Check if the target is a projectile
-        let Ok(projectile) = projectile_query.get(collision.target) else {
-            continue;
+        // Check both entities to find which one is the projectile.
+        // The collision detection iterates all pairs without ordering guarantees,
+        // so the projectile could be either `target` or `other`.
+        let (projectile_entity, projectile, target_entity) = match (
+            projectile_query.get(collision.target),
+            projectile_query.get(collision.other),
+        ) {
+            (Ok(p), _) => (collision.target, p, collision.other),
+            (Err(_), Ok(p)) => (collision.other, p, collision.target),
+            (Err(_), Err(_)) => continue, // Neither entity is a projectile
         };
 
-        // Don't hit the source
-        if collision.other == projectile.source {
+        // Don't hit the source (the entity that fired this projectile)
+        if target_entity == projectile.source {
             continue;
         }
 
-        // Apply damage to the other entity
-        if let Ok(mut health) = health_query.get_mut(collision.other) {
+        // Apply damage to the target entity if it has health
+        if let Ok(mut health) = health_query.get_mut(target_entity) {
             let destroyed = health.apply_damage(projectile.damage);
-            hit_events.send(ProjectileHit {
-                projectile: collision.target,
-                target: collision.other,
-                damage: projectile.damage,
-                hit_point: collision.point,
-            });
-
             if destroyed {
-                log::info!("Entity {:?} destroyed by projectile", collision.other);
+                log::info!("Entity {target_entity:?} destroyed by projectile");
             }
         }
+
+        // Emit hit event for VFX/sound (even if target has no health, e.g. asteroids)
+        hit_events.send(ProjectileHit {
+            projectile: projectile_entity,
+            target: target_entity,
+            damage: projectile.damage,
+            hit_point: collision.point,
+        });
+
+        // Despawn the projectile on any hit
+        commands.entity(projectile_entity).despawn_recursive();
     }
 }
 
