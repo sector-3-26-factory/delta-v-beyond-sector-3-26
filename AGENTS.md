@@ -192,3 +192,31 @@ Git operations are reserved exclusively for human developers. This includes:
 - Accidental agent commits can corrupt the repository state and blame history.
 
 **VIOLATION:** If an agent attempts to run any git write command, it has violated this binding constraint. There is no exception, no context where this is acceptable.
+
+---
+
+## 8. Implementation plan execution
+
+When a user provides an implementation plan with numbered steps, the agent must only execute the steps explicitly requested by the user. **The agent's task is NOT to implement the whole plan or milestone.**
+
+**Workflow:**
+
+- If the user says "implement step 1", the agent implements **only step 1** and then stops. The task is complete.
+- If the user says "implement step 1 - 3", the agent implements **steps 1, 2, and 3** (in order), then stops. The task is complete.
+- If the user says "implement steps 2 and 4", the agent implements **steps 2 and 4** (in order), then stops. The task is complete.
+
+**Rules:**
+
+1. The agent must not infer or assume additional steps beyond what was explicitly requested.
+2. The agent must not proceed to subsequent steps after completing the requested ones.
+3. The agent must not ask for confirmation before each step unless the user explicitly requests it.
+4. The agent must not ask for confirmation after completing the requested steps.
+
+**Example scenarios:**
+
+| User request | Agent behavior |
+|--------------|----------------|
+| "implement step 1" | Execute step 1 only, then report completion |
+| "implement steps 1-3" | Execute steps 1, 2, 3 in order, then report completion |
+| "implement step 5" | Execute step 5 only, then report completion |
+| "implement steps 2, 4, 6" | Execute steps 2, 4, 6 in order, then report completion |
