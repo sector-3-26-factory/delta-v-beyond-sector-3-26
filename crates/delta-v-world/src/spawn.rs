@@ -9,12 +9,13 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::{DebugAxesEligible, Health, SpawnEntity};
-use delta_v_physics::{CollisionShape, DynamicBody, RigidBody};
+use delta_v_core::{DebugAxesEligible, SpawnEntity};
+use delta_v_physics::{CollisionLayersComponent, CollisionShape, DynamicBody, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
 use delta_v_spawn::template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_mass,
 };
+use delta_v_types::collision::layers;
 use delta_v_types::CollisionShapeJson;
 
 /// Marker component for a pending asteroid mesh waiting for its glTF to load.
@@ -92,6 +93,7 @@ pub fn spawn_asteroid_system(
             DynamicBody,
             RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
             CollisionShape(collision_shape_data),
+            CollisionLayersComponent::new(layers::ASTEROID),
             Transform::from_translation(event.position)
                 .with_rotation(event.rotation)
                 .with_scale(scale),
@@ -101,8 +103,6 @@ pub fn spawn_asteroid_system(
             Name::new(event.id.clone()),
             PendingAsteroidMesh { gltf_handle },
             DebugAxesEligible::new(event.id.clone(), axis_length),
-            // Health component for damage model (M4)
-            Health::new(50.0),
         ));
 
         info!("Spawned asteroid '{}' with mass {} kg", event.id, mass);

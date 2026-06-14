@@ -7,7 +7,7 @@
 
 use serde_json::Value;
 
-use delta_v_types::{BoundingBox, Vec3Json};
+use delta_v_types::{BoundingBoxJson, Vec3Json};
 
 /// Extracts a mass value from a validated template JSON value.
 ///
@@ -54,7 +54,7 @@ pub fn extract_vec3(json: &serde_json::Map<String, Value>) -> Vec3Json {
     }
 }
 
-/// Extracts a `BoundingBox` from a validated template JSON value.
+/// Extracts a `BoundingBoxJson` from a validated template JSON value.
 ///
 /// # Panics
 ///
@@ -63,7 +63,7 @@ pub fn extract_vec3(json: &serde_json::Map<String, Value>) -> Vec3Json {
 /// by `delta-v-json` (ADR-0013).
 #[allow(clippy::expect_used)]
 #[must_use]
-pub fn extract_bounding_box(template: &Value) -> BoundingBox {
+pub fn extract_bounding_box(template: &Value) -> BoundingBoxJson {
     // INVARIANT: bounding_box.min and bounding_box.max are required by schema (ADR-0013)
     let bbox = template
         .get("bounding_box")
@@ -80,12 +80,12 @@ pub fn extract_bounding_box(template: &Value) -> BoundingBox {
             .expect("max should be an object"),
     );
 
-    BoundingBox { min, max }
+    BoundingBoxJson { min, max }
 }
 
-/// Computes debug axis length from a `BoundingBox` (120% of longest side).
+/// Computes debug axis length from a `BoundingBoxJson` (120% of longest side).
 #[must_use]
-pub fn compute_debug_axis_length(bbox: &BoundingBox) -> f32 {
+pub fn compute_debug_axis_length(bbox: &BoundingBoxJson) -> f32 {
     let size = bbox.size();
     let max_dim = size.x.max(size.y).max(size.z);
     max_dim * 1.2

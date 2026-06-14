@@ -32,6 +32,7 @@ delta-v-weapons = { path = "../delta-v-weapons", version = "0.0.1" }
 delta-v-stations = { path = "../delta-v-stations", version = "0.0.1" }
 delta-v-items = { path = "../delta-v-items", version = "0.0.1" }
 delta-v-world = { path = "../delta-v-world", version = "0.0.1" }
+delta-v-ai = { path = "../delta-v-ai", version = "0.0.1" }
 
 bevy = { workspace = true }
 bevy_mod_billboard = { workspace = true }

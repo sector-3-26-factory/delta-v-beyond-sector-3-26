@@ -11,7 +11,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
-use delta_v_types::{QuatJson, Vec3Json};
+use delta_v_types::{AiTaskJson, QuatJson, Vec3Json};
 
 /// Top-level world definition loaded from `*.world.json`.
 ///
@@ -60,6 +60,11 @@ pub struct EntitySpawn {
     /// Only valid for ship templates. Default: false (from schema).
     /// Filled by schema defaults; never absent after loading (ADR-0039, ADR-0040).
     pub player_controlled: bool,
+    /// Optional AI task assignment. If present, the entity is AI-driven
+    /// and the loader will load `ai_controlled_ship.json` and merge with
+    /// the co-located `ship.json`. The task determines the AI mission
+    /// (e.g., "patrol"). Absent means static ship (serde defaults Option to None).
+    pub ai_task: Option<AiTaskJson>,
     /// The loaded template JSON (populated by loader).
     /// Not present in JSON; filled by `delta-v-world` loader.
     #[serde(skip)]

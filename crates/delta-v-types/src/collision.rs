@@ -8,7 +8,7 @@
 use bevy::prelude::Vec3;
 use serde::Deserialize;
 
-use crate::physics::PhysicalQuantity;
+use crate::physics::PhysicalQuantityJson;
 use crate::spatial::Vec3Json;
 
 /// Collision layers for categorizing entities.
@@ -39,7 +39,7 @@ pub mod layers {
 
     /// Layer for ships (player and NPCs).
     ///
-    /// Ships are on layer 1 and can collide with asteroids (`ASTEROID_LAYER`).
+    /// Ships are on layer 1 and can collide with ships and asteroids.
     pub const SHIP_LAYER: u32 = 1;
 
     /// Layer for asteroids (static obstacles).
@@ -47,7 +47,7 @@ pub mod layers {
     /// Asteroids are on layer 2 and can collide with ships (`SHIP_LAYER`).
     pub const ASTEROID_LAYER: u32 = 2;
 
-    /// Collision layers for ships: on `SHIP_LAYER`, can collide with `ASTEROID_LAYER`.
+    /// Collision layers for ships: on `SHIP_LAYER`, can collide with `ASTEROID_LAYER` only.
     pub const SHIP: super::CollisionLayers =
         super::CollisionLayers::new(SHIP_LAYER, ASTEROID_LAYER);
 
@@ -142,7 +142,7 @@ pub struct CollisionShapeJson {
     #[serde(rename = "type")]
     pub shape_type: String,
     /// Radius for sphere shapes (metres).
-    pub radius: Option<PhysicalQuantity>,
+    pub radius: Option<PhysicalQuantityJson>,
     /// Half-extents for box shapes (metres).
     pub half_extents: Option<Vec3Json>,
     /// Offset of the collision shape center from the entity origin in metres.

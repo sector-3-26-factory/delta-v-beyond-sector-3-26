@@ -4,12 +4,10 @@
 
 use bevy::prelude::*;
 use delta_v_core::Weapon;
-use delta_v_physics::{CollisionShape, RigidBody};
+use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 
 use crate::components::Projectile;
-// PROJECTILE collision layers are defined in delta-v-types but cannot be used
-// directly as a Component since delta-v-types must not derive Component (ADR-0046).
-// Collision filtering for projectiles will be handled by the physics system.
+use delta_v_types::collision::layers;
 
 /// Spawns a projectile entity.
 ///
@@ -53,6 +51,7 @@ pub fn spawn_projectile(
             InheritedVisibility::default(),
             rigid_body,
             CollisionShape::sphere(weapon.projectile_radius, Vec3::ZERO),
+            CollisionLayersComponent::new(layers::PROJECTILE),
             Projectile {
                 source,
                 lifetime: weapon.lifetime,

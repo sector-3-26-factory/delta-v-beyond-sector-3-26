@@ -52,4 +52,11 @@ pub enum AppState {
     /// All gameplay systems (input, physics, camera follow, HUD) run
     /// in this state.
     InGame,
+
+    /// Skirmish is over (win or lose).
+    ///
+    /// Entered when the player is destroyed or all enemy ships are
+    /// destroyed. For M5, only logs the result; M6 will add HUD,
+    /// restart, etc.
+    SkirmishOver,
 }

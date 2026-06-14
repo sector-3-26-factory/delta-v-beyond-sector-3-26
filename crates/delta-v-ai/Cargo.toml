@@ -1,0 +1,25 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
+[package]
+name = "delta-v-ai"
+version.workspace = true
+edition = "2021"
+rust-version = "1.88"
+description = "AI state machines and behavior systems for driven entities"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["ai", "state-machine", "behavior"]
+categories = ["game-development"]
+
+[dependencies]
+bevy = { workspace = true }
+log = { workspace = true }
+delta-v-core = { workspace = true }
+delta-v-physics = { workspace = true }
+delta-v-types = { workspace = true }
+delta-v-spawn = { workspace = true }
+thiserror = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

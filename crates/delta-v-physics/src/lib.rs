@@ -42,14 +42,16 @@ pub mod rigid_body;
 pub mod systems;
 
 pub use collision::{
-    CollisionDetected, CollisionShape, CollisionShapeType, DynamicBody, StaticBody,
+    CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeType, DynamicBody,
+    StaticBody,
 };
 pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
+pub use delta_v_types::CollisionLayers;
 pub use rigid_body::{MassSource, RigidBody};
 pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig};
+use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health};
 use floating_origin_systems::{check_and_recenter_origin_system, mark_new_entities_system};
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
@@ -165,10 +167,23 @@ impl Plugin for PhysicsPlugin {
 /// For box shapes, the collision check uses the actual box geometry rather than
 /// a sphere approximation, preventing false positives in thin axes and false
 /// negatives in wide axes.
+///
+/// Collision layers are checked to filter out non-colliding entity pairs.
 #[allow(clippy::needless_pass_by_value)]
 fn collision_detection_system(
     mut events: EventWriter<'_, CollisionDetected>,
-    bodies: Query<'_, '_, (Entity, &RigidBody, &Transform, &CollisionShape)>,
+    bodies: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &RigidBody,
+            &Transform,
+            &CollisionShape,
+            &CollisionLayersComponent,
+        ),
+    >,
+    health_query: Query<'_, '_, &Health>,
 ) {
     let bodies_vec: Vec<_> = bodies.iter().collect();
     let len = bodies_vec.len();
@@ -177,9 +192,17 @@ fn collision_detection_system(
         for j in (i + 1)..len {
             // SAFETY: i and j are valid indices from the loop bounds
             #[allow(clippy::indexing_slicing)]
-            let (entity_a, body_a, transform_a, shape_a) = bodies_vec[i];
+            let (entity_a, body_a, transform_a, shape_a, layers_a) = bodies_vec[i];
             #[allow(clippy::indexing_slicing)]
-            let (entity_b, body_b, transform_b, shape_b) = bodies_vec[j];
+            let (entity_b, body_b, transform_b, shape_b, layers_b) = bodies_vec[j];
+
+            // Check collision layers: entity A can collide with B if B's layer is in A's mask
+            // and A's layer is in B's mask
+            let can_collide =
+                (layers_b.layers & layers_a.mask) != 0 && (layers_a.layers & layers_b.mask) != 0;
+            if !can_collide {
+                continue;
+            }
 
             // Apply collision shape offset to get the actual collision center
             let pos_a = transform_a.translation + shape_a.offset;
@@ -190,7 +213,15 @@ fn collision_detection_system(
             if let Some((normal, penetration_depth)) = collision {
                 let relative_velocity = body_b.velocity - body_a.velocity;
 
-                log::debug!("Collision detected: entities {entity_a:?} and {entity_b:?}, penetration={penetration_depth:.2}, normal={normal:?}");
+                let health_a = health_query.get(entity_a).map_or_else(
+                    |_| "no-hp".to_string(),
+                    |h| format!("hp={:.0}/{:.0}", h.current, h.max),
+                );
+                let health_b = health_query.get(entity_b).map_or_else(
+                    |_| "no-hp".to_string(),
+                    |h| format!("hp={:.0}/{:.0}", h.current, h.max),
+                );
+                log::debug!("Collision detected: {entity_a:?} ({health_a}) <-> {entity_b:?} ({health_b}), penetration={penetration_depth:.2}, normal={normal:?}");
 
                 events.send(CollisionDetected {
                     target: entity_a,

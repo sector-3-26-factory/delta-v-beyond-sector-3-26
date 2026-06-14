@@ -137,4 +137,5 @@ informational and must be aligned with.
 - ❌ No loading templates outside `delta-v-assets`
 - ❌ No flat files in `delta-v-core/src/` — use subdirectories
 - ❌ No `CollisionShape` (Bevy Component) in `delta-v-types` — it stays in `delta-v-physics`
+- ✅ Domain crates MAY depend on `delta-v-physics` for `RigidBody`/`CollisionShape` components (exception to ADR-0051)
 - ❌ No JSON deserialization value types without the `Json` suffix in `delta-v-types`

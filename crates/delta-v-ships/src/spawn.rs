@@ -20,8 +20,9 @@ use delta_v_core::{
     ChaseCameraOffset, DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, SpawnEntity,
     Weapon,
 };
-use delta_v_physics::{CollisionShape, RigidBody};
+use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
+use delta_v_types::collision::layers;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
 #[derive(Component)]
@@ -45,7 +46,7 @@ impl delta_v_spawn::mesh_attachment::PendingMesh for PendingShipMesh {
 ///
 /// The event's `template` field contains validated template JSON from delta-v-json.
 #[allow(clippy::needless_pass_by_value)]
-pub fn spawn_ship_from_template(
+pub fn spawn_ship(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
     mut events: EventReader<'_, '_, SpawnEntity>,
@@ -147,8 +148,9 @@ fn spawn_player_ship(
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
             CollisionShape(collision_shape_data),
+            CollisionLayersComponent::new(layers::SHIP),
             // Health component for damage model (M4)
-            Health::new(100.0),
+            Health::new(template.health.value),
         ))
         .id();
 
@@ -289,7 +291,7 @@ fn spawn_static_ship(
             FlightAssist,
             CollisionShape(collision_shape_data),
             // Health component for damage model (M4)
-            Health::new(100.0),
+            Health::new(template.health.value),
         ))
         .id();
 

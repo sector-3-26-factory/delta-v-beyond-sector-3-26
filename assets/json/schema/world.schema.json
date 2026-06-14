@@ -74,6 +74,13 @@
           "description": "If true, the entity is player-controlled. Loads player_controlled_ship.json instead of ship.json and merges with the co-located ship.json. Only valid for ship templates. Exactly one entity in the world must have this set to true.",
           "type": "boolean",
           "default": false
+        },
+        "ai_task": {
+          "description": "Optional AI task assignment. If present, the entity is AI-driven and the loader will load ai_controlled_ship.json and merge with the co-located ship.json. The task determines the AI mission (e.g., 'patrol'). Absent means static ship.",
+          "type": "string",
+          "enum": [
+            "patrol"
+          ]
         }
       }
     },

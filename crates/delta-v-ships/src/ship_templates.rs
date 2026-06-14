@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 use delta_v_core::camera::ShipCamerasTemplate;
-use delta_v_types::{BoundingBox, PhysicalQuantity};
+use delta_v_types::{BoundingBoxJson, PhysicalQuantityJson};
 
 /// Base deserialized ship template JSON.
 ///
@@ -22,7 +22,7 @@ use delta_v_types::{BoundingBox, PhysicalQuantity};
 #[derive(Debug, Deserialize)]
 pub struct ShipTemplate {
     /// Ship mass in kilograms.
-    pub mass: PhysicalQuantity,
+    pub mass: PhysicalQuantityJson,
     /// Dimensionless inertia multiplier (default 1.0 from schema).
     pub inertia_scale: f32,
     /// Propulsion system configuration.
@@ -38,7 +38,7 @@ pub struct ShipTemplate {
 #[derive(Debug, Deserialize)]
 pub struct PlayerShipTemplate {
     /// Ship mass in kilograms (from merged ship template).
-    pub mass: PhysicalQuantity,
+    pub mass: PhysicalQuantityJson,
     /// Dimensionless inertia multiplier (from merged ship template).
     pub inertia_scale: f32,
     /// Propulsion system configuration (from merged ship template).
@@ -47,12 +47,15 @@ pub struct PlayerShipTemplate {
     pub cameras: ShipCamerasTemplate,
     /// Axis-aligned bounding box in ship-local coordinates (metres).
     /// Used for debug axes and spatial calculations.
-    pub bounding_box: BoundingBox,
+    pub bounding_box: BoundingBoxJson,
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
     /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
     pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
+    /// Ship health in hit points (default 100.0 from schema).
+    /// Used for damage model (M4).
+    pub health: PhysicalQuantityJson,
 }
 
 /// Deserialized non-player ship template JSON.
@@ -62,19 +65,22 @@ pub struct PlayerShipTemplate {
 #[derive(Debug, Deserialize)]
 pub struct StaticShipTemplate {
     /// Ship mass in kilograms.
-    pub mass: PhysicalQuantity,
+    pub mass: PhysicalQuantityJson,
     /// Dimensionless inertia multiplier.
     pub inertia_scale: f32,
     /// Propulsion system configuration.
     pub propulsion: ShipPropulsionTemplate,
     /// Axis-aligned bounding box in ship-local coordinates (metres).
     /// Used for debug axes and spatial calculations.
-    pub bounding_box: BoundingBox,
+    pub bounding_box: BoundingBoxJson,
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
     /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
     pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
+    /// Ship health in hit points (default 100.0 from schema).
+    /// Used for damage model (M4).
+    pub health: PhysicalQuantityJson,
 }
 
 /// Propulsion configuration from the ship template.
@@ -96,9 +102,9 @@ pub struct MainThrusterTemplate {
     #[serde(rename = "type")]
     pub thruster_type: String,
     /// Maximum forward thrust.
-    pub max_forward_thrust: PhysicalQuantity,
+    pub max_forward_thrust: PhysicalQuantityJson,
     /// Maximum backward/reverse thrust.
-    pub max_backward_thrust: PhysicalQuantity,
+    pub max_backward_thrust: PhysicalQuantityJson,
 }
 
 /// Maneuvering thruster (RCS) configuration from the template.
@@ -108,9 +114,9 @@ pub struct ManeuveringThrusterTemplate {
     #[serde(rename = "type")]
     pub thruster_type: String,
     /// Maximum torque per rotation axis.
-    pub max_torque: PhysicalQuantity,
+    pub max_torque: PhysicalQuantityJson,
     /// Maximum strafe thrust per lateral/vertical axis.
-    pub max_strafe_thrust: PhysicalQuantity,
+    pub max_strafe_thrust: PhysicalQuantityJson,
     /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
     /// is first pressed. 0 = instant full torque (no ramp).
     pub rotation_ramp_ticks: u32,

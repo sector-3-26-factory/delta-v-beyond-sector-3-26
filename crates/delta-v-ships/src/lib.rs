@@ -55,7 +55,7 @@ pub use ship_templates::{
     MainThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig, ShipPropulsionTemplate,
     ShipTemplate, StaticShipTemplate, ThrustCommand, TorqueCommand,
 };
-pub use spawn::spawn_ship_from_template;
+pub use spawn::spawn_ship;
 
 #[cfg(test)]
 #[path = "spawn_tests.rs"]
@@ -121,7 +121,7 @@ impl Plugin for ShipsPlugin {
         .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting)
         .add_systems(
             Update,
-            spawn_ship_from_template
+            spawn_ship
                 .in_set(WorldSpawnSet::SpawnShips)
                 .run_if(in_state(AppState::SpawningEntities)),
         )

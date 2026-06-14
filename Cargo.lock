@@ -1783,6 +1783,7 @@ dependencies = [
  "bevy",
  "bevy_mod_billboard",
  "clap",
+ "delta-v-ai",
  "delta-v-assets",
  "delta-v-config",
  "delta-v-core",
@@ -1796,6 +1797,20 @@ dependencies = [
  "delta-v-world",
  "env_logger",
  "log",
+]
+
+[[package]]
+name = "delta-v-ai"
+version = "0.0.1"
+dependencies = [
+ "bevy",
+ "delta-v-core",
+ "delta-v-physics",
+ "delta-v-spawn",
+ "delta-v-types",
+ "log",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

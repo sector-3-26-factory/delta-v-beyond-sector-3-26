@@ -6,7 +6,7 @@
 #![allow(clippy::float_cmp)]
 
 use crate::collision::{CollisionShapeJson, CollisionShapeType};
-use crate::physics::PhysicalQuantity;
+use crate::physics::PhysicalQuantityJson;
 use crate::spatial::Vec3Json;
 
 // ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ fn test_collision_shape_json_deserialize_with_offset() {
 fn test_collision_shape_json_shape_type_method() {
     let sphere = CollisionShapeJson {
         shape_type: "sphere".to_string(),
-        radius: Some(PhysicalQuantity {
+        radius: Some(PhysicalQuantityJson {
             value: 1.0,
             unit: "m".to_string(),
         }),

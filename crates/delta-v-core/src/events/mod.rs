@@ -51,6 +51,11 @@ pub struct SpawnEntity {
 
     /// Optional scale. Defaults to 1.0 on all axes.
     pub scale: Vec3,
+
+    /// Optional AI task assignment from the world definition.
+    /// If `Some`, the entity is AI-driven and the task determines its mission.
+    /// If `None`, the entity is static or player-controlled.
+    pub ai_task: Option<String>,
 }
 
 impl SpawnEntity {
@@ -82,6 +87,7 @@ impl SpawnEntity {
             position,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
+            ai_task: None,
         }
     }
 
@@ -98,6 +104,14 @@ impl SpawnEntity {
     #[allow(clippy::missing_const_for_fn)]
     pub fn with_scale(mut self, scale: Vec3) -> Self {
         self.scale = scale;
+        self
+    }
+
+    /// Sets the AI task for this spawn event.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn with_ai_task(mut self, ai_task: String) -> Self {
+        self.ai_task = Some(ai_task);
         self
     }
 }

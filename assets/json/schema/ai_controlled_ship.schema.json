@@ -1,0 +1,55 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/ai_controlled_ship",
+    "title": "AI-controlled ship template",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines the AI-controlled ship entity type. This overlay template co-locates with the base ship.json in the same directory and adds AI behavioral parameters. Per ADR-0038, templates are loaded and validated independently of the world definition.\n\nPhysical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "entity_type",
+        "ai"
+    ],
+    "properties": {
+        "entity_type": {
+            "description": "Entity type discriminator. Must be 'ai_controlled_ship'.",
+            "type": "string",
+            "const": "ai_controlled_ship"
+        },
+        "ai": {
+            "description": "AI behavioral parameters. These depend on the ship type -- a fighter has different values than a cargo ship.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "aggro_range",
+                "attack_range",
+                "leash_range",
+                "flee_health_threshold",
+                "patrol_radius"
+            ],
+            "properties": {
+                "aggro_range": {
+                    "description": "Distance in metres at which the AI becomes hostile and pursues.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "attack_range": {
+                    "description": "Distance in metres at which the AI starts attacking.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "leash_range": {
+                    "description": "Maximum distance in metres from patrol point before the AI returns.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "flee_health_threshold": {
+                    "description": "Health fraction (0-1) below which the AI flees from combat. 0.25 = flee at 25% health.",
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                },
+                "patrol_radius": {
+                    "description": "Radius in metres for patrol wander behaviour.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                }
+            }
+        }
+    }
+}

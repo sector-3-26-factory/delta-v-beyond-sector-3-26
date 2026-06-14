@@ -51,5 +51,9 @@
             },
             "rotation_ramp_ticks": 60
         }
+    },
+    "health": {
+        "value": 100.0,
+        "unit": "hp"
     }
 }
