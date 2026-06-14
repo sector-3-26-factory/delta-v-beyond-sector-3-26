@@ -1,0 +1,76 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/i18n",
+    "title": "Internationalization",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nTranslation files with a fixed nested structure that mirrors a typed Rust hierarchy. Keys are validated at compile time; missing or mistyped keys are compiler errors.\n\nSee ADR-0037.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "ui"
+    ],
+    "properties": {
+        "ui": {
+            "description": "UI translations.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "menu"
+            ],
+            "properties": {
+                "menu": {
+                    "description": "Menu translations.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "keybindings"
+                    ],
+                    "properties": {
+                        "keybindings": {
+                            "description": "Keybindings menu translations.",
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "title",
+                                "close",
+                                "group",
+                                "action",
+                                "key"
+                            ],
+                            "properties": {
+                                "title": {
+                                    "description": "Menu title.",
+                                    "type": "string"
+                                },
+                                "close": {
+                                    "description": "Close button hint.",
+                                    "type": "string"
+                                },
+                                "group": {
+                                    "description": "Action group names.",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                },
+                                "action": {
+                                    "description": "Logical action names.",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                },
+                                "key": {
+                                    "description": "Physical key names.",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

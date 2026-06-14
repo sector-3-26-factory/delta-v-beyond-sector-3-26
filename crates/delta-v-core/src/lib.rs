@@ -52,6 +52,7 @@ pub mod events;
 pub mod flight_assist;
 pub mod floating_origin;
 pub mod health;
+pub mod i18n;
 pub mod input;
 pub mod spawn;
 pub mod state;
@@ -75,6 +76,7 @@ pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
 pub use health::{Health, Weapon};
+pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use input::{ActiveActions, InputSet, KeybindingsResource, LogicalAction};
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;

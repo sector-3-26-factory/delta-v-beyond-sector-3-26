@@ -169,14 +169,18 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
     // INVARIANT: template loading must succeed (ADR-0013).
     let (entity_type, template_path, merged_template, mesh_template_path) =
         if entity_spawn.player_controlled {
+            // INVARIANT: player_controlled_ship template is required by schema (ADR-0013)
             load_player_controlled_ship(template_short)
                 .expect("player_controlled_ship template must load successfully")
         } else if entity_spawn.ai_task.is_some() {
+            // INVARIANT: ai_controlled_ship template is required by schema (ADR-0013)
             load_ai_controlled_ship(template_short)
                 .expect("ai_controlled_ship template must load successfully")
         } else if template_short.starts_with("asteroids/") {
+            // INVARIANT: asteroid template is required by schema (ADR-0013)
             load_asteroid(template_short).expect("asteroid template must load successfully")
         } else {
+            // INVARIANT: ship template is required by schema (ADR-0013)
             load_ship(template_short).expect("ship template must load successfully")
         };
 

@@ -1,0 +1,51 @@
+{
+    "ui": {
+        "menu": {
+            "keybindings": {
+                "title": "KEYBINDINGS",
+                "close": "Close [F1]",
+                "group": {
+                    "flight": "Flight",
+                    "combat": "Combat",
+                    "systems": "Systems"
+                },
+                "action": {
+                    "thrust_forward": "Thrust Forward",
+                    "thrust_backward": "Thrust Backward",
+                    "pitch_up": "Pitch Up",
+                    "pitch_down": "Pitch Down",
+                    "yaw_left": "Yaw Left",
+                    "yaw_right": "Yaw Right",
+                    "roll_left": "Roll Left",
+                    "roll_right": "Roll Right",
+                    "strafe_left": "Strafe Left",
+                    "strafe_right": "Strafe Right",
+                    "strafe_up": "Strafe Up",
+                    "strafe_down": "Strafe Down",
+                    "toggle_flight_assist": "Toggle Flight Assist",
+                    "fire_primary": "Fire Primary",
+                    "cockpit_cycle_next": "Cycle Cockpit Next",
+                    "cockpit_cycle_prev": "Cycle Cockpit Prev"
+                },
+                "key": {
+                    "KeyW": "W",
+                    "KeyS": "S",
+                    "KeyA": "A",
+                    "KeyD": "D",
+                    "KeyQ": "Q",
+                    "KeyE": "E",
+                    "KeyR": "R",
+                    "KeyF": "F",
+                    "KeyC": "C",
+                    "ArrowUp": "↑",
+                    "ArrowDown": "↓",
+                    "ArrowLeft": "←",
+                    "ArrowRight": "→",
+                    "Space": "Space",
+                    "KeyF2": "F2",
+                    "KeyLeftAlt": "Alt Left"
+                }
+            }
+        }
+    }
+}

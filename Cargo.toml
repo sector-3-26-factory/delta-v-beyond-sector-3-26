@@ -45,6 +45,15 @@ delta-v-physics = { path = "crates/delta-v-physics", version = "0.0.1" }
 delta-v-core = { path = "crates/delta-v-core", version = "0.0.1" }
 delta-v-spawn = { path = "crates/delta-v-spawn", version = "0.0.1" }
 delta-v-ai = { path = "crates/delta-v-ai", version = "0.0.1" }
+delta-v-assets = { path = "crates/delta-v-assets", version = "0.0.1" }
+delta-v-config = { path = "crates/delta-v-config", version = "0.0.1" }
+delta-v-net = { path = "crates/delta-v-net", version = "0.0.1" }
+delta-v-ships = { path = "crates/delta-v-ships", version = "0.0.1" }
+delta-v-propulsion = { path = "crates/delta-v-propulsion", version = "0.0.1" }
+delta-v-weapons = { path = "crates/delta-v-weapons", version = "0.0.1" }
+delta-v-stations = { path = "crates/delta-v-stations", version = "0.0.1" }
+delta-v-items = { path = "crates/delta-v-items", version = "0.0.1" }
+delta-v-world = { path = "crates/delta-v-world", version = "0.0.1" }
 
 [workspace.lints.rust]
 unsafe_code = "warn"
