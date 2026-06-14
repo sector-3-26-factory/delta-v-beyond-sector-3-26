@@ -67,7 +67,7 @@
         },
         "cockpit": {
             "description": "Cockpit overlay definition with stations and gauge slots. See cockpit.schema.json.",
-            "$ref": "cockpit.schema.json"
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/cockpit"
         }
     },
     "$defs": {

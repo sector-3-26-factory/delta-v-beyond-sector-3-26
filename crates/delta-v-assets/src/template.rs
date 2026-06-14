@@ -16,12 +16,6 @@ use serde_json::Value;
 use crate::error::AssetError;
 use crate::paths::resolve_template_path;
 
-/// Path to the units schema file (relative to assets root).
-const UNITS_SCHEMA_PATH: &str = "json/schema/units.schema.json";
-
-/// Path to the schema directory (relative to assets root).
-const SCHEMA_DIR_PATH: &str = "json/schema";
-
 /// Loads a template from a path, validates it, and returns the JSON value.
 ///
 /// This is the SINGLE function for loading templates. All crates should use
@@ -61,10 +55,8 @@ pub fn load_template(
     };
     let full_path = get_workspace_root().join(&template_path);
     let schema_path = get_workspace_root().join(format!("assets/json/schema/{schema_name}"));
-    let units_schema_path = get_workspace_root().join(format!("assets/{UNITS_SCHEMA_PATH}"));
-    let schema_dir = get_workspace_root().join(format!("assets/{SCHEMA_DIR_PATH}"));
 
-    load_template_from_paths(&full_path, &schema_path, &schema_dir, &units_schema_path)
+    load_template_from_paths(&full_path, &schema_path)
 }
 
 /// Loads a player-controlled ship template, merging base ship with player-specific data.
@@ -206,19 +198,9 @@ pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetErr
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
 /// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
-fn load_template_from_paths(
-    template_path: &Path,
-    schema_path: &Path,
-    schema_dir: &Path,
-    units_schema_path: &Path,
-) -> Result<Value, AssetError> {
-    let template = json_loader::load_validated_with_registry(
-        template_path,
-        schema_path,
-        schema_dir,
-        units_schema_path,
-    )
-    .map_err(|e| map_json_error(e, template_path))?;
+fn load_template_from_paths(template_path: &Path, schema_path: &Path) -> Result<Value, AssetError> {
+    let template = json_loader::load_validated_with_registry(template_path, schema_path)
+        .map_err(|e| map_json_error(e, template_path))?;
 
     Ok(template)
 }
