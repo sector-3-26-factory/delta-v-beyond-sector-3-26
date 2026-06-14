@@ -149,8 +149,11 @@ pub fn input_reader_system(
                 let factor = ramp_factor(&mut ramp.ramp_ticks.z, ramp_ticks_max);
                 torque_cmd.torque.z -= propulsion.max_torque * factor;
             }
-            LogicalAction::ToggleFlightAssist | LogicalAction::FirePrimary => {
-                // Handled by other systems (flight_assist_toggle_system / weapons plugin)
+            LogicalAction::ToggleFlightAssist
+            | LogicalAction::FirePrimary
+            | LogicalAction::CockpitCycleNext
+            | LogicalAction::CockpitCyclePrev => {
+                // Handled by other systems (flight_assist_toggle_system / weapons plugin / cockpit module)
             }
         }
     }

@@ -45,6 +45,7 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod cockpit;
 pub mod error;
 pub mod ship_templates;
 pub mod spawn;

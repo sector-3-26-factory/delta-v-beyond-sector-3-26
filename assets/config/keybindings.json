@@ -69,6 +69,17 @@
       "keyboard": [
         "Space"
       ]
+    },
+    "cockpit_cycle_next": {
+      "keyboard": [
+        "F2"
+      ]
+    },
+    "cockpit_cycle_prev": {
+      "keyboard": [
+        "AltLeft",
+        "F2"
+      ]
     }
   }
 }

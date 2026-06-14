@@ -56,6 +56,8 @@ pub struct PlayerShipTemplate {
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,
+    /// Cockpit overlay definition with stations and gauge slots.
+    pub cockpit: CockpitDefinition,
 }
 
 /// Deserialized non-player ship template JSON.
@@ -81,6 +83,62 @@ pub struct StaticShipTemplate {
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,
+}
+
+/// Cockpit overlay definition with stations and gauge slots.
+#[derive(Debug, Deserialize)]
+pub struct CockpitDefinition {
+    /// List of cockpit stations.
+    pub stations: Vec<CockpitStation>,
+}
+
+/// A cockpit station with its texture and gauge slots.
+///
+/// The `slots` field defaults to an empty array via the schema (cockpit.schema.json).
+/// Per ADR-0039, defaults are defined in schema only — no `#[serde(default)]`.
+#[derive(Debug, Deserialize)]
+pub struct CockpitStation {
+    /// Station identifier.
+    pub id: String,
+    /// PNG file path relative to the template directory.
+    pub texture: String,
+    /// Gauge slot definitions. Defaults to `[]` via schema.
+    pub slots: Vec<GaugeSlot>,
+}
+
+/// A gauge slot defining position/shape and the default gauge type.
+#[derive(Debug, Deserialize)]
+pub struct GaugeSlot {
+    /// Shape defining the slot position and size.
+    pub shape: GaugeShape,
+    /// Gauge type name (e.g., "altitude", "velocity").
+    pub default_gauge: String,
+}
+
+/// Shape for a gauge slot: either rectangle or circle.
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", content = "$content")]
+pub enum GaugeShape {
+    /// Rectangle shape with pixel coordinates.
+    Rectangle {
+        /// Left edge (pixels).
+        x1: f32,
+        /// Top edge (pixels).
+        y1: f32,
+        /// Right edge (pixels).
+        x2: f32,
+        /// Bottom edge (pixels).
+        y2: f32,
+    },
+    /// Circle shape with center and radius.
+    Circle {
+        /// Center X (pixels).
+        cx: f32,
+        /// Center Y (pixels).
+        cy: f32,
+        /// Radius (pixels).
+        r: f32,
+    },
 }
 
 /// Propulsion configuration from the ship template.

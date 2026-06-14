@@ -106,6 +106,14 @@
             "available": true
         }
     },
+    "cockpit": {
+        "stations": [
+            {
+                "id": "default",
+                "texture": "cockpit-default.png"
+            }
+        ]
+    },
     "collision_shape": {
         "type": "box",
         "half_extents": {
