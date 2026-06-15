@@ -150,6 +150,9 @@ impl Plugin for ShipsPlugin {
             delta_v_core::debug_camera_positions.run_if(in_state(AppState::InGame)),
         );
 
+        // Cockpit overlay systems (M6).
+        app.add_plugins(cockpit::CockpitPlugin);
+
         // Input → Forces pipeline in FixedUpdate (ADR-0017).
         // Must run after InputSet::Translate (which populates ActiveActions)
         // and before PhysicsSet::AccumulateForces (which includes gravity).

@@ -110,7 +110,7 @@
         "stations": [
             {
                 "id": "default",
-                "texture": "cockpit-default.png"
+                "texture": "cockpit/default.png"
             }
         ]
     }

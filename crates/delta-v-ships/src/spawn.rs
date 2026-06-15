@@ -13,6 +13,7 @@
 //!
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
+use crate::cockpit::CockpitOverlayResource;
 use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
@@ -215,6 +216,12 @@ fn spawn_player_ship(
         max_strafe_thrust: maneuvering.max_strafe_thrust.value,
         active_main_thruster_index: active_index,
         rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
+    });
+
+    // Insert cockpit overlay resource from template (M6).
+    // The cockpit module will spawn the overlay on AppState::InGame.
+    commands.insert_resource(CockpitOverlayResource {
+        stations: template.cockpit.stations,
     });
 
     log::info!(

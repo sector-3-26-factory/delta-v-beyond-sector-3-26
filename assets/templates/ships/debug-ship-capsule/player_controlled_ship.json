@@ -104,14 +104,14 @@
                 "z": 0.0
             },
             "available": true
-        },
-        "cockpit": {
-            "stations": [
-                {
-                    "id": "default",
-                    "texture": "cockpit-default.png"
-                }
-            ]
         }
+    },
+    "cockpit": {
+        "stations": [
+            {
+                "id": "default",
+                "texture": "cockpit/default.png"
+            }
+        ]
     }
 }

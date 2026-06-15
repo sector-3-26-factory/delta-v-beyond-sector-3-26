@@ -78,6 +78,8 @@ Each milestone ends on a runnable, demoable build.
 - Win/lose conditions per skirmish.
 
 ### M6 -- HUD and feel
+- Status: **in progress**.
+- Cockpit overlay system with PNG overlays and station switching (Step 5 implemented).
 - Velocity vector indicator, thrust gauges, target reticle.
 - Sound effects, camera shake, basic VFX.
 
