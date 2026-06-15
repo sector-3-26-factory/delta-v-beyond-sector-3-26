@@ -26,5 +26,6 @@ use bevy::prelude::*;
 /// When `true`, the menu UI is visible; when `false`, it is hidden.
 // INVARIANT: Bevy ECS resource requires Default trait for resource initialization.
 // The default value is `false` (menu closed).
+// allow-default: Bevy ECS Resource trait requires Default for resource initialization.
 #[derive(Resource, Default)]
 pub struct KeybindingsMenuOpen(pub bool);

@@ -33,6 +33,7 @@
     clippy::pedantic,
     clippy::cargo
 )]
+#![allow(clippy::multiple_crate_versions)]
 #![deny(
     clippy::unwrap_used,
     clippy::expect_used,
