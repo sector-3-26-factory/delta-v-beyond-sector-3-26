@@ -21,7 +21,7 @@ pub struct CollisionShapeDebug {
 pub struct CollisionShapeDebugMesh;
 
 /// Spawns wireframe debug meshes for entities with collision shapes.
-#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity, deprecated)]
 pub fn spawn_collision_shape_debug(
     mut commands: Commands<'_, '_>,
     mut meshes: ResMut<'_, Assets<Mesh>>,
@@ -56,14 +56,14 @@ pub fn spawn_collision_shape_debug(
             ..default()
         });
 
+        let mesh_handle: bevy::asset::Handle<Mesh> = meshes.add(mesh);
+        let mat_handle: bevy::asset::Handle<StandardMaterial> = material;
         let debug_mesh = commands
             .spawn((
-                PbrBundle {
-                    mesh: meshes.add(mesh),
-                    material,
-                    transform: Transform::from_translation(offset),
-                    ..default()
-                },
+                Mesh3d(mesh_handle),
+                MeshMaterial3d(mat_handle),
+                Transform::from_translation(offset),
+                Visibility::default(),
                 CollisionShapeDebugMesh,
             ))
             .id();
@@ -88,7 +88,12 @@ pub fn update_collision_shape_debug_color(
     mut events: EventReader<'_, '_, CollisionDetected>,
     mut materials: ResMut<'_, Assets<StandardMaterial>>,
     debug_config: Res<'_, delta_v_core::debug::debug_config::DebugConfig>,
-    mesh_query: Query<'_, '_, (&Handle<StandardMaterial>, &Parent), With<CollisionShapeDebugMesh>>,
+    mesh_query: Query<
+        '_,
+        '_,
+        (&MeshMaterial3d<StandardMaterial>, &Parent),
+        With<CollisionShapeDebugMesh>,
+    >,
     aabb_query: Query<'_, '_, (Entity, &Aabb, &GlobalTransform)>,
     collision_debug_query: Query<'_, '_, (Entity, &CollisionShapeDebug)>,
 ) {
@@ -104,7 +109,7 @@ pub fn update_collision_shape_debug_color(
 
     for (mat_handle, parent) in mesh_query.iter() {
         let is_colliding = colliding.contains(&parent.get());
-        if let Some(mat) = materials.get_mut(mat_handle) {
+        if let Some(mat) = materials.get_mut(&mat_handle.0) {
             mat.base_color = if is_colliding {
                 Color::srgb(1.0, 0.0, 0.0)
             } else {

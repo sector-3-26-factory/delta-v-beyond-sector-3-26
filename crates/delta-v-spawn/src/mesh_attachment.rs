@@ -3,7 +3,7 @@
 //! Generic mesh attachment system for glTF loading.
 
 use bevy::hierarchy::BuildChildren;
-use bevy::prelude::{Assets, Commands, Component, Entity, Gltf, Query, Res, SceneBundle};
+use bevy::prelude::{Assets, Commands, Component, Entity, Gltf, Query, Res, SceneRoot};
 
 /// Trait for pending mesh marker components.
 ///
@@ -29,14 +29,10 @@ pub fn attach_meshes<T: Component + PendingMesh>(
             if gltf.scenes.is_empty() {
                 continue;
             }
-            commands.entity(entity).with_children(|parent| {
-                for scene_handle in &gltf.scenes {
-                    parent.spawn(SceneBundle {
-                        scene: scene_handle.clone(),
-                        ..Default::default()
-                    });
-                }
-            });
+            for scene_handle in &gltf.scenes {
+                let child = commands.spawn(SceneRoot(scene_handle.clone())).id();
+                commands.entity(entity).add_child(child);
+            }
             commands.entity(entity).remove::<T>();
         }
     }

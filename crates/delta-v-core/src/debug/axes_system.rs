@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
-use bevy_mod_billboard::prelude::*;
 
 use super::axes::{DebugAxes, DebugAxesEligible, DebugAxisRootMarker};
 use super::debug_config::DebugConfig;
@@ -213,11 +212,11 @@ fn add_debug_axes_to_entity(
     // Add axis meshes and labels as children of the root.
     commands.entity(axis_root).with_children(|axis_parent| {
         // X axis (red) with "X" label
-        axis_parent.spawn(PbrBundle {
-            mesh: meshes.add(x_axis_mesh),
-            material: x_material,
-            ..default()
-        });
+        axis_parent.spawn((
+            Mesh3d(meshes.add(x_axis_mesh)),
+            MeshMaterial3d(x_material),
+            Transform::default(),
+        ));
         spawn_axis_label(
             axis_parent,
             "X (right)",
@@ -229,11 +228,11 @@ fn add_debug_axes_to_entity(
         );
 
         // Y axis (green) with "Y (up)" label
-        axis_parent.spawn(PbrBundle {
-            mesh: meshes.add(y_axis_mesh),
-            material: y_material,
-            ..default()
-        });
+        axis_parent.spawn((
+            Mesh3d(meshes.add(y_axis_mesh)),
+            MeshMaterial3d(y_material),
+            Transform::default(),
+        ));
         spawn_axis_label(
             axis_parent,
             "Y (up)",
@@ -245,11 +244,11 @@ fn add_debug_axes_to_entity(
         );
 
         // Z axis (blue) with "Z (back)" label
-        axis_parent.spawn(PbrBundle {
-            mesh: meshes.add(z_axis_mesh),
-            material: z_material,
-            ..default()
-        });
+        axis_parent.spawn((
+            Mesh3d(meshes.add(z_axis_mesh)),
+            MeshMaterial3d(z_material),
+            Transform::default(),
+        ));
         spawn_axis_label(
             axis_parent,
             "Z (back)",
@@ -262,7 +261,7 @@ fn add_debug_axes_to_entity(
     });
 
     // Make the axis root a child of the target entity.
-    commands.entity(target).push_children(&[axis_root]);
+    commands.entity(target).add_children(&[axis_root]);
 }
 
 /// Base font size for axis labels at the reference axis length.
@@ -293,18 +292,15 @@ fn spawn_axis_label(
     log::info!(
         "spawn_axis_label: spawning label '{label}' at ({x}, {y}, {z}) font_size={font_size:.1} scale={transform_scale:.4}"
     );
-    parent.spawn(BillboardTextBundle {
-        transform: Transform::from_xyz(x, y, z).with_scale(Vec3::splat(transform_scale)),
-        text: Text::from_section(
-            label,
-            TextStyle {
-                font_size,
-                color,
-                ..default()
-            },
-        ),
-        ..default()
-    });
+    parent.spawn((
+        Transform::from_xyz(x, y, z).with_scale(Vec3::splat(transform_scale)),
+        Text::new(label),
+        TextFont {
+            font_size,
+            ..default()
+        },
+        TextColor(color),
+    ));
 }
 
 /// Creates a line mesh from start to end point.

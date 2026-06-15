@@ -153,7 +153,7 @@ pub fn update_projectiles(
     mut query: Query<'_, '_, (Entity, &mut Projectile)>,
     time: Res<'_, Time<Fixed>>,
 ) {
-    let dt = time.delta_seconds();
+    let dt = time.delta_secs();
     for (entity, mut projectile) in &mut query {
         projectile.lifetime -= dt;
         if projectile.lifetime <= 0.0 {

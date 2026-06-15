@@ -36,7 +36,6 @@ delta-v-ai = { workspace = true }
 delta-v-ui = { workspace = true }
 
 bevy = { workspace = true }
-bevy_mod_billboard = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 clap = { workspace = true }
