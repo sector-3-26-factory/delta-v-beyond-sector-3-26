@@ -19,6 +19,7 @@
 //! Keybindings menu systems.
 
 use bevy::prelude::*;
+use delta_v_core::{I18n, KeybindingsResource};
 
 use super::components::KeybindingsMenuRoot;
 use super::resources::KeybindingsMenuOpen;
@@ -36,6 +37,8 @@ pub fn keybindings_menu_toggle_system(
     keyboard: Res<'_, ButtonInput<KeyCode>>,
     mut menu_open: ResMut<'_, KeybindingsMenuOpen>,
     query: Query<'_, '_, Entity, With<KeybindingsMenuRoot>>,
+    i18n: Res<'_, I18n>,
+    keybindings: Res<'_, KeybindingsResource>,
 ) {
     // Check if F1 is pressed
     let f1_pressed = keyboard.just_pressed(KeyCode::F1);
@@ -53,7 +56,7 @@ pub fn keybindings_menu_toggle_system(
         log::debug!("keybindings menu: closed");
     } else {
         // Open the menu: spawn the menu UI
-        spawn_keybindings_menu(&mut commands);
+        spawn_keybindings_menu(&mut commands, &i18n, &keybindings);
         menu_open.0 = true;
         log::debug!("keybindings menu: opened");
     }

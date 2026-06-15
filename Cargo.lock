@@ -1831,8 +1831,10 @@ name = "delta-v-config"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-assets",
  "delta-v-core",
  "delta-v-json",
+ "delta-v-types",
  "directories",
  "log",
  "serde",

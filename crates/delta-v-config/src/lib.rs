@@ -41,6 +41,7 @@
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 pub mod error;
+pub mod i18n;
 pub mod keybindings;
 pub mod loader;
 pub mod resources;
@@ -54,6 +55,7 @@ mod loader_tests;
 mod deep_merge_tests;
 
 pub use error::ConfigError;
+pub use i18n::load_i18n;
 pub use keybindings::{ActionBindings, Keybindings};
 pub use resources::KeybindingsResource;
 
@@ -109,6 +111,16 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
         })
         .collect();
     commands.insert_resource(KeybindingsResource(kb_map));
+
+    // i18n translations (ADR-0037).
+    // INVARIANT: a missing or invalid i18n file is a hard startup
+    // error (ADR-0013). The panic is intentional; no recovery is possible.
+    #[allow(clippy::panic)]
+    let i18n = load_i18n().unwrap_or_else(|e| {
+        panic!("fatal: failed to load i18n: {e}");
+    });
+    log::info!("i18n loaded (title: {})", i18n.ui.menu.keybindings.title);
+    commands.insert_resource(i18n);
 
     // Diagnostics configuration (ADR-0022, ADR-0039).
     // INVARIANT: a missing or invalid diagnostics file is a hard startup

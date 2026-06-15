@@ -1,4 +1,20 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
+//
+// Delta-V beyond Sector 3.26
+// Copyright (C) 2025  Cute-Donkey
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! Asset loading and template management.
 //!
@@ -9,18 +25,23 @@
 //!
 //! See ADR-0049 for the template system reorganization.
 
-#![warn(missing_docs)]
-#![warn(rust_2018_idioms)]
-#![warn(unreachable_pub)]
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::panic)]
-#![deny(clippy::indexing_slicing)]
-#![deny(clippy::todo)]
-#![deny(clippy::unimplemented)]
-#![deny(clippy::dbg_macro)]
+#![warn(
+    missing_docs,
+    rust_2018_idioms,
+    unreachable_pub,
+    clippy::all,
+    clippy::pedantic,
+    clippy::cargo
+)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::todo,
+    clippy::unimplemented,
+    clippy::dbg_macro
+)]
 
 use bevy::app::Plugin;
 
@@ -34,7 +55,7 @@ mod template_tests;
 
 // Re-exports for convenience
 pub use error::AssetError;
-pub use paths::resolve_template_path;
+pub use paths::{get_workspace_root, resolve_template_path};
 
 /// Plugin for asset loading and template management.
 pub struct AssetsPlugin;

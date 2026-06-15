@@ -18,8 +18,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 directories = { workspace = true }
-delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
+delta-v-core = { workspace = true }
 delta-v-json = { workspace = true }
+delta-v-assets = { workspace = true }
+delta-v-types = { workspace = true }
 
 [features]
 dev = []
