@@ -18,7 +18,7 @@
 
 //! Keybindings menu spawning functions.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use delta_v_core::{I18n, KeybindingsResource};
@@ -101,7 +101,7 @@ pub fn spawn_keybindings_menu(
                 })
                 .with_children(|content_parent| {
                     // Group actions by category
-                    let mut grouped: HashMap<&str, Vec<(&String, &Vec<String>)>> = HashMap::new();
+                    let mut grouped: BTreeMap<&str, Vec<(&String, &Vec<String>)>> = BTreeMap::new();
                     for (action_name, bindings) in &keybindings.0 {
                         let group_key = get_action_group(action_name);
                         grouped

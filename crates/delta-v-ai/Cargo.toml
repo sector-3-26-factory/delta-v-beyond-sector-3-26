@@ -14,6 +14,7 @@ categories = ["game-development"]
 [dependencies]
 bevy = { workspace = true }
 log = { workspace = true }
+serde = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-physics = { workspace = true }
 delta-v-types = { workspace = true }

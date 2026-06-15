@@ -29,7 +29,7 @@
 //! fallbacks), and ADR-0038 (Shared JSON utilities crate).
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
-#![warn(clippy::all, clippy::pedantic)]
+#![warn(clippy::all, clippy::pedantic, clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
 #![deny(
     clippy::unwrap_used,

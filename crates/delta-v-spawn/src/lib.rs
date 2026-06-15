@@ -15,6 +15,7 @@
 #![warn(unreachable_pub)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
+#![warn(clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
@@ -31,7 +32,7 @@ pub mod template_extraction;
 
 // Re-exports for convenience
 pub use collision::shape_from_json;
-pub use mesh_attachment::{PendingMesh, attach_meshes};
+pub use mesh_attachment::{attach_meshes, PendingMesh};
 pub use template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_mass, extract_vec3,
 };

@@ -50,7 +50,7 @@ pub fn load_default_world() -> Result<WorldDef, WorldError> {
 /// # Errors
 /// Returns [`WorldError`] if the file cannot be read, parsed, or validated.
 pub fn load_world_from_paths(json_path: &Path, schema_path: &Path) -> Result<WorldDef, WorldError> {
-    let value = json_loader::load_validated(json_path, schema_path)
+    let value = json_loader::load_validated_with_registry(json_path, schema_path)
         .map_err(|e| map_json_error(e, json_path))?;
     serde_json::from_value(value).map_err(|e| WorldError::Parse {
         path: json_path.to_owned(),

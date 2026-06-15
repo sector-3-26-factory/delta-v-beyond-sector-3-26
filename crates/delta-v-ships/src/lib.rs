@@ -33,7 +33,7 @@
 //! and ADR-0017 (Fixed timestep).
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
-#![warn(clippy::all, clippy::pedantic)]
+#![warn(clippy::all, clippy::pedantic, clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
 #![deny(
     clippy::unwrap_used,
@@ -68,13 +68,13 @@ mod systems_tests;
 
 use bevy::prelude::*;
 use delta_v_core::{
-    AppState, InputSet, SectorBoundaryResource, WorldSpawnSet, check_sector_boundary_system,
+    check_sector_boundary_system, AppState, InputSet, SectorBoundaryResource, WorldSpawnSet,
 };
 use delta_v_physics::PhysicsSet;
 use systems::{
-    PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
-    flight_assist_damping_system, flight_assist_toggle_system, input_reader_system, thrust_system,
-    torque_system,
+    clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
+    input_reader_system, thrust_system, torque_system, PreviousActions, RotationRampState,
+    ShipInputSet,
 };
 
 /// Wrapper system that calls `delta_v_spawn::lighting::setup_scene_lighting`.
