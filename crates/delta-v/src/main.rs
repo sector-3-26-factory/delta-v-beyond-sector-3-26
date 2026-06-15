@@ -37,7 +37,6 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
-
 use std::path::PathBuf;
 
 use bevy::prelude::*;
