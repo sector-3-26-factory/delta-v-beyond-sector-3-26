@@ -49,21 +49,19 @@ pub fn spawn_cockpit_overlay(
     // Spawn a full-screen UI node for the cockpit overlay container.
     // The sprite is spawned as a child of this node.
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..default()
-            },
+        .spawn(Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
             ..default()
         })
         .with_children(|parent| {
             parent.spawn((
-                SpriteBundle {
-                    texture: texture_handle.clone(),
-                    transform: Transform::from_scale(Vec3::new(1.0, 1.0, 1.0)),
+                Sprite {
+                    image: texture_handle.clone(),
                     ..default()
                 },
+                Transform::from_scale(Vec3::new(1.0, 1.0, 1.0)),
+                Visibility::default(),
                 super::CockpitOverlay {
                     texture: texture_handle,
                 },

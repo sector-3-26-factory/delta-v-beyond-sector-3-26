@@ -112,7 +112,7 @@ pub fn integrate_velocity_system(
     time: Res<'_, Time<Fixed>>,
     mut bodies: Query<'_, '_, &mut RigidBody>,
 ) {
-    let delta_time = time.delta_seconds();
+    let delta_time = time.delta().as_secs_f32();
 
     for mut body in &mut bodies {
         body.integrate_velocity(delta_time);
@@ -127,7 +127,7 @@ pub fn integrate_angular_velocity_system(
     time: Res<'_, Time<Fixed>>,
     mut bodies: Query<'_, '_, &mut RigidBody>,
 ) {
-    let delta_time = time.delta_seconds();
+    let delta_time = time.delta().as_secs_f32();
 
     for mut body in &mut bodies {
         body.integrate_angular_velocity(delta_time);
@@ -143,7 +143,7 @@ pub fn integrate_position_system(
     mut bodies: Query<'_, '_, (&RigidBody, &mut Transform)>,
     time: Res<'_, Time<Fixed>>,
 ) {
-    let delta_time = time.delta_seconds();
+    let delta_time = time.delta().as_secs_f32();
 
     for (body, mut transform) in &mut bodies {
         // Linear integration: p += v * dt

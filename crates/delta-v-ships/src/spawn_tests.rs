@@ -281,7 +281,7 @@ fn test_player_ship_spawn_position() {
     let player_entity = app.world().get_resource::<PlayerShipEntity>().unwrap();
     let entity_ref = app.world().get_entity(player_entity.0);
     assert!(
-        entity_ref.is_some(),
+        entity_ref.is_ok(),
         "player ship entity should exist in the world"
     );
 

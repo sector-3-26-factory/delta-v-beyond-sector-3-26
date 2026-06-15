@@ -55,10 +55,10 @@ pub fn spawn_chase_camera(
     camera_offset: Res<'_, ChaseCameraOffset>,
 ) {
     commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_translation(camera_offset.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        },
+        Camera3d::default(),
+        Camera::default(),
+        Transform::from_translation(camera_offset.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Visibility::default(),
         CameraFollow {
             target: ship_entity.0,
             offset: camera_offset.0,

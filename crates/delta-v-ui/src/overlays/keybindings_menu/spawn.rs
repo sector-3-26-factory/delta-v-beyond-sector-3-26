@@ -48,66 +48,55 @@ pub fn spawn_keybindings_menu(
 
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
             KeybindingsMenuRoot,
         ))
         .with_children(|parent| {
             // Title bar at the top
-            parent
-                .spawn(TextBundle::from_section(
-                    title,
-                    TextStyle {
-                        font_size: 24.0,
-                        color: Color::WHITE,
-                        ..default()
-                    },
-                ))
-                .insert(NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        height: Val::Px(50.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
+            parent.spawn((
+                Text::new(title),
+                TextFont {
+                    font_size: 24.0,
                     ..default()
-                });
+                },
+                TextColor(Color::WHITE),
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(50.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+            ));
 
             // Close hint below title
-            parent
-                .spawn(TextBundle::from_section(
-                    close_hint,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: Color::srgb(0.7, 0.7, 0.7),
-                        ..default()
-                    },
-                ))
-                .insert(Style {
+            parent.spawn((
+                Text::new(close_hint),
+                TextFont {
+                    font_size: 14.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.7, 0.7, 0.7)),
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(30.0),
                     justify_content: JustifyContent::Center,
                     ..default()
-                });
+                },
+            ));
 
             // Content area with scrollable keybindings
             parent
-                .spawn(NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(20.0)),
-                        ..default()
-                    },
+                .spawn(Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
                     ..default()
                 })
                 .with_children(|content_parent| {
@@ -125,21 +114,20 @@ pub fn spawn_keybindings_menu(
                     for (group_key, actions_in_group) in &grouped {
                         // Group header
                         if let Some(group_name) = groups.get(*group_key) {
-                            content_parent
-                                .spawn(TextBundle::from_section(
-                                    group_name.clone(),
-                                    TextStyle {
-                                        font_size: 18.0,
-                                        color: Color::srgb(0.9, 0.9, 0.9),
-                                        ..default()
-                                    },
-                                ))
-                                .insert(Style {
+                            content_parent.spawn((
+                                Text::new(group_name.clone()),
+                                TextFont {
+                                    font_size: 18.0,
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                                Node {
                                     width: Val::Percent(100.0),
                                     height: Val::Px(30.0),
                                     margin: UiRect::bottom(Val::Px(10.0)),
                                     ..default()
-                                });
+                                },
+                            ));
                         }
 
                         // Actions in this group
@@ -164,33 +152,30 @@ pub fn spawn_keybindings_menu(
 
                             // Create the keybinding entry row
                             content_parent
-                                .spawn(NodeBundle {
-                                    style: Style {
-                                        width: Val::Percent(100.0),
-                                        height: Val::Px(25.0),
-                                        justify_content: JustifyContent::SpaceBetween,
-                                        margin: UiRect::bottom(Val::Px(5.0)),
-                                        ..default()
-                                    },
+                                .spawn(Node {
+                                    width: Val::Percent(100.0),
+                                    height: Val::Px(25.0),
+                                    justify_content: JustifyContent::SpaceBetween,
+                                    margin: UiRect::bottom(Val::Px(5.0)),
                                     ..default()
                                 })
                                 .with_children(|row| {
-                                    row.spawn(TextBundle::from_section(
-                                        action_display,
-                                        TextStyle {
+                                    row.spawn((
+                                        Text::new(action_display),
+                                        TextFont {
                                             font_size: 14.0,
-                                            color: Color::WHITE,
                                             ..default()
                                         },
+                                        TextColor(Color::WHITE),
                                     ));
 
-                                    row.spawn(TextBundle::from_section(
-                                        key_display,
-                                        TextStyle {
+                                    row.spawn((
+                                        Text::new(key_display),
+                                        TextFont {
                                             font_size: 14.0,
-                                            color: Color::srgb(0.8, 0.8, 0.8),
                                             ..default()
                                         },
+                                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
                                     ));
                                 });
                         }
