@@ -42,6 +42,7 @@ Each milestone ends on a runnable, demoable build.
   ([ADR-0034](adr/0034-no-warnings-policy.md)).
 
 ### M1 -- A ship in space
+*Status: complete.*
 - 3D scene with a primitive "ship" mesh and a chase camera.
 - Default world loaded automatically at startup, defined in JSON +
   glTF
@@ -55,6 +56,7 @@ Each milestone ends on a runnable, demoable build.
   [ADR-0022](adr/0022-performance-instrumentation.md)).
 
 ### M2 -- Newtonian flight
+*Status: complete.*
 - Apply forces and torques from input to a rigid body
   ([ADR-0009](adr/0009-newtonian-physics-with-gravity.md)).
 - 6 degrees of freedom, no speed cap.
@@ -63,22 +65,24 @@ Each milestone ends on a runnable, demoable build.
   ([ADR-0017](adr/0017-fixed-timestep-and-determinism.md)).
 
 ### M3 -- Collisions and the world
+*Status: complete.*
 - Static obstacles (asteroids), collision response via avian3d.
 - Sector boundaries.
 - Floating origin engaged
   ([ADR-0007](adr/0007-floating-origin.md)).
 
 ### M4 -- Weapons
-- Status: **complete**.
+*Status: complete.*
 - Projectile weapons that inherit the firing ship's velocity.
 - Damage model on rigid bodies.
 
 ### M5 -- Enemies
+*Status: complete.*
 - Minimal scripted / state-machine AI opponents.
 - Win/lose conditions per skirmish.
 
 ### M6 -- HUD and feel
-- Status: **in progress**.
+*Status: in progress.*
 - Cockpit overlay system with PNG overlays and station switching (Step 5 implemented).
 - Velocity vector indicator, thrust gauges, target reticle.
 - Sound effects, camera shake, basic VFX.

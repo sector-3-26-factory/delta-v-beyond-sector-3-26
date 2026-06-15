@@ -33,6 +33,7 @@ delta-v-stations = { workspace = true }
 delta-v-items = { workspace = true }
 delta-v-world = { workspace = true }
 delta-v-ai = { workspace = true }
+delta-v-ui = { workspace = true }
 
 bevy = { workspace = true }
 bevy_mod_billboard = { workspace = true }

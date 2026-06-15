@@ -16,6 +16,7 @@ members = [
     "crates/delta-v-types",
     "crates/delta-v-spawn",
     "crates/delta-v-ai",
+    "crates/delta-v-ui",
 ]
 resolver = "2"
 
@@ -54,6 +55,7 @@ delta-v-weapons = { path = "crates/delta-v-weapons", version = "0.0.1" }
 delta-v-stations = { path = "crates/delta-v-stations", version = "0.0.1" }
 delta-v-items = { path = "crates/delta-v-items", version = "0.0.1" }
 delta-v-world = { path = "crates/delta-v-world", version = "0.0.1" }
+delta-v-ui = { path = "crates/delta-v-ui", version = "0.0.1" }
 
 [workspace.lints.rust]
 unsafe_code = "warn"

@@ -20,30 +20,121 @@
 
 use bevy::prelude::*;
 
+use delta_v_core::input::ActiveActions;
+use delta_v_core::input::LogicalAction;
+
+use super::components::CockpitOverlay;
+use super::spawn::CockpitOverlayResource;
+use super::ActiveCockpitStation;
+
 /// Cycles to the next cockpit station when the player presses the key.
 ///
 /// Runs in `Update` during `AppState::InGame`.
+/// Reads `ActiveActions` for `CockpitCycleNext`.
+/// Cycles through stations in JSON order, loading the new station's PNG texture.
 #[allow(clippy::needless_pass_by_value)]
-pub fn cockpit_station_cycle_next_system(keyboard: Res<'_, ButtonInput<KeyCode>>) {
-    if !keyboard.pressed(KeyCode::F2) {
+pub fn cockpit_station_cycle_next_system(
+    mut commands: Commands<'_, '_>,
+    asset_server: Res<'_, AssetServer>,
+    cockpit: Res<'_, CockpitOverlayResource>,
+    mut active_station: ResMut<'_, ActiveCockpitStation>,
+    query: Query<'_, '_, Entity, With<CockpitOverlay>>,
+    active_actions: Res<'_, ActiveActions>,
+) {
+    // Check if the cycle next action is pressed
+    if !active_actions.0.contains(&LogicalAction::CockpitCycleNext) {
         return;
     }
 
-    // TODO: Implement station switching logic
-    // This will cycle through stations in JSON order
-    log::debug!("cockpit: cycle next station");
+    let Ok(entity) = query.get_single() else {
+        return;
+    };
+
+    // Find current station index
+    let current_idx = cockpit
+        .stations
+        .iter()
+        .position(|s| s.id == active_station.station_id)
+        .unwrap_or(0);
+
+    // Calculate next index (wrap around)
+    let next_idx = (current_idx + 1) % cockpit.stations.len();
+    let Some(next_station) = cockpit.stations.get(next_idx) else {
+        return;
+    };
+
+    // Load the new texture
+    let texture_handle = asset_server.load(&next_station.texture);
+
+    // Insert a new overlay component with the new texture
+    commands.entity(entity).insert(CockpitOverlay {
+        texture: texture_handle,
+    });
+
+    // Update the active station resource
+    active_station.station_id.clone_from(&next_station.id);
+
+    log::debug!(
+        "cockpit: switched to station '{}' ({})",
+        next_station.id,
+        next_station.texture
+    );
 }
 
 /// Cycles to the previous cockpit station when the player presses the key.
 ///
 /// Runs in `Update` during `AppState::InGame`.
+/// Reads `ActiveActions` for `CockpitCyclePrev`.
+/// Cycles backward through stations in JSON order.
 #[allow(clippy::needless_pass_by_value)]
-pub fn cockpit_station_cycle_prev_system(keyboard: Res<'_, ButtonInput<KeyCode>>) {
-    if !keyboard.pressed(KeyCode::AltLeft) || !keyboard.pressed(KeyCode::F2) {
+pub fn cockpit_station_cycle_prev_system(
+    mut commands: Commands<'_, '_>,
+    asset_server: Res<'_, AssetServer>,
+    cockpit: Res<'_, CockpitOverlayResource>,
+    mut active_station: ResMut<'_, ActiveCockpitStation>,
+    query: Query<'_, '_, Entity, With<CockpitOverlay>>,
+    active_actions: Res<'_, ActiveActions>,
+) {
+    // Check if the cycle prev action is pressed
+    if !active_actions.0.contains(&LogicalAction::CockpitCyclePrev) {
         return;
     }
 
-    // TODO: Implement station switching logic
-    // This will cycle backward through stations in JSON order
-    log::debug!("cockpit: cycle prev station");
+    let Ok(entity) = query.get_single() else {
+        return;
+    };
+
+    // Find current station index
+    let current_idx = cockpit
+        .stations
+        .iter()
+        .position(|s| s.id == active_station.station_id)
+        .unwrap_or(0);
+
+    // Calculate previous index (wrap around)
+    let prev_idx = if current_idx == 0 {
+        cockpit.stations.len() - 1
+    } else {
+        current_idx - 1
+    };
+    let Some(prev_station) = cockpit.stations.get(prev_idx) else {
+        return;
+    };
+
+    // Load the new texture
+    let texture_handle = asset_server.load(&prev_station.texture);
+
+    // Insert a new overlay component with the new texture
+    commands.entity(entity).insert(CockpitOverlay {
+        texture: texture_handle,
+    });
+
+    // Update the active station resource
+    active_station.station_id.clone_from(&prev_station.id);
+
+    log::debug!(
+        "cockpit: switched to station '{}' ({})",
+        prev_station.id,
+        prev_station.texture
+    );
 }

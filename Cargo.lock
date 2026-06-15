@@ -1793,6 +1793,7 @@ dependencies = [
  "delta-v-propulsion",
  "delta-v-ships",
  "delta-v-stations",
+ "delta-v-ui",
  "delta-v-weapons",
  "delta-v-world",
  "env_logger",
@@ -1942,6 +1943,16 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "delta-v-ui"
+version = "0.0.1"
+dependencies = [
+ "bevy",
+ "delta-v-core",
+ "delta-v-types",
+ "log",
 ]
 
 [[package]]

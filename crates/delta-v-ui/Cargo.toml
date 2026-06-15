@@ -1,0 +1,21 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
+[package]
+name = "delta-v-ui"
+version.workspace = true
+edition = "2021"
+rust-version = "1.88"
+description = "UI overlay systems for HUD and menus"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["ui", "hud", "overlay"]
+categories = ["game-development"]
+
+[dependencies]
+bevy = { workspace = true }
+log = { workspace = true }
+delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
+delta-v-types = { workspace = true }
+
+[lints]
+workspace = true

@@ -39,6 +39,7 @@ use delta_v_physics::PhysicsPlugin;
 use delta_v_propulsion::PropulsionPlugin;
 use delta_v_ships::ShipsPlugin;
 use delta_v_stations::StationsPlugin;
+use delta_v_ui::UiPlugin;
 use delta_v_weapons::WeaponsPlugin;
 use delta_v_world::{WorldPath, WorldPlugin};
 
@@ -147,6 +148,7 @@ fn main() {
         .add_plugins(ItemsPlugin)
         .add_plugins(WorldPlugin)
         .add_plugins(AiPlugin)
+        .add_plugins(UiPlugin)
         .run();
 }
 
