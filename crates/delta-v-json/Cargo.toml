@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-json"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Shared JSON loading, schema validation and default-fill utilities"
 license.workspace = true

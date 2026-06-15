@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-config"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "JSON loading, schema validation, configuration management"
 license.workspace = true

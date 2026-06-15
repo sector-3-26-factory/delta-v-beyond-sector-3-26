@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-ships"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Ship types and ship-specific systems"
 license.workspace = true

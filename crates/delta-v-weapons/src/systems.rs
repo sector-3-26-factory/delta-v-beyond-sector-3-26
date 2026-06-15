@@ -43,7 +43,7 @@ pub fn fire_input_system(
             "FirePrimary pressed, sending FireWeapon event for ship {:?}",
             ship_entity.0
         );
-        events.send(FireWeapon {
+        events.write(FireWeapon {
             source: ship_entity.0,
             weapon_index: 0,
         });
@@ -131,7 +131,7 @@ pub fn projectile_collision_system(
         }
 
         // Emit hit event for VFX/sound (even if target has no health, e.g. asteroids)
-        hit_events.send(ProjectileHit {
+        hit_events.write(ProjectileHit {
             projectile: projectile_entity,
             target: target_entity,
             damage: projectile.damage,
@@ -139,7 +139,7 @@ pub fn projectile_collision_system(
         });
 
         // Despawn the projectile on any hit
-        commands.entity(projectile_entity).despawn_recursive();
+        commands.entity(projectile_entity).despawn();
     }
 }
 
@@ -157,7 +157,7 @@ pub fn update_projectiles(
     for (entity, mut projectile) in &mut query {
         projectile.lifetime -= dt;
         if projectile.lifetime <= 0.0 {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }

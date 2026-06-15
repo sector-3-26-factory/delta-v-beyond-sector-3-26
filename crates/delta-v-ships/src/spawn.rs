@@ -126,7 +126,9 @@ fn spawn_player_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
+    log::debug!(
+        "spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
+    );
 
     // Build the ship entity spawn command.
     // Use delta-v-spawn for collision shape conversion (ADR-0047).
@@ -274,7 +276,9 @@ fn spawn_static_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!("spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
+    log::debug!(
+        "spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
+    );
 
     // Build the ship entity spawn command.
     // Use delta-v-spawn for collision shape conversion (ADR-0047).

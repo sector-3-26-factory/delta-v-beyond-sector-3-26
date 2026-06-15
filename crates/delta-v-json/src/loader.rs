@@ -360,15 +360,14 @@ fn validate_units_recursive(
             // Check if this object is a physical quantity (has "value" as number and "unit" as string).
             if let (Some(Value::Number(_)), Some(Value::String(unit_str))) =
                 (map.get("value"), map.get("unit"))
+                && !allowed_units.contains(unit_str)
             {
-                if !allowed_units.contains(unit_str) {
-                    return Err(JsonError::InvalidUnit {
-                        path: data_path.to_owned(),
-                        pointer,
-                        unit: unit_str.clone(),
-                        units_schema: units_schema_path.to_owned(),
-                    });
-                }
+                return Err(JsonError::InvalidUnit {
+                    path: data_path.to_owned(),
+                    pointer,
+                    unit: unit_str.clone(),
+                    units_schema: units_schema_path.to_owned(),
+                });
             }
 
             // Recurse into children.
@@ -474,11 +473,7 @@ fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value
         }
     }
 
-    if has_defaults {
-        Some(defaults)
-    } else {
-        None
-    }
+    if has_defaults { Some(defaults) } else { None }
 }
 
 /// Resolves a `$ref`, supporting both local and cross-schema references.

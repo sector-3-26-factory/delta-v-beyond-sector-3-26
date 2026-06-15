@@ -146,7 +146,7 @@ fn load_world_system(
     // entities based on `entity_type`, in dependency order via WorldSpawnSet.
     for entity_spawn in &world.entities {
         let spawn_event = build_spawn_event(entity_spawn);
-        events.send(spawn_event);
+        events.write(spawn_event);
     }
 
     commands.insert_resource(WorldDefResource(world));

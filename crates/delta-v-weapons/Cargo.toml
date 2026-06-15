@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-weapons"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Weapons systems and projectiles"
 license.workspace = true

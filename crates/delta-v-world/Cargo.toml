@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-world"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Sectors, worlds, and hyperspace gates"
 license.workspace = true

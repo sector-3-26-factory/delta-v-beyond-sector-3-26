@@ -68,13 +68,13 @@ mod systems_tests;
 
 use bevy::prelude::*;
 use delta_v_core::{
-    check_sector_boundary_system, AppState, InputSet, SectorBoundaryResource, WorldSpawnSet,
+    AppState, InputSet, SectorBoundaryResource, WorldSpawnSet, check_sector_boundary_system,
 };
 use delta_v_physics::PhysicsSet;
 use systems::{
-    clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
-    input_reader_system, thrust_system, torque_system, PreviousActions, RotationRampState,
-    ShipInputSet,
+    PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
+    flight_assist_damping_system, flight_assist_toggle_system, input_reader_system, thrust_system,
+    torque_system,
 };
 
 /// Wrapper system that calls `delta_v_spawn::lighting::setup_scene_lighting`.

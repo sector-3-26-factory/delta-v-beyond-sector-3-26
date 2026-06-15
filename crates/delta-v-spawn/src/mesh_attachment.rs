@@ -2,7 +2,6 @@
 
 //! Generic mesh attachment system for glTF loading.
 
-use bevy::hierarchy::BuildChildren;
 use bevy::prelude::{Assets, Commands, Component, Entity, Gltf, Query, Res, SceneRoot};
 
 /// Trait for pending mesh marker components.

@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-ai"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "AI state machines and behavior systems for driven entities"
 license.workspace = true

@@ -15,8 +15,8 @@ use delta_v_spawn::collision::shape_from_json;
 use delta_v_spawn::template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_mass,
 };
-use delta_v_types::collision::layers;
 use delta_v_types::CollisionShapeJson;
+use delta_v_types::collision::layers;
 
 /// Marker component for a pending asteroid mesh waiting for its glTF to load.
 #[derive(Component)]

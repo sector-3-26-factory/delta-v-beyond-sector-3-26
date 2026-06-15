@@ -1,7 +1,7 @@
 [package]
 name = "delta-v-assets"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 description = "Asset loading and template management for the delta-v game"
 license.workspace = true
 repository.workspace = true

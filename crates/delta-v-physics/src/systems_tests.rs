@@ -9,7 +9,7 @@ use bevy::time::TimePlugin;
 
 use crate::constants::{GRAVITATIONAL_CONSTANT, GRAVITY_CUTOFF_RADIUS_M};
 use crate::rigid_body::{MassSource, RigidBody};
-use crate::systems::{gravity_system, PhysicsSet};
+use crate::systems::{PhysicsSet, gravity_system};
 
 /// Builds a minimal Bevy app with the fixed timestep and physics systems.
 fn build_test_app() -> App {

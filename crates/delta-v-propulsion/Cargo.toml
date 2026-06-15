@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-propulsion"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Thrusters, hyperdrive, propulsion systems"
 license.workspace = true

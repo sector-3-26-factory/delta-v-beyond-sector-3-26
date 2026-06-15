@@ -211,5 +211,5 @@ fn get_action_group(action_name: &str) -> &'static str {
 
 /// Recursively despawns the keybindings menu entity and all its children.
 pub fn despawn_keybindings_menu(commands: &mut Commands<'_, '_>, entity: Entity) {
-    commands.entity(entity).despawn_recursive();
+    commands.entity(entity).despawn();
 }

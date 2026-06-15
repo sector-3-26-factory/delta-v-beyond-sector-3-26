@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-core"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Core ECS fundamentals and shared components"
 license.workspace = true

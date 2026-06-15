@@ -99,7 +99,7 @@ pub fn ai_state_machine_system(
                             );
                         }
                         if current_forward.dot(to_player) > 0.9 {
-                            fire_events.send(FireWeapon {
+                            fire_events.write(FireWeapon {
                                 source: entity,
                                 weapon_index: 0,
                             });

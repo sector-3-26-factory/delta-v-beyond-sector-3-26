@@ -15,7 +15,7 @@ mod tests {
 
     use bevy::prelude::*;
 
-    use crate::camera::{chase_camera_system, CameraFollow};
+    use crate::camera::{CameraFollow, chase_camera_system};
 
     // ---------------------------------------------------------------------------
     // Helpers
