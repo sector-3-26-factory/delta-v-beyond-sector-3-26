@@ -34,6 +34,7 @@
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic)]
+#![allow(clippy::multiple_crate_versions)]
 #![deny(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -45,6 +46,7 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod cockpit;
 pub mod error;
 pub mod ship_templates;
 pub mod spawn;
@@ -148,6 +150,9 @@ impl Plugin for ShipsPlugin {
             Update,
             delta_v_core::debug_camera_positions.run_if(in_state(AppState::InGame)),
         );
+
+        // Cockpit overlay systems (M6).
+        app.add_plugins(cockpit::CockpitPlugin);
 
         // Input → Forces pipeline in FixedUpdate (ADR-0017).
         // Must run after InputSet::Translate (which populates ActiveActions)

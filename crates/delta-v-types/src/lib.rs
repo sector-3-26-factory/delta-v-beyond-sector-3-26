@@ -20,6 +20,7 @@
 #![warn(unreachable_pub)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::multiple_crate_versions)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
@@ -30,6 +31,7 @@
 
 pub mod ai;
 pub mod collision;
+pub mod i18n;
 pub mod ids;
 pub mod physics;
 pub mod spatial;
@@ -39,6 +41,7 @@ pub mod weapons;
 pub use ai::{AiConfigJson, AiTaskJson};
 pub use collision::layers::PROJECTILE;
 pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType};
+pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use ids::{EntityId, TemplatePath};
 pub use physics::PhysicalQuantityJson;
 pub use spatial::{BoundingBoxJson, QuatJson, Vec3Json};

@@ -21,18 +21,19 @@ path = "src/main.rs"
 dev = ["delta-v-config/dev"]
 
 [dependencies]
-delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
-delta-v-config = { path = "../delta-v-config", version = "0.0.1" }
-delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }
-delta-v-assets = { path = "../delta-v-assets", version = "0.0.1" }
-delta-v-net = { path = "../delta-v-net", version = "0.0.1" }
-delta-v-ships = { path = "../delta-v-ships", version = "0.0.1" }
-delta-v-propulsion = { path = "../delta-v-propulsion", version = "0.0.1" }
-delta-v-weapons = { path = "../delta-v-weapons", version = "0.0.1" }
-delta-v-stations = { path = "../delta-v-stations", version = "0.0.1" }
-delta-v-items = { path = "../delta-v-items", version = "0.0.1" }
-delta-v-world = { path = "../delta-v-world", version = "0.0.1" }
-delta-v-ai = { path = "../delta-v-ai", version = "0.0.1" }
+delta-v-core = { workspace = true }
+delta-v-config = { workspace = true }
+delta-v-physics = { workspace = true }
+delta-v-assets = { workspace = true }
+delta-v-net = { workspace = true }
+delta-v-ships = { workspace = true }
+delta-v-propulsion = { workspace = true }
+delta-v-weapons = { workspace = true }
+delta-v-stations = { workspace = true }
+delta-v-items = { workspace = true }
+delta-v-world = { workspace = true }
+delta-v-ai = { workspace = true }
+delta-v-ui = { workspace = true }
 
 bevy = { workspace = true }
 bevy_mod_billboard = { workspace = true }

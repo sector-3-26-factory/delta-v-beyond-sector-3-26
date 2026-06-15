@@ -1,4 +1,20 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
+//
+// Delta-V beyond Sector 3.26
+// Copyright (C) 2025  Cute-Donkey
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! Template loading and merging utilities.
 //!
@@ -8,19 +24,13 @@
 //!
 //! See ADR-0049 for the template system reorganization.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use delta_v_json::loader as json_loader;
 use serde_json::Value;
 
 use crate::error::AssetError;
-use crate::paths::resolve_template_path;
-
-/// Path to the units schema file (relative to assets root).
-const UNITS_SCHEMA_PATH: &str = "json/schema/units.schema.json";
-
-/// Path to the schema directory (relative to assets root).
-const SCHEMA_DIR_PATH: &str = "json/schema";
+use crate::paths::{get_workspace_root, resolve_template_path};
 
 /// Loads a template from a path, validates it, and returns the JSON value.
 ///
@@ -61,10 +71,8 @@ pub fn load_template(
     };
     let full_path = get_workspace_root().join(&template_path);
     let schema_path = get_workspace_root().join(format!("assets/json/schema/{schema_name}"));
-    let units_schema_path = get_workspace_root().join(format!("assets/{UNITS_SCHEMA_PATH}"));
-    let schema_dir = get_workspace_root().join(format!("assets/{SCHEMA_DIR_PATH}"));
 
-    load_template_from_paths(&full_path, &schema_path, &schema_dir, &units_schema_path)
+    load_template_from_paths(&full_path, &schema_path)
 }
 
 /// Loads a player-controlled ship template, merging base ship with player-specific data.
@@ -174,6 +182,10 @@ pub fn load_ai_controlled_ship(
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
 pub fn load_asteroid(name: &str) -> Result<(String, String, Value, String), AssetError> {
+    // INVARIANT: The name may or may not have the "asteroids/" prefix.
+    // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
+    // The `unwrap_or` is intentional: callers may pass either "asteroids/my-asteroid" or "my-asteroid".
+    // Both are valid and result in the same template being loaded.
     let template_name = name.strip_prefix("asteroids/").unwrap_or(name);
     let template_path = format!("templates/asteroids/{template_name}/asteroid.json");
     let mesh_path = template_path.replace("asteroid.json", "mesh.glb");
@@ -190,6 +202,10 @@ pub fn load_asteroid(name: &str) -> Result<(String, String, Value, String), Asse
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
 pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetError> {
+    // INVARIANT: The name may or may not have the "ships/" prefix.
+    // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
+    // The `unwrap_or` is intentional: callers may pass either "ships/my-ship" or "my-ship".
+    // Both are valid and result in the same template being loaded.
     let template_name = name.strip_prefix("ships/").unwrap_or(name);
     let template_path = format!("templates/ships/{template_name}/ship.json");
     let mesh_path = template_path.replace("ship.json", "mesh.glb");
@@ -206,34 +222,11 @@ pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetErr
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
 /// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
-fn load_template_from_paths(
-    template_path: &Path,
-    schema_path: &Path,
-    schema_dir: &Path,
-    units_schema_path: &Path,
-) -> Result<Value, AssetError> {
-    let template = json_loader::load_validated_with_registry(
-        template_path,
-        schema_path,
-        schema_dir,
-        units_schema_path,
-    )
-    .map_err(|e| map_json_error(e, template_path))?;
+fn load_template_from_paths(template_path: &Path, schema_path: &Path) -> Result<Value, AssetError> {
+    let template = json_loader::load_validated_with_registry(template_path, schema_path)
+        .map_err(|e| map_json_error(e, template_path))?;
 
     Ok(template)
-}
-
-/// Returns the workspace root path.
-#[must_use]
-#[allow(clippy::expect_used)]
-fn get_workspace_root() -> PathBuf {
-    let manifest_dir = std::env!("CARGO_MANIFEST_DIR");
-    PathBuf::from(manifest_dir)
-        .parent()
-        .expect("CARGO_MANIFEST_DIR parent must exist")
-        .parent()
-        .expect("workspace root must exist")
-        .to_path_buf()
 }
 
 /// Maps a `delta-v-json` error to an `AssetError`.

@@ -58,6 +58,10 @@ pub enum LogicalAction {
     ToggleFlightAssist,
     /// Fire the primary weapon.
     FirePrimary,
+    /// Cycle to the next cockpit station.
+    CockpitCycleNext,
+    /// Cycle to the previous cockpit station.
+    CockpitCyclePrev,
 }
 
 impl LogicalAction {
@@ -81,6 +85,8 @@ impl LogicalAction {
             Self::StrafeDown => "strafe_down",
             Self::ToggleFlightAssist => "toggle_flight_assist",
             Self::FirePrimary => "fire_primary",
+            Self::CockpitCycleNext => "cockpit_cycle_next",
+            Self::CockpitCyclePrev => "cockpit_cycle_prev",
         }
     }
 
@@ -104,6 +110,8 @@ impl LogicalAction {
             Self::StrafeDown,
             Self::ToggleFlightAssist,
             Self::FirePrimary,
+            Self::CockpitCycleNext,
+            Self::CockpitCyclePrev,
         ]
     }
 }
@@ -186,6 +194,8 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "KeyR" => Some(KeyCode::KeyR),
         "KeyF" => Some(KeyCode::KeyF),
         "KeyC" => Some(KeyCode::KeyC),
+        "F2" => Some(KeyCode::F2),
+        "AltLeft" => Some(KeyCode::AltLeft),
         "ArrowUp" => Some(KeyCode::ArrowUp),
         "ArrowDown" => Some(KeyCode::ArrowDown),
         "ArrowLeft" => Some(KeyCode::ArrowLeft),

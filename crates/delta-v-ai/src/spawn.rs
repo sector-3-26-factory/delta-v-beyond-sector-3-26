@@ -65,18 +65,21 @@ pub fn spawn_npc_ship(
 
         let template = &event.template;
 
+        // INVARIANT: mass.value is required by ai_controlled_ship schema (ADR-0013)
         let mass = template
             .get("mass")
             .and_then(|m| m.get("value"))
             .and_then(|v| v.as_f64())
             .expect("ai_controlled_ship template must have mass.value") as f32;
 
+        // INVARIANT: inertia_scale is required by ai_controlled_ship schema (ADR-0013)
         let inertia_scale = template
             .get("inertia_scale")
             .and_then(|v| v.as_f64())
             .expect("ai_controlled_ship template must have inertia_scale (ADR-0014)")
             as f32;
 
+        // INVARIANT: health.value is required by ai_controlled_ship schema (ADR-0013)
         // Read health from template (ADR-0014: gameplay values from JSON)
         let health_value = template
             .get("health")
@@ -85,12 +88,14 @@ pub fn spawn_npc_ship(
             .expect("ai_controlled_ship template must have health.value")
             as f32;
 
+        // INVARIANT: collision_shape is required by ai_controlled_ship schema (ADR-0013)
         let collision_shape = template
             .get("collision_shape")
             .expect("ai_controlled_ship template must have collision_shape");
 
         let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
 
+        // INVARIANT: collision_shape is validated by delta-v-json (ADR-0013)
         let collision_shape_data = shape_from_json(
             &serde_json::from_value(collision_shape.clone())
                 .expect("collision_shape must be valid JSON"),
@@ -98,6 +103,7 @@ pub fn spawn_npc_ship(
         )
         .expect("collision shape must be valid (ADR-0013)");
 
+        // INVARIANT: bounding_box is required by ai_controlled_ship schema (ADR-0013)
         let bbox = template
             .get("bounding_box")
             .expect("ai_controlled_ship template must have bounding_box");
@@ -145,10 +151,12 @@ pub fn spawn_npc_ship(
 
         let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
 
+        // INVARIANT: ai config is required by ai_controlled_ship schema (ADR-0013)
         let ai_config = template
             .get("ai")
             .expect("ai_controlled_ship template must have ai field");
 
+        // INVARIANT: AI config fields are required by schema (ADR-0013)
         let aggro_range = ai_config
             .get("aggro_range")
             .and_then(|a| a.get("value"))
@@ -175,6 +183,7 @@ pub fn spawn_npc_ship(
             .and_then(|v| v.as_f64())
             .expect("ai.patrol_radius.value is required") as f32;
 
+        // INVARIANT: ai_task is validated by schema (ADR-0013)
         let ai_task = match event.ai_task.as_deref() {
             Some("patrol") => AiTask::Patrol,
             Some(other) => panic!("Unknown AI task '{other}' for entity '{}'", event.id),
@@ -213,9 +222,11 @@ pub fn spawn_npc_ship(
 
         if let Some(weapons) = template.get("weapons").and_then(|w| w.as_array()) {
             for (i, weapon_json) in weapons.iter().enumerate() {
+                // INVARIANT: weapon JSON is validated by delta-v-json (ADR-0013)
                 let weapon: WeaponTemplateJson = serde_json::from_value(weapon_json.clone())
                     .expect("weapon must be valid JSON (validated by delta-v-json)");
                 commands.entity(ship_entity).insert(Weapon {
+                    // INVARIANT: weapon slot fits in u32 (ADR-0013)
                     slot: u32::try_from(i).expect("weapon slot overflow"),
                     cooldown: 0.0,
                     projectile_speed: weapon.projectile_speed.value,

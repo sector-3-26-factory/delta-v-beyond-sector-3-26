@@ -112,7 +112,16 @@ fn make_player_ship_event() -> SpawnEntity {
             }
         },
         "weapons": [],
-        "health": { "value": 100.0, "unit": "hp" }
+        "health": { "value": 100.0, "unit": "hp" },
+        "cockpit": {
+                    "stations": [
+                        {
+                            "id": "default",
+                            "texture": "cockpit-default.png",
+                            "slots": []
+                        }
+                    ]
+                }
     });
 
     SpawnEntity::new(

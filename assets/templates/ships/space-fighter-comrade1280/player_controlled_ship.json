@@ -105,5 +105,13 @@
             },
             "available": true
         }
+    },
+    "cockpit": {
+        "stations": [
+            {
+                "id": "default",
+                "texture": "cockpit/default.png"
+            }
+        ]
     }
 }

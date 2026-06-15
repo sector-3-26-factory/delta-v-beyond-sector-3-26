@@ -27,6 +27,7 @@
 //! by their `$id` at startup, so any cross-schema `$ref` is automatically
 //! resolvable without manual registration.
 
+use std::collections::HashMap;
 use std::path::Path;
 
 use serde_json::Value;
@@ -37,15 +38,15 @@ use crate::error::JsonError;
 // Schema registry — auto-discovers all schemas in assets/json/schema/
 // ---------------------------------------------------------------------------
 
-/// Builds a `referencing::Registry` containing every `.schema.json` file
-/// found in `schema_dir`. Each schema is registered by its `$id` URI so
-/// that cross-schema `$ref`s resolve automatically.
+/// Builds a `HashMap` containing every `.schema.json` file found in `schema_dir`.
+/// Each schema is keyed by its `$id` URI for direct lookup.
+///
+/// Schemas without an `$id` field or with invalid JSON are silently skipped.
 ///
 /// # Errors
-/// Returns [`JsonError::SchemaLoad`] if any schema file cannot be read,
-/// parsed, or lacks a `$id`.
-fn build_schema_registry(schema_dir: &Path) -> Result<jsonschema::Registry<'_>, JsonError> {
-    let mut registry = jsonschema::Registry::new();
+/// Returns [`JsonError::SchemaLoad`] if the schema directory cannot be read.
+fn build_schema_map(schema_dir: &Path) -> Result<HashMap<String, Value>, JsonError> {
+    let mut map = HashMap::new();
 
     let entries = std::fs::read_dir(schema_dir).map_err(|e| JsonError::SchemaLoad {
         path: schema_dir.to_owned(),
@@ -66,35 +67,21 @@ fn build_schema_registry(schema_dir: &Path) -> Result<jsonschema::Registry<'_>, 
             continue;
         }
 
-        let text = std::fs::read_to_string(&path).map_err(|e| JsonError::SchemaLoad {
-            path: path.clone(),
-            reason: e.to_string(),
-        })?;
-        let schema: Value = serde_json::from_str(&text).map_err(|e| JsonError::SchemaLoad {
-            path: path.clone(),
-            reason: e.to_string(),
-        })?;
-        let id = schema
-            .get("$id")
-            .and_then(Value::as_str)
-            .ok_or_else(|| JsonError::SchemaLoad {
-                path: path.clone(),
-                reason: "schema missing $id".to_string(),
-            })?
-            .to_string();
+        // Skip files that can't be read or parsed - they're not valid schemas
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(schema): Result<Value, _> = serde_json::from_str(&text) else {
+            continue;
+        };
 
-        registry = registry
-            .add(&id, schema)
-            .map_err(|e| JsonError::SchemaLoad {
-                path: path.clone(),
-                reason: e.to_string(),
-            })?;
+        // Skip schemas without $id - they can't be referenced cross-schema
+        if let Some(id) = schema.get("$id").and_then(Value::as_str) {
+            map.insert(id.to_string(), schema);
+        }
     }
 
-    registry.prepare().map_err(|e| JsonError::SchemaLoad {
-        path: schema_dir.to_owned(),
-        reason: e.to_string(),
-    })
+    Ok(map)
 }
 
 // ---------------------------------------------------------------------------
@@ -180,8 +167,23 @@ pub fn validate_with_registry(
             reason: e.to_string(),
         })?;
 
-    // Build registry from all schemas in the schema directory
-    let registry = build_schema_registry(schema_dir)?;
+    // Build schema map from all schemas in the schema directory
+    let schema_map = build_schema_map(schema_dir)?;
+
+    // Build a jsonschema Registry from the map for validation
+    let mut registry = jsonschema::Registry::new();
+    for (id, schema) in &schema_map {
+        registry = registry
+            .add(id, schema.clone())
+            .map_err(|e| JsonError::SchemaLoad {
+                path: schema_path.to_owned(),
+                reason: e.to_string(),
+            })?;
+    }
+    let registry = registry.prepare().map_err(|e| JsonError::SchemaLoad {
+        path: schema_path.to_owned(),
+        reason: e.to_string(),
+    })?;
 
     // Build validator with the registry for cross-schema $ref resolution
     let validator = jsonschema::options()
@@ -204,7 +206,7 @@ pub fn validate_with_registry(
 }
 
 /// Reads a schema file and recursively fills `default` values into `value`
-/// for any absent fields.
+/// for any absent fields, with cross-schema `$ref` support via a schema map.
 ///
 /// This is the authoritative default-fill mechanism (ADR-0013). Serde
 /// types loaded via this pipeline must **not** implement `Default` as a
@@ -212,13 +214,15 @@ pub fn validate_with_registry(
 /// `serde_json::from_value` will return a parse error, which is the
 /// correct hard failure.
 ///
-/// Local `$defs` `$ref`s (`"$ref": "#/$defs/<name>"`) are resolved so
-/// that defaults declared inside `$defs` sub-schemas are applied.
+/// Cross-schema `$ref`s (e.g., `"$ref": "https://delta-v-beyond-sector-3-26/schema/cockpit"`)
+/// are resolved using the schema directory so that defaults declared in
+/// external schemas are applied.
 ///
 /// # Errors
 /// Returns [`JsonError::SchemaLoad`] if the schema file cannot be read
 /// or parsed.
 pub fn fill_defaults(value: &mut Value, schema_path: &Path) -> Result<(), JsonError> {
+    let schema_dir = schema_path.parent().unwrap_or_else(|| Path::new(""));
     let schema_text = std::fs::read_to_string(schema_path).map_err(|e| JsonError::SchemaLoad {
         path: schema_path.to_owned(),
         reason: e.to_string(),
@@ -227,8 +231,12 @@ pub fn fill_defaults(value: &mut Value, schema_path: &Path) -> Result<(), JsonEr
         path: schema_path.to_owned(),
         reason: e.to_string(),
     })?;
-    // Pass the root document so $ref resolution can look up $defs.
-    fill_defaults_recursive(value, &schema, &schema);
+
+    // Build schema map for cross-schema $ref resolution
+    let schema_map = build_schema_map(schema_dir)?;
+
+    // Fill defaults using the schema map
+    fill_defaults_recursive(value, &schema, &schema, &schema_map);
     Ok(())
 }
 
@@ -258,20 +266,23 @@ pub fn load_validated(json_path: &Path, schema_path: &Path) -> Result<Value, Jso
 pub fn load_validated_with_registry(
     json_path: &Path,
     schema_path: &Path,
-    schema_dir: &Path,
-    units_schema_path: &Path,
 ) -> Result<Value, JsonError> {
+    // Compute schema_dir from schema_path
+    let schema_dir = schema_path.parent().unwrap_or_else(|| Path::new(""));
+
     // Read the JSON file
     let mut value = read_json(json_path)?;
 
     // Validate with registry to resolve cross-schema $refs
     validate_with_registry(&value, schema_path, json_path, schema_dir)?;
 
-    // Fill defaults
+    // Fill defaults with schema map to resolve cross-schema $refs
     fill_defaults(&mut value, schema_path)?;
 
     // Validate units against the allowed units list
-    validate_units(&value, json_path, units_schema_path)?;
+    // The units schema is always in the same directory as the schema
+    let units_schema_path = schema_dir.join("units.schema.json");
+    validate_units(&value, json_path, &units_schema_path)?;
 
     Ok(value)
 }
@@ -399,13 +410,18 @@ fn validate_units_recursive(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/// Recursive default-fill pass.
+/// Recursive default-fill pass with cross-schema $ref support.
 ///
-/// `root` is always the full schema document so that `$ref` strings of
-/// the form `"#/$defs/<name>"` can be resolved.
-fn fill_defaults_recursive(value: &mut Value, schema: &Value, root: &Value) {
+/// `root` is the main schema document for local `$defs` resolution.
+/// `schema_map` is used for cross-schema `$ref` resolution.
+fn fill_defaults_recursive(
+    value: &mut Value,
+    schema: &Value,
+    root: &Value,
+    schema_map: &HashMap<String, Value>,
+) {
     // Resolve $ref before processing.
-    let resolved = resolve_ref(schema, root);
+    let resolved = resolve_ref(schema, root, schema_map);
 
     match value {
         Value::Object(obj) => {
@@ -420,23 +436,21 @@ fn fill_defaults_recursive(value: &mut Value, schema: &Value, root: &Value) {
                     } else {
                         // If no top-level default, check if the property schema has a $ref
                         // that points to a definition with property-level defaults.
-                        // In that case, create an object with those defaults.
-                        let resolved_prop = resolve_ref(prop_schema, root);
+                        let resolved_prop = resolve_ref(prop_schema, root, schema_map);
                         if let Some(prop_defaults) = get_property_defaults(resolved_prop) {
                             obj.insert(key.clone(), Value::Object(prop_defaults));
                         }
                     }
                 } else if let Some(child) = obj.get_mut(key) {
-                    fill_defaults_recursive(child, prop_schema, root);
+                    fill_defaults_recursive(child, prop_schema, root, schema_map);
                 }
             }
         }
         Value::Array(arr) => {
             // For arrays, we need to find the schema for array items.
-            // The schema should have an "items" property that describes the items.
             if let Some(items_schema) = resolved.get("items") {
                 for item in arr.iter_mut() {
-                    fill_defaults_recursive(item, items_schema, root);
+                    fill_defaults_recursive(item, items_schema, root, schema_map);
                 }
             }
         }
@@ -467,23 +481,28 @@ fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value
     }
 }
 
-/// Resolves a local `$ref` of the form `"#/$defs/<name>"`.
+/// Resolves a `$ref`, supporting both local and cross-schema references.
 ///
-/// Returns the referenced sub-schema from `root["$defs"][<name>]`.
-/// If the reference cannot be resolved, returns `schema` unchanged
-/// (which will produce a parse error downstream — the correct failure).
-fn resolve_ref<'a>(schema: &'a Value, root: &'a Value) -> &'a Value {
+/// Local refs (`"#/$defs/<name>"`) are resolved from the root schema.
+/// Cross-schema refs (URIs like `"https://delta-v-beyond-sector-3-26/schema/cockpit"`)
+/// are resolved from the schema map.
+fn resolve_ref<'a>(
+    schema: &'a Value,
+    root: &'a Value,
+    schema_map: &'a HashMap<String, Value>,
+) -> &'a Value {
     let Some(ref_str) = schema.get("$ref").and_then(Value::as_str) else {
         return schema;
     };
 
-    // Only local refs are supported for default-filling.
-    // Cross-schema refs are handled by the jsonschema library during validation.
-    let Some(def_name) = ref_str.strip_prefix("#/$defs/") else {
-        return schema;
-    };
+    // Try local ref first
+    if let Some(def_name) = ref_str.strip_prefix("#/$defs/") {
+        return root
+            .get("$defs")
+            .and_then(|defs| defs.get(def_name))
+            .unwrap_or(schema);
+    }
 
-    root.get("$defs")
-        .and_then(|defs| defs.get(def_name))
-        .unwrap_or(schema)
+    // Try cross-schema ref via schema map
+    schema_map.get(ref_str).unwrap_or(schema)
 }

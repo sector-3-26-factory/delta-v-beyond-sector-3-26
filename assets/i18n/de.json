@@ -1,0 +1,51 @@
+{
+    "ui": {
+        "menu": {
+            "keybindings": {
+                "title": "TASTENBELEGUNG",
+                "close": "Schließen [F1]",
+                "group": {
+                    "flight": "Flug",
+                    "combat": "Kampf",
+                    "systems": "Systeme"
+                },
+                "action": {
+                    "thrust_forward": "Vorwärts Schub",
+                    "thrust_backward": "Rückwärts Schub",
+                    "pitch_up": "Neigen Hoch",
+                    "pitch_down": "Neigen Runter",
+                    "yaw_left": "Schwenken Links",
+                    "yaw_right": "Schwenken Rechts",
+                    "roll_left": "Rollen Links",
+                    "roll_right": "Rollen Rechts",
+                    "strafe_left": "Seitwärts Links",
+                    "strafe_right": "Seitwärts Rechts",
+                    "strafe_up": "Seitwärts Hoch",
+                    "strafe_down": "Seitwärts Runter",
+                    "toggle_flight_assist": "Flugassistenz Umschalten",
+                    "fire_primary": "Primäre Waffe abfeuern",
+                    "cockpit_cycle_next": "nächste Cockpit-Ansicht",
+                    "cockpit_cycle_prev": "vorherige Cockpit-Ansicht"
+                },
+                "key": {
+                    "KeyW": "W",
+                    "KeyS": "S",
+                    "KeyA": "A",
+                    "KeyD": "D",
+                    "KeyQ": "Q",
+                    "KeyE": "E",
+                    "KeyR": "R",
+                    "KeyF": "F",
+                    "KeyC": "C",
+                    "ArrowUp": "↑",
+                    "ArrowDown": "↓",
+                    "ArrowLeft": "←",
+                    "ArrowRight": "→",
+                    "Space": "Leertaste",
+                    "KeyF2": "F2",
+                    "KeyLeftAlt": "Alt Links"
+                }
+            }
+        }
+    }
+}

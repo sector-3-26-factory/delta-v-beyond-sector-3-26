@@ -1,0 +1,89 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/cockpit",
+    "title": "Cockpit overlay definition",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines cockpit overlay stations with PNG textures and gauge slot positions. Each station represents a different cockpit view (e.g., default, navigation, tactical).\n\nSee M6 -- HUD and Feel plan.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "stations"
+    ],
+    "properties": {
+        "stations": {
+            "description": "List of cockpit stations. The first station is used on startup. Must contain at least one station.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "id",
+                    "texture"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "Station identifier. Used for station switching.",
+                        "type": "string"
+                    },
+                    "texture": {
+                        "description": "PNG file path relative to the template directory (e.g., \"cockpit/default.png\"). Transparent areas show the 3D scene; opaque areas show panel art.",
+                        "type": "string"
+                    },
+                    "slots": {
+                        "description": "Gauge slot definitions. Each slot defines a position/shape and the default gauge type to render.",
+                        "type": "array",
+                        "default": [],
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "shape",
+                                "default_gauge"
+                            ],
+                            "properties": {
+                                "shape": {
+                                    "description": "Shape defining the slot position and size. Either rectangle or circle.",
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "type"
+                                    ],
+                                    "properties": {
+                                        "type": {
+                                            "description": "Shape type: rectangle or circle.",
+                                            "type": "string",
+                                            "enum": [
+                                                "rectangle",
+                                                "circle"
+                                            ]
+                                        },
+                                        "x1": {
+                                            "description": "Rectangle left edge (pixels).",
+                                            "type": "number"
+                                        },
+                                        "y1": {
+                                            "description": "Rectangle top edge (pixels).",
+                                            "type": "number"
+                                        },
+                                        "x2": {
+                                            "description": "Rectangle right edge (pixels).",
+                                            "type": "number"
+                                        },
+                                        "y2": {
+                                            "description": "Rectangle bottom edge (pixels).",
+                                            "type": "number"
+                                        }
+                                    }
+                                },
+                                "default_gauge": {
+                                    "description": "Gauge type name (e.g., \"altitude\", \"velocity\"). Maps to a specific HUD element renderer.",
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

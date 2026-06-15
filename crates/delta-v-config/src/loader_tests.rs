@@ -22,23 +22,12 @@ mod tests {
         error::ConfigError,
         loader::{load_and_validate_from_paths, merge_user_override},
     };
-
-    /// Returns the absolute path to the workspace root, derived from
-    /// `CARGO_MANIFEST_DIR` (which points at the crate directory).
-    fn workspace_root() -> std::path::PathBuf {
-        let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        manifest
-            .parent()
-            .expect("crates dir")
-            .parent()
-            .expect("workspace root")
-            .to_owned()
-    }
+    use delta_v_assets::get_workspace_root;
 
     /// The shipped default keybindings file must load without errors.
     #[test]
     fn test_loads_default_keybindings_ok() {
-        let root = workspace_root();
+        let root = get_workspace_root();
         let kb = load_and_validate_from_paths(
             &root.join("assets/config/keybindings.json"),
             &root.join("assets/json/schema/keybindings.schema.json"),
@@ -62,7 +51,7 @@ mod tests {
     /// The shipped default flight-assist file must load without errors.
     #[test]
     fn test_loads_default_flight_assist_ok() {
-        let root = workspace_root();
+        let root = get_workspace_root();
         let fa = load_and_validate_from_paths(
             &root.join("assets/config/flight-assist.json"),
             &root.join("assets/json/schema/flight-assist.schema.json"),
@@ -97,7 +86,7 @@ mod tests {
     /// validation with [`ConfigError::Schema`].
     #[test]
     fn test_schema_violation_errors() {
-        let schema_path = workspace_root().join("assets/json/schema/keybindings.schema.json");
+        let schema_path = get_workspace_root().join("assets/json/schema/keybindings.schema.json");
 
         let bad_json = r#"{"unknown_key": true}"#;
         let mut tmp = NamedTempFile::new().expect("tempfile");

@@ -19,27 +19,17 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use crate::{error::WorldError, loader::load_world_from_paths};
-
-    /// Returns the absolute workspace root path.
-    fn workspace_root() -> std::path::PathBuf {
-        let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        manifest
-            .parent()
-            .expect("crates dir")
-            .parent()
-            .expect("workspace root")
-            .to_owned()
-    }
+    use delta_v_assets::get_workspace_root;
 
     /// Returns the path to the test fixtures directory.
     fn fixtures_path() -> std::path::PathBuf {
-        workspace_root().join("crates/delta-v-world/tests/fixtures")
+        get_workspace_root().join("crates/delta-v-world/tests/fixtures")
     }
 
     /// The shipped default world file must load without errors.
     #[test]
     fn test_loads_default_world_ok() {
-        let root = workspace_root();
+        let root = get_workspace_root();
         let world = load_world_from_paths(
             &root.join("assets/worlds/default.world.json"),
             &root.join("assets/json/schema/world.schema.json"),
@@ -52,7 +42,7 @@ mod tests {
     /// The default world must have at least one entity (per ADR-0038).
     #[test]
     fn test_entities_present() {
-        let root = workspace_root();
+        let root = get_workspace_root();
         let world = load_world_from_paths(
             &root.join("assets/worlds/default.world.json"),
             &root.join("assets/json/schema/world.schema.json"),
@@ -74,7 +64,7 @@ mod tests {
     /// [`WorldError::Io`].
     #[test]
     fn test_missing_file_errors() {
-        let root = workspace_root();
+        let root = get_workspace_root();
         let result = load_world_from_paths(
             std::path::Path::new("/nonexistent/world.json"),
             &root.join("assets/json/schema/world.schema.json"),
@@ -89,7 +79,7 @@ mod tests {
     /// produce [`WorldError::Schema`].
     #[test]
     fn test_schema_violation_errors() {
-        let root = workspace_root();
+        let root = get_workspace_root();
         let schema_path = root.join("assets/json/schema/world.schema.json");
 
         let bad_json = r#"{"unknown_key": true}"#;

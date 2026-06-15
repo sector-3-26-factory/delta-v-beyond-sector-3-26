@@ -49,11 +49,10 @@ code, optionally with a region suffix (`en`, `de`, `en-US`,
 `pt-BR`). Initially: `en.json` (default), `de.json`.
 
 The English file is the **reference**: it defines the complete set
-of keys. Other languages may be incomplete; missing keys fall back
-to the English value. This fallback is **not** a silent default in
-the sense of [ADR-0013](0013-no-silent-fallbacks.md): the language
-file omits a key by design (the translator has not got to it yet),
-and the user has explicitly chosen "best effort translation".
+of keys. All supported language files (initially: `de.json`) MUST
+contain all keys from the reference file. A missing key in any
+language file is a hard error (ADR-0013). The language file is
+validated against the reference structure at load time.
 
 A missing key in `en.json`, on the other hand, is an error: the
 reference file must be complete.
