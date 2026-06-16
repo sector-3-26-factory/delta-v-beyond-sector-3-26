@@ -10,6 +10,6 @@
 # the toolchain, and external crate releases can no longer break CI.
 #
 # Bump deliberately and keep `rust-version` in Cargo.toml in sync.
-channel = "1.90.0"
+channel = "1.91.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

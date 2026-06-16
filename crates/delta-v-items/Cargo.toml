@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-items"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Collectable items and inventory"
 license.workspace = true

@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-net"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Networking (placeholder until ADR-0030/0031 are decided)"
 license.workspace = true

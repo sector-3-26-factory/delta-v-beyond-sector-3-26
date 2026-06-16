@@ -118,7 +118,8 @@ These provide cross-cutting infrastructure:
 - May not depend on domain crates
 
 **`crates/delta-v-json/`**
-- Shared JSON utilities: `read_json`, `validate`, `fill_defaults`, `load_validated`
+- Shared JSON utilities: `read_json`, `validate`, `fill_defaults`, `load`
+- Builder pattern API: `load(json_path, schema_path).load()`
 - Single implementation of the read → validate → fill-defaults pipeline
 - Resolves local `$defs` `$ref`s for the fill-defaults pass
 - No Bevy dependency; no domain knowledge

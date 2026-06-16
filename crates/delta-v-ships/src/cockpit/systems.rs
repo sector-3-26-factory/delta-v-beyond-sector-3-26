@@ -23,9 +23,9 @@ use bevy::prelude::*;
 use delta_v_core::input::ActiveActions;
 use delta_v_core::input::LogicalAction;
 
+use super::ActiveCockpitStation;
 use super::components::CockpitOverlay;
 use super::spawn::CockpitOverlayResource;
-use super::ActiveCockpitStation;
 
 /// Cycles to the next cockpit station when the player presses the key.
 ///
@@ -46,7 +46,7 @@ pub fn cockpit_station_cycle_next_system(
         return;
     }
 
-    let Ok(entity) = query.get_single() else {
+    let Ok(entity) = query.single() else {
         return;
     };
 
@@ -100,7 +100,7 @@ pub fn cockpit_station_cycle_prev_system(
         return;
     }
 
-    let Ok(entity) = query.get_single() else {
+    let Ok(entity) = query.single() else {
         return;
     };
 

@@ -66,8 +66,8 @@ fn test_integrate_velocity() {
     let mut body = RigidBody::new(10.0, 1.0);
     body.apply_force(Vec3::new(100.0, 0.0, 0.0));
     body.integrate_velocity(1.0 / 60.0); // 60 Hz timestep
-                                         // a = F/m = 100/10 = 10 m/s²
-                                         // v = a * dt = 10 * (1/60) ≈ 0.1667
+    // a = F/m = 100/10 = 10 m/s²
+    // v = a * dt = 10 * (1/60) ≈ 0.1667
     assert!((body.velocity.x - 0.1667).abs() < 0.001);
 }
 

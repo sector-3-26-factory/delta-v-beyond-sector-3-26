@@ -1,0 +1,24 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "world.schema.json",
+    "title": "Physical Units Registry (Test)",
+    "description": "Minimal units schema for test fixtures. See AGENTS.md.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "value": {
+            "description": "Numeric magnitude.",
+            "type": "number"
+        },
+        "unit": {
+            "description": "Physical unit identifier.",
+            "type": "string",
+            "enum": [
+                "kg",
+                "N",
+                "m",
+                "s"
+            ]
+        }
+    }
+}

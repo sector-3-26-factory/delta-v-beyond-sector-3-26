@@ -18,7 +18,7 @@ mod tests {
 
     use tempfile::NamedTempFile;
 
-    use crate::{error::WorldError, loader::load_world_from_paths};
+    use crate::{error::WorldError, loader::load_test_world_from_paths as load_world_from_paths};
     use delta_v_assets::get_workspace_root;
 
     /// Returns the path to the test fixtures directory.

@@ -8,9 +8,8 @@
 
 The template system is scattered across multiple crates with unclear responsibilities:
 
-- `delta-v-json` — Provides `load_validated()`, `load_validated_with_units()`,
-  `fill_defaults()`, `validate()`. This is the JSON pipeline: read → validate →
-  fill defaults → deserialize.
+- `delta-v-json` — Provides `load()` builder pattern, `fill_defaults()`, `validate()`.
+  This is the JSON pipeline: read → validate → fill defaults → deserialize.
 - `delta-v-assets` — Empty crate. Only logs "AssetsPlugin initialized". Was
   intended for "asset loader extensions and glTF helpers" (per its doc comment).
 - `delta-v-world/src/template_loader.rs` — Loads entity templates using
@@ -44,7 +43,7 @@ delta-v-world    → World definition loading (uses delta-v-assets for templates
 delta-v-config   → Config loading (uses delta-v-json directly for simple files)
 ```
 
-### `delta-v-json` — JSON pipeline (unchanged)
+### `delta-v-json` — JSON pipeline
 
 **Responsibilities**:
 - Read JSON from file
@@ -53,6 +52,12 @@ delta-v-config   → Config loading (uses delta-v-json directly for simple files
 - Re-validate after default-fill
 - Deserialize into Rust structs
 - Unit validation (physical quantities)
+
+**API**:
+- `load(json_path, schema_path)` - Builder pattern entry point
+- `JsonLoader::with_user_override(path)` - Add user override
+- `JsonLoader::skip_units()` - Skip unit validation
+- `JsonLoader::load()` - Execute the pipeline
 
 **Does NOT**:
 - Resolve asset paths
@@ -104,13 +109,13 @@ World Definition (*.world.json)
   │
   ├─ delta-v-world::loader
   │    Uses: delta-v-assets::template::load_world()
-  │    Which uses: delta-v-json::load_validated()
+  │    Which uses: delta-v-json::load()
   │
   └─ For each entity in world:
        │
        ├─ delta-v-assets::template::load_template()
        │    Resolves path: "ships/debug-ship-cube" → "templates/ships/debug-ship-cube/ship.json"
-       │    Uses: delta-v-json::load_validated_with_units()
+       │    Uses: delta-v-json::load()
        │
        └─ delta-v-assets::template::load_player_controlled_ship()
             Loads player_controlled_ship.json

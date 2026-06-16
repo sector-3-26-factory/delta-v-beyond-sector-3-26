@@ -10,8 +10,8 @@ use bevy::time::TimePlugin;
 use crate::constants::{GRAVITATIONAL_CONSTANT, GRAVITY_CUTOFF_RADIUS_M};
 use crate::rigid_body::{MassSource, RigidBody};
 use crate::systems::{
-    clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
-    integrate_position_system, integrate_velocity_system, PhysicsSet,
+    PhysicsSet, clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
+    integrate_position_system, integrate_velocity_system,
 };
 
 // ---------------------------------------------------------------------------

@@ -49,8 +49,8 @@ pub fn keybindings_menu_toggle_system(
 
     if menu_open.0 {
         // Close the menu: despawn the root entity
-        if let Ok(entity) = query.get_single() {
-            commands.entity(entity).despawn_recursive();
+        if let Ok(entity) = query.single() {
+            commands.entity(entity).despawn();
         }
         menu_open.0 = false;
         log::debug!("keybindings menu: closed");

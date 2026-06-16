@@ -17,8 +17,8 @@ use delta_v_physics::RigidBody;
 
 use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 use crate::systems::{
-    clear_commands_system, flight_assist_damping_system, flight_assist_toggle_system,
-    input_reader_system, thrust_system, torque_system, PreviousActions, RotationRampState,
+    PreviousActions, RotationRampState, clear_commands_system, flight_assist_damping_system,
+    flight_assist_toggle_system, input_reader_system, thrust_system, torque_system,
 };
 
 // ---------------------------------------------------------------------------

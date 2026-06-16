@@ -7,7 +7,7 @@
 
 use serde_json::Value;
 
-use delta_v_types::{BoundingBoxJson, Vec3Json};
+use delta_v_types::{BoundingBoxJson, CollisionShapeJson, Vec3Json};
 
 /// Extracts a mass value from a validated template JSON value.
 ///
@@ -81,6 +81,23 @@ pub fn extract_bounding_box(template: &Value) -> BoundingBoxJson {
     );
 
     BoundingBoxJson { min, max }
+}
+
+/// Extracts a `CollisionShapeJson` from a validated template JSON value.
+///
+/// # Panics
+///
+/// Panics if `collision_shape` is missing from the template. This is safe because
+/// the schema requires this field and it is validated by `delta-v-json` (ADR-0013).
+#[allow(clippy::expect_used)]
+#[must_use]
+pub fn extract_collision_shape(template: &Value) -> CollisionShapeJson {
+    // INVARIANT: collision_shape is required by schema and validated by delta-v-json (ADR-0013)
+    let shape = template
+        .get("collision_shape")
+        .expect("collision_shape should be present per schema");
+    serde_json::from_value(shape.clone())
+        .expect("collision_shape must be valid JSON (validated by delta-v-json)")
 }
 
 /// Computes debug axis length from a `BoundingBoxJson` (120% of longest side).

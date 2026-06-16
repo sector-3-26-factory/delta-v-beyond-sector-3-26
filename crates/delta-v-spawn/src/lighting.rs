@@ -3,7 +3,7 @@
 //! Scene lighting setup utilities.
 
 use bevy::prelude::{
-    default, AmbientLight, Color, Commands, DirectionalLight, EulerRot, Quat, Transform, Visibility,
+    AmbientLight, Color, Commands, DirectionalLight, EulerRot, Quat, Transform, Visibility, default,
 };
 
 /// Sets up scene lighting (directional + ambient). Called once per world load.
@@ -26,5 +26,6 @@ pub fn setup_scene_lighting(commands: &mut Commands<'_, '_>) {
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
         brightness: 200.0,
+        affects_lightmapped_meshes: true,
     });
 }

@@ -71,7 +71,7 @@ pub struct DiagnosticsPlugin;
 impl Plugin for DiagnosticsPlugin {
     fn build(&self, app: &mut App) {
         use crate::AppState;
-        app.add_plugins(FrameTimeDiagnosticsPlugin)
+        app.add_plugins(FrameTimeDiagnosticsPlugin::default())
             .init_resource::<DiagnosticsState>()
             .add_systems(OnEnter(AppState::InGame), reset_frame_time_diagnostics)
             .add_systems(

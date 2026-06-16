@@ -20,6 +20,7 @@
 #![warn(unreachable_pub)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
+#![warn(clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]

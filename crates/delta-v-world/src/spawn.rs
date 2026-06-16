@@ -13,10 +13,9 @@ use delta_v_core::{DebugAxesEligible, SpawnEntity};
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, DynamicBody, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
 use delta_v_spawn::template_extraction::{
-    compute_debug_axis_length, extract_bounding_box, extract_mass,
+    compute_debug_axis_length, extract_bounding_box, extract_collision_shape, extract_mass,
 };
 use delta_v_types::collision::layers;
-use delta_v_types::CollisionShapeJson;
 
 /// Marker component for a pending asteroid mesh waiting for its glTF to load.
 #[derive(Component)]
@@ -63,11 +62,7 @@ pub fn spawn_asteroid_system(
 
         // Extract collision shape (required) using delta-v-spawn utilities (ADR-0047)
         // INVARIANT: collision_shape is required by schema and validated by delta-v-json (ADR-0013)
-        let shape = template
-            .get("collision_shape")
-            .expect("asteroid template must have collision_shape");
-        let collision_shape_json: CollisionShapeJson = serde_json::from_value(shape.clone())
-            .expect("collision_shape must be valid JSON (ADR-0013)");
+        let collision_shape_json = extract_collision_shape(template);
         let collision_shape_data = shape_from_json(&collision_shape_json, 1.0)
             .expect("collision shape must be valid (ADR-0013)");
 

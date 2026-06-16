@@ -222,9 +222,11 @@ fn collision_detection_system(
                     |_| "no-hp".to_string(),
                     |h| format!("hp={:.0}/{:.0}", h.current, h.max),
                 );
-                log::debug!("Collision detected: {entity_a:?} ({health_a}) <-> {entity_b:?} ({health_b}), penetration={penetration_depth:.2}, normal={normal:?}");
+                log::debug!(
+                    "Collision detected: {entity_a:?} ({health_a}) <-> {entity_b:?} ({health_b}), penetration={penetration_depth:.2}, normal={normal:?}"
+                );
 
-                events.send(CollisionDetected {
+                events.write(CollisionDetected {
                     target: entity_a,
                     other: entity_b,
                     point: pos_a + normal * penetration_depth * 0.5,
@@ -352,25 +354,13 @@ fn check_collision(
 
                     if dx <= dy && dx <= dz {
                         // Closest to x face
-                        if local.x > 0.0 {
-                            Vec3::X
-                        } else {
-                            Vec3::NEG_X
-                        }
+                        if local.x > 0.0 { Vec3::X } else { Vec3::NEG_X }
                     } else if dy <= dz {
                         // Closest to y face
-                        if local.y > 0.0 {
-                            Vec3::Y
-                        } else {
-                            Vec3::NEG_Y
-                        }
+                        if local.y > 0.0 { Vec3::Y } else { Vec3::NEG_Y }
                     } else {
                         // Closest to z face
-                        if local.z > 0.0 {
-                            Vec3::Z
-                        } else {
-                            Vec3::NEG_Z
-                        }
+                        if local.z > 0.0 { Vec3::Z } else { Vec3::NEG_Z }
                     }
                 };
 
@@ -524,25 +514,23 @@ fn collision_response_system(
                 * POSITION_CORRECTION_PERCENT
                 / total_inv_mass;
 
-            if let Ok(shape_a) = shapes.get(response.target) {
-                if !response.target_is_static {
-                    if let Ok((_, mut transform_a)) = all_bodies.get_mut(response.target) {
-                        let pos_a = transform_a.translation + shape_a.offset;
-                        // Normal points from A to B, so move A in opposite direction (away from B)
-                        let corrected_pos = pos_a - normal * correction_magnitude * inv_mass_a;
-                        transform_a.translation = corrected_pos - shape_a.offset;
-                    }
-                }
+            if let Ok(shape_a) = shapes.get(response.target)
+                && !response.target_is_static
+                && let Ok((_, mut transform_a)) = all_bodies.get_mut(response.target)
+            {
+                let pos_a = transform_a.translation + shape_a.offset;
+                // Normal points from A to B, so move A in opposite direction (away from B)
+                let corrected_pos = pos_a - normal * correction_magnitude * inv_mass_a;
+                transform_a.translation = corrected_pos - shape_a.offset;
             }
-            if let Ok(shape_b) = shapes.get(response.other) {
-                if !response.other_is_static {
-                    if let Ok((_, mut transform_b)) = all_bodies.get_mut(response.other) {
-                        let pos_b = transform_b.translation + shape_b.offset;
-                        // Move B in the direction of the normal (away from A)
-                        let corrected_pos = pos_b + normal * correction_magnitude * inv_mass_b;
-                        transform_b.translation = corrected_pos - shape_b.offset;
-                    }
-                }
+            if let Ok(shape_b) = shapes.get(response.other)
+                && !response.other_is_static
+                && let Ok((_, mut transform_b)) = all_bodies.get_mut(response.other)
+            {
+                let pos_b = transform_b.translation + shape_b.offset;
+                // Move B in the direction of the normal (away from A)
+                let corrected_pos = pos_b + normal * correction_magnitude * inv_mass_b;
+                transform_b.translation = corrected_pos - shape_b.offset;
             }
         }
 
@@ -557,15 +545,15 @@ fn collision_response_system(
         let impulse = normal * impulse_magnitude;
 
         // Apply impulse to both bodies (Newton's third law)
-        if let Ok((mut body_a, _)) = all_bodies.get_mut(response.target) {
-            if !response.target_is_static {
-                body_a.apply_impulse(-impulse);
-            }
+        if let Ok((mut body_a, _)) = all_bodies.get_mut(response.target)
+            && !response.target_is_static
+        {
+            body_a.apply_impulse(-impulse);
         }
-        if let Ok((mut body_b, _)) = all_bodies.get_mut(response.other) {
-            if !response.other_is_static {
-                body_b.apply_impulse(impulse);
-            }
+        if let Ok((mut body_b, _)) = all_bodies.get_mut(response.other)
+            && !response.other_is_static
+        {
+            body_b.apply_impulse(impulse);
         }
 
         log::debug!(

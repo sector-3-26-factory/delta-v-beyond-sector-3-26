@@ -14,7 +14,10 @@
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
 use crate::cockpit::CockpitOverlayResource;
-use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
+use crate::ship_templates::{
+    MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
+    StaticShipTemplate,
+};
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
@@ -79,6 +82,77 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
 }
 
+/// Spawns camera entities for each available camera definition.
+///
+/// Only cameras with `available: true` are spawned as child entities
+/// of the ship. Positions and targets are scaled by the entity scale.
+fn spawn_cameras(
+    commands: &mut Commands<'_, '_>,
+    ship_entity: Entity,
+    template: &PlayerShipTemplate,
+    scale: f32,
+) {
+    for (name, camera) in [
+        ("cockpit", &template.cameras.cockpit),
+        ("chase", &template.cameras.chase),
+        ("rear", &template.cameras.rear),
+        ("front", &template.cameras.front),
+        ("left", &template.cameras.left),
+        ("right", &template.cameras.right),
+        ("top", &template.cameras.top),
+        ("bottom", &template.cameras.bottom),
+    ] {
+        if camera.available {
+            let position =
+                Vec3::new(camera.position.x, camera.position.y, camera.position.z) * scale;
+            let target = Vec3::new(camera.target.x, camera.target.y, camera.target.z) * scale;
+            commands.entity(ship_entity).with_children(|parent| {
+                let _camera_entity = parent.spawn((
+                    Transform::from_translation(position).looking_at(target, Vec3::Y),
+                    delta_v_core::CameraFollow {
+                        target: ship_entity,
+                        offset: position,
+                    },
+                ));
+                log::debug!("spawned {name} camera at {position:?}");
+            });
+        }
+    }
+}
+
+/// Inserts player-specific resources after the ship entity is spawned.
+///
+/// Stores the player ship entity ID, chase camera offset, propulsion
+/// configuration, and cockpit overlay resource.
+fn insert_player_resources(
+    commands: &mut Commands<'_, '_>,
+    ship_entity: Entity,
+    template: &PlayerShipTemplate,
+    main: &MainThrusterTemplate,
+    maneuvering: &ManeuveringThrusterTemplate,
+    active_index: usize,
+    scale: f32,
+) {
+    let chase_offset = Vec3::new(
+        template.cameras.chase.position.x,
+        template.cameras.chase.position.y,
+        template.cameras.chase.position.z,
+    ) * scale;
+    commands.insert_resource(PlayerShipEntity(ship_entity));
+    commands.insert_resource(ChaseCameraOffset(chase_offset));
+    commands.insert_resource(ShipPropulsionConfig {
+        max_forward_thrust: main.max_forward_thrust.value,
+        max_backward_thrust: main.max_backward_thrust.value,
+        max_torque: maneuvering.max_torque.value,
+        max_strafe_thrust: maneuvering.max_strafe_thrust.value,
+        active_main_thruster_index: active_index,
+        rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
+    });
+    commands.insert_resource(CockpitOverlayResource {
+        stations: template.cockpit.stations.clone(),
+    });
+}
+
 /// Spawns the player-controlled ship from a template event.
 ///
 /// Template is validated by delta-v-json; structure is guaranteed.
@@ -126,7 +200,9 @@ fn spawn_player_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!("spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
+    log::debug!(
+        "spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
+    );
 
     // Build the ship entity spawn command.
     // Use delta-v-spawn for collision shape conversion (ADR-0047).
@@ -168,61 +244,19 @@ fn spawn_player_ship(
             projectile_radius: weapon_json.projectile_radius.value,
         });
     }
-
     // Spawn cameras for each available camera definition, scaled by the entity scale.
-    for (name, camera) in [
-        ("cockpit", &template.cameras.cockpit),
-        ("chase", &template.cameras.chase),
-        ("rear", &template.cameras.rear),
-        ("front", &template.cameras.front),
-        ("left", &template.cameras.left),
-        ("right", &template.cameras.right),
-        ("top", &template.cameras.top),
-        ("bottom", &template.cameras.bottom),
-    ] {
-        if camera.available {
-            let position =
-                Vec3::new(camera.position.x, camera.position.y, camera.position.z) * scale;
-            let target = Vec3::new(camera.target.x, camera.target.y, camera.target.z) * scale;
-            commands.entity(ship_entity).with_children(|parent| {
-                let _camera_entity = parent.spawn((
-                    Transform::from_translation(position).looking_at(target, Vec3::Y),
-                    delta_v_core::CameraFollow {
-                        target: ship_entity,
-                        offset: position,
-                    },
-                ));
-                log::debug!("spawned {name} camera at {position:?}");
-            });
-        }
-    }
+    spawn_cameras(commands, ship_entity, &template, scale);
 
-    // Store player ship ID and chase camera offset for camera tracking.
-    // Use the chase camera's position and target to compute the offset, scaled.
-    let chase_offset = Vec3::new(
-        template.cameras.chase.position.x,
-        template.cameras.chase.position.y,
-        template.cameras.chase.position.z,
-    ) * scale;
-    commands.insert_resource(PlayerShipEntity(ship_entity));
-    commands.insert_resource(ChaseCameraOffset(chase_offset));
-
-    // Insert propulsion configuration from template JSON (ADR-0014).
-    // These values are read by the input → forces pipeline each tick.
-    commands.insert_resource(ShipPropulsionConfig {
-        max_forward_thrust: main.max_forward_thrust.value,
-        max_backward_thrust: main.max_backward_thrust.value,
-        max_torque: maneuvering.max_torque.value,
-        max_strafe_thrust: maneuvering.max_strafe_thrust.value,
-        active_main_thruster_index: active_index,
-        rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
-    });
-
-    // Insert cockpit overlay resource from template (M6).
-    // The cockpit module will spawn the overlay on AppState::InGame.
-    commands.insert_resource(CockpitOverlayResource {
-        stations: template.cockpit.stations,
-    });
+    // Store player ship ID, chase camera offset, propulsion config, and cockpit overlay.
+    insert_player_resources(
+        commands,
+        ship_entity,
+        &template,
+        main,
+        maneuvering,
+        active_index,
+        scale,
+    );
 
     log::info!(
         "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
@@ -274,7 +308,9 @@ fn spawn_static_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!("spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})");
+    log::debug!(
+        "spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
+    );
 
     // Build the ship entity spawn command.
     // Use delta-v-spawn for collision shape conversion (ADR-0047).

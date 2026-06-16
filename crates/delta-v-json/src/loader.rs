@@ -1,9 +1,9 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Core JSON loading, schema validation and default-fill utilities.
+//! JSON loading pipeline with builder pattern.
 //!
-//! This module is the single implementation of the JSON pipeline
-//! used by all JSON-backed crates (ADR-0038):
+//! This module provides the [`load`] function as the single entry point
+//! for the JSON pipeline used by all JSON-backed crates (ADR-0038):
 //!
 //! 1. Read a file from disk into a [`serde_json::Value`].
 //! 2. Validate the value against a JSON Schema file (ADR-0012).
@@ -26,9 +26,20 @@
 //! All schemas in `assets/json/schema/` are auto-discovered and registered
 //! by their `$id` at startup, so any cross-schema `$ref` is automatically
 //! resolvable without manual registration.
+//!
+//! ## Public API
+//!
+//! The public API consists of:
+//! - [`load`] - entry point returning a [`JsonLoader`] builder
+//! - [`JsonLoader::with_user_override`] - add user override for deep-merge
+//! - [`JsonLoader::skip_units`] - skip unit validation for non-physical JSON
+//! - [`JsonLoader::load`] - execute the pipeline
+//!
+//! Internal helpers (`read_json`, `validate`, `validate_with_registry`, `fill_defaults`)
+//! are not part of the public API.
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -85,7 +96,7 @@ fn build_schema_map(schema_dir: &Path) -> Result<HashMap<String, Value>, JsonErr
 }
 
 // ---------------------------------------------------------------------------
-// Public API
+// Internal helpers
 // ---------------------------------------------------------------------------
 
 /// Reads a JSON file from disk.
@@ -93,7 +104,7 @@ fn build_schema_map(schema_dir: &Path) -> Result<HashMap<String, Value>, JsonErr
 /// # Errors
 /// Returns [`JsonError::Io`] if the file cannot be opened or read.
 /// Returns [`JsonError::Parse`] if the content is not valid JSON.
-pub fn read_json(path: &Path) -> Result<Value, JsonError> {
+fn read_json(path: &Path) -> Result<Value, JsonError> {
     let text = std::fs::read_to_string(path).map_err(|e| JsonError::Io {
         path: path.to_owned(),
         source: e,
@@ -102,40 +113,6 @@ pub fn read_json(path: &Path) -> Result<Value, JsonError> {
         path: path.to_owned(),
         source: e,
     })
-}
-
-/// Validates `value` against the JSON Schema at `schema_path`.
-///
-/// Returns the **first** validation error as [`JsonError::Schema`].
-///
-/// # Errors
-/// Returns [`JsonError::SchemaLoad`] if the schema cannot be loaded.
-/// Returns [`JsonError::Schema`] if validation fails.
-pub fn validate(value: &Value, schema_path: &Path, data_path: &Path) -> Result<(), JsonError> {
-    let schema_text = std::fs::read_to_string(schema_path).map_err(|e| JsonError::SchemaLoad {
-        path: schema_path.to_owned(),
-        reason: e.to_string(),
-    })?;
-    let schema_value: Value =
-        serde_json::from_str(&schema_text).map_err(|e| JsonError::SchemaLoad {
-            path: schema_path.to_owned(),
-            reason: e.to_string(),
-        })?;
-    let validator =
-        jsonschema::validator_for(&schema_value).map_err(|e| JsonError::SchemaLoad {
-            path: schema_path.to_owned(),
-            reason: e.to_string(),
-        })?;
-
-    let errors: Vec<_> = validator.iter_errors(value).collect();
-    if let Some(err) = errors.into_iter().next() {
-        return Err(JsonError::Schema {
-            path: data_path.to_owned(),
-            pointer: err.instance_path().to_string(),
-            reason: err.to_string(),
-        });
-    }
-    Ok(())
 }
 
 /// Validates `value` against the JSON Schema at `schema_path` with cross-schema support.
@@ -150,7 +127,7 @@ pub fn validate(value: &Value, schema_path: &Path, data_path: &Path) -> Result<(
 /// # Errors
 /// Returns [`JsonError::SchemaLoad`] if the schema cannot be loaded.
 /// Returns [`JsonError::Schema`] if validation fails.
-pub fn validate_with_registry(
+fn validate_with_registry(
     value: &Value,
     schema_path: &Path,
     data_path: &Path,
@@ -221,7 +198,7 @@ pub fn validate_with_registry(
 /// # Errors
 /// Returns [`JsonError::SchemaLoad`] if the schema file cannot be read
 /// or parsed.
-pub fn fill_defaults(value: &mut Value, schema_path: &Path) -> Result<(), JsonError> {
+pub(crate) fn fill_defaults(value: &mut Value, schema_path: &Path) -> Result<(), JsonError> {
     let schema_dir = schema_path.parent().unwrap_or_else(|| Path::new(""));
     let schema_text = std::fs::read_to_string(schema_path).map_err(|e| JsonError::SchemaLoad {
         path: schema_path.to_owned(),
@@ -240,51 +217,173 @@ pub fn fill_defaults(value: &mut Value, schema_path: &Path) -> Result<(), JsonEr
     Ok(())
 }
 
-/// Convenience: read, validate and fill defaults in one call.
+// ---------------------------------------------------------------------------
+// Builder pattern (new API)
+// ---------------------------------------------------------------------------
+
+/// Main entry point for JSON loading with a builder pattern.
 ///
-/// # Errors
-/// Returns [`JsonError`] if any step fails.
-pub fn load_validated(json_path: &Path, schema_path: &Path) -> Result<Value, JsonError> {
-    let mut value = read_json(json_path)?;
-    validate(&value, schema_path, json_path)?;
-    fill_defaults(&mut value, schema_path)?;
-    Ok(value)
+/// This function returns a [`JsonLoader`] builder that can be configured
+/// with optional parameters before calling `.load()`.
+///
+/// # Example
+///
+/// ```no_run
+/// use delta_v_json::load;
+/// use std::path::PathBuf;
+///
+/// // Simple load with defaults
+/// let value = load(PathBuf::from("config.json"), PathBuf::from("config.schema.json"))
+///     .load()?;
+///
+/// // With user override
+/// let value = load(PathBuf::from("config.json"), PathBuf::from("config.schema.json"))
+///     .with_user_override(Some(&PathBuf::from("user.json")))
+///     .load()?;
+///
+/// // Skip unit validation for non-physical JSON
+/// let value = load(PathBuf::from("config.json"), PathBuf::from("config.schema.json"))
+///     .skip_units()
+///     .load()?;
+/// # Ok::<(), delta_v_json::JsonError>(())
+/// ```
+pub fn load(json_path: PathBuf, schema_path: PathBuf) -> JsonLoader {
+    JsonLoader::new(json_path, schema_path)
 }
 
-/// Full pipeline: read, validate with cross-schema registry, fill defaults,
-/// and validate units.
+/// Builder for JSON loading with configurable options.
 ///
-/// This version uses `validate_with_registry` with auto-discovered schemas
-/// to properly resolve cross-schema `$ref`s.
+/// Created by the [`load`] function. Use methods to configure
+/// the loading behavior, then call `.load()` to execute.
 ///
-/// Per ADR-0008, all numeric physical quantities MUST use the
-/// `{"value": N, "unit": "..."}` format with a unit from the registry.
+/// # Example
 ///
-/// # Errors
-/// Returns [`JsonError`] if any step fails, including
-/// [`JsonError::InvalidUnit`] if a unit is not in the registry.
-pub fn load_validated_with_registry(
-    json_path: &Path,
-    schema_path: &Path,
-) -> Result<Value, JsonError> {
-    // Compute schema_dir from schema_path
-    let schema_dir = schema_path.parent().unwrap_or_else(|| Path::new(""));
+/// ```no_run
+/// use delta_v_json::load;
+/// use std::path::PathBuf;
+///
+/// let value = load(
+///     PathBuf::from("config.json"),
+///     PathBuf::from("config.schema.json"),
+/// )
+/// .with_user_override(Some(&PathBuf::from("user.json")))
+/// .load()?;
+/// # Ok::<(), delta_v_json::JsonError>(())
+/// ```
+#[derive(Debug)]
+pub struct JsonLoader {
+    json_path: PathBuf,
+    schema_path: PathBuf,
+    user_override_path: Option<PathBuf>,
+    validate_units: bool,
+}
 
-    // Read the JSON file
-    let mut value = read_json(json_path)?;
+impl JsonLoader {
+    /// Creates a new `JsonLoader` with the given paths.
+    #[allow(clippy::missing_const_for_fn)]
+    pub(crate) fn new(json_path: PathBuf, schema_path: PathBuf) -> Self {
+        Self {
+            json_path,
+            schema_path,
+            user_override_path: None,
+            validate_units: true,
+        }
+    }
 
-    // Validate with registry to resolve cross-schema $refs
-    validate_with_registry(&value, schema_path, json_path, schema_dir)?;
+    /// Adds a user override file to deep-merge on top of the defaults.
+    ///
+    /// The user override is loaded, deep-merged with the defaults,
+    /// and the result is re-validated against the schema.
+    ///
+    /// # Errors
+    ///
+    /// If the user override file exists but fails to load or validate,
+    /// an error is returned. If the file doesn't exist, it's silently skipped.
+    #[must_use]
+    pub fn with_user_override(mut self, path: Option<&Path>) -> Self {
+        if let Some(path) = path {
+            self.user_override_path = Some(path.to_path_buf());
+        }
+        self
+    }
 
-    // Fill defaults with schema map to resolve cross-schema $refs
-    fill_defaults(&mut value, schema_path)?;
+    /// Skips unit validation for physical quantities.
+    ///
+    /// Use this for JSON files that don't contain physical quantities
+    /// with `{"value", "unit"}` objects, or when you want to bypass
+    /// the unit registry check.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn skip_units(mut self) -> Self {
+        self.validate_units = false;
+        self
+    }
 
-    // Validate units against the allowed units list
-    // The units schema is always in the same directory as the schema
-    let units_schema_path = schema_dir.join("units.schema.json");
-    validate_units(&value, json_path, &units_schema_path)?;
+    /// Executes the JSON loading pipeline.
+    ///
+    /// The pipeline performs:
+    /// 1. Read JSON from `json_path`
+    /// 2. Validate against schema (with cross-schema `$ref` support)
+    /// 3. Fill schema defaults
+    /// 4. (Optional) Deep-merge user override and re-validate
+    /// 5. (Optional) Validate physical quantity units
+    ///
+    /// # Errors
+    ///
+    /// Returns [`JsonError`] if any step fails.
+    pub fn load(self) -> Result<Value, JsonError> {
+        let schema_dir = self.schema_path.parent().unwrap_or_else(|| Path::new(""));
 
-    Ok(value)
+        // Step 1: Read the JSON file
+        let mut value = read_json(&self.json_path)?;
+
+        // Step 2: Validate with registry to resolve cross-schema $refs
+        validate_with_registry(&value, &self.schema_path, &self.json_path, schema_dir)?;
+
+        // Step 3: Fill defaults with schema map to resolve cross-schema $refs
+        fill_defaults(&mut value, &self.schema_path)?;
+
+        // Step 4: Apply user override if provided
+        if let Some(user_path) = &self.user_override_path {
+            if user_path.exists() {
+                let user_value = read_json(user_path)?;
+                deep_merge(&mut value, user_value);
+                // Re-validate after merge
+                validate_with_registry(&value, &self.schema_path, user_path, schema_dir)?;
+            } else {
+                tracing::info!("user override file not found at {}", user_path.display());
+            }
+        }
+
+        // Step 5: Validate units if enabled
+        if self.validate_units {
+            let units_schema_path = schema_dir.join("units.schema.json");
+            validate_units(&value, &self.json_path, &units_schema_path)?;
+        }
+
+        Ok(value)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/// Deep-merges `src` on top of `dst`.
+///
+/// Rules:
+/// - Objects: merged recursively; `src` keys override `dst` keys.
+/// - Arrays, scalars, null: `src` replaces `dst` wholesale.
+fn deep_merge(dst: &mut Value, src: Value) {
+    match (dst, src) {
+        (Value::Object(dst_map), Value::Object(src_map)) => {
+            for (k, v) in src_map {
+                let entry = dst_map.entry(k).or_insert(Value::Null);
+                deep_merge(entry, v);
+            }
+        }
+        (dst, src) => *dst = src,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -360,15 +459,14 @@ fn validate_units_recursive(
             // Check if this object is a physical quantity (has "value" as number and "unit" as string).
             if let (Some(Value::Number(_)), Some(Value::String(unit_str))) =
                 (map.get("value"), map.get("unit"))
+                && !allowed_units.contains(unit_str)
             {
-                if !allowed_units.contains(unit_str) {
-                    return Err(JsonError::InvalidUnit {
-                        path: data_path.to_owned(),
-                        pointer,
-                        unit: unit_str.clone(),
-                        units_schema: units_schema_path.to_owned(),
-                    });
-                }
+                return Err(JsonError::InvalidUnit {
+                    path: data_path.to_owned(),
+                    pointer,
+                    unit: unit_str.clone(),
+                    units_schema: units_schema_path.to_owned(),
+                });
             }
 
             // Recurse into children.
@@ -474,11 +572,7 @@ fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value
         }
     }
 
-    if has_defaults {
-        Some(defaults)
-    } else {
-        None
-    }
+    if has_defaults { Some(defaults) } else { None }
 }
 
 /// Resolves a `$ref`, supporting both local and cross-schema references.

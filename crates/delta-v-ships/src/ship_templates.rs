@@ -86,7 +86,7 @@ pub struct StaticShipTemplate {
 }
 
 /// Cockpit overlay definition with stations and gauge slots.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CockpitDefinition {
     /// List of cockpit stations.
     pub stations: Vec<CockpitStation>,
@@ -96,7 +96,7 @@ pub struct CockpitDefinition {
 ///
 /// The `slots` field defaults to an empty array via the schema (cockpit.schema.json).
 /// Per ADR-0039, defaults are defined in schema only — no `#[serde(default)]`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CockpitStation {
     /// Station identifier.
     pub id: String,
@@ -107,7 +107,7 @@ pub struct CockpitStation {
 }
 
 /// A gauge slot defining position/shape and the default gauge type.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct GaugeSlot {
     /// Shape defining the slot position and size.
     pub shape: GaugeShape,
@@ -116,7 +116,7 @@ pub struct GaugeSlot {
 }
 
 /// Shape for a gauge slot: either rectangle or circle.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", content = "$content")]
 pub enum GaugeShape {
     /// Rectangle shape with pixel coordinates.

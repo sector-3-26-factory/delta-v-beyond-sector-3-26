@@ -1,4 +1,20 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
+//
+// Delta-V beyond Sector 3.26
+// Copyright (C) 2025  Cute-Donkey
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! Configuration file loader: reads, validates and merges JSON config files.
 //!
@@ -13,7 +29,7 @@
 
 use std::path::{Path, PathBuf};
 
-use delta_v_json::{error::JsonError, loader as json_loader};
+use delta_v_json::{error::JsonError, load};
 use directories::ProjectDirs;
 use serde_json::Value;
 
@@ -73,10 +89,10 @@ pub fn load_flight_assist() -> Result<FlightAssistConfig, ConfigError> {
 }
 
 // ---------------------------------------------------------------------------
-// Test / hot-reload entry points
+// Test entry points
 // ---------------------------------------------------------------------------
 
-/// Public entry point used by tests and the hot-reload path.
+/// Entry point used by tests.
 ///
 /// Reads `json_path`, validates against `schema_path`, fills defaults,
 /// and returns the resulting [`Value`].
@@ -84,16 +100,14 @@ pub fn load_flight_assist() -> Result<FlightAssistConfig, ConfigError> {
 /// # Errors
 /// Returns [`ConfigError`] if the file cannot be read, parsed, or
 /// validated.
-pub fn load_and_validate_from_paths(
+#[allow(dead_code)]
+pub(crate) fn load_and_validate_from_paths(
     json_path: &Path,
     schema_path: &Path,
 ) -> Result<Value, ConfigError> {
-    json_loader::load_validated(json_path, schema_path).map_err(|e| map_json_error(e, json_path))
-}
-
-/// Public wrapper around [`deep_merge`] used by tests.
-pub fn merge_user_override(dst: &mut Value, src: Value) {
-    deep_merge(dst, src);
+    load(json_path.to_path_buf(), schema_path.to_path_buf())
+        .load()
+        .map_err(|e| map_json_error(e, json_path))
 }
 
 // ---------------------------------------------------------------------------
@@ -126,23 +140,6 @@ fn map_json_error(e: JsonError, _context: &Path) -> ConfigError {
             unit,
             units_schema,
         },
-    }
-}
-
-/// Deep-merges `src` on top of `dst`.
-///
-/// Rules (ADR-0010):
-/// - Objects: merged recursively; `src` keys override `dst` keys.
-/// - Arrays, scalars, null: `src` replaces `dst` wholesale.
-fn deep_merge(dst: &mut Value, src: Value) {
-    match (dst, src) {
-        (Value::Object(dst_map), Value::Object(src_map)) => {
-            for (k, v) in src_map {
-                let entry = dst_map.entry(k).or_insert(Value::Null);
-                deep_merge(entry, v);
-            }
-        }
-        (dst, src) => *dst = src,
     }
 }
 
@@ -201,34 +198,11 @@ where
     let defaults_path = PathBuf::from(format!("assets/config/{name}.json"));
     let schema_path = PathBuf::from(format!("assets/json/schema/{name}.schema.json"));
 
-    // 1 + 2: load, validate, fill defaults via delta-v-json.
-    log::debug!("loading defaults from {}", defaults_path.display());
-    let mut merged = json_loader::load_validated(&defaults_path, &schema_path)
+    let merged = load(defaults_path.clone(), schema_path)
+        .with_user_override(user_path_fn().as_deref())
+        .load()
         .map_err(|e| map_json_error(e, &defaults_path))?;
-    log::debug!("defaults loaded from {}: {merged}", defaults_path.display());
 
-    // 3: try user override.
-    if let Some(user_path) = user_path_fn() {
-        if user_path.exists() {
-            log::info!("user override found at {}", user_path.display());
-            let user_value =
-                json_loader::read_json(&user_path).map_err(|e| map_json_error(e, &user_path))?;
-            log::debug!("user override content: {user_value}");
-            deep_merge(&mut merged, user_value);
-            log::debug!("merged config: {merged}");
-            json_loader::validate(&merged, &schema_path, &user_path)
-                .map_err(|e| map_json_error(e, &user_path))?;
-            log::info!("user override for {name} validated and merged");
-        } else {
-            log::debug!(
-                "no user override at {} (file does not exist)",
-                user_path.display()
-            );
-        }
-    }
-
-    // 4: deserialise.
-    log::info!("final {name} config after defaults + overrides: {merged}");
     serde_json::from_value(merged).map_err(|e| ConfigError::Parse {
         path: defaults_path,
         source: e,

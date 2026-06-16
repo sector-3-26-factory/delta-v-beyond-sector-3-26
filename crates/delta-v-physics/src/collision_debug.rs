@@ -6,8 +6,8 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::primitives::Aabb;
 
-use crate::collision::CollisionShapeType;
 use crate::CollisionDetected;
+use crate::collision::CollisionShapeType;
 
 /// Marker for entities whose collision shape should be visualized.
 #[derive(Component, Debug)]
@@ -91,7 +91,7 @@ pub fn update_collision_shape_debug_color(
     mesh_query: Query<
         '_,
         '_,
-        (&MeshMaterial3d<StandardMaterial>, &Parent),
+        (&MeshMaterial3d<StandardMaterial>, &ChildOf),
         With<CollisionShapeDebugMesh>,
     >,
     aabb_query: Query<'_, '_, (Entity, &Aabb, &GlobalTransform)>,
@@ -108,7 +108,7 @@ pub fn update_collision_shape_debug_color(
     }
 
     for (mat_handle, parent) in mesh_query.iter() {
-        let is_colliding = colliding.contains(&parent.get());
+        let is_colliding = colliding.contains(&parent.parent());
         if let Some(mat) = materials.get_mut(&mat_handle.0) {
             mat.base_color = if is_colliding {
                 Color::srgb(1.0, 0.0, 0.0)
@@ -126,7 +126,16 @@ pub fn update_collision_shape_debug_color(
             let world_center = gt.transform_point(center);
             log::debug!(
                 "Entity {:?} AABB: center=({:.2},{:.2},{:.2}) half=({:.2},{:.2},{:.2}) world_center=({:.2},{:.2},{:.2})",
-                entity, center.x, center.y, center.z, half.x, half.y, half.z, world_center.x, world_center.y, world_center.z
+                entity,
+                center.x,
+                center.y,
+                center.z,
+                half.x,
+                half.y,
+                half.z,
+                world_center.x,
+                world_center.y,
+                world_center.z
             );
         }
     }

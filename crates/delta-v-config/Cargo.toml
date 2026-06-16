@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-config"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "JSON loading, schema validation, configuration management"
 license.workspace = true
@@ -13,14 +13,15 @@ categories = ["game-development"]
 
 [dependencies]
 bevy = { workspace = true }
+directories = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-directories = { workspace = true }
+tracing = { workspace = true }
+delta-v-assets = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-json = { workspace = true }
-delta-v-assets = { workspace = true }
 delta-v-types = { workspace = true }
 
 [features]

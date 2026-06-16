@@ -27,12 +27,12 @@ use std::path::PathBuf;
 
 use crate::ConfigError;
 use delta_v_assets::get_workspace_root;
-use delta_v_json::loader as json_loader;
+use delta_v_json::load;
 use delta_v_types::I18n;
 
 /// Loads and validates the i18n file.
 ///
-/// Uses [`json_loader::load_validated`] to load and validate the English
+/// Uses the new `load()` builder pattern to load and validate the English
 /// translation file against the i18n schema.
 ///
 /// # Errors
@@ -42,7 +42,8 @@ pub fn load_i18n() -> Result<I18n, ConfigError> {
     let json_path: PathBuf = get_workspace_root().join("assets/i18n/en.json");
     let schema_path: PathBuf = get_workspace_root().join("assets/json/schema/i18n.schema.json");
 
-    let value = json_loader::load_validated(&json_path, &schema_path)
+    let value = load(json_path.clone(), schema_path)
+        .load()
         .map_err(|e| ConfigError::from_json_error(e, &json_path))?;
 
     serde_json::from_value(value).map_err(|e| ConfigError::Parse {

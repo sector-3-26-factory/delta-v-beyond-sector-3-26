@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-stations"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Space stations and station components"
 license.workspace = true

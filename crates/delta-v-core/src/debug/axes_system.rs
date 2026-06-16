@@ -31,7 +31,9 @@ pub fn mark_debug_axes(
 
     log::info!(
         "mark_debug_axes: {} eligible entities found, show_axis_indicators={}, axis_indicator_entities={:?}",
-        eligible_count, debug_config.show_axis_indicators, debug_config.axis_indicator_entities
+        eligible_count,
+        debug_config.show_axis_indicators,
+        debug_config.axis_indicator_entities
     );
 
     for (entity, eligible) in query.iter() {
@@ -48,7 +50,8 @@ pub fn mark_debug_axes(
         } else {
             log::debug!(
                 "mark_debug_axes: filtering out entity {:?} (id: {}) - not in axis_indicator_entities",
-                entity, eligible.entity_id
+                entity,
+                eligible.entity_id
             );
         }
     }
@@ -131,7 +134,7 @@ pub fn update_debug_axes_on_change(
                 );
 
                 // Despawn the old axis root entity.
-                commands.entity(child).despawn_recursive();
+                commands.entity(child).despawn();
 
                 // Spawn a new axis root with the updated length.
                 add_debug_axes_to_entity(&mut commands, &mut meshes, &mut materials, axes, entity);
@@ -148,11 +151,11 @@ pub fn update_debug_axes_on_change(
 /// This causes the axes to remain world-aligned even as the target rotates.
 #[allow(clippy::needless_pass_by_value)]
 pub fn update_debug_axes_rotation(
-    mut axis_query: Query<'_, '_, (&Parent, &mut Transform), With<DebugAxisRootMarker>>,
+    mut axis_query: Query<'_, '_, (&ChildOf, &mut Transform), With<DebugAxisRootMarker>>,
     target_query: Query<'_, '_, &Transform, Without<DebugAxisRootMarker>>,
 ) {
     for (parent, mut axis_transform) in &mut axis_query {
-        let Ok(target_transform) = target_query.get(**parent) else {
+        let Ok(target_transform) = target_query.get(parent.parent()) else {
             continue;
         };
         // Set local rotation to the inverse of the parent's rotation.
@@ -278,7 +281,7 @@ const LABEL_POSITION_FRACTION: f32 = 1.1;
 
 /// Helper function to spawn an axis label with size adapted to the ship scale.
 fn spawn_axis_label(
-    parent: &mut ChildBuilder<'_>,
+    parent: &mut bevy::ecs::hierarchy::ChildSpawnerCommands<'_>,
     label: &str,
     x: f32,
     y: f32,

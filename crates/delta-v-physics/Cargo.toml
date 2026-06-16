@@ -2,7 +2,7 @@
 [package]
 name = "delta-v-physics"
 version.workspace = true
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 description = "Newtonian physics, gravity, floating origin"
 license.workspace = true

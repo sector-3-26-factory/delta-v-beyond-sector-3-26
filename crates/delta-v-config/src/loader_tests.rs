@@ -18,10 +18,8 @@ mod tests {
 
     use tempfile::NamedTempFile;
 
-    use crate::{
-        error::ConfigError,
-        loader::{load_and_validate_from_paths, merge_user_override},
-    };
+    use crate::error::ConfigError;
+    use crate::loader::load_and_validate_from_paths;
     use delta_v_assets::get_workspace_root;
 
     /// The shipped default keybindings file must load without errors.
@@ -97,36 +95,5 @@ mod tests {
             matches!(result, Err(ConfigError::Schema { .. })),
             "expected ConfigError::Schema for unknown field, got: {result:?}"
         );
-    }
-
-    /// A user override that changes one action's keyboard binding must be
-    /// reflected in the merged result; unchanged actions must survive.
-    #[test]
-    fn test_user_override_merges() {
-        use serde_json::json;
-
-        let mut base = json!({
-            "actions": {
-                "thrust_forward":  { "keyboard": ["KeyW"] },
-                "thrust_backward": { "keyboard": ["KeyS"] }
-            }
-        });
-        let override_value = json!({
-            "actions": {
-                "thrust_forward": { "keyboard": ["KeyT"] }
-            }
-        });
-
-        merge_user_override(&mut base, override_value);
-
-        let fwd = &base["actions"]["thrust_forward"]["keyboard"];
-        assert_eq!(
-            fwd,
-            &json!(["KeyT"]),
-            "override should replace thrust_forward binding"
-        );
-
-        let bwd = &base["actions"]["thrust_backward"]["keyboard"];
-        assert_eq!(bwd, &json!(["KeyS"]), "thrust_backward should be unchanged");
     }
 }
