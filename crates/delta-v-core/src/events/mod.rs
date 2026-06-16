@@ -20,7 +20,7 @@ use serde_json::Value;
 ///
 /// This decouples world loading from entity spawning, allowing each domain
 /// to own its spawn logic (ADR-0005).
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 pub struct SpawnEntity {
     /// Unique identifier for this entity instance (from world definition).
     /// Used for debug filtering, save/load, networking, and player-facing UI.
@@ -120,7 +120,7 @@ impl SpawnEntity {
 ///
 /// Emitted by the input system; consumed by the weapons plugin to
 /// spawn projectiles. The source entity must have a [`Weapon`] component.
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub struct FireWeapon {
     /// The entity that is firing (e.g., the player ship).
     pub source: Entity,
@@ -132,7 +132,7 @@ pub struct FireWeapon {
 ///
 /// Emitted by the weapons plugin when a projectile collision is detected.
 /// Contains the projectile, target, damage, and hit point for VFX/sound.
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub struct ProjectileHit {
     /// The projectile entity.
     pub projectile: Entity,

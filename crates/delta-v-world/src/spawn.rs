@@ -47,7 +47,7 @@ impl delta_v_spawn::mesh_attachment::PendingMesh for PendingAsteroidMesh {
 pub fn spawn_asteroid_system(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
-    mut reader: EventReader<'_, '_, SpawnEntity>,
+    mut reader: MessageReader<'_, '_, SpawnEntity>,
 ) {
     for event in reader.read() {
         if event.entity_type != "asteroid" {

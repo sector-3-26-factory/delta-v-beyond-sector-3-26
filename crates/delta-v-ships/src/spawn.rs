@@ -53,7 +53,7 @@ impl delta_v_spawn::mesh_attachment::PendingMesh for PendingShipMesh {
 pub fn spawn_ship(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
-    mut events: EventReader<'_, '_, SpawnEntity>,
+    mut events: MessageReader<'_, '_, SpawnEntity>,
 ) {
     for event in events.read() {
         match event.entity_type.as_str() {

@@ -47,7 +47,7 @@ pub fn ai_state_machine_system(
         With<NpcShip>,
     >,
     player_query: Query<'_, '_, &Transform>,
-    mut fire_events: EventWriter<'_, FireWeapon>,
+    mut fire_events: MessageWriter<'_, FireWeapon>,
 ) {
     let Ok(player_transform) = player_query.get(player_entity.0) else {
         return;

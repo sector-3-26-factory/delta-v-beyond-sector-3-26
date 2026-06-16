@@ -31,7 +31,7 @@ pub enum WeaponsSet {
 pub fn fire_input_system(
     active: Res<'_, ActiveActions>,
     mut weapon_state: ResMut<'_, WeaponState>,
-    mut events: EventWriter<'_, FireWeapon>,
+    mut events: MessageWriter<'_, FireWeapon>,
     ship_entity: Res<'_, PlayerShipEntity>,
 ) {
     let fire_held = active.0.contains(&LogicalAction::FirePrimary);
@@ -59,7 +59,7 @@ pub fn fire_input_system(
 #[allow(clippy::needless_pass_by_value)]
 pub fn process_fire_commands(
     mut commands: Commands<'_, '_>,
-    mut events: EventReader<'_, '_, FireWeapon>,
+    mut events: MessageReader<'_, '_, FireWeapon>,
     ship_query: Query<'_, '_, (&Transform, &RigidBody)>,
     weapon_query: Query<'_, '_, &Weapon>,
 ) {
@@ -99,10 +99,10 @@ pub fn process_fire_commands(
 #[allow(clippy::needless_pass_by_value)]
 pub fn projectile_collision_system(
     mut commands: Commands<'_, '_>,
-    mut collision_events: EventReader<'_, '_, CollisionDetected>,
+    mut collision_events: MessageReader<'_, '_, CollisionDetected>,
     projectile_query: Query<'_, '_, &Projectile>,
     mut health_query: Query<'_, '_, &mut Health>,
-    mut hit_events: EventWriter<'_, ProjectileHit>,
+    mut hit_events: MessageWriter<'_, ProjectileHit>,
 ) {
     for collision in collision_events.read() {
         // Check both entities to find which one is the projectile.

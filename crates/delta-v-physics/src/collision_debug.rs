@@ -3,8 +3,7 @@
 //! Collision shape debug visualization (ADR-0044 exempt).
 
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology};
-use bevy::render::primitives::Aabb;
+use bevy_mesh::{Indices, PrimitiveTopology};
 
 use crate::CollisionDetected;
 use crate::collision::CollisionShapeType;
@@ -82,10 +81,10 @@ pub fn spawn_collision_shape_debug(
     }
 }
 
-/// Updates debug mesh colors and logs AABB bounds for troubleshooting.
+/// Updates debug mesh colors based on collision state.
 #[allow(clippy::needless_pass_by_value)]
 pub fn update_collision_shape_debug_color(
-    mut events: EventReader<'_, '_, CollisionDetected>,
+    mut messages: MessageReader<'_, '_, CollisionDetected>,
     mut materials: ResMut<'_, Assets<StandardMaterial>>,
     debug_config: Res<'_, delta_v_core::debug::debug_config::DebugConfig>,
     mesh_query: Query<
@@ -94,17 +93,15 @@ pub fn update_collision_shape_debug_color(
         (&MeshMaterial3d<StandardMaterial>, &ChildOf),
         With<CollisionShapeDebugMesh>,
     >,
-    aabb_query: Query<'_, '_, (Entity, &Aabb, &GlobalTransform)>,
-    collision_debug_query: Query<'_, '_, (Entity, &CollisionShapeDebug)>,
 ) {
     if !debug_config.show_collision_shapes {
         return;
     }
 
     let mut colliding = std::collections::HashSet::new();
-    for event in events.read() {
-        colliding.insert(event.target);
-        colliding.insert(event.other);
+    for message in messages.read() {
+        colliding.insert(message.target);
+        colliding.insert(message.other);
     }
 
     for (mat_handle, parent) in mesh_query.iter() {
@@ -115,28 +112,6 @@ pub fn update_collision_shape_debug_color(
             } else {
                 Color::srgb(0.0, 1.0, 0.0)
             };
-        }
-    }
-
-    // Log AABB bounds for entities with collision shapes
-    for (entity, _debug) in collision_debug_query.iter() {
-        if let Ok((_, aabb, gt)) = aabb_query.get(entity) {
-            let center: Vec3 = aabb.center.into();
-            let half: Vec3 = aabb.half_extents.into();
-            let world_center = gt.transform_point(center);
-            log::debug!(
-                "Entity {:?} AABB: center=({:.2},{:.2},{:.2}) half=({:.2},{:.2},{:.2}) world_center=({:.2},{:.2},{:.2})",
-                entity,
-                center.x,
-                center.y,
-                center.z,
-                half.x,
-                half.y,
-                half.z,
-                world_center.x,
-                world_center.y,
-                world_center.z
-            );
         }
     }
 }

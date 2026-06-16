@@ -32,7 +32,7 @@ fn create_test_app() -> App {
         file_path: "assets".to_string(),
         ..default()
     });
-    app.add_event::<SpawnEntity>();
+    app.add_message::<SpawnEntity>();
     app.init_asset::<Gltf>();
     app.add_systems(Update, spawn_ship);
     app
@@ -150,12 +150,12 @@ fn test_unknown_entity_type_does_not_spawn() {
     );
 
     // Send the event.
-    app.world_mut().send_event(event);
+    app.world_mut().write_message(event);
     // Run the spawn system.
     app.update();
 
     // No entities should have been spawned.
-    let entity_count = app.world().iter_entities().count();
+    let entity_count = app.world_mut().entities().len();
     // The spawn system should have logged a warning but not spawned anything.
     assert!(
         entity_count == 0,
@@ -178,7 +178,7 @@ fn test_npc_ship_does_not_panic() {
         Vec3::ZERO,
     );
 
-    app.world_mut().send_event(event);
+    app.world_mut().write_message(event);
     // Should not panic — NPC ships log a warning.
     app.update();
 }
@@ -217,7 +217,7 @@ fn test_player_ship_spawn_creates_resources() {
     let mut app = create_test_app();
 
     let event = make_player_ship_event();
-    app.world_mut().send_event(event);
+    app.world_mut().write_message(event);
 
     // Run the system — it will attempt to load the glTF mesh, which
     // will fail silently (the mesh file may not exist in the test
@@ -273,7 +273,7 @@ fn test_player_ship_spawn_position() {
 
     let event = make_player_ship_event();
     let expected_pos = event.position;
-    app.world_mut().send_event(event);
+    app.world_mut().write_message(event);
     app.update();
 
     // The PlayerShipEntity resource should reference an entity at the

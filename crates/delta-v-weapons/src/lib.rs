@@ -63,8 +63,8 @@ pub struct WeaponsPlugin;
 impl Plugin for WeaponsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WeaponState>()
-            .add_event::<FireWeapon>()
-            .add_event::<ProjectileHit>()
+            .add_message::<FireWeapon>()
+            .add_message::<ProjectileHit>()
             .configure_sets(
                 FixedUpdate,
                 (
