@@ -26,7 +26,7 @@
 
 use std::path::Path;
 
-use delta_v_json::loader as json_loader;
+use delta_v_json::load;
 use serde_json::Value;
 
 use crate::error::AssetError;
@@ -223,7 +223,8 @@ pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetErr
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
 /// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
 fn load_template_from_paths(template_path: &Path, schema_path: &Path) -> Result<Value, AssetError> {
-    let template = json_loader::load_validated_with_registry(template_path, schema_path)
+    let template = load(template_path.to_path_buf(), schema_path.to_path_buf())
+        .load()
         .map_err(|e| map_json_error(e, template_path))?;
 
     Ok(template)

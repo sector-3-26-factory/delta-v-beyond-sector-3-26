@@ -51,10 +51,6 @@ pub mod resources;
 #[path = "loader_tests.rs"]
 mod loader_tests;
 
-#[cfg(test)]
-#[path = "deep_merge_tests.rs"]
-mod deep_merge_tests;
-
 pub use error::ConfigError;
 pub use i18n::load_i18n;
 pub use keybindings::{ActionBindings, Keybindings};

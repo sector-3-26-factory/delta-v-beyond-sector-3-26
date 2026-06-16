@@ -60,15 +60,15 @@ pub mod state;
 
 // Re-exports from subdirectories
 pub use boundary::{
-    check_sector_boundary_system, BoundaryBehavior, SectorBoundary, SectorBoundaryResource,
+    BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
 };
 pub use camera::{
-    debug_camera_positions, spawn_chase_camera, CameraDefinition, CameraFollow, ChaseCameraOffset,
-    PlayerShipEntity, ShipCamerasTemplate,
+    CameraDefinition, CameraFollow, ChaseCameraOffset, PlayerShipEntity, ShipCamerasTemplate,
+    debug_camera_positions, spawn_chase_camera,
 };
 pub use debug::{
-    mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_rotation,
-    DebugAxes, DebugAxesEligible, DebugAxisRootMarker, DebugConfig,
+    DebugAxes, DebugAxesEligible, DebugAxisRootMarker, DebugConfig, mark_debug_axes,
+    spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_rotation,
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::{FireWeapon, ProjectileHit, SpawnEntity};

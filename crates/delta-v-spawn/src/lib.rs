@@ -32,7 +32,7 @@ pub mod template_extraction;
 
 // Re-exports for convenience
 pub use collision::shape_from_json;
-pub use mesh_attachment::{attach_meshes, PendingMesh};
+pub use mesh_attachment::{PendingMesh, attach_meshes};
 pub use template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_mass, extract_vec3,
 };

@@ -27,6 +27,37 @@
 //!
 //! See ADR-0012 (JSON schema validation), ADR-0013 (No silent
 //! fallbacks), and ADR-0038 (Shared JSON utilities crate).
+//!
+//! # Example
+//!
+//! ```no_run
+//! use delta_v_json::load;
+//! use std::path::PathBuf;
+//!
+//! // Simple load with defaults
+//! let value = load(
+//!     PathBuf::from("config.json"),
+//!     PathBuf::from("config.schema.json"),
+//! )
+//! .load()?;
+//!
+//! // With user override
+//! let value = load(
+//!     PathBuf::from("config.json"),
+//!     PathBuf::from("config.schema.json"),
+//! )
+//! .with_user_override(Some(&PathBuf::from("user.json")))
+//! .load()?;
+//!
+//! // Skip unit validation for non-physical JSON
+//! let value = load(
+//!     PathBuf::from("config.json"),
+//!     PathBuf::from("config.schema.json"),
+//! )
+//! .skip_units()
+//! .load()?;
+//! # Ok::<(), delta_v_json::JsonError>(())
+//! ```
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
@@ -46,10 +77,7 @@ pub mod error;
 pub mod loader;
 
 pub use error::JsonError;
-pub use loader::{
-    fill_defaults, load_validated, load_validated_with_registry, read_json, validate,
-    validate_with_registry,
-};
+pub use loader::{JsonLoader, load};
 
 #[cfg(test)]
 #[path = "loader_tests.rs"]

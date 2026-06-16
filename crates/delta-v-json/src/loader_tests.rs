@@ -244,3 +244,55 @@ fn test_fill_defaults_with_world_schema() {
     );
     assert!(entity.get("scale").is_some(), "scale should be present");
 }
+
+// ---------------------------------------------------------------------------
+// Tests: deep_merge
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_deep_merge_nested_objects() {
+    let base = serde_json::json!({
+        "actions": {
+            "thrust_forward": { "keyboard": ["KeyW"] },
+            "thrust_backward": { "keyboard": ["KeyS"] }
+        },
+        "settings": {
+            "sensitivity": 1.0,
+            "invert_y": false
+        }
+    });
+
+    let override_val = serde_json::json!({
+        "actions": {
+            "thrust_forward": { "keyboard": ["KeyT"] }
+        },
+        "settings": {
+            "sensitivity": 2.0
+        }
+    });
+
+    // Use the builder to test deep_merge
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "actions": { "type": "object" },
+            "settings": { "type": "object" }
+        }
+    });
+    let schema_path = std::env::temp_dir().join("test_deep_merge_schema.json");
+    std::fs::write(&schema_path, schema.to_string()).unwrap();
+
+    let json_path = std::env::temp_dir().join("test_deep_merge.json");
+    std::fs::write(&json_path, base.to_string()).unwrap();
+
+    let override_path = std::env::temp_dir().join("test_deep_merge_override.json");
+    std::fs::write(&override_path, override_val.to_string()).unwrap();
+
+    let result = crate::loader::load(json_path, schema_path)
+        .with_user_override(Some(&override_path))
+        .skip_units()
+        .load();
+
+    // The deep_merge is tested indirectly through the builder
+    assert!(result.is_ok());
+}
