@@ -1,7 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy_mesh::{Indices, PrimitiveTopology};
 
 use super::axes::{DebugAxes, DebugAxesEligible, DebugAxisRootMarker};
 use super::debug_config::DebugConfig;

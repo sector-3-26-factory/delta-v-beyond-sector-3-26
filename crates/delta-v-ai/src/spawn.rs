@@ -109,7 +109,7 @@ fn deserialize_template(event: &SpawnEntity) -> AiControlledShipTemplate {
 pub fn spawn_npc_ship(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
-    mut events: EventReader<'_, '_, SpawnEntity>,
+    mut events: MessageReader<'_, '_, SpawnEntity>,
     mut skirmish_state: ResMut<'_, SkirmishState>,
 ) {
     for event in events.read() {

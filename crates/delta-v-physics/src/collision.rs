@@ -63,7 +63,7 @@ impl CollisionShape {
 }
 
 /// Event emitted when a collision is detected.
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub struct CollisionDetected {
     /// The entity that was hit.
     pub target: Entity,

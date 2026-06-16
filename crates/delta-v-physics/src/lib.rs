@@ -82,7 +82,7 @@ impl Plugin for PhysicsPlugin {
         // FixedUpdate runs at this rate; render frames run independently at display rate.
         // Per ADR-0017, catch-up is bounded to prevent runaway.
         app.insert_resource(Time::<Fixed>::from_hz(f64::from(FIXED_TIMESTEP_HZ)))
-            .add_event::<CollisionDetected>();
+            .add_message::<CollisionDetected>();
 
         // Initialize floating origin resources
         app.init_resource::<FloatingOrigin>()
@@ -172,7 +172,7 @@ impl Plugin for PhysicsPlugin {
 /// Collision layers are checked to filter out non-colliding entity pairs.
 #[allow(clippy::needless_pass_by_value)]
 fn collision_detection_system(
-    mut events: EventWriter<'_, CollisionDetected>,
+    mut events: MessageWriter<'_, CollisionDetected>,
     bodies: Query<
         '_,
         '_,
@@ -431,7 +431,7 @@ struct CollisionResponse {
 /// Runs in `FixedUpdate` BEFORE velocity integration, so impulses affect current frame.
 #[allow(clippy::needless_pass_by_value)]
 fn collision_response_system(
-    mut events: EventReader<'_, '_, CollisionDetected>,
+    mut events: MessageReader<'_, '_, CollisionDetected>,
     mut all_bodies: Query<'_, '_, (&mut RigidBody, &mut Transform)>,
     static_markers: Query<'_, '_, Entity, With<StaticBody>>,
     shapes: Query<'_, '_, &CollisionShape>,

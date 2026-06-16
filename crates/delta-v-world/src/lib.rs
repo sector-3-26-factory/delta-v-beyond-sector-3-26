@@ -76,7 +76,7 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SpawnEntity>()
+        app.add_message::<SpawnEntity>()
             .add_systems(OnEnter(AppState::LoadingWorld), load_world_system)
             // Asteroid spawning runs in Update during SpawningEntities
             .add_systems(
@@ -119,7 +119,7 @@ impl Plugin for WorldPlugin {
 fn load_world_system(
     world_path: Res<'_, WorldPath>,
     mut commands: Commands<'_, '_>,
-    mut events: EventWriter<'_, SpawnEntity>,
+    mut events: MessageWriter<'_, SpawnEntity>,
     mut next: ResMut<'_, NextState<AppState>>,
 ) {
     // INVARIANT: a missing or invalid world file is a hard startup

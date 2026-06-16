@@ -29,7 +29,7 @@ fn build_collision_app() -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.add_event::<CollisionDetected>();
+    app.add_message::<CollisionDetected>();
     app.configure_sets(
         FixedUpdate,
         (
