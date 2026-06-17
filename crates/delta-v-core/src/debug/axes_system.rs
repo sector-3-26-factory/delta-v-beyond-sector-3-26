@@ -1,17 +1,12 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 use bevy::prelude::*;
-use bevy_mesh::{Indices, PrimitiveTopology};
 
-use super::axes::{DebugAxes, DebugAxesEligible, DebugAxisRootMarker};
+use super::axes::{AxisLabel, DebugAxes, DebugAxesEligible};
 use super::debug_config::DebugConfig;
+use crate::camera::ActiveMainCamera;
 
 /// Marks eligible entities with `DebugAxes` if debug config enables visualization.
-///
-/// Runs during `SpawningEntities` state after all domain spawn systems have run.
-/// Reads `DebugAxesEligible` markers and adds `DebugAxes` if `show_axis_indicators` is true.
-/// Per ADR-0005, this decouples debug visualization from domain plugins.
-/// Per ADR-0013, if `DebugConfig` is missing it is a hard error (checked at startup).
 #[allow(clippy::needless_pass_by_value)]
 pub fn mark_debug_axes(
     mut commands: Commands<'_, '_>,
@@ -19,303 +14,133 @@ pub fn mark_debug_axes(
     query: Query<'_, '_, (Entity, &DebugAxesEligible), Added<DebugAxesEligible>>,
 ) {
     if !debug_config.show_axis_indicators {
-        log::debug!("mark_debug_axes: show_axis_indicators is false, skipping");
         return;
     }
-
-    let eligible_count = query.iter().count();
-    if eligible_count == 0 {
-        log::debug!("mark_debug_axes: no eligible entities found");
-        return;
-    }
-
-    log::info!(
-        "mark_debug_axes: {} eligible entities found, show_axis_indicators={}, axis_indicator_entities={:?}",
-        eligible_count,
-        debug_config.show_axis_indicators,
-        debug_config.axis_indicator_entities
-    );
 
     for (entity, eligible) in query.iter() {
         if debug_config.should_show_axes_for(&eligible.entity_id) {
-            log::debug!(
-                "mark_debug_axes: adding DebugAxes to entity {:?} (id: {})",
-                entity,
-                eligible.entity_id
-            );
             commands.entity(entity).insert(DebugAxes::new(
                 eligible.entity_id.clone(),
                 eligible.axis_length,
             ));
-        } else {
-            log::debug!(
-                "mark_debug_axes: filtering out entity {:?} (id: {}) - not in axis_indicator_entities",
-                entity,
-                eligible.entity_id
-            );
         }
     }
 }
 
-/// Spawns debug axis line meshes and labels for entities with `DebugAxes` component.
+/// Renders debug axis lines using gizmos.
 ///
-/// Runs during `SpawningEntities` state and also during `InGame` (for re-spawns
-/// when axis length changes). For each marked entity, adds axis root as a CHILD
-/// of the target entity, with axis meshes and labels as children of the root.
-/// The axis root's rotation is set to the inverse of the target's rotation each
-/// frame by `update_debug_axes_rotation`, keeping axes world-aligned.
-///
-/// Per ADR-0006, axes follow the right-handed coordinate system: +X right, +Y up, -Z forward.
+/// Gizmo render layers are configured at app startup to match the chase
+/// camera's render layer, so gizmos are only rendered by the active camera.
 #[allow(clippy::needless_pass_by_value)]
-pub fn spawn_debug_axes(
-    mut commands: Commands<'_, '_>,
-    mut meshes: ResMut<'_, Assets<Mesh>>,
-    mut materials: ResMut<'_, Assets<StandardMaterial>>,
+pub fn render_debug_axes(
     debug_config: Res<'_, DebugConfig>,
-    query: Query<'_, '_, (Entity, &DebugAxes), Added<DebugAxes>>,
+    query: Query<'_, '_, (&GlobalTransform, &DebugAxes)>,
+    mut gizmos: Gizmos<'_, '_>,
 ) {
-    let axes_count = query.iter().count();
-    if axes_count == 0 {
-        log::debug!("spawn_debug_axes: no entities with DebugAxes component");
-        return;
-    }
-
-    log::info!("spawn_debug_axes: spawning axes for {axes_count} entities");
-
-    for (entity, axes) in query.iter() {
-        // Check if this entity should have axes shown based on config.
+    for (global_transform, axes) in &query {
         if !debug_config.should_show_axes_for(&axes.entity_id) {
-            log::debug!(
-                "spawn_debug_axes: skipping entity {:?} (id: {}) - filtered by config",
-                entity,
-                axes.entity_id
-            );
             continue;
         }
 
-        log::debug!(
-            "spawn_debug_axes: rendering axes for entity {:?} (id: {}, length: {})",
-            entity,
-            axes.entity_id,
-            axes.axis_length
+        let length = axes.axis_length;
+        let origin = global_transform.translation();
+
+        gizmos.line(
+            origin,
+            origin + Vec3::new(length, 0.0, 0.0),
+            Color::srgb(1.0, 0.0, 0.0),
         );
-
-        add_debug_axes_to_entity(&mut commands, &mut meshes, &mut materials, axes, entity);
+        gizmos.line(
+            origin,
+            origin + Vec3::new(0.0, length, 0.0),
+            Color::srgb(0.0, 1.0, 0.0),
+        );
+        gizmos.line(
+            origin,
+            origin + Vec3::new(0.0, 0.0, length),
+            Color::srgb(0.0, 0.0, 1.0),
+        );
     }
 }
 
-/// Updates debug axes when the [`DebugAxes`] component changes (e.g. axis length
-/// updated after glTF mesh load).
-///
-/// Runs during `InGame`. When the axis length changes, despawns the old axis root
-/// entity and spawns a new one with the correct length.
+/// Spawns debug axis label UI text entities.
 #[allow(clippy::needless_pass_by_value)]
-pub fn update_debug_axes_on_change(
-    mut commands: Commands<'_, '_>,
-    mut meshes: ResMut<'_, Assets<Mesh>>,
-    mut materials: ResMut<'_, Assets<StandardMaterial>>,
+pub fn spawn_debug_axis_labels(
     debug_config: Res<'_, DebugConfig>,
-    query: Query<'_, '_, (Entity, &DebugAxes, &Children), Changed<DebugAxes>>,
-    axis_root_query: Query<'_, '_, Entity, With<DebugAxisRootMarker>>,
+    query: Query<'_, '_, (Entity, &GlobalTransform, &DebugAxes), Added<DebugAxes>>,
+    mut commands: Commands<'_, '_>,
 ) {
-    for (entity, axes, children) in query.iter() {
+    for (entity, _global_transform, axes) in &query {
         if !debug_config.should_show_axes_for(&axes.entity_id) {
             continue;
         }
 
-        // Find the axis root among the entity's children.
-        for &child in children {
-            if axis_root_query.contains(child) {
-                log::info!(
-                    "update_debug_axes_on_change: axis length changed for entity {:?} (id: {}), despawning old root {:?}",
-                    entity,
-                    axes.entity_id,
-                    child
-                );
+        let length = axes.axis_length;
 
-                // Despawn the old axis root entity.
-                commands.entity(child).despawn();
-
-                // Spawn a new axis root with the updated length.
-                add_debug_axes_to_entity(&mut commands, &mut meshes, &mut materials, axes, entity);
-                break;
-            }
+        for (label_text, offset, color) in [
+            ("X", Vec3::new(length, 0.0, 0.0), Color::srgb(1.0, 0.0, 0.0)),
+            ("Y", Vec3::new(0.0, length, 0.0), Color::srgb(0.0, 1.0, 0.0)),
+            ("Z", Vec3::new(0.0, 0.0, length), Color::srgb(0.0, 0.0, 1.0)),
+        ] {
+            commands.spawn((
+                Text::new(label_text),
+                TextFont {
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextColor(color),
+                Node {
+                    position_type: PositionType::Absolute,
+                    ..default()
+                },
+                AxisLabel { entity, offset },
+            ));
         }
     }
 }
 
-/// Updates the rotation of all debug axis roots to match their target's rotation.
+/// Updates debug axis labels by projecting 3D world positions to 2D screen coordinates.
 ///
-/// Runs every frame in `Update` when `AppState::InGame`. For each axis root,
-/// computes the inverse of the target's rotation and applies it to the axis root.
-/// This causes the axes to remain world-aligned even as the target rotates.
+/// Uses the `ActiveMainCamera` marker to find the currently active camera,
+/// and computes world position as `translation() + offset` (world-space, no rotation)
+/// to match how `render_debug_axes` draws the gizmo lines.
 #[allow(clippy::needless_pass_by_value)]
-pub fn update_debug_axes_rotation(
-    mut axis_query: Query<'_, '_, (&ChildOf, &mut Transform), With<DebugAxisRootMarker>>,
-    target_query: Query<'_, '_, &Transform, Without<DebugAxisRootMarker>>,
+#[allow(clippy::type_complexity)]
+pub fn update_debug_axis_labels(
+    camera_query: Query<
+        '_,
+        '_,
+        (&Camera, &GlobalTransform),
+        (With<Camera3d>, With<ActiveMainCamera>),
+    >,
+    window_query: Query<'_, '_, &Window>,
+    entity_query: Query<'_, '_, &GlobalTransform>,
+    mut label_query: Query<'_, '_, (&AxisLabel, &mut Node, &mut Visibility)>,
 ) {
-    for (parent, mut axis_transform) in &mut axis_query {
-        let Ok(target_transform) = target_query.get(parent.parent()) else {
+    let Ok((camera, camera_transform)) = camera_query.single() else {
+        return;
+    };
+
+    let Ok(window) = window_query.single() else {
+        return;
+    };
+
+    let window_height = window.height();
+
+    for (label, mut node, mut visibility) in &mut label_query {
+        let Ok(entity_transform) = entity_query.get(label.entity) else {
+            *visibility = Visibility::Hidden;
             continue;
         };
-        // Set local rotation to the inverse of the parent's rotation.
-        // This cancels out the parent's rotation, making axes appear world-aligned.
-        axis_transform.rotation = target_transform.rotation.inverse();
+
+        let world_pos = entity_transform.translation() + label.offset;
+
+        if let Ok(viewport_pos) = camera.world_to_viewport(camera_transform, world_pos) {
+            node.left = Val::Px(viewport_pos.x);
+            node.top = Val::Px(window_height - viewport_pos.y);
+            *visibility = Visibility::Inherited;
+        } else {
+            *visibility = Visibility::Hidden;
+        }
     }
-}
-
-/// Adds debug axes to an entity as children.
-///
-/// Spawns an axis root as a child of the target entity, with axis meshes
-/// and labels as children of the root. The axis root is marked with
-/// `DebugAxisRootMarker` for the rotation update system.
-fn add_debug_axes_to_entity(
-    commands: &mut Commands<'_, '_>,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    axes: &DebugAxes,
-    target: Entity,
-) {
-    let length = axes.axis_length;
-
-    // Create line meshes for each axis
-    let x_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(length, 0.0, 0.0));
-    let y_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(0.0, length, 0.0));
-    let z_axis_mesh = create_line_mesh(Vec3::ZERO, Vec3::new(0.0, 0.0, length));
-
-    // Create materials for each axis (red, green, blue)
-    let x_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(1.0, 0.0, 0.0),
-        emissive: Color::srgb(1.0, 0.0, 0.0).into(),
-        ..default()
-    });
-    let y_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.0, 1.0, 0.0),
-        emissive: Color::srgb(0.0, 1.0, 0.0).into(),
-        ..default()
-    });
-    let z_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.0, 0.0, 1.0),
-        emissive: Color::srgb(0.0, 0.0, 1.0).into(),
-        ..default()
-    });
-
-    // Spawn axis root as a standalone entity first, then parent it to the target.
-    let axis_root = commands
-        .spawn((
-            Transform::default(),
-            GlobalTransform::default(),
-            Visibility::default(),
-            InheritedVisibility::default(),
-            ViewVisibility::default(),
-            DebugAxisRootMarker,
-        ))
-        .id();
-
-    // Add axis meshes and labels as children of the root.
-    commands.entity(axis_root).with_children(|axis_parent| {
-        // X axis (red) with "X" label
-        axis_parent.spawn((
-            Mesh3d(meshes.add(x_axis_mesh)),
-            MeshMaterial3d(x_material),
-            Transform::default(),
-        ));
-        spawn_axis_label(
-            axis_parent,
-            "X (right)",
-            length * LABEL_POSITION_FRACTION,
-            0.0,
-            0.0,
-            Color::srgb(1.0, 0.0, 0.0),
-            length,
-        );
-
-        // Y axis (green) with "Y (up)" label
-        axis_parent.spawn((
-            Mesh3d(meshes.add(y_axis_mesh)),
-            MeshMaterial3d(y_material),
-            Transform::default(),
-        ));
-        spawn_axis_label(
-            axis_parent,
-            "Y (up)",
-            0.0,
-            length * LABEL_POSITION_FRACTION,
-            0.0,
-            Color::srgb(0.0, 1.0, 0.0),
-            length,
-        );
-
-        // Z axis (blue) with "Z (back)" label
-        axis_parent.spawn((
-            Mesh3d(meshes.add(z_axis_mesh)),
-            MeshMaterial3d(z_material),
-            Transform::default(),
-        ));
-        spawn_axis_label(
-            axis_parent,
-            "Z (back)",
-            0.0,
-            0.0,
-            length * LABEL_POSITION_FRACTION,
-            Color::srgb(0.0, 0.0, 1.0),
-            length,
-        );
-    });
-
-    // Make the axis root a child of the target entity.
-    commands.entity(target).add_children(&[axis_root]);
-}
-
-/// Base font size for axis labels at the reference axis length.
-const LABEL_BASE_FONT_SIZE: f32 = 50.0;
-
-/// Base transform scale for axis labels at the reference axis length.
-const LABEL_BASE_SCALE: f32 = 0.01;
-
-/// Reference axis length for label sizing.
-const LABEL_REFERENCE_LENGTH: f32 = 2.0;
-
-/// Fraction of axis length where labels are placed.
-const LABEL_POSITION_FRACTION: f32 = 1.1;
-
-/// Helper function to spawn an axis label with size adapted to the ship scale.
-fn spawn_axis_label(
-    parent: &mut bevy::ecs::hierarchy::ChildSpawnerCommands<'_>,
-    label: &str,
-    x: f32,
-    y: f32,
-    z: f32,
-    color: Color,
-    axis_length: f32,
-) {
-    let scale_factor = (axis_length / LABEL_REFERENCE_LENGTH).sqrt();
-    let font_size = LABEL_BASE_FONT_SIZE * scale_factor;
-    let transform_scale = LABEL_BASE_SCALE * scale_factor;
-    log::info!(
-        "spawn_axis_label: spawning label '{label}' at ({x}, {y}, {z}) font_size={font_size:.1} scale={transform_scale:.4}"
-    );
-    parent.spawn((
-        Transform::from_xyz(x, y, z).with_scale(Vec3::splat(transform_scale)),
-        Text::new(label),
-        TextFont {
-            font_size,
-            ..default()
-        },
-        TextColor(color),
-    ));
-}
-
-/// Creates a line mesh from start to end point.
-#[allow(clippy::default_trait_access)]
-fn create_line_mesh(start: Vec3, end: Vec3) -> Mesh {
-    let vertices = vec![start, end];
-    let indices = Indices::U32(vec![0, 1]);
-
-    let mut mesh = Mesh::new(PrimitiveTopology::LineList, default());
-
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-    mesh.insert_indices(indices);
-
-    mesh
 }
