@@ -17,18 +17,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! Core ECS fundamentals, shared components, and plugin traits.
-//!
-//! This crate provides the foundation that all domain crates build upon.
-//! It owns the top-level [`AppState`] state machine, the logical input
-//! action pipeline (ADR-0011), and registers the state-transition logging
-//! systems that every other plugin relies on.
-//!
-//! [`KeybindingsResource`] is defined here (not in `delta-v-config`) so
-//! that [`input::input_translation_system`] can read it without creating
-//! a crate-dependency cycle.  `ConfigPlugin` in `delta-v-config` inserts
-//! the resource; `delta-v-config` already depends on `delta-v-core`.
-//!
-//! See ADR-0005 (plugin architecture) and ADR-0018 (state management).
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
@@ -63,12 +51,12 @@ pub use boundary::{
     BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
 };
 pub use camera::{
-    CameraDefinition, CameraFollow, ChaseCameraOffset, PlayerShipEntity, ShipCamerasTemplate,
-    debug_camera_positions, spawn_chase_camera,
+    ActiveMainCamera, CameraDefinition, CameraFollow, ChaseCameraOffset, PlayerShipEntity,
+    ShipCamerasTemplate, debug_camera_positions, spawn_chase_camera, spawn_ui_camera,
 };
 pub use debug::{
-    DebugAxes, DebugAxesEligible, DebugAxisRootMarker, DebugConfig, mark_debug_axes,
-    spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_rotation,
+    AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, mark_debug_axes, render_debug_axes,
+    spawn_debug_axis_labels, update_debug_axis_labels, update_gizmo_render_layers,
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::{FireWeapon, ProjectileHit, SpawnEntity};
@@ -110,15 +98,6 @@ use bevy::prelude::*;
 use crate::input::{input_log_system, input_translation_system};
 
 /// The core plugin that initialises fundamental ECS infrastructure.
-///
-/// Responsibilities:
-/// - Registers the [`AppState`] state machine.
-/// - Logs an `INFO` line on every state transition (ADR-0015, ADR-0018).
-/// - Immediately transitions from [`AppState::Boot`] to
-///   [`AppState::LoadingDefaults`] so that config and world loaders can
-///   start their work.
-/// - Initialises [`ActiveActions`] and registers the input translation
-///   pipeline (ADR-0011, ADR-0017).
 pub struct CorePlugin;
 
 impl Plugin for CorePlugin {
@@ -127,17 +106,22 @@ impl Plugin for CorePlugin {
 
         app.init_state::<AppState>().add_plugins(DiagnosticsPlugin);
 
+        // Initialize gizmo config with default render layer (will be updated dynamically).
+        // The update_gizmo_render_layers system will set the correct layer based on active camera.
+        app.init_gizmo_group::<bevy::gizmos::config::DefaultGizmoConfigGroup>();
+
         // Log every state entry at INFO level (ADR-0015, ADR-0018).
         app.add_systems(OnEnter(AppState::Boot), log_boot);
         app.add_systems(OnEnter(AppState::LoadingDefaults), log_loading_defaults);
         app.add_systems(OnEnter(AppState::LoadingWorld), log_loading_world);
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
-        app.add_systems(OnEnter(AppState::InGame), (log_in_game, spawn_chase_camera));
+        app.add_systems(
+            OnEnter(AppState::InGame),
+            (log_in_game, spawn_chase_camera, spawn_ui_camera),
+        );
         app.add_systems(OnEnter(AppState::SkirmishOver), log_skirmish_over);
 
-        // Configure WorldSpawnSet ordering: MarkDebugAxes runs after all domain spawning.
-        // Per ADR-0005 (plugin architecture), debug visualization is decoupled from domains.
-        // Sets must be configured in Update schedule, not OnEnter (per Bevy system scheduling).
+        // Configure WorldSpawnSet ordering.
         app.configure_sets(
             Update,
             (
@@ -154,19 +138,15 @@ impl Plugin for CorePlugin {
                 .run_if(in_state(AppState::SpawningEntities)),
         );
 
-        // Mark eligible entities with debug axes, then spawn axis meshes (ADR-0022, ADR-0005).
-        // mark_debug_axes converts DebugAxesEligible → DebugAxes based on config.
-        // spawn_debug_axes renders the axes for marked entities.
-        // Both run in Update during SpawningEntities, after all domain spawn systems.
+        // Mark eligible entities with debug axes.
         app.add_systems(
             Update,
-            (debug::mark_debug_axes, spawn_debug_axes)
+            (debug::mark_debug_axes, debug::spawn_debug_axis_labels)
                 .chain()
                 .in_set(WorldSpawnSet::MarkDebugAxes),
         );
 
-        // Chase camera follows the ship every frame during InGame and SkirmishOver.
-        // Runs in both states so the camera continues to follow the ship after the skirmish ends.
+        // Chase camera follows the ship every frame.
         app.add_systems(
             Update,
             camera::chase_camera_system.run_if(|state: Res<'_, State<AppState>>| {
@@ -174,23 +154,30 @@ impl Plugin for CorePlugin {
             }),
         );
 
-        // Debug axes: re-spawn axes when length changes (e.g. after glTF load
-        // updates DebugAxes with the correct bounding-box length).
-        // Runs in InGame after attach_ship_meshes updates DebugAxes.
+        // Add gameplay render layers to all entities that have Transform but no RenderLayers.
+        // Runs every frame to catch dynamically spawned entities.
+        app.add_systems(Update, apply_gameplay_render_layers);
+
+        // Debug axis labels: update UI text positions via viewport projection.
         app.add_systems(
             Update,
-            debug::update_debug_axes_on_change.run_if(in_state(AppState::InGame)),
+            debug::update_debug_axis_labels.run_if(in_state(AppState::InGame)),
         );
 
-        // Debug axes rotation update: keeps axis roots world-aligned by applying
-        // the inverse of the target's rotation each frame.
+        // Debug axes rendering: runs in Update to draw gizmos.
         app.add_systems(
             Update,
-            debug::update_debug_axes_rotation.run_if(in_state(AppState::InGame)),
+            debug::render_debug_axes.run_if(in_state(AppState::InGame)),
+        );
+
+        // Update gizmo render layers to match the active camera.
+        // Runs when active camera changes to ensure gizmos render only on active camera's layer.
+        app.add_systems(
+            Update,
+            debug::update_gizmo_render_layers.run_if(in_state(AppState::InGame)),
         );
 
         // Input pipeline (ADR-0011, ADR-0017).
-        // Runs in FixedUpdate during InGame; Translate always before Log.
         app.init_resource::<ActiveActions>()
             .configure_sets(
                 FixedUpdate,
@@ -207,15 +194,35 @@ impl Plugin for CorePlugin {
                     .run_if(in_state(AppState::InGame)),
             );
 
-        // Immediately leave Boot: transition to LoadingDefaults so that
-        // ConfigPlugin can begin loading on the same frame.
+        // Immediately leave Boot.
         app.add_systems(OnEnter(AppState::Boot), advance_from_boot);
     }
 }
 
-// ---------------------------------------------------------------------------
-// State-transition logging systems (ADR-0015, ADR-0018)
-// ---------------------------------------------------------------------------
+/// Adds gameplay render layers (0-7) to all entities that have a `Transform`
+/// but no `RenderLayers` component, excluding cameras.
+/// This ensures gameplay objects are visible to all cameras.
+// INVARIANT: Query uses multiple With/Without clauses for precise entity filtering.
+#[allow(clippy::type_complexity)]
+fn apply_gameplay_render_layers(
+    mut commands: Commands<'_, '_>,
+    query: Query<
+        '_,
+        '_,
+        Entity,
+        (
+            With<Transform>,
+            Without<bevy::camera::visibility::RenderLayers>,
+            Without<Camera>,
+        ),
+    >,
+) {
+    for entity in &query {
+        commands
+            .entity(entity)
+            .insert(camera::gameplay_render_layers());
+    }
+}
 
 fn log_boot() {
     info!("AppState -> Boot");
@@ -241,15 +248,6 @@ fn log_skirmish_over() {
     info!("AppState -> SkirmishOver");
 }
 
-// ---------------------------------------------------------------------------
-// Boot transition
-// ---------------------------------------------------------------------------
-
-/// Advances the state machine from [`AppState::Boot`] to
-/// [`AppState::LoadingDefaults`].
-///
-/// This runs in `OnEnter(Boot)` so the transition happens on the very
-/// first frame, before any rendering occurs.
 fn advance_from_boot(mut next: ResMut<'_, NextState<AppState>>) {
     next.set(AppState::LoadingDefaults);
 }

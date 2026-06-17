@@ -23,7 +23,8 @@ pub fn setup_scene_lighting(commands: &mut Commands<'_, '_>) {
     ));
 
     // Ambient light for general scene fill.
-    commands.insert_resource(AmbientLight {
+    // In Bevy 0.18, AmbientLight is a component, not a resource.
+    commands.spawn(AmbientLight {
         color: Color::WHITE,
         brightness: 200.0,
         affects_lightmapped_meshes: true,

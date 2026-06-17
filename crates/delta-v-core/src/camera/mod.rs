@@ -2,14 +2,9 @@
 
 //! Camera follow component and chase-camera system.
 //!
-//! The chase camera is intentionally simple at M1: fixed offset, no
-//! lag, no spring damping. Those are M6 concerns.
-//!
-//! This module also owns the camera-related template structs used to
-//! deserialize camera positions from the ship template JSON.
-//!
 //! See ADR-0005 (plugin architecture) and ADR-0018 (state management).
 
+use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 
 /// Camera template types for deserializing camera positions from ship template JSON.
@@ -18,36 +13,39 @@ pub mod types;
 pub use types::{CameraDefinition, ShipCamerasTemplate};
 
 /// Stores the entity ID of the player-controlled ship.
-///
-/// Inserted by `ShipsPlugin` when the player ship is spawned.
-/// Used by the chase camera system to know which entity to follow.
 #[derive(Resource)]
 pub struct PlayerShipEntity(pub Entity);
 
 /// Stores the chase camera offset from the template.
-///
-/// Inserted by `ShipsPlugin` when the player ship is spawned.
-/// Used by `spawn_chase_camera` to position the camera correctly.
 #[derive(Resource, Debug, Clone, Copy)]
 pub struct ChaseCameraOffset(pub Vec3);
 
+/// Marker component for the currently active main camera.
+#[derive(Component)]
+pub struct ActiveMainCamera;
+
 /// Instructs the chase-camera system to follow a target entity.
-///
-/// Attach to the camera entity. Set `target` to the entity to follow.
 #[derive(Component, Debug)]
 pub struct CameraFollow {
     /// The entity to track.
     pub target: Entity,
     /// Offset from the target's position in the target's local space.
-    /// Default: 20 m behind, 8 m above (Vec3 in target-local coords).
     pub offset: Vec3,
 }
 
-/// Spawns the 3-D chase camera after the player ship entity exists.
-///
-/// Runs during `OnEnter(AppState::InGame)`. Reads the `PlayerShipEntity`
-/// resource to determine which entity to follow. Panics if the resource
-/// is not present (programming error in plugin sequencing).
+/// Render layers for gameplay objects — belongs to ALL layers so every camera can see them.
+pub fn gameplay_render_layers() -> RenderLayers {
+    RenderLayers::layer(0)
+        .with(1)
+        .with(2)
+        .with(3)
+        .with(4)
+        .with(5)
+        .with(6)
+        .with(7)
+}
+
+/// Spawns the 3-D chase camera on layer 1 with `ActiveMainCamera` marker.
 #[allow(clippy::needless_pass_by_value)]
 pub fn spawn_chase_camera(
     mut commands: Commands<'_, '_>,
@@ -56,31 +54,39 @@ pub fn spawn_chase_camera(
 ) {
     commands.spawn((
         Camera3d::default(),
-        Camera::default(),
+        Camera {
+            order: 0,
+            ..default()
+        },
         Transform::from_translation(camera_offset.0).looking_at(Vec3::ZERO, Vec3::Y),
         Visibility::default(),
         CameraFollow {
             target: ship_entity.0,
             offset: camera_offset.0,
         },
+        RenderLayers::layer(1),
+        ActiveMainCamera,
     ));
 
-    log::info!(
-        "chase camera spawned at offset {:?}, following player ship",
-        camera_offset.0
-    );
+    log::info!("chase camera spawned at offset {:?}", camera_offset.0);
+}
+
+/// Spawns the 2-D UI camera required for rendering UI elements.
+pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 1,
+            ..default()
+        },
+        Transform::default(),
+        Visibility::default(),
+        bevy::ui::IsDefaultUiCamera,
+    ));
+    log::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
 }
 
 /// Moves the camera to maintain its offset behind the followed entity.
-///
-/// Runs every frame in `Update` when `AppState::InGame` or `AppState::SkirmishOver`.
-/// Rotates the offset by the ship's current rotation so the camera
-/// stays behind the ship as it turns.
-///
-/// Uses the ship's local up vector (+Y in ship space) as the `look_at`
-/// up reference to avoid the gimbal lock singularity that occurs with
-/// a fixed world `Vec3::Y` when the camera is directly above or below
-/// the target (e.g. at 90° pitch).
 #[allow(clippy::needless_pass_by_value)]
 pub fn chase_camera_system(
     mut camera_query: Query<'_, '_, (&mut Transform, &CameraFollow)>,
@@ -90,23 +96,14 @@ pub fn chase_camera_system(
         let Ok(target_transform) = target_query.get(follow.target) else {
             continue;
         };
-
-        // Rotate offset by the ship's current rotation so camera
-        // stays behind the ship as it turns.
         let world_offset = target_transform.rotation * follow.offset;
         cam_transform.translation = target_transform.translation + world_offset;
-
-        // Use the ship's local up vector as the look_at up reference.
-        // This avoids gimbal lock when the camera is above/below the ship.
         let ship_up = target_transform.rotation * Vec3::Y;
         cam_transform.look_at(target_transform.translation, ship_up);
     }
 }
 
-/// Debug system that logs positions of ship, camera, and asteroids each frame.
-///
-/// This is useful for diagnosing camera and entity positioning issues.
-/// Can be disabled in production builds.
+/// Debug system that logs camera positions each frame.
 #[allow(clippy::needless_pass_by_value)]
 pub fn debug_camera_positions(
     camera_query: Query<'_, '_, (&Transform, &CameraFollow)>,
@@ -115,11 +112,10 @@ pub fn debug_camera_positions(
     for (cam_transform, follow) in &camera_query {
         if let Ok((target_transform, target_name)) = target_query.get(follow.target) {
             log::debug!(
-                "Camera: pos={:?}, looking at ship '{}' at {:?}, offset={:?}",
+                "Camera: pos={:?}, looking at '{}' at {:?}",
                 cam_transform.translation,
-                target_name.as_ref(),
-                target_transform.translation,
-                cam_transform.translation - target_transform.translation
+                target_name,
+                target_transform.translation
             );
         }
     }

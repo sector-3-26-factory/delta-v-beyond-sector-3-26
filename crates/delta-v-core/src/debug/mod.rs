@@ -8,29 +8,21 @@
 //! The spawning process is decoupled per ADR-0005 (plugin architecture):
 //! - Domain plugins (`ShipsPlugin`, etc.) mark entities with `DebugAxesEligible`.
 //! - `CorePlugin`'s `mark_debug_axes` system converts eligible entities to `DebugAxes`.
-//! - `CorePlugin`'s `spawn_debug_axes` system renders the axes and labels.
+//! - `CorePlugin`'s `render_debug_axes` system renders the axes using gizmos.
+//! - `CorePlugin`'s `update_debug_axis_labels` system positions UI labels via viewport projection.
 //!
-//! Axes are spawned as CHILDREN of their target entity. Each axis root has a
-//! `DebugAxisRootMarker` component. The `update_debug_axes_rotation` system
-//! queries these markers, finds their parent's rotation, and sets the root's
-//! local rotation to the inverse, keeping axes world-aligned.
-//!
-//! The visibility chain is: target → axis root → axis (→ axis label?).
-//! The axis root has `Visibility`, `InheritedVisibility`, and `ViewVisibility`
-//! to ensure proper visibility propagation to its children.
+//! Gizmos are used for axis lines, and UI text with viewport projection for labels.
+//! Per ADR-0044, debug visualization is exempt from the "no visual data in Rust" rule.
 //!
 //! - X axis: red line with "X (right)" label
 //! - Y axis: green line with "Y (up)" label
-//! - Z axis: blue line with "Z (backward)" label
+//! - Z axis: blue line with "Z (back)" label
 //!
 //! Length is calculated as 2× the entity's longest expansion along any axis.
-//! When the axis length changes (e.g. after a glTF mesh finishes loading and
-//! the bounding box is computed), the old axis root is despawned and a new one
-//! is created with the updated length.
 
-/// Debug axis marker components (`DebugAxesEligible`, `DebugAxes`, `DebugAxisRootMarker`).
+/// Debug axis marker components (`DebugAxesEligible`, `DebugAxes`).
 pub mod axes;
-/// Debug axis systems (`mark_debug_axes`, `spawn_debug_axes`, `update_debug_axes_on_change`, `update_debug_axes_rotation`).
+/// Debug axis systems (`mark_debug_axes`, `render_debug_axes`, `update_debug_axis_labels`).
 pub mod axes_system;
 /// Debug configuration (`DebugConfig`).
 pub mod debug_config;
@@ -39,8 +31,9 @@ pub mod debug_config;
 #[path = "axes_tests.rs"]
 mod axes_tests;
 
-pub use axes::{DebugAxes, DebugAxesEligible, DebugAxisRootMarker};
+pub use axes::{AxisLabel, DebugAxes, DebugAxesEligible};
 pub use axes_system::{
-    mark_debug_axes, spawn_debug_axes, update_debug_axes_on_change, update_debug_axes_rotation,
+    mark_debug_axes, render_debug_axes, spawn_debug_axis_labels, update_debug_axis_labels,
+    update_gizmo_render_layers,
 };
 pub use debug_config::DebugConfig;

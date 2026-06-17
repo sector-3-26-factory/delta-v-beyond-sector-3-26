@@ -2,6 +2,18 @@
 
 use bevy::prelude::*;
 
+/// Marker component for debug axis labels.
+///
+/// Stores the entity being labeled and the world-space offset from that entity
+/// where the label should be positioned.
+#[derive(Component)]
+pub struct AxisLabel {
+    /// The entity being labeled.
+    pub entity: Entity,
+    /// World-space offset from the entity where the label is positioned.
+    pub offset: Vec3,
+}
+
 /// Marker component for entities eligible to have debug axes rendered.
 ///
 /// Domain plugins (e.g., `ShipsPlugin`) spawn entities and mark them with this component.
@@ -29,9 +41,9 @@ impl DebugAxesEligible {
 
 /// Component marking an entity that should have debug axes rendered.
 ///
-/// The axes are spawned as CHILDREN of the target entity, with a [`DebugAxisRootMarker`]
-/// component on the root. The `update_debug_axes_rotation` system inverts the parent's
-/// rotation to keep the axes world-aligned.
+/// The axes are rendered using Bevy's gizmo system for lines, with UI text
+/// labels positioned via viewport projection. Per ADR-0006, axes follow the
+/// right-handed coordinate system: +X right, +Y up, -Z forward.
 #[derive(Component, Debug, Clone)]
 pub struct DebugAxes {
     /// Entity ID for selective axis targeting (from world definition).
@@ -50,11 +62,3 @@ impl DebugAxes {
         }
     }
 }
-
-/// Marker component on a debug axis root entity.
-///
-/// Used to identify axis root entities for the inverse rotation update system.
-/// The axis root is a child of the target entity, and this marker allows the
-/// update system to find it and set its rotation to the inverse of the parent's.
-#[derive(Component)]
-pub struct DebugAxisRootMarker;
