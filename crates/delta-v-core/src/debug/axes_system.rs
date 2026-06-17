@@ -6,7 +6,31 @@ use super::axes::{AxisLabel, DebugAxes, DebugAxesEligible};
 use super::debug_config::DebugConfig;
 use crate::camera::ActiveMainCamera;
 
+/// Updates gizmo render layers to match the active camera's layer.
+///
+/// This system runs when the active camera changes and updates the gizmo
+/// configuration so that debug axes are only rendered by the active camera.
+// INVARIANT: Query returns at most one camera with ActiveMainCamera marker.
+#[allow(clippy::needless_pass_by_value)]
+pub fn update_gizmo_render_layers(
+    mut gizmo_config_store: ResMut<'_, bevy::gizmos::config::GizmoConfigStore>,
+    camera_query: Query<'_, '_, &bevy::camera::visibility::RenderLayers, (With<ActiveMainCamera>,)>,
+) {
+    let Ok(camera_layers) = camera_query.single() else {
+        return;
+    };
+
+    // Extract the first layer from the camera's render layers
+    // The active camera should have exactly one layer assigned
+    if let Some(layer) = camera_layers.iter().next() {
+        let (gizmo_config, _) =
+            gizmo_config_store.config_mut::<bevy::gizmos::config::DefaultGizmoConfigGroup>();
+        gizmo_config.render_layers = bevy::camera::visibility::RenderLayers::layer(layer);
+    }
+}
+
 /// Marks eligible entities with `DebugAxes` if debug config enables visualization.
+// INVARIANT: Query returns only newly-marked entities via Added<DebugAxesEligible>.
 #[allow(clippy::needless_pass_by_value)]
 pub fn mark_debug_axes(
     mut commands: Commands<'_, '_>,
@@ -31,6 +55,7 @@ pub fn mark_debug_axes(
 ///
 /// Gizmo render layers are configured at app startup to match the chase
 /// camera's render layer, so gizmos are only rendered by the active camera.
+// INVARIANT: Gizmos are drawn in world space; no pass-by-value optimization applies.
 #[allow(clippy::needless_pass_by_value)]
 pub fn render_debug_axes(
     debug_config: Res<'_, DebugConfig>,
@@ -64,6 +89,7 @@ pub fn render_debug_axes(
 }
 
 /// Spawns debug axis label UI text entities.
+// INVARIANT: Query returns only newly-spawned debug axes via Added<DebugAxes>.
 #[allow(clippy::needless_pass_by_value)]
 pub fn spawn_debug_axis_labels(
     debug_config: Res<'_, DebugConfig>,
@@ -104,6 +130,7 @@ pub fn spawn_debug_axis_labels(
 /// Uses the `ActiveMainCamera` marker to find the currently active camera,
 /// and computes world position as `translation() + offset` (world-space, no rotation)
 /// to match how `render_debug_axes` draws the gizmo lines.
+// INVARIANT: Query returns at most one camera and one window; type complexity from multiple query params.
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::type_complexity)]
 pub fn update_debug_axis_labels(

@@ -35,7 +35,14 @@ pub struct CameraFollow {
 
 /// Render layers for gameplay objects — belongs to ALL layers so every camera can see them.
 pub fn gameplay_render_layers() -> RenderLayers {
-    RenderLayers::layer(0).with(1).with(2).with(3)
+    RenderLayers::layer(0)
+        .with(1)
+        .with(2)
+        .with(3)
+        .with(4)
+        .with(5)
+        .with(6)
+        .with(7)
 }
 
 /// Spawns the 3-D chase camera on layer 1 with `ActiveMainCamera` marker.

@@ -18,6 +18,7 @@ use crate::ship_templates::{
     MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
     StaticShipTemplate,
 };
+use bevy::camera::visibility::RenderLayers;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
@@ -49,6 +50,7 @@ impl delta_v_spawn::mesh_attachment::PendingMesh for PendingShipMesh {
 /// - `"npc_ship"`: NPC-controlled ship (future)
 ///
 /// The event's `template` field contains validated template JSON from delta-v-json.
+// INVARIANT: MessageReader::read returns events by value; pass by value is idiomatic.
 #[allow(clippy::needless_pass_by_value)]
 pub fn spawn_ship(
     mut commands: Commands<'_, '_>,
@@ -86,21 +88,22 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
 ///
 /// Only cameras with `available: true` are spawned as child entities
 /// of the ship. Positions and targets are scaled by the entity scale.
+/// Each camera is assigned its own render layer (cockpit=0, chase=1, etc.).
 fn spawn_cameras(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
     template: &PlayerShipTemplate,
     scale: f32,
 ) {
-    for (name, camera) in [
-        ("cockpit", &template.cameras.cockpit),
-        ("chase", &template.cameras.chase),
-        ("rear", &template.cameras.rear),
-        ("front", &template.cameras.front),
-        ("left", &template.cameras.left),
-        ("right", &template.cameras.right),
-        ("top", &template.cameras.top),
-        ("bottom", &template.cameras.bottom),
+    for (name, camera, layer) in [
+        ("cockpit", &template.cameras.cockpit, 0),
+        ("chase", &template.cameras.chase, 1),
+        ("rear", &template.cameras.rear, 2),
+        ("front", &template.cameras.front, 3),
+        ("left", &template.cameras.left, 4),
+        ("right", &template.cameras.right, 5),
+        ("top", &template.cameras.top, 6),
+        ("bottom", &template.cameras.bottom, 7),
     ] {
         if camera.available {
             let position =
@@ -113,8 +116,9 @@ fn spawn_cameras(
                         target: ship_entity,
                         offset: position,
                     },
+                    RenderLayers::layer(layer),
                 ));
-                log::debug!("spawned {name} camera at {position:?}");
+                log::debug!("spawned {name} camera at {position:?} on layer {layer}");
             });
         }
     }
@@ -163,6 +167,7 @@ fn insert_player_resources(
 /// Only cameras with `available: true` are spawned as camera entities.
 ///
 /// Debug axes length is computed from the bounding box stored in the template JSON.
+// INVARIANT: Indexing is safe (active_index=0, weapons iter), expect used after JSON validation.
 #[allow(
     clippy::option_if_let_else,
     clippy::indexing_slicing,
@@ -276,6 +281,7 @@ fn spawn_player_ship(
 /// player input, cameras, or propulsion configuration.
 ///
 /// Template is validated by delta-v-json; structure is guaranteed.
+// INVARIANT: Indexing is safe (weapons iter), expect used after JSON validation.
 #[allow(
     clippy::option_if_let_else,
     clippy::indexing_slicing,

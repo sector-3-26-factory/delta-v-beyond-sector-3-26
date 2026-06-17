@@ -56,7 +56,7 @@ pub use camera::{
 };
 pub use debug::{
     AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, mark_debug_axes, render_debug_axes,
-    spawn_debug_axis_labels, update_debug_axis_labels,
+    spawn_debug_axis_labels, update_debug_axis_labels, update_gizmo_render_layers,
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::{FireWeapon, ProjectileHit, SpawnEntity};
@@ -106,15 +106,9 @@ impl Plugin for CorePlugin {
 
         app.init_state::<AppState>().add_plugins(DiagnosticsPlugin);
 
-        // Configure gizmo render layers to match the chase camera (layer 1).
-        // This prevents gizmos from being rendered by other cameras.
-        app.insert_gizmo_config(
-            bevy::gizmos::config::DefaultGizmoConfigGroup,
-            bevy::gizmos::config::GizmoConfig {
-                render_layers: bevy::camera::visibility::RenderLayers::layer(1),
-                ..default()
-            },
-        );
+        // Initialize gizmo config with default render layer (will be updated dynamically).
+        // The update_gizmo_render_layers system will set the correct layer based on active camera.
+        app.init_gizmo_group::<bevy::gizmos::config::DefaultGizmoConfigGroup>();
 
         // Log every state entry at INFO level (ADR-0015, ADR-0018).
         app.add_systems(OnEnter(AppState::Boot), log_boot);
@@ -176,6 +170,13 @@ impl Plugin for CorePlugin {
             debug::render_debug_axes.run_if(in_state(AppState::InGame)),
         );
 
+        // Update gizmo render layers to match the active camera.
+        // Runs when active camera changes to ensure gizmos render only on active camera's layer.
+        app.add_systems(
+            Update,
+            debug::update_gizmo_render_layers.run_if(in_state(AppState::InGame)),
+        );
+
         // Input pipeline (ADR-0011, ADR-0017).
         app.init_resource::<ActiveActions>()
             .configure_sets(
@@ -198,8 +199,11 @@ impl Plugin for CorePlugin {
     }
 }
 
-/// Adds gameplay render layers (0-3) to all entities that have a `Transform`
-/// but no `RenderLayers` component. This ensures gameplay objects are visible to all cameras.
+/// Adds gameplay render layers (0-7) to all entities that have a `Transform`
+/// but no `RenderLayers` component, excluding cameras.
+/// This ensures gameplay objects are visible to all cameras.
+// INVARIANT: Query uses multiple With/Without clauses for precise entity filtering.
+#[allow(clippy::type_complexity)]
 fn apply_gameplay_render_layers(
     mut commands: Commands<'_, '_>,
     query: Query<
@@ -209,6 +213,7 @@ fn apply_gameplay_render_layers(
         (
             With<Transform>,
             Without<bevy::camera::visibility::RenderLayers>,
+            Without<Camera>,
         ),
     >,
 ) {

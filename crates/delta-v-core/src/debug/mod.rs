@@ -34,5 +34,6 @@ mod axes_tests;
 pub use axes::{AxisLabel, DebugAxes, DebugAxesEligible};
 pub use axes_system::{
     mark_debug_axes, render_debug_axes, spawn_debug_axis_labels, update_debug_axis_labels,
+    update_gizmo_render_layers,
 };
 pub use debug_config::DebugConfig;
