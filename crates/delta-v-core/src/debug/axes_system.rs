@@ -140,7 +140,6 @@ pub fn update_debug_axis_labels(
         (&Camera, &GlobalTransform),
         (With<Camera3d>, With<ActiveMainCamera>),
     >,
-    window_query: Query<'_, '_, &Window>,
     entity_query: Query<'_, '_, &GlobalTransform>,
     mut label_query: Query<'_, '_, (&AxisLabel, &mut Node, &mut Visibility)>,
 ) {
@@ -148,23 +147,18 @@ pub fn update_debug_axis_labels(
         return;
     };
 
-    let Ok(window) = window_query.single() else {
-        return;
-    };
-
-    let window_height = window.height();
-
     for (label, mut node, mut visibility) in &mut label_query {
         let Ok(entity_transform) = entity_query.get(label.entity) else {
             *visibility = Visibility::Hidden;
             continue;
         };
 
+        // Axes are world-aligned (not rotated with the entity), matching render_debug_axes
         let world_pos = entity_transform.translation() + label.offset;
 
         if let Ok(viewport_pos) = camera.world_to_viewport(camera_transform, world_pos) {
             node.left = Val::Px(viewport_pos.x);
-            node.top = Val::Px(window_height - viewport_pos.y);
+            node.top = Val::Px(viewport_pos.y);
             *visibility = Visibility::Inherited;
         } else {
             *visibility = Visibility::Hidden;
