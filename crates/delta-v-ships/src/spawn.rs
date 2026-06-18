@@ -22,8 +22,7 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    ChaseCameraOffset, DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, SpawnEntity,
-    Weapon,
+    DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, SpawnEntity, Weapon,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
@@ -89,12 +88,14 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
 /// Only cameras with `available: true` are spawned as child entities
 /// of the ship. Positions and targets are scaled by the entity scale.
 /// Each camera is assigned its own render layer (cockpit=0, chase=1, etc.).
+/// The chase camera (layer 1) gets `ActiveMainCamera` marker.
 fn spawn_cameras(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
     template: &PlayerShipTemplate,
     scale: f32,
 ) {
+    let active_camera_name = "chase";
     for (name, camera, layer) in [
         ("cockpit", &template.cameras.cockpit, 0),
         ("chase", &template.cameras.chase, 1),
@@ -110,14 +111,19 @@ fn spawn_cameras(
                 Vec3::new(camera.position.x, camera.position.y, camera.position.z) * scale;
             let target = Vec3::new(camera.target.x, camera.target.y, camera.target.z) * scale;
             commands.entity(ship_entity).with_children(|parent| {
-                let _camera_entity = parent.spawn((
-                    Transform::from_translation(position).looking_at(target, Vec3::Y),
-                    delta_v_core::CameraFollow {
-                        target: ship_entity,
-                        offset: position,
+                let mut camera_entity = parent.spawn((
+                    Camera3d::default(),
+                    Camera {
+                        order: 0,
+                        is_active: name == active_camera_name,
+                        ..default()
                     },
+                    Transform::from_translation(position).looking_at(target, Vec3::Y),
                     RenderLayers::layer(layer),
                 ));
+                if name == active_camera_name {
+                    camera_entity.insert(delta_v_core::ActiveMainCamera);
+                }
                 log::debug!("spawned {name} camera at {position:?} on layer {layer}");
             });
         }
@@ -134,22 +140,15 @@ fn insert_player_resources(
     template: &PlayerShipTemplate,
     main: &MainThrusterTemplate,
     maneuvering: &ManeuveringThrusterTemplate,
-    active_index: usize,
-    scale: f32,
+    active_main_thruster_index: usize,
 ) {
-    let chase_offset = Vec3::new(
-        template.cameras.chase.position.x,
-        template.cameras.chase.position.y,
-        template.cameras.chase.position.z,
-    ) * scale;
     commands.insert_resource(PlayerShipEntity(ship_entity));
-    commands.insert_resource(ChaseCameraOffset(chase_offset));
     commands.insert_resource(ShipPropulsionConfig {
         max_forward_thrust: main.max_forward_thrust.value,
         max_backward_thrust: main.max_backward_thrust.value,
         max_torque: maneuvering.max_torque.value,
         max_strafe_thrust: maneuvering.max_strafe_thrust.value,
-        active_main_thruster_index: active_index,
+        active_main_thruster_index,
         rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
     });
     commands.insert_resource(CockpitOverlayResource {
@@ -183,8 +182,8 @@ fn spawn_player_ship(
     let template = deserialize_template(event);
 
     // Extract propulsion values from the active main thruster.
-    let active_index = 0_usize; // M2: single active thruster
-    let main = &template.propulsion.main_thrusters[active_index];
+    let active_main_thruster_index = 0_usize; // M2: single active thruster
+    let main = &template.propulsion.main_thrusters[active_main_thruster_index];
     let maneuvering = &template.propulsion.maneuvering_thruster;
 
     // Derive mesh path from the mesh template path (always mesh.glb in the template directory).
@@ -252,15 +251,14 @@ fn spawn_player_ship(
     // Spawn cameras for each available camera definition, scaled by the entity scale.
     spawn_cameras(commands, ship_entity, &template, scale);
 
-    // Store player ship ID, chase camera offset, propulsion config, and cockpit overlay.
+    // Store player ship ID, propulsion config, and cockpit overlay.
     insert_player_resources(
         commands,
         ship_entity,
         &template,
         main,
         maneuvering,
-        active_index,
-        scale,
+        active_main_thruster_index,
     );
 
     log::info!(

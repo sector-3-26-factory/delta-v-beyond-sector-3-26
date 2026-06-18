@@ -51,8 +51,7 @@ pub use boundary::{
     BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
 };
 pub use camera::{
-    ActiveMainCamera, CameraDefinition, CameraFollow, ChaseCameraOffset, PlayerShipEntity,
-    ShipCamerasTemplate, debug_camera_positions, spawn_chase_camera, spawn_ui_camera,
+    ActiveMainCamera, CameraDefinition, PlayerShipEntity, ShipCamerasTemplate, spawn_ui_camera,
 };
 pub use debug::{
     AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, mark_debug_axes, render_debug_axes,
@@ -89,10 +88,6 @@ mod input_tests;
 #[path = "boundary/tests.rs"]
 mod boundary_tests;
 
-#[cfg(test)]
-#[path = "camera/tests.rs"]
-mod camera_tests;
-
 use bevy::prelude::*;
 
 use crate::input::{input_log_system, input_translation_system};
@@ -115,10 +110,7 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::LoadingDefaults), log_loading_defaults);
         app.add_systems(OnEnter(AppState::LoadingWorld), log_loading_world);
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
-        app.add_systems(
-            OnEnter(AppState::InGame),
-            (log_in_game, spawn_chase_camera, spawn_ui_camera),
-        );
+        app.add_systems(OnEnter(AppState::InGame), (log_in_game, spawn_ui_camera));
         app.add_systems(OnEnter(AppState::SkirmishOver), log_skirmish_over);
 
         // Configure WorldSpawnSet ordering.
@@ -144,14 +136,6 @@ impl Plugin for CorePlugin {
             (debug::mark_debug_axes, debug::spawn_debug_axis_labels)
                 .chain()
                 .in_set(WorldSpawnSet::MarkDebugAxes),
-        );
-
-        // Chase camera follows the ship every frame.
-        app.add_systems(
-            Update,
-            camera::chase_camera_system.run_if(|state: Res<'_, State<AppState>>| {
-                *state.get() == AppState::InGame || *state.get() == AppState::SkirmishOver
-            }),
         );
 
         // Add gameplay render layers to all entities that have Transform but no RenderLayers.

@@ -20,22 +20,20 @@
 
 use std::collections::BTreeMap;
 
+use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
+use bevy_lunex::prelude::*;
 use delta_v_core::{I18n, KeybindingsResource};
 
 use super::components::KeybindingsMenuRoot;
 
-/// Spawns the keybindings menu UI.
-///
-/// Creates a full-screen semi-transparent background with:
-/// - Title bar using i18n translation
-/// - Close hint using i18n translation
-/// - Scrollable content area with grouped keybinding entries
-///
-/// Each action is displayed with its translated name and the translated
-/// key names for its bindings.
+// ============================================================================
+// OLD IMPLEMENTATION – kept for reference / comparison
+// ============================================================================
+
+/// Original bevy_ui-based keybindings menu (preserved for comparison).
 #[allow(clippy::too_many_lines)]
-pub fn spawn_keybindings_menu(
+pub fn spawn_keybindings_menu_old(
     commands: &mut Commands<'_, '_>,
     i18n: &I18n,
     keybindings: &KeybindingsResource,
@@ -57,7 +55,6 @@ pub fn spawn_keybindings_menu(
             KeybindingsMenuRoot,
         ))
         .with_children(|parent| {
-            // Title bar at the top
             parent.spawn((
                 Text::new(title),
                 TextFont {
@@ -74,7 +71,6 @@ pub fn spawn_keybindings_menu(
                 },
             ));
 
-            // Close hint below title
             parent.spawn((
                 Text::new(close_hint),
                 TextFont {
@@ -90,7 +86,6 @@ pub fn spawn_keybindings_menu(
                 },
             ));
 
-            // Content area with scrollable keybindings
             parent
                 .spawn(Node {
                     width: Val::Percent(100.0),
@@ -100,7 +95,6 @@ pub fn spawn_keybindings_menu(
                     ..default()
                 })
                 .with_children(|content_parent| {
-                    // Group actions by category
                     let mut grouped: BTreeMap<&str, Vec<(&String, &Vec<String>)>> = BTreeMap::new();
                     for (action_name, bindings) in &keybindings.0 {
                         let group_key = get_action_group(action_name);
@@ -110,9 +104,7 @@ pub fn spawn_keybindings_menu(
                             .push((action_name, &bindings.keyboard));
                     }
 
-                    // Create a section for each group
                     for (group_key, actions_in_group) in &grouped {
-                        // Group header
                         if let Some(group_name) = groups.get(*group_key) {
                             content_parent.spawn((
                                 Text::new(group_name.clone()),
@@ -130,27 +122,21 @@ pub fn spawn_keybindings_menu(
                             ));
                         }
 
-                        // Actions in this group
                         for (action_name, key_bindings) in actions_in_group {
-                            // Get translated action name
                             let action_display = actions
                                 .get(*action_name)
                                 .cloned()
                                 .unwrap_or_else(|| (*action_name).clone());
-
-                            // Get translated key names
                             let key_names: Vec<String> = key_bindings
                                 .iter()
                                 .filter_map(|k| keys.get(k).cloned())
                                 .collect();
-
                             let key_display = if key_names.is_empty() {
                                 "None".to_string()
                             } else {
                                 key_names.join(" + ")
                             };
 
-                            // Create the keybinding entry row
                             content_parent
                                 .spawn(Node {
                                     width: Val::Percent(100.0),
@@ -168,7 +154,6 @@ pub fn spawn_keybindings_menu(
                                         },
                                         TextColor(Color::WHITE),
                                     ));
-
                                     row.spawn((
                                         Text::new(key_display),
                                         TextFont {
@@ -183,6 +168,74 @@ pub fn spawn_keybindings_menu(
                 });
         });
 }
+
+// ============================================================================
+// NEW IMPLEMENTATION – Lunex retained-layout example
+// ============================================================================
+
+/// Spawns a Lunex UI example (button with text).
+///
+/// This is a 1:1 translation of the Lunex README button example:
+/// <https://github.com/bytestring-net/bevy_lunex/blob/main/README.md>
+///
+/// Press F1 to see it rendered.
+pub fn spawn_keybindings_menu(
+    commands: &mut Commands<'_, '_>,
+    _i18n: &I18n,
+    _keybindings: &KeybindingsResource,
+) {
+    // Create UI root
+    commands
+        .spawn((
+            KeybindingsMenuRoot,
+            UiLayoutRoot::new_2d(),
+            UiFetchFromCamera::<0>,
+            RenderLayers::layer(8),
+        ))
+        .with_children(|ui| {
+            // Spawn a button in the middle of the screen
+            ui.spawn((
+                Name::new("My Button"),
+                // Specify the position and size of the button
+                UiLayout::window()
+                    .pos(Rl((50.0, 50.0)))
+                    .size((200.0, 50.0))
+                    .pack(),
+            ))
+            .with_children(|ui| {
+                // Spawn a child node with a background
+                ui.spawn((
+                    // Fill the parent
+                    UiLayout::window().full().pack(),
+                    Sprite {
+                        color: Color::srgba(0.8, 0.2, 0.2, 0.5),
+                        ..default()
+                    },
+                ))
+                .with_children(|ui| {
+                    // Spawn the text
+                    ui.spawn((
+                        // For text always use window layout to position it
+                        UiLayout::window()
+                            .pos((Rh(40.0), Rl(50.0)))
+                            .anchor(Anchor::CENTER_LEFT)
+                            .pack(),
+                        // Text height proportional to the parent node
+                        UiTextSize::from(Rh(60.0)),
+                        Text2d::new("Click me!"),
+                        TextFont {
+                            font_size: 64.0,
+                            ..default()
+                        },
+                    ));
+                });
+            });
+        });
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
 
 /// Determines the action group for a given action name.
 ///

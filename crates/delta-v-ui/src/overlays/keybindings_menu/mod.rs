@@ -41,5 +41,11 @@ impl Plugin for KeybindingsMenuPlugin {
             Update,
             systems::keybindings_menu_toggle_system.run_if(in_state(AppState::InGame)),
         );
+
+        // Lunex debug plugin prints the UI hierarchy tree to console
+        // and draws gizmo outlines around UI nodes.
+        // Only enabled in dev builds per ADR-0035.
+        #[cfg(feature = "dev")]
+        app.add_plugins(bevy_lunex::UiLunexDebugPlugin::<8, 8>);
     }
 }

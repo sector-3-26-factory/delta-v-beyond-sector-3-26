@@ -11,8 +11,12 @@ readme = "README.md"
 keywords = ["ui", "hud", "overlay"]
 categories = ["game-development"]
 
+[features]
+dev = []
+
 [dependencies]
 bevy = { workspace = true }
+bevy_lunex = { workspace = true }
 log = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-types = { workspace = true }

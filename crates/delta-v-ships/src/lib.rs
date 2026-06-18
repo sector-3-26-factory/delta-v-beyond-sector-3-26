@@ -144,11 +144,6 @@ impl Plugin for ShipsPlugin {
         .add_systems(
             Update,
             check_sector_boundary_system.run_if(in_state(AppState::InGame)),
-        )
-        // Debug: log positions each frame (can be disabled in production).
-        .add_systems(
-            Update,
-            delta_v_core::debug_camera_positions.run_if(in_state(AppState::InGame)),
         );
 
         // Cockpit overlay systems (M6).
