@@ -87,4 +87,6 @@ This pattern is already implemented for ships (`delta-v-ships/src/spawn.rs`) and
 - This decision applies only to runtime visual data. Build-time code generation (e.g., for constants) is allowed.
 - The `bevy::gltf::Gltf` asset type is the only exception - we load glTF files, not generate them.
 - **Debug/diagnostic visual data is exempt**: Debug axes, collision shape visualization, and other developer tooling are not subject to this rule since they do not impact player experience or gameplay.
+- **Camera and render layer configuration is exempt**: Setting `RenderLayers`, camera `order`, `UiSourceCamera`, and similar camera/render infrastructure in Rust code is not visual content creation. These are plumbing concerns required by Bevy's rendering architecture and do not generate textures, meshes, shaders, or other visual data.
+- **UI infrastructure types from third-party crates are exempt**: Types from crates like `bevy_lunex` (e.g., `UiLayout`, `Dimension`, `UiSourceCamera`) used in domain crates for layout and rendering hooks are infrastructure, not visual content creation. They do not generate textures, meshes, shaders, or other visual data.
 - See also ADR-0019 (Asset pipeline), ADR-0041 (Third-party asset acquisition), ADR-0043 (Ship template split).

@@ -43,8 +43,9 @@ pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
 
 /// Spawns the Lunex menu camera.
 ///
-/// Renders on `Layer(2)` with `order: 3`. This camera sees Lunex UI elements
-/// (keybindings menu, etc.). Carries `UiSourceCamera::<2>` so that Lunex
+/// Renders on layers 2, 3, 4 with `order: 3`. Layer 2 has Lunex UI elements
+/// (keybindings menu, etc.). Layers 3 and 4 are for Lunex debug gizmos
+/// (2D and 3D outlines). Carries `UiSourceCamera::<2>` so that Lunex
 /// `UiFetchFromCamera::<2>` widgets render correctly. Uses ID 2 to avoid
 /// collision with Bevy's default internal camera ID 0.
 pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
@@ -57,7 +58,7 @@ pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
         },
         Transform::default(),
         Visibility::default(),
-        RenderLayers::layer(2),
+        RenderLayers::from_layers(&[2, 3, 4]),
         bevy_lunex::UiSourceCamera::<2>,
     ));
     log::info!("Menu camera (Lunex) spawned with UiSourceCamera::<2>");
