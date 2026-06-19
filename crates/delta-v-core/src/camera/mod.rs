@@ -20,31 +20,45 @@ pub struct PlayerShipEntity(pub Entity);
 #[derive(Component)]
 pub struct ActiveMainCamera;
 
-/// Render layers for gameplay objects — belongs to ALL layers so every camera can see them.
-pub fn gameplay_render_layers() -> RenderLayers {
-    RenderLayers::layer(0)
-        .with(1)
-        .with(2)
-        .with(3)
-        .with(4)
-        .with(5)
-        .with(6)
-        .with(7)
-}
-
-/// Spawns the 2-D UI camera required for rendering UI elements.
+/// Spawns the 2-D UI camera required for rendering the cockpit overlay PNG.
+///
+/// Renders on `Layer(1)` with `order: 1`. This camera sees the cockpit
+/// interior view (`.png` with alpha transparency). The `ActiveMainCamera`'s
+/// 3D world is visible through the transparent areas.
 pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
     commands.spawn((
         Camera2d,
         Camera {
             order: 1,
+            is_active: true,
             ..default()
         },
         Transform::default(),
         Visibility::default(),
-        RenderLayers::layer(8),
+        RenderLayers::layer(1),
         bevy::ui::IsDefaultUiCamera,
-        bevy_lunex::UiSourceCamera::<0>,
     ));
     log::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
+}
+
+/// Spawns the Lunex menu camera.
+///
+/// Renders on `Layer(2)` with `order: 3`. This camera sees Lunex UI elements
+/// (keybindings menu, etc.). Carries `UiSourceCamera::<2>` so that Lunex
+/// `UiFetchFromCamera::<2>` widgets render correctly. Uses ID 2 to avoid
+/// collision with Bevy's default internal camera ID 0.
+pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 3,
+            is_active: true,
+            ..default()
+        },
+        Transform::default(),
+        Visibility::default(),
+        RenderLayers::layer(2),
+        bevy_lunex::UiSourceCamera::<2>,
+    ));
+    log::info!("Menu camera (Lunex) spawned with UiSourceCamera::<2>");
 }

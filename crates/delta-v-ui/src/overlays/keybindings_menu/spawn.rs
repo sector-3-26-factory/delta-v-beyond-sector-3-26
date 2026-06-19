@@ -185,12 +185,12 @@ pub fn spawn_keybindings_menu(
     _keybindings: &KeybindingsResource,
 ) {
     // Create UI root
-    commands
+    let menu_root = commands
         .spawn((
             KeybindingsMenuRoot,
             UiLayoutRoot::new_2d(),
-            UiFetchFromCamera::<0>,
-            RenderLayers::layer(8),
+            UiFetchFromCamera::<2>,
+            RenderLayers::layer(2),
         ))
         .with_children(|ui| {
             // Spawn a button in the middle of the screen
@@ -201,6 +201,7 @@ pub fn spawn_keybindings_menu(
                     .pos(Rl((50.0, 50.0)))
                     .size((200.0, 50.0))
                     .pack(),
+                RenderLayers::layer(2),
             ))
             .with_children(|ui| {
                 // Spawn a child node with a background
@@ -211,6 +212,7 @@ pub fn spawn_keybindings_menu(
                         color: Color::srgba(0.8, 0.2, 0.2, 0.5),
                         ..default()
                     },
+                    RenderLayers::layer(2),
                 ))
                 .with_children(|ui| {
                     // Spawn the text
@@ -227,10 +229,14 @@ pub fn spawn_keybindings_menu(
                             font_size: 64.0,
                             ..default()
                         },
+                        RenderLayers::layer(2),
                     ));
                 });
             });
-        });
+        })
+        .id();
+
+    log::debug!("spawned keybindings menu root entity {menu_root:?}");
 }
 
 // ============================================================================

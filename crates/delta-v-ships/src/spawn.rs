@@ -87,8 +87,8 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
 ///
 /// Only cameras with `available: true` are spawned as child entities
 /// of the ship. Positions and targets are scaled by the entity scale.
-/// Each camera is assigned its own render layer (cockpit=0, chase=1, etc.).
-/// The chase camera (layer 1) gets `ActiveMainCamera` marker.
+/// All ship cameras render on `Layer(0)` with `order: 0`.
+/// The chase camera gets the `ActiveMainCamera` marker.
 fn spawn_cameras(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
@@ -96,15 +96,15 @@ fn spawn_cameras(
     scale: f32,
 ) {
     let active_camera_name = "chase";
-    for (name, camera, layer) in [
-        ("cockpit", &template.cameras.cockpit, 0),
-        ("chase", &template.cameras.chase, 1),
-        ("rear", &template.cameras.rear, 2),
-        ("front", &template.cameras.front, 3),
-        ("left", &template.cameras.left, 4),
-        ("right", &template.cameras.right, 5),
-        ("top", &template.cameras.top, 6),
-        ("bottom", &template.cameras.bottom, 7),
+    for (name, camera) in [
+        ("cockpit", &template.cameras.cockpit),
+        ("chase", &template.cameras.chase),
+        ("rear", &template.cameras.rear),
+        ("front", &template.cameras.front),
+        ("left", &template.cameras.left),
+        ("right", &template.cameras.right),
+        ("top", &template.cameras.top),
+        ("bottom", &template.cameras.bottom),
     ] {
         if camera.available {
             let position =
@@ -119,12 +119,12 @@ fn spawn_cameras(
                         ..default()
                     },
                     Transform::from_translation(position).looking_at(target, Vec3::Y),
-                    RenderLayers::layer(layer),
+                    RenderLayers::layer(0),
                 ));
                 if name == active_camera_name {
                     camera_entity.insert(delta_v_core::ActiveMainCamera);
                 }
-                log::debug!("spawned {name} camera at {position:?} on layer {layer}");
+                log::debug!("spawned {name} camera at {position:?} on layer 0");
             });
         }
     }
@@ -166,7 +166,7 @@ fn insert_player_resources(
 /// Only cameras with `available: true` are spawned as camera entities.
 ///
 /// Debug axes length is computed from the bounding box stored in the template JSON.
-// INVARIANT: Indexing is safe (active_index=0, weapons iter), expect used after JSON validation.
+// INVARIANT: Indexing is safe (active_main_thruster_index=0, weapons iter), expect used after JSON validation.
 #[allow(
     clippy::option_if_let_else,
     clippy::indexing_slicing,
