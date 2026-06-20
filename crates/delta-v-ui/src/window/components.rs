@@ -16,22 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! UI overlay systems for HUD and menus.
-//!
-//! This crate contains UI-related systems that are not ship-specific:
-//! - Keybindings reference menu (F1)
-//! - Future: inventory, price lists, settings menu
+//! Window components.
 
 use bevy::prelude::*;
 
-pub mod overlays;
-pub mod window;
-
-/// Plugin for UI overlay systems.
-pub struct UiPlugin;
-
-impl Plugin for UiPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(overlays::OverlaysPlugin);
-    }
-}
+/// Marker component for a window root entity.
+///
+/// This component is added to the root node of a window UI tree.
+/// It is used to find and despawn the window when closing.
+#[derive(Component)]
+pub struct WindowRoot;

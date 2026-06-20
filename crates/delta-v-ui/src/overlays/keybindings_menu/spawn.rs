@@ -24,6 +24,7 @@ use bevy_lunex::prelude::*;
 use delta_v_core::{I18n, KeybindingsResource};
 
 use super::components::KeybindingsMenuRoot;
+use crate::window::{WindowConfig, spawn_window};
 
 // ============================================================================
 // Lunex-based keybindings menu
@@ -32,129 +33,28 @@ use super::components::KeybindingsMenuRoot;
 /// Spawns the keybindings menu using Lunex UI.
 ///
 /// Displays a 300x200px semi-transparent window centered on screen.
-/// The title and close hint are positioned side by side in one row.
+/// The title and hint are positioned side by side in one row.
 /// Press F1 to toggle visibility.
-#[allow(clippy::too_many_lines)]
 pub fn spawn_keybindings_menu(
     commands: &mut Commands<'_, '_>,
     i18n: &I18n,
     _keybindings: &KeybindingsResource,
 ) {
     let title = i18n.ui.menu.keybindings.title.clone();
-    let close_hint = i18n.ui.menu.keybindings.close.clone();
+    let hint = i18n.ui.menu.keybindings.close.clone();
 
-    // Create UI root with Lunex components
-    let menu_root = commands
-        .spawn((
-            KeybindingsMenuRoot,
-            UiLayoutRoot::new_2d(),
-            UiFetchFromCamera::<2>,
-            RenderLayers::layer(2),
-        ))
-        .with_children(|ui| {
-            // Main panel: Artificially narrowed to 200px
-            ui.spawn((
-                Name::new("Panel"),
-                UiLayout::window()
-                    .pos(Rl((50.0, 50.0)))
-                    .size((Ab(300.0), Ab(200.0)))
-                    .anchor(Anchor::CENTER)
-                    .pack(),
-                Sprite {
-                    color: Color::srgba(0.0, 0.0, 0.0, 0.8),
-                    ..default()
-                },
-                RenderLayers::layer(2),
-            ))
-            .with_children(|ui| {
-                // Header row container: 20px height at position (5, 5)
-                ui.spawn((
-                    Name::new("HeaderRow"),
-                    UiLayout::window()
-                        .pos((Ab(5.0), Ab(5.0)))
-                        .size((Rl(100.0) - Ab(10.0), Ab(20.0)))
-                        .pack(),
-                ))
-                .with_children(|ui| {
-                    // Title container: 50% width, full height of parent
-                    ui.spawn((
-                        Name::new("TitleContainer"),
-                        UiLayout::window().size((Rl(50.0), Rh(100.0))).pack(),
-                    ))
-                    .with_children(|ui| {
-                        // Title text: Stays compact, anchors LEFT
-                        ui.spawn((
-                            Name::new("Title"),
-                            UiLayout::window()
-                                .pos((Rl(0.0), Rl(50.0))) // Left wall (0%), vertical center (50%)
-                                .anchor(Anchor::CENTER_LEFT) // Lunex anchor left
-                                .pack(),
-                            // Scales matching 80% of the TitleContainer's height.
-                            // If the window shrinks heavily, Rh shrinks, forcing the text down.
-                            UiTextSize::from(Rh(80.0)),
-                            Text2d::new(&title),
-                            TextLayout {
-                                justify: Justify::Left,
-                                ..default()
-                            },
-                            TextFont {
-                                font_size: 20.0, // Fallback base size
-                                ..default()
-                            },
-                            TextColor(Color::WHITE),
-                            Pickable::IGNORE,
-                            RenderLayers::layer(2),
-                        ));
-                    });
+    let menu_root = spawn_window(
+        commands,
+        &WindowConfig {
+            title,
+            hint,
+            ..default()
+        },
+        keybindings_menu_content,
+    );
 
-                    // Close hint container: 50% width, full height of parent
-                    ui.spawn((
-                        Name::new("CloseHintContainer"),
-                        UiLayout::window()
-                            .pos((Rl(50.0), Ab(0.0)))
-                            .size((Rl(50.0), Rh(100.0)))
-                            .pack(),
-                    ))
-                    .with_children(|ui| {
-                        // Close hint text: Stays compact, anchors RIGHT
-                        ui.spawn((
-                            Name::new("CloseHint"),
-                            UiLayout::window()
-                                .pos((Rl(100.0), Rl(50.0))) // Right wall (100%), vertical center (50%)
-                                .anchor(Anchor::CENTER_RIGHT) // Lunex anchor right
-                                .pack(),
-                            // Slightly smaller scaling factor (60% of row height)
-                            UiTextSize::from(Rh(60.0)),
-                            Text2d::new(&close_hint),
-                            TextLayout {
-                                justify: Justify::Right,
-                                ..default()
-                            },
-                            TextFont {
-                                font_size: 14.0, // Fallback base size
-                                ..default()
-                            },
-                            TextColor(Color::srgb(0.7, 0.7, 0.7)),
-                            Pickable::IGNORE,
-                            RenderLayers::layer(2),
-                        ));
-                    });
-                });
-
-                // Content container: fills remaining space below header
-                ui.spawn((
-                    Name::new("Content"),
-                    UiLayout::window()
-                        .pos((Ab(0.0), Ab(25.0)))
-                        .size((Rl(100.0), Rl(100.0) - Ab(25.0)))
-                        .pack(),
-                ))
-                .with_children(|ui| {
-                    spawn_content_text(ui);
-                });
-            });
-        })
-        .id();
+    // Add the keybindings-specific marker so the toggle system can find/despawn this entity.
+    commands.entity(menu_root).insert(KeybindingsMenuRoot);
 
     tracing::debug!("spawned keybindings menu root entity {menu_root:?}");
 }
@@ -162,6 +62,11 @@ pub fn spawn_keybindings_menu(
 /// Recursively despawns the keybindings menu entity and all its children.
 pub fn despawn_keybindings_menu(commands: &mut Commands<'_, '_>, entity: Entity) {
     commands.entity(entity).despawn();
+}
+
+/// Spawns the keybindings menu content inside the window content area.
+fn keybindings_menu_content(ui: &mut ChildSpawnerCommands<'_>) {
+    spawn_content_text(ui);
 }
 
 /// Spawns the content text entity inside the keybindings menu.

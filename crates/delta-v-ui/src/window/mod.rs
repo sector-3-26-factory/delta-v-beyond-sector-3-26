@@ -16,22 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! UI overlay systems for HUD and menus.
+//! Reusable window UI module.
 //!
-//! This crate contains UI-related systems that are not ship-specific:
-//! - Keybindings reference menu (F1)
-//! - Future: inventory, price lists, settings menu
+//! Provides a generic window frame with a title bar, hint text, and content area.
+//! The content area is populated via a callback function, making this module
+//! reusable for different window types (keybindings menu, settings, etc.).
 
-use bevy::prelude::*;
+pub mod components;
+pub mod spawn;
 
-pub mod overlays;
-pub mod window;
-
-/// Plugin for UI overlay systems.
-pub struct UiPlugin;
-
-impl Plugin for UiPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(overlays::OverlaysPlugin);
-    }
-}
+pub use components::WindowRoot;
+pub use spawn::{WindowConfig, spawn_window};
