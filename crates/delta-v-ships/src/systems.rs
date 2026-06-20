@@ -22,10 +22,10 @@ use std::collections::BTreeSet;
 
 use bevy::prelude::*;
 use delta_v_core::{
-    ActiveActions, FlightAssist, FlightAssistConfig, FlightAssistState, LogicalAction,
-    PlayerShipEntity,
+    ActiveActions, FlightAssist, FlightAssistConfig, FlightAssistState, PlayerShipEntity,
 };
 use delta_v_physics::RigidBody;
+use delta_v_types::LogicalAction;
 
 use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 

@@ -100,7 +100,7 @@ informational and must be aligned with.
 
 [ADR-0050]: Strict naming conventions for crates and modules. Spawning logic: `src/spawn.rs` with `spawn_<entity_type>` systems. Components: no suffix (e.g., `FlightAssist`). Resources: no suffix (e.g., `WorldDefResource`). Events: past tense or imperative (e.g., `SpawnEntity`). Test files: `_tests.rs` suffix. FORBIDDEN: `asteroid_spawner.rs`, `station_spawner.rs`, or any spawner filename other than `spawn.rs`. FORBIDDEN: `spawn_station_system` — use `spawn_station`. Every domain crate uses the standard module structure: `lib.rs`, `components.rs`, `systems.rs`, `spawn.rs`, `resources.rs`, `error.rs`.
 
-[ADR-0051]: The crate architecture follows a strict dependency hierarchy. Technical crates (`delta-v-json`, `delta-v-types`, `delta-v-spawn`, `delta-v-assets`) MUST NOT depend on domain crates. Domain crates MUST NOT depend on other domain crates. `delta-v-core` MUST NOT depend on domain crates. Cross-domain communication uses events/components only (ADR-0005). The binary `delta-v` is the only crate that registers plugins. See the crate architecture decision tree in ADR-0051 for "where does this go?" guidance.
+[ADR-0051]: The crate architecture follows a strict dependency hierarchy. Technical crates (`delta-v-json`, `delta-v-types`, `delta-v-spawn`, `delta-v-assets`) MUST NOT depend on domain crates. `delta-v-core` is a **foundation crate** (not a domain crate) — domain crates MAY depend on `delta-v-core` and on technical crates. Domain crates MUST NOT depend on other domain crates (use events/components for cross-domain communication per ADR-0005). `delta-v-core` MUST NOT depend on domain crates. The binary `delta-v` is the only crate that registers plugins. See the crate architecture decision tree in ADR-0051 for "where does this go?" guidance.
 
 ---
 
@@ -133,9 +133,10 @@ informational and must be aligned with.
 - ❌ No shared types outside `delta-v-types` (including `Vec3Json`, `QuatJson`, `CollisionShapeJson`, `BoundingBox`, `PhysicalQuantity`)
 - ❌ No `ShipCollisionShape` or per-entity-type collision shape variants — use `CollisionShapeJson` for ALL entity types
 - ❌ No spawner files named anything other than `spawn.rs` (e.g., `asteroid_spawner.rs`)
-- ❌ No domain-to-domain crate dependencies (use events/components)
+- ❌ No domain-to-domain crate dependencies (use events/components) — **Note:** `delta-v-core` is a foundation crate, NOT a domain crate; domain crates MAY depend on `delta-v-core`
 - ❌ No loading templates outside `delta-v-assets`
 - ❌ No flat files in `delta-v-core/src/` — use subdirectories
 - ❌ No `CollisionShape` (Bevy Component) in `delta-v-types` — it stays in `delta-v-physics`
 - ✅ Domain crates MAY depend on `delta-v-physics` for `RigidBody`/`CollisionShape` components (exception to ADR-0051)
+- ✅ Domain crates MAY depend on `delta-v-core` for foundation types and systems (exception to ADR-0051 — `delta-v-core` is a foundation crate, not a domain crate)
 - ❌ No JSON deserialization value types without the `Json` suffix in `delta-v-types`

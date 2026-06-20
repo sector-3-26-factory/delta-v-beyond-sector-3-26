@@ -36,6 +36,8 @@ pub struct WindowConfig {
     pub render_layer: usize,
 }
 
+// allow-default: WindowConfig is a pure Rust UI helper struct, not JSON-backed.
+// ADR-0013/ADR-0039 Default ban applies only to JSON-deserialized types.
 impl Default for WindowConfig {
     fn default() -> Self {
         Self {
@@ -62,7 +64,7 @@ impl Default for WindowConfig {
 pub fn spawn_window(
     commands: &mut Commands<'_, '_>,
     config: &WindowConfig,
-    content_fn: fn(&mut ChildSpawnerCommands<'_>),
+    content_fn: impl FnOnce(&mut ChildSpawnerCommands<'_>),
 ) -> Entity {
     commands
         .spawn((

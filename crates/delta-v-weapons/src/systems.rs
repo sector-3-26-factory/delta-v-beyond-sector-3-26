@@ -3,10 +3,9 @@
 //! Weapon and projectile systems.
 
 use bevy::prelude::*;
-use delta_v_core::{
-    ActiveActions, FireWeapon, Health, LogicalAction, PlayerShipEntity, ProjectileHit, Weapon,
-};
+use delta_v_core::{ActiveActions, FireWeapon, Health, PlayerShipEntity, ProjectileHit, Weapon};
 use delta_v_physics::{CollisionDetected, RigidBody};
+use delta_v_types::LogicalAction;
 
 use crate::components::Projectile;
 use crate::resources::WeaponState;

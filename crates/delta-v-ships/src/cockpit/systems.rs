@@ -21,7 +21,7 @@
 use bevy::prelude::*;
 
 use delta_v_core::input::ActiveActions;
-use delta_v_core::input::LogicalAction;
+use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
 use super::components::CockpitOverlay;

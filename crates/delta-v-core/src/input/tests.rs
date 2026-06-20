@@ -18,58 +18,6 @@ mod tests {
     use crate::input::{ActiveActions, LogicalAction};
 
     // ---------------------------------------------------------------------------
-    // LogicalAction helpers
-    // ---------------------------------------------------------------------------
-
-    /// All variants must have unique `as_str()` values.
-    #[test]
-    fn test_logical_action_str_keys_are_unique() {
-        let all = LogicalAction::all();
-        let mut seen = std::collections::BTreeSet::new();
-        for action in all {
-            let key = action.as_str();
-            assert!(
-                seen.insert(key),
-                "duplicate as_str() key: '{key}' (check LogicalAction::as_str)"
-            );
-        }
-    }
-
-    /// `all()` must return all 16 variants (12 M1 actions + [`ToggleFlightAssist`] + [`FirePrimary`] + cockpit cycle actions).
-    #[test]
-    fn test_logical_action_all_count() {
-        assert_eq!(
-            LogicalAction::all().len(),
-            16,
-            "expected 16 LogicalAction variants"
-        );
-    }
-
-    /// `as_str()` values must match what the default keybindings JSON uses.
-    #[test]
-    fn test_logical_action_str_matches_keybindings() {
-        let expected_keys = [
-            "thrust_forward",
-            "thrust_backward",
-            "pitch_up",
-            "pitch_down",
-            "yaw_left",
-            "yaw_right",
-            "roll_left",
-            "roll_right",
-            "strafe_left",
-            "strafe_right",
-            "strafe_up",
-            "strafe_down",
-            "toggle_flight_assist",
-        ];
-        for key in &expected_keys {
-            let found = LogicalAction::all().iter().any(|a| a.as_str() == *key);
-            assert!(found, "missing LogicalAction for key '{key}'");
-        }
-    }
-
-    // ---------------------------------------------------------------------------
     // ActiveActions resource
     // ---------------------------------------------------------------------------
 
