@@ -38,7 +38,7 @@ pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
         RenderLayers::layer(1),
         bevy::ui::IsDefaultUiCamera,
     ));
-    log::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
+    tracing::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
 }
 
 /// Spawns the Lunex menu camera.
@@ -61,5 +61,5 @@ pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
         RenderLayers::from_layers(&[2, 3, 4]),
         bevy_lunex::UiSourceCamera::<2>,
     ));
-    log::info!("Menu camera (Lunex) spawned with UiSourceCamera::<2>");
+    tracing::info!("Menu camera (Lunex) spawned with UiSourceCamera::<2>");
 }

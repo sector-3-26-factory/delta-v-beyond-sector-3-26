@@ -90,7 +90,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let keybindings = load_keybindings().unwrap_or_else(|e| {
         panic!("fatal: failed to load keybindings: {e}");
     });
-    log::info!("keybindings loaded ({} actions)", keybindings.actions.len());
+    tracing::info!("keybindings loaded ({} actions)", keybindings.actions.len());
 
     // Convert delta-v-config::Keybindings into delta_v_core::KeybindingsResource.
     // KeybindingsResource is defined in delta-v-core to avoid a crate-dep cycle (ADR-0002).
@@ -116,7 +116,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let i18n = load_i18n().unwrap_or_else(|e| {
         panic!("fatal: failed to load i18n: {e}");
     });
-    log::info!("i18n loaded (title: {})", i18n.ui.menu.keybindings.title);
+    tracing::info!("i18n loaded (title: {})", i18n.ui.menu.keybindings.title);
     commands.insert_resource(i18n);
 
     // Diagnostics configuration (ADR-0022, ADR-0039).
@@ -126,7 +126,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let diagnostics_config = load_diagnostics().unwrap_or_else(|e| {
         panic!("fatal: failed to load diagnostics config: {e}");
     });
-    log::info!(
+    tracing::info!(
         "diagnostics config loaded (threshold: {:.1}ms)",
         diagnostics_config.frame_time_warn_threshold_secs() * 1000.0
     );
@@ -139,7 +139,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let debug_config = load_debug().unwrap_or_else(|e| {
         panic!("fatal: failed to load debug config: {e}");
     });
-    log::info!(
+    tracing::info!(
         "debug config loaded (show_axis_indicators: {})",
         debug_config.show_axis_indicators
     );
@@ -152,7 +152,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let flight_assist_config = load_flight_assist().unwrap_or_else(|e| {
         panic!("fatal: failed to load flight-assist config: {e}");
     });
-    log::info!(
+    tracing::info!(
         "flight-assist config loaded (enabled_by_default: {}, damping_coefficient: {})",
         flight_assist_config.enabled_by_default,
         flight_assist_config.damping_coefficient

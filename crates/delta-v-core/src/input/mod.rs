@@ -171,7 +171,7 @@ pub fn input_translation_system(
 #[allow(clippy::needless_pass_by_value)]
 pub fn input_log_system(active: Res<'_, ActiveActions>) {
     if !active.0.is_empty() {
-        log::debug!("active actions: {:?}", active.0);
+        tracing::debug!("active actions: {:?}", active.0);
     }
 }
 
@@ -202,7 +202,7 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "ArrowRight" => Some(KeyCode::ArrowRight),
         "Space" => Some(KeyCode::Space),
         _ => {
-            log::warn!("keybindings: unknown key name '{name}' (ignored)");
+            tracing::warn!("keybindings: unknown key name '{name}' (ignored)");
             None
         }
     }

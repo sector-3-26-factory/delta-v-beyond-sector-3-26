@@ -128,7 +128,7 @@ fn load_world_system(
     let world = load_world(world_path.as_ref()).unwrap_or_else(|e| {
         panic!("fatal: failed to load world: {e}");
     });
-    log::info!("world loaded: {}", world.name);
+    tracing::info!("world loaded: {}", world.name);
 
     // Validate: exactly one entity must have player_controlled: true
     let player_controlled_count = world

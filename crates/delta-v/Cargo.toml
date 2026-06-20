@@ -37,8 +37,7 @@ delta-v-ui = { workspace = true }
 
 bevy = { workspace = true }
 bevy_lunex = { workspace = true }
-log = { workspace = true }
-env_logger = { workspace = true }
+tracing = { workspace = true }
 clap = { workspace = true }
 
 [lints]

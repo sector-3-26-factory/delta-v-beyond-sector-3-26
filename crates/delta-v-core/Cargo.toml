@@ -15,7 +15,7 @@ categories = ["game-development"]
 bevy = { workspace = true }
 bevy_lunex = { workspace = true }
 bevy_mesh = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 delta-v-types = { workspace = true }

@@ -40,7 +40,7 @@ pub fn spawn_cockpit_overlay(
     cockpit: Res<'_, CockpitOverlayResource>,
 ) {
     let Some(station) = cockpit.stations.first() else {
-        log::error!("cockpit.stations must contain at least one station");
+        tracing::error!("cockpit.stations must contain at least one station");
         return;
     };
 
@@ -73,7 +73,7 @@ pub fn spawn_cockpit_overlay(
         station_id: station.id.clone(),
     });
 
-    log::debug!("spawned cockpit overlay for station '{}'", station.id);
+    tracing::debug!("spawned cockpit overlay for station '{}'", station.id);
 }
 
 /// Resource holding the cockpit overlay definition for the player ship.

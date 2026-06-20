@@ -142,10 +142,10 @@ pub fn skirmish_check_system(
         .unwrap_or(false);
 
     if !skirmish_state.player_alive {
-        log::info!("Skirmish lost -- player destroyed");
+        tracing::info!("Skirmish lost -- player destroyed");
         next_state.set(delta_v_core::AppState::SkirmishOver);
     } else if skirmish_state.total_enemies > 0 && skirmish_state.enemies_alive == 0 {
-        log::info!("Skirmish won -- all enemies destroyed");
+        tracing::info!("Skirmish won -- all enemies destroyed");
         next_state.set(delta_v_core::AppState::SkirmishOver);
     }
 }

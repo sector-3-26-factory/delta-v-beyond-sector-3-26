@@ -212,7 +212,7 @@ pub fn flight_assist_toggle_system(
     // Edge detection: only toggle on the transition from not-pressed to pressed.
     if is_pressed && !was_pressed {
         state.enabled = !state.enabled;
-        log::info!("flight assist toggled: {}", state.enabled);
+        tracing::info!("flight assist toggled: {}", state.enabled);
     }
 
     // Update previous state for next tick.

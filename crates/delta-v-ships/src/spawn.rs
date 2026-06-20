@@ -62,7 +62,7 @@ pub fn spawn_ship(
             "ship" => spawn_static_ship(&mut commands, &asset_server, event),
             "npc_ship" => {
                 // NPC ships: future implementation
-                log::warn!("NPC ship spawning not yet implemented");
+                tracing::warn!("NPC ship spawning not yet implemented");
             }
             // Other entity types (e.g. "asteroid") are handled by other plugins.
             // Silently skip — a single plugin cannot know whether another plugin
@@ -124,7 +124,7 @@ fn spawn_cameras(
                 if name == active_camera_name {
                     camera_entity.insert(delta_v_core::ActiveMainCamera);
                 }
-                log::debug!("spawned {name} camera at {position:?} on layer 0");
+                tracing::debug!("spawned {name} camera at {position:?} on layer 0");
             });
         }
     }
@@ -204,7 +204,7 @@ fn spawn_player_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!(
+    tracing::debug!(
         "spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
     );
 
@@ -261,7 +261,7 @@ fn spawn_player_ship(
         active_main_thruster_index,
     );
 
-    log::info!(
+    tracing::info!(
         "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
         event.position.x,
         event.position.y,
@@ -312,7 +312,7 @@ fn spawn_static_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!(
+    tracing::debug!(
         "spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
     );
 
@@ -355,7 +355,7 @@ fn spawn_static_ship(
         });
     }
 
-    log::info!(
+    tracing::info!(
         "static ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",
         event.position.x,
         event.position.y,

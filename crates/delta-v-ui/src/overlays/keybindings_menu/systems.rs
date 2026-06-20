@@ -53,11 +53,11 @@ pub fn keybindings_menu_toggle_system(
             commands.entity(entity).despawn();
         }
         menu_open.0 = false;
-        log::debug!("keybindings menu: closed");
+        tracing::debug!("keybindings menu: closed");
     } else {
         // Open the menu: spawn the menu UI
         spawn_keybindings_menu(&mut commands, &i18n, &keybindings);
         menu_open.0 = true;
-        log::debug!("keybindings menu: opened");
+        tracing::debug!("keybindings menu: opened");
     }
 }

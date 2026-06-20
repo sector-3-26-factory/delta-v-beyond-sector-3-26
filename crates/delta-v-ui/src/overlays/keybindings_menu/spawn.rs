@@ -18,8 +18,6 @@
 
 //! Keybindings menu spawning functions.
 
-use std::collections::BTreeMap;
-
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use bevy_lunex::prelude::*;
@@ -28,163 +26,24 @@ use delta_v_core::{I18n, KeybindingsResource};
 use super::components::KeybindingsMenuRoot;
 
 // ============================================================================
-// OLD IMPLEMENTATION – kept for reference / comparison
+// Lunex-based keybindings menu
 // ============================================================================
 
-/// Original bevy_ui-based keybindings menu (preserved for comparison).
+/// Spawns the keybindings menu using Lunex UI.
+///
+/// Displays a 300x200px semi-transparent window centered on screen.
+/// The title and close hint are positioned side by side in one row.
+/// Press F1 to toggle visibility.
 #[allow(clippy::too_many_lines)]
-pub fn spawn_keybindings_menu_old(
+pub fn spawn_keybindings_menu(
     commands: &mut Commands<'_, '_>,
     i18n: &I18n,
-    keybindings: &KeybindingsResource,
+    _keybindings: &KeybindingsResource,
 ) {
     let title = i18n.ui.menu.keybindings.title.clone();
     let close_hint = i18n.ui.menu.keybindings.close.clone();
-    let groups = i18n.ui.menu.keybindings.group.clone();
-    let actions = i18n.ui.menu.keybindings.action.clone();
-    let keys = i18n.ui.menu.keybindings.key.clone();
 
-    commands
-        .spawn((
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
-            KeybindingsMenuRoot,
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Text::new(title),
-                TextFont {
-                    font_size: 24.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(50.0),
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-            ));
-
-            parent.spawn((
-                Text::new(close_hint),
-                TextFont {
-                    font_size: 14.0,
-                    ..default()
-                },
-                TextColor(Color::srgb(0.7, 0.7, 0.7)),
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(30.0),
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-            ));
-
-            parent
-                .spawn(Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(20.0)),
-                    ..default()
-                })
-                .with_children(|content_parent| {
-                    let mut grouped: BTreeMap<&str, Vec<(&String, &Vec<String>)>> = BTreeMap::new();
-                    for (action_name, bindings) in &keybindings.0 {
-                        let group_key = get_action_group(action_name);
-                        grouped
-                            .entry(group_key)
-                            .or_default()
-                            .push((action_name, &bindings.keyboard));
-                    }
-
-                    for (group_key, actions_in_group) in &grouped {
-                        if let Some(group_name) = groups.get(*group_key) {
-                            content_parent.spawn((
-                                Text::new(group_name.clone()),
-                                TextFont {
-                                    font_size: 18.0,
-                                    ..default()
-                                },
-                                TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                                Node {
-                                    width: Val::Percent(100.0),
-                                    height: Val::Px(30.0),
-                                    margin: UiRect::bottom(Val::Px(10.0)),
-                                    ..default()
-                                },
-                            ));
-                        }
-
-                        for (action_name, key_bindings) in actions_in_group {
-                            let action_display = actions
-                                .get(*action_name)
-                                .cloned()
-                                .unwrap_or_else(|| (*action_name).clone());
-                            let key_names: Vec<String> = key_bindings
-                                .iter()
-                                .filter_map(|k| keys.get(k).cloned())
-                                .collect();
-                            let key_display = if key_names.is_empty() {
-                                "None".to_string()
-                            } else {
-                                key_names.join(" + ")
-                            };
-
-                            content_parent
-                                .spawn(Node {
-                                    width: Val::Percent(100.0),
-                                    height: Val::Px(25.0),
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    margin: UiRect::bottom(Val::Px(5.0)),
-                                    ..default()
-                                })
-                                .with_children(|row| {
-                                    row.spawn((
-                                        Text::new(action_display),
-                                        TextFont {
-                                            font_size: 14.0,
-                                            ..default()
-                                        },
-                                        TextColor(Color::WHITE),
-                                    ));
-                                    row.spawn((
-                                        Text::new(key_display),
-                                        TextFont {
-                                            font_size: 14.0,
-                                            ..default()
-                                        },
-                                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
-                                    ));
-                                });
-                        }
-                    }
-                });
-        });
-}
-
-// ============================================================================
-// NEW IMPLEMENTATION – Lunex retained-layout example
-// ============================================================================
-
-/// Spawns a Lunex UI example (button with text).
-///
-/// This is a 1:1 translation of the Lunex README button example:
-/// <https://github.com/bytestring-net/bevy_lunex/blob/main/README.md>
-///
-/// Press F1 to see it rendered.
-pub fn spawn_keybindings_menu(
-    commands: &mut Commands<'_, '_>,
-    _i18n: &I18n,
-    _keybindings: &KeybindingsResource,
-) {
-    // Create UI root
+    // Create UI root with Lunex components
     let menu_root = commands
         .spawn((
             KeybindingsMenuRoot,
@@ -193,82 +52,138 @@ pub fn spawn_keybindings_menu(
             RenderLayers::layer(2),
         ))
         .with_children(|ui| {
-            // Spawn a button in the middle of the screen
+            // Main panel: Artificially narrowed to 200px
             ui.spawn((
-                Name::new("My Button"),
-                // Specify the position and size of the button
+                Name::new("Panel"),
                 UiLayout::window()
                     .pos(Rl((50.0, 50.0)))
-                    .size((200.0, 50.0))
+                    .size((Ab(300.0), Ab(200.0)))
+                    .anchor(Anchor::CENTER)
                     .pack(),
+                Sprite {
+                    color: Color::srgba(0.0, 0.0, 0.0, 0.8),
+                    ..default()
+                },
                 RenderLayers::layer(2),
             ))
             .with_children(|ui| {
-                // Spawn a child node with a background
+                // Header row container: 20px height at position (5, 5)
                 ui.spawn((
-                    // Fill the parent
-                    UiLayout::window().full().pack(),
-                    Sprite {
-                        color: Color::srgba(0.8, 0.2, 0.2, 0.5),
-                        ..default()
-                    },
-                    RenderLayers::layer(2),
+                    Name::new("HeaderRow"),
+                    UiLayout::window()
+                        .pos((Ab(5.0), Ab(5.0)))
+                        .size((Rl(100.0) - Ab(10.0), Ab(20.0)))
+                        .pack(),
                 ))
                 .with_children(|ui| {
-                    // Spawn the text
+                    // Title container: 50% width, full height of parent
                     ui.spawn((
-                        // For text always use window layout to position it
+                        Name::new("TitleContainer"),
+                        UiLayout::window().size((Rl(50.0), Rh(100.0))).pack(),
+                    ))
+                    .with_children(|ui| {
+                        // Title text: Stays compact, anchors LEFT
+                        ui.spawn((
+                            Name::new("Title"),
+                            UiLayout::window()
+                                .pos((Rl(0.0), Rl(50.0))) // Left wall (0%), vertical center (50%)
+                                .anchor(Anchor::CENTER_LEFT) // Lunex anchor left
+                                .pack(),
+                            // Scales matching 80% of the TitleContainer's height.
+                            // If the window shrinks heavily, Rh shrinks, forcing the text down.
+                            UiTextSize::from(Rh(80.0)),
+                            Text2d::new(&title),
+                            TextLayout {
+                                justify: Justify::Left,
+                                ..default()
+                            },
+                            TextFont {
+                                font_size: 20.0, // Fallback base size
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                            Pickable::IGNORE,
+                            RenderLayers::layer(2),
+                        ));
+                    });
+
+                    // Close hint container: 50% width, full height of parent
+                    ui.spawn((
+                        Name::new("CloseHintContainer"),
                         UiLayout::window()
-                            .pos((Rh(40.0), Rl(50.0)))
-                            .anchor(Anchor::CENTER_LEFT)
+                            .pos((Rl(50.0), Ab(0.0)))
+                            .size((Rl(50.0), Rh(100.0)))
                             .pack(),
-                        // Text height proportional to the parent node
-                        UiTextSize::from(Rh(60.0)),
-                        Text2d::new("Click me!"),
-                        TextFont {
-                            font_size: 64.0,
-                            ..default()
-                        },
-                        RenderLayers::layer(2),
-                    ));
+                    ))
+                    .with_children(|ui| {
+                        // Close hint text: Stays compact, anchors RIGHT
+                        ui.spawn((
+                            Name::new("CloseHint"),
+                            UiLayout::window()
+                                .pos((Rl(100.0), Rl(50.0))) // Right wall (100%), vertical center (50%)
+                                .anchor(Anchor::CENTER_RIGHT) // Lunex anchor right
+                                .pack(),
+                            // Slightly smaller scaling factor (60% of row height)
+                            UiTextSize::from(Rh(60.0)),
+                            Text2d::new(&close_hint),
+                            TextLayout {
+                                justify: Justify::Right,
+                                ..default()
+                            },
+                            TextFont {
+                                font_size: 14.0, // Fallback base size
+                                ..default()
+                            },
+                            TextColor(Color::srgb(0.7, 0.7, 0.7)),
+                            Pickable::IGNORE,
+                            RenderLayers::layer(2),
+                        ));
+                    });
+                });
+
+                // Content container: fills remaining space below header
+                ui.spawn((
+                    Name::new("Content"),
+                    UiLayout::window()
+                        .pos((Ab(0.0), Ab(25.0)))
+                        .size((Rl(100.0), Rl(100.0) - Ab(25.0)))
+                        .pack(),
+                ))
+                .with_children(|ui| {
+                    spawn_content_text(ui);
                 });
             });
         })
         .id();
 
-    log::debug!("spawned keybindings menu root entity {menu_root:?}");
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-/// Determines the action group for a given action name.
-///
-/// Groups are based on the action name prefix:
-/// - `thrust_*`, `pitch_*`, `yaw_*`, `roll_*`, `strafe_*` → `flight`
-/// - `fire_*` → `combat`
-/// - `toggle_*` → `systems`
-/// - `cockpit_*` → `systems`
-/// - Everything else → `other`
-fn get_action_group(action_name: &str) -> &'static str {
-    if action_name.starts_with("thrust_")
-        || action_name.starts_with("pitch_")
-        || action_name.starts_with("yaw_")
-        || action_name.starts_with("roll_")
-        || action_name.starts_with("strafe_")
-    {
-        "flight"
-    } else if action_name.starts_with("fire_") {
-        "combat"
-    } else if action_name.starts_with("toggle_") || action_name.starts_with("cockpit_") {
-        "systems"
-    } else {
-        "other"
-    }
+    tracing::debug!("spawned keybindings menu root entity {menu_root:?}");
 }
 
 /// Recursively despawns the keybindings menu entity and all its children.
 pub fn despawn_keybindings_menu(commands: &mut Commands<'_, '_>, entity: Entity) {
     commands.entity(entity).despawn();
+}
+
+/// Spawns the content text entity inside the keybindings menu.
+fn spawn_content_text(ui: &mut ChildSpawnerCommands<'_>) {
+    ui.spawn((
+        Name::new("ContentText"),
+        UiLayout::window()
+            .pos((Rl(0.0), Rl(0.0)))
+            .anchor(Anchor::TOP_LEFT)
+            .pack(),
+        UiTextSize::from(Ab(16.0)),
+        Text2d::new("hello world hallo welt hello world hallo welt "),
+        TextLayout {
+            justify: Justify::Left,
+            linebreak: LineBreak::AnyCharacter,
+        },
+        TextFont {
+            font_size: 16.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.0, 1.0, 0.0)),
+        Pickable::IGNORE,
+        RenderLayers::layer(2),
+    ));
 }

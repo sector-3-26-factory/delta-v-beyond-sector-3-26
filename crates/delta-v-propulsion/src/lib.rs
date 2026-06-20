@@ -25,6 +25,6 @@ pub struct PropulsionPlugin;
 
 impl Plugin for PropulsionPlugin {
     fn build(&self, _app: &mut App) {
-        log::info!("PropulsionPlugin initialized");
+        tracing::info!("PropulsionPlugin initialized");
     }
 }

@@ -39,7 +39,7 @@ pub fn fire_input_system(
 
     // Edge detection: fire on press, not hold
     if fire_held && !was_held {
-        log::debug!(
+        tracing::debug!(
             "FirePrimary pressed, sending FireWeapon event for ship {:?}",
             ship_entity.0
         );
@@ -65,7 +65,7 @@ pub fn process_fire_commands(
 ) {
     for event in events.read() {
         let Ok((transform, body)) = ship_query.get(event.source) else {
-            log::debug!(
+            tracing::debug!(
                 "Could not get ship transform/body for entity {:?}",
                 event.source
             );
@@ -73,14 +73,14 @@ pub fn process_fire_commands(
         };
 
         if let Ok(weapon) = weapon_query.get(event.source) {
-            log::debug!(
+            tracing::debug!(
                 "Spawning projectile from ship {:?}, damage={}",
                 event.source,
                 weapon.damage
             );
             spawn_projectile(&mut commands, event.source, transform, body, weapon);
         } else {
-            log::warn!("Ship {:?} has no Weapon component!", event.source);
+            tracing::warn!("Ship {:?} has no Weapon component!", event.source);
         }
     }
 }
@@ -126,7 +126,7 @@ pub fn projectile_collision_system(
         if let Ok(mut health) = health_query.get_mut(target_entity) {
             let destroyed = health.apply_damage(projectile.damage);
             if destroyed {
-                log::info!("Entity {target_entity:?} destroyed by projectile");
+                tracing::info!("Entity {target_entity:?} destroyed by projectile");
             }
         }
 

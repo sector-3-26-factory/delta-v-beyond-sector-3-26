@@ -74,7 +74,7 @@ pub fn cockpit_station_cycle_next_system(
     // Update the active station resource
     active_station.station_id.clone_from(&next_station.id);
 
-    log::debug!(
+    tracing::debug!(
         "cockpit: switched to station '{}' ({})",
         next_station.id,
         next_station.texture
@@ -132,7 +132,7 @@ pub fn cockpit_station_cycle_prev_system(
     // Update the active station resource
     active_station.station_id.clone_from(&prev_station.id);
 
-    log::debug!(
+    tracing::debug!(
         "cockpit: switched to station '{}' ({})",
         prev_station.id,
         prev_station.texture

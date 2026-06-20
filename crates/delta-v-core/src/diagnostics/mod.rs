@@ -127,7 +127,7 @@ fn frame_time_watchdog_system(
         if ft > threshold {
             state.overrun_streak += 1;
             if state.overrun_streak == config.consecutive_frames_threshold {
-                log::warn!(
+                tracing::warn!(
                     "frame time {:.1} ms exceeded {:.1} ms threshold for {} consecutive frames",
                     ft * 1000.0,
                     threshold * 1000.0,

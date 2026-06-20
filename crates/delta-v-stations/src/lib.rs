@@ -25,6 +25,6 @@ pub struct StationsPlugin;
 
 impl Plugin for StationsPlugin {
     fn build(&self, _app: &mut App) {
-        log::info!("StationsPlugin initialized");
+        tracing::info!("StationsPlugin initialized");
     }
 }
