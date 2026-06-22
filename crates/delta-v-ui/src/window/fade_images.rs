@@ -22,7 +22,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::image::Image;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-use super::components::{BACKGROUND_COLOR, FADE_ZONE_HEIGHT};
+use super::theme::UiTheme;
 
 /// Creates the top fade gradient image: window background (top) → transparent (bottom).
 ///
@@ -36,7 +36,7 @@ use super::components::{BACKGROUND_COLOR, FADE_ZONE_HEIGHT};
     clippy::cast_precision_loss
 )]
 pub fn create_fade_top_image() -> Image {
-    let height = FADE_ZONE_HEIGHT as u32;
+    let height = UiTheme::FADE_ZONE_HEIGHT as u32;
     let mut data = Vec::with_capacity((height * 4) as usize);
 
     for y in 0..height {
@@ -44,9 +44,9 @@ pub fn create_fade_top_image() -> Image {
         let t = (height - y) as f32 / height as f32;
         // Cubic ease-out: strong color for most of the zone, quick fade at edge
         let alpha = ((1.0 - (1.0 - t).powi(3)) * 255.0).round() as u8;
-        data.push((BACKGROUND_COLOR.to_linear().red * 255.0) as u8); // R
-        data.push((BACKGROUND_COLOR.to_linear().green * 255.0) as u8); // G
-        data.push((BACKGROUND_COLOR.to_linear().blue * 255.0) as u8); // B
+        data.push((UiTheme::BACKGROUND_COLOR.to_linear().red * 255.0) as u8); // R
+        data.push((UiTheme::BACKGROUND_COLOR.to_linear().green * 255.0) as u8); // G
+        data.push((UiTheme::BACKGROUND_COLOR.to_linear().blue * 255.0) as u8); // B
         data.push(alpha); // A
     }
 
@@ -75,7 +75,7 @@ pub fn create_fade_top_image() -> Image {
     clippy::cast_precision_loss
 )]
 pub fn create_fade_bottom_image() -> Image {
-    let height = FADE_ZONE_HEIGHT as u32;
+    let height = UiTheme::FADE_ZONE_HEIGHT as u32;
     let mut data = Vec::with_capacity((height * 4) as usize);
 
     for y in 0..height {
@@ -83,9 +83,9 @@ pub fn create_fade_bottom_image() -> Image {
         let t = y as f32 / height as f32;
         // Cubic ease-out: quick fade from transparent, then strong color for most of the zone
         let alpha = ((1.0 - (1.0 - t).powi(3)) * 255.0).round() as u8;
-        data.push((BACKGROUND_COLOR.to_linear().red * 255.0) as u8); // R
-        data.push((BACKGROUND_COLOR.to_linear().green * 255.0) as u8); // G
-        data.push((BACKGROUND_COLOR.to_linear().blue * 255.0) as u8); // B
+        data.push((UiTheme::BACKGROUND_COLOR.to_linear().red * 255.0) as u8); // R
+        data.push((UiTheme::BACKGROUND_COLOR.to_linear().green * 255.0) as u8); // G
+        data.push((UiTheme::BACKGROUND_COLOR.to_linear().blue * 255.0) as u8); // B
         data.push(alpha); // A
     }
 

@@ -20,18 +20,6 @@
 
 use bevy::prelude::*;
 
-/// Height of the fade-out zones in pixels.
-///
-/// This constant controls both the height of the gradient overlay sprites
-/// and the padding lines added at the top and bottom of the scroll content.
-pub const FADE_ZONE_HEIGHT: f32 = 30.0;
-
-/// Window background color (semi-transparent black).
-///
-/// Used for the panel background and as the fade target color for scroll
-/// fade zones. Content fades to this color at the top and bottom edges.
-pub const BACKGROUND_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8);
-
 /// Marker component for a window root entity.
 ///
 /// This component is added to the root node of a window UI tree.

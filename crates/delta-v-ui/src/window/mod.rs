@@ -27,5 +27,7 @@ pub mod components;
 pub mod fade_images;
 pub mod spawn;
 pub mod systems;
+pub mod theme;
 
 pub use spawn::{WindowConfig, spawn_window};
+pub use theme::UiTheme;

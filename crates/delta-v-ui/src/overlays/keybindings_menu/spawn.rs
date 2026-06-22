@@ -23,7 +23,7 @@ use delta_v_core::{I18n, KeybindingsResource};
 use delta_v_types::LogicalAction;
 
 use super::components::KeybindingsMenuRoot;
-use crate::window::{WindowConfig, spawn_window};
+use crate::window::{UiTheme, WindowConfig, spawn_window};
 
 // ============================================================================
 // Bevy UI-based keybindings menu
@@ -31,7 +31,7 @@ use crate::window::{WindowConfig, spawn_window};
 
 /// Spawns the keybindings menu using Bevy UI.
 ///
-/// Displays a 300x200px semi-transparent window centered on screen.
+/// Displays a semi-transparent window centered on screen.
 /// The title and hint are positioned side by side in one row.
 /// Press F1 to toggle visibility.
 pub fn spawn_keybindings_menu(
@@ -136,10 +136,10 @@ fn keybindings_menu_content(
                 Name::new(format!("GroupHeaderText_{group_key}")),
                 Text::new(group_name),
                 TextFont {
-                    font_size: 14.0,
+                    font_size: UiTheme::GROUP_HEADER_FONT_SIZE,
                     ..default()
                 },
-                TextColor(Color::srgb(1.0, 0.85, 0.0)),
+                TextColor(UiTheme::GROUP_HEADER_COLOR),
                 TextLayout {
                     linebreak: LineBreak::NoWrap,
                     ..default()
@@ -204,10 +204,10 @@ fn keybindings_menu_content(
                         Name::new(format!("ActionText_{action_name}")),
                         Text::new(action_display),
                         TextFont {
-                            font_size: 12.0,
+                            font_size: UiTheme::TEXT_FONT_SIZE,
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor(UiTheme::LABEL_COLOR),
                         TextLayout {
                             linebreak: LineBreak::NoWrap,
                             ..default()
@@ -228,10 +228,10 @@ fn keybindings_menu_content(
                         Name::new(format!("KeyText_{action_name}")),
                         Text::new(key_text),
                         TextFont {
-                            font_size: 12.0,
+                            font_size: UiTheme::TEXT_FONT_SIZE,
                             ..default()
                         },
-                        TextColor(Color::srgb(0.7, 1.0, 0.7)),
+                        TextColor(UiTheme::VALUE_COLOR),
                         TextLayout {
                             linebreak: LineBreak::NoWrap,
                             ..default()

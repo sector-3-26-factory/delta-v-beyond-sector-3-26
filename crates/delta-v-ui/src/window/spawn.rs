@@ -22,8 +22,9 @@ use bevy::prelude::*;
 use bevy::ui::{Overflow, ScrollPosition, ZIndex};
 use delta_v_core::RenderLayer;
 
-use super::components::{BACKGROUND_COLOR, FADE_ZONE_HEIGHT, WindowScrollContainer};
+use super::components::WindowScrollContainer;
 use super::fade_images::{create_fade_bottom_image, create_fade_top_image};
+use super::theme::UiTheme;
 
 /// Configuration for a window entity.
 pub struct WindowConfig {
@@ -42,7 +43,7 @@ impl Default for WindowConfig {
         Self {
             title: String::new(),
             hint: String::new(),
-            size: Vec2::new(300.0, 200.0),
+            size: UiTheme::DEFAULT_WINDOW_SIZE,
         }
     }
 }
@@ -97,19 +98,19 @@ pub fn spawn_window(
                     flex_direction: FlexDirection::Column,
                     ..default()
                 },
-                BackgroundColor(BACKGROUND_COLOR),
+                BackgroundColor(UiTheme::BACKGROUND_COLOR),
             ))
             .with_children(|ui| {
-                // Header row — 20px tall, fixed height
+                // Header row — fixed height
                 ui.spawn((
                     Name::new("HeaderRow"),
                     Node {
                         width: Val::Percent(100.0),
-                        height: Val::Px(20.0),
+                        height: Val::Px(UiTheme::HEADER_HEIGHT),
                         flex_direction: FlexDirection::Row,
                         justify_content: JustifyContent::SpaceBetween,
                         align_items: AlignItems::Center,
-                        padding: UiRect::horizontal(Val::Px(5.0)),
+                        padding: UiRect::horizontal(Val::Px(UiTheme::HEADER_PADDING)),
                         flex_shrink: 0.0,
                         ..default()
                     },
@@ -120,10 +121,10 @@ pub fn spawn_window(
                         Name::new("Title"),
                         Text::new(&config.title),
                         TextFont {
-                            font_size: 20.0,
+                            font_size: UiTheme::TITLE_FONT_SIZE,
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor(UiTheme::TITLE_COLOR),
                     ));
 
                     // Hint text
@@ -131,10 +132,10 @@ pub fn spawn_window(
                         Name::new("Hint"),
                         Text::new(&config.hint),
                         TextFont {
-                            font_size: 14.0,
+                            font_size: UiTheme::HINT_FONT_SIZE,
                             ..default()
                         },
-                        TextColor(Color::srgb(0.7, 0.7, 0.7)),
+                        TextColor(UiTheme::HINT_COLOR),
                     ));
                 });
 
@@ -144,7 +145,7 @@ pub fn spawn_window(
                     Name::new("ContentContainer"),
                     Node {
                         width: Val::Percent(100.0),
-                        height: Val::Px(size.y - 20.0),
+                        height: Val::Px(size.y - UiTheme::HEADER_HEIGHT),
                         overflow: Overflow {
                             x: OverflowAxis::Clip,
                             y: OverflowAxis::Visible,
@@ -176,7 +177,7 @@ pub fn spawn_window(
                             Name::new("PaddingTop"),
                             Node {
                                 width: Val::Percent(100.0),
-                                height: Val::Px(FADE_ZONE_HEIGHT),
+                                height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
                                 flex_shrink: 0.0,
                                 ..default()
                             },
@@ -190,7 +191,7 @@ pub fn spawn_window(
                             Name::new("PaddingBottom"),
                             Node {
                                 width: Val::Percent(100.0),
-                                height: Val::Px(FADE_ZONE_HEIGHT),
+                                height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
                                 flex_shrink: 0.0,
                                 ..default()
                             },
@@ -202,7 +203,7 @@ pub fn spawn_window(
                         Name::new("FadeTop"),
                         Node {
                             width: Val::Percent(100.0),
-                            height: Val::Px(FADE_ZONE_HEIGHT),
+                            height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
                             position_type: PositionType::Absolute,
                             top: Val::Px(0.0),
                             left: Val::Px(0.0),
@@ -221,7 +222,7 @@ pub fn spawn_window(
                         Name::new("FadeBottom"),
                         Node {
                             width: Val::Percent(100.0),
-                            height: Val::Px(FADE_ZONE_HEIGHT),
+                            height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
                             position_type: PositionType::Absolute,
                             bottom: Val::Px(0.0),
                             left: Val::Px(0.0),
