@@ -18,15 +18,12 @@
 
 //! Window spawning functions.
 
-use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use bevy::ui::{Overflow, ScrollPosition, ZIndex};
+use delta_v_core::RenderLayer;
 
 use super::components::{BACKGROUND_COLOR, FADE_ZONE_HEIGHT, WindowScrollContainer};
 use super::fade_images::{create_fade_bottom_image, create_fade_top_image};
-
-/// Render layer for window UI elements.
-pub(crate) const RENDER_LAYER: usize = 2;
 
 /// Configuration for a window entity.
 pub struct WindowConfig {
@@ -88,7 +85,7 @@ pub fn spawn_window(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            RenderLayers::layer(RENDER_LAYER),
+            RenderLayer::Menu.render_layers(),
         ))
         .with_children(|ui| {
             // Main panel — semi-transparent black background
@@ -101,7 +98,6 @@ pub fn spawn_window(
                     ..default()
                 },
                 BackgroundColor(BACKGROUND_COLOR),
-                RenderLayers::layer(RENDER_LAYER),
             ))
             .with_children(|ui| {
                 // Header row — 20px tall, fixed height
@@ -117,7 +113,6 @@ pub fn spawn_window(
                         flex_shrink: 0.0,
                         ..default()
                     },
-                    RenderLayers::layer(RENDER_LAYER),
                 ))
                 .with_children(|ui| {
                     // Title text
@@ -129,7 +124,6 @@ pub fn spawn_window(
                             ..default()
                         },
                         TextColor(Color::WHITE),
-                        RenderLayers::layer(RENDER_LAYER),
                     ));
 
                     // Hint text
@@ -141,7 +135,6 @@ pub fn spawn_window(
                             ..default()
                         },
                         TextColor(Color::srgb(0.7, 0.7, 0.7)),
-                        RenderLayers::layer(RENDER_LAYER),
                     ));
                 });
 
@@ -159,7 +152,6 @@ pub fn spawn_window(
                         position_type: PositionType::Relative,
                         ..default()
                     },
-                    RenderLayers::layer(RENDER_LAYER),
                 ))
                 .with_children(|ui| {
                     // Scrollable content — handles Y scrolling via Bevy's layout system
@@ -177,7 +169,6 @@ pub fn spawn_window(
                             ..default()
                         },
                         ScrollPosition(Vec2::ZERO),
-                        RenderLayers::layer(RENDER_LAYER),
                     ))
                     .with_children(|ui| {
                         // Top padding line
@@ -189,7 +180,6 @@ pub fn spawn_window(
                                 flex_shrink: 0.0,
                                 ..default()
                             },
-                            RenderLayers::layer(RENDER_LAYER),
                         ));
 
                         // Actual content from the caller
@@ -204,7 +194,6 @@ pub fn spawn_window(
                                 flex_shrink: 0.0,
                                 ..default()
                             },
-                            RenderLayers::layer(RENDER_LAYER),
                         ));
                     });
 
@@ -225,7 +214,6 @@ pub fn spawn_window(
                             color: Color::WHITE,
                             ..default()
                         },
-                        RenderLayers::layer(RENDER_LAYER),
                     ));
 
                     // Fade-out zone: bottom — absolutely positioned, NOT affected by scroll
@@ -245,7 +233,6 @@ pub fn spawn_window(
                             color: Color::WHITE,
                             ..default()
                         },
-                        RenderLayers::layer(RENDER_LAYER),
                     ));
                 });
             });

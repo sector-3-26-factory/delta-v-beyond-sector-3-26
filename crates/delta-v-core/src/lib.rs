@@ -51,8 +51,8 @@ pub use boundary::{
     BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
 };
 pub use camera::{
-    ActiveMainCamera, CameraDefinition, PlayerShipEntity, ShipCamerasTemplate, spawn_menu_camera,
-    spawn_ui_camera,
+    ActiveMainCamera, CameraDefinition, PlayerShipEntity, RenderLayer, ShipCamerasTemplate,
+    spawn_menu_camera, spawn_ui_camera,
 };
 pub use debug::{
     AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, mark_debug_axes, render_debug_axes,
@@ -187,8 +187,8 @@ impl Plugin for CorePlugin {
     }
 }
 
-/// Adds `RenderLayers::layer(0)` to all entities that have a `Transform`
-/// but no `RenderLayers` component, excluding cameras.
+/// Adds `RenderLayer::Gameplay` render layers to all entities that have a
+/// `Transform` but no `RenderLayers` component, excluding cameras.
 /// This ensures gameplay objects are visible to all ship cameras (all on layer 0).
 // INVARIANT: Query uses multiple With/Without clauses for precise entity filtering.
 #[allow(clippy::type_complexity)]
@@ -208,7 +208,7 @@ fn apply_gameplay_render_layers(
     for entity in &query {
         commands
             .entity(entity)
-            .insert(bevy::camera::visibility::RenderLayers::layer(0));
+            .insert(RenderLayer::Gameplay.render_layers());
     }
 }
 

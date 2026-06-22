@@ -36,7 +36,6 @@ delta-v-ai = { workspace = true }
 delta-v-ui = { workspace = true }
 
 bevy = { workspace = true }
-bevy_lunex = { workspace = true }
 tracing = { workspace = true }
 clap = { workspace = true }
 

@@ -18,13 +18,11 @@
 
 //! Keybindings menu spawning functions.
 
-use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use delta_v_core::{I18n, KeybindingsResource};
 use delta_v_types::LogicalAction;
 
 use super::components::KeybindingsMenuRoot;
-use crate::window::spawn::RENDER_LAYER;
 use crate::window::{WindowConfig, spawn_window};
 
 // ============================================================================
@@ -75,7 +73,7 @@ pub fn despawn_keybindings_menu(commands: &mut Commands<'_, '_>, entity: Entity)
 /// Uses Bevy UI `Node` + `Text` pattern: each row is a `Node` with flex layout,
 /// containing `Text` children for action name and key binding.
 // This function is long because it manually constructs a multi-group, multi-row
-// Bevy UI tree with repetitive per-element Node/Text/RenderLayers boilerplate.
+// Bevy UI tree with repetitive per-element Node/Text boilerplate.
 #[allow(clippy::too_many_lines)]
 fn keybindings_menu_content(
     ui: &mut ChildSpawnerCommands<'_>,
@@ -132,7 +130,6 @@ fn keybindings_menu_content(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            RenderLayers::layer(RENDER_LAYER),
         ))
         .with_children(|header| {
             header.spawn((
@@ -147,7 +144,6 @@ fn keybindings_menu_content(
                     linebreak: LineBreak::NoWrap,
                     ..default()
                 },
-                RenderLayers::layer(RENDER_LAYER),
             ));
         });
 
@@ -193,7 +189,6 @@ fn keybindings_menu_content(
                     flex_direction: FlexDirection::Row,
                     ..default()
                 },
-                RenderLayers::layer(RENDER_LAYER),
             ))
             .with_children(|row| {
                 // Action name (left column, 50% width)
@@ -203,7 +198,6 @@ fn keybindings_menu_content(
                         width: Val::Percent(50.0),
                         ..default()
                     },
-                    RenderLayers::layer(RENDER_LAYER),
                 ))
                 .with_children(|action_col| {
                     action_col.spawn((
@@ -218,7 +212,6 @@ fn keybindings_menu_content(
                             linebreak: LineBreak::NoWrap,
                             ..default()
                         },
-                        RenderLayers::layer(RENDER_LAYER),
                     ));
                 });
 
@@ -229,7 +222,6 @@ fn keybindings_menu_content(
                         width: Val::Percent(50.0),
                         ..default()
                     },
-                    RenderLayers::layer(RENDER_LAYER),
                 ))
                 .with_children(|key_col| {
                     key_col.spawn((
@@ -244,7 +236,6 @@ fn keybindings_menu_content(
                             linebreak: LineBreak::NoWrap,
                             ..default()
                         },
-                        RenderLayers::layer(RENDER_LAYER),
                     ));
                 });
             });

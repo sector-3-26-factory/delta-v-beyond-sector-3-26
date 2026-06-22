@@ -162,15 +162,6 @@ fn main() {
         .add_plugins(WorldPlugin)
         .add_plugins(AiPlugin);
 
-    // UI infrastructure plugins (bevy_lunex) registered in the binary per ADR-0005,
-    // before the domain UiPlugin that depends on them.
-    app.add_plugins(bevy_lunex::UiLunexPlugins);
-
-    // Lunex debug plugin: prints UI hierarchy tree and draws gizmo outlines.
-    // Only enabled in dev builds per ADR-0035.
-    #[cfg(feature = "dev")]
-    app.add_plugins(bevy_lunex::UiLunexDebugPlugin::<3, 4>);
-
     app.add_plugins(UiPlugin);
 
     app.run();

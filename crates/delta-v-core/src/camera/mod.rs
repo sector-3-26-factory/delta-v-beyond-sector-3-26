@@ -12,6 +12,45 @@ pub mod types;
 
 pub use types::{CameraDefinition, ShipCamerasTemplate};
 
+/// Named render layer indices for the camera/layer system.
+///
+/// | Layer | Name | What it renders |
+/// |-------|------|-----------------|
+/// | 0 | Gameplay | 3D world, ship cameras, gameplay entities |
+/// | 1 | Ui | Cockpit overlay PNG, Bevy UI |
+/// | 2 | Menu | Bevy UI windows, keybindings menu |
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RenderLayer {
+    /// Layer 0 — Gameplay: 3D world, ship cameras, all gameplay entities.
+    Gameplay,
+    /// Layer 1 — UI: Cockpit overlay PNG, Bevy UI.
+    Ui,
+    /// Layer 2 — Menu: Bevy UI windows, keybindings menu.
+    Menu,
+}
+
+impl RenderLayer {
+    /// Returns the raw layer index as `usize`.
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Gameplay => 0,
+            Self::Ui => 1,
+            Self::Menu => 2,
+        }
+    }
+
+    /// Returns a `RenderLayers` containing only this layer.
+    pub const fn render_layers(self) -> RenderLayers {
+        RenderLayers::layer(self.index())
+    }
+}
+
+impl From<RenderLayer> for RenderLayers {
+    fn from(layer: RenderLayer) -> Self {
+        layer.render_layers()
+    }
+}
+
 /// Stores the entity ID of the player-controlled ship.
 #[derive(Resource)]
 pub struct PlayerShipEntity(pub Entity);
@@ -35,19 +74,17 @@ pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
         },
         Transform::default(),
         Visibility::default(),
-        RenderLayers::layer(1),
+        RenderLayer::Ui.render_layers(),
         bevy::ui::IsDefaultUiCamera,
     ));
     tracing::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
 }
 
-/// Spawns the Lunex menu camera.
+/// Spawns the menu camera for Bevy UI windows and menus.
 ///
-/// Renders on layers 2, 3, 4 with `order: 3`. Layer 2 has Lunex UI elements
-/// (keybindings menu, etc.). Layers 3 and 4 are for Lunex debug gizmos
-/// (2D and 3D outlines). Carries `UiSourceCamera::<2>` so that Lunex
-/// `UiFetchFromCamera::<2>` widgets render correctly. Uses ID 2 to avoid
-/// collision with Bevy's default internal camera ID 0.
+/// Renders on `Layer(2)` with `order: 3`. This camera sees the keybindings
+/// menu, window overlays, and other UI elements that should render on top
+/// of the cockpit and 3D world.
 pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
     commands.spawn((
         Camera2d,
@@ -58,8 +95,7 @@ pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
         },
         Transform::default(),
         Visibility::default(),
-        RenderLayers::from_layers(&[2, 3, 4]),
-        bevy_lunex::UiSourceCamera::<2>,
+        RenderLayer::Menu.render_layers(),
     ));
-    tracing::info!("Menu camera (Lunex) spawned with UiSourceCamera::<2>");
+    tracing::info!("Menu camera (Bevy UI) spawned on layer 2");
 }

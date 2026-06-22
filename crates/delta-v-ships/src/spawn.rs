@@ -18,11 +18,10 @@ use crate::ship_templates::{
     MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
     StaticShipTemplate,
 };
-use bevy::camera::visibility::RenderLayers;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, SpawnEntity, Weapon,
+    DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, RenderLayer, SpawnEntity, Weapon,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
@@ -119,7 +118,7 @@ fn spawn_cameras(
                         ..default()
                     },
                     Transform::from_translation(position).looking_at(target, Vec3::Y),
-                    RenderLayers::layer(0),
+                    RenderLayer::Gameplay.render_layers(),
                 ));
                 if name == active_camera_name {
                     camera_entity.insert(delta_v_core::ActiveMainCamera);
