@@ -181,7 +181,7 @@ fn print_x11_hint() {
 [delta-v]   2. Compare DISPLAY on host vs inside the devcontainer:
 [delta-v]        host:      echo $DISPLAY   (e.g. :0)
 [delta-v]        container: echo $DISPLAY   (must match)
-[delta-v]   3. If they differ, inside the container run:
+[delta-v]   3. If they differ, inside the devcontainer run:
 [delta-v]        export DISPLAY=<host value>   (e.g. export DISPLAY=:0)
 [delta-v]      then retry: cargo run --bin delta-v
 [delta-v]   See .devcontainer/README.md for full troubleshooting."

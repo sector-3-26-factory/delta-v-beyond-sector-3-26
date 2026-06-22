@@ -68,6 +68,7 @@ pub fn spawn_window(
     commands: &mut Commands<'_, '_>,
     config: &WindowConfig,
     asset_server: &Res<'_, AssetServer>,
+    theme: &Res<'_, UiTheme>,
     content_fn: impl FnOnce(&mut ChildSpawnerCommands<'_>),
 ) -> Entity {
     // Load fade gradient images into the asset server
@@ -121,6 +122,7 @@ pub fn spawn_window(
                         Name::new("Title"),
                         Text::new(&config.title),
                         TextFont {
+                            font: theme.font.clone(),
                             font_size: UiTheme::TITLE_FONT_SIZE,
                             ..default()
                         },
@@ -132,6 +134,7 @@ pub fn spawn_window(
                         Name::new("Hint"),
                         Text::new(&config.hint),
                         TextFont {
+                            font: theme.font.clone(),
                             font_size: UiTheme::HINT_FONT_SIZE,
                             ..default()
                         },

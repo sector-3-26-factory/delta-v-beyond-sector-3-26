@@ -16,19 +16,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! UI theme constants — single source of truth for all visual properties.
+//! UI theme — single source of truth for all visual properties.
 //!
-//! This is **not** player-configurable. Change these `pub const` values
-//! to change the look of all UI windows and overlays.
+//! [`UiTheme`] is a Bevy resource that holds the font handle and all
+//! visual constants (colors, font sizes, spacing) for windows and overlays.
+//! Every consumer references this resource.
 
 use bevy::prelude::*;
 
-/// UI theme constants.
+/// UI theme resource.
 ///
-/// All visual properties (colors, font sizes, spacing) for windows and
-/// overlays are defined here. To change the look of the UI, edit the
-/// values in this struct — every consumer references these constants.
-pub struct UiTheme;
+/// Inserted once at startup by [`load_ui_theme`].  All UI systems that need
+/// the font or visual constants receive `Res<UiTheme>`.
+#[derive(Resource, Debug)]
+pub struct UiTheme {
+    /// Handle to the font used for all UI text.
+    pub font: Handle<Font>,
+}
 
 impl UiTheme {
     // --- Window ---
@@ -84,4 +88,15 @@ impl UiTheme {
 
     /// Value text color (e.g. key bindings, secondary text).
     pub const VALUE_COLOR: Color = Color::srgb(0.7, 1.0, 0.7);
+}
+
+/// Startup system that loads the UI font and inserts the [`UiTheme`] resource.
+///
+/// Loads `fonts/DejaVuSansMono.ttf` and inserts it as a resource so that
+/// all UI systems can access the font handle.
+#[allow(clippy::needless_pass_by_value)]
+pub fn load_ui_theme(mut commands: Commands<'_, '_>, asset_server: Res<'_, AssetServer>) {
+    let font: Handle<Font> = asset_server.load("fonts/DejaVuSansMono.ttf");
+    commands.insert_resource(UiTheme { font });
+    tracing::info!("loaded UI theme font (DejaVu Sans Mono)");
 }

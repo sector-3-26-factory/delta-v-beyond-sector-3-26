@@ -39,6 +39,7 @@ pub fn spawn_keybindings_menu(
     i18n: &I18n,
     keybindings: &KeybindingsResource,
     asset_server: &Res<'_, AssetServer>,
+    theme: &Res<'_, UiTheme>,
 ) {
     let title = i18n.ui.menu.keybindings.title.clone();
     let hint = i18n.ui.menu.keybindings.close.clone();
@@ -51,7 +52,8 @@ pub fn spawn_keybindings_menu(
             ..default()
         },
         asset_server,
-        |ui| keybindings_menu_content(ui, i18n, keybindings),
+        theme,
+        |ui| keybindings_menu_content(ui, i18n, keybindings, theme),
     );
 
     // Add the keybindings-specific marker so the toggle system can find/despawn this entity.
@@ -79,6 +81,7 @@ fn keybindings_menu_content(
     ui: &mut ChildSpawnerCommands<'_>,
     i18n: &I18n,
     keybindings: &KeybindingsResource,
+    theme: &Res<'_, UiTheme>,
 ) {
     // Group definitions: (group_key, actions in group)
     // The group key maps to `i18n.ui.menu.keybindings.group.<group_key>`.
@@ -136,6 +139,7 @@ fn keybindings_menu_content(
                 Name::new(format!("GroupHeaderText_{group_key}")),
                 Text::new(group_name),
                 TextFont {
+                    font: theme.font.clone(),
                     font_size: UiTheme::GROUP_HEADER_FONT_SIZE,
                     ..default()
                 },
@@ -177,7 +181,7 @@ fn keybindings_menu_content(
                                 .map_or_else(|| key_name.clone(), Clone::clone)
                         })
                         .collect::<Vec<_>>()
-                        .join(" / ")
+                        .join(" + ")
                 })
                 .unwrap_or_default();
 
@@ -204,6 +208,7 @@ fn keybindings_menu_content(
                         Name::new(format!("ActionText_{action_name}")),
                         Text::new(action_display),
                         TextFont {
+                            font: theme.font.clone(),
                             font_size: UiTheme::TEXT_FONT_SIZE,
                             ..default()
                         },
@@ -228,6 +233,7 @@ fn keybindings_menu_content(
                         Name::new(format!("KeyText_{action_name}")),
                         Text::new(key_text),
                         TextFont {
+                            font: theme.font.clone(),
                             font_size: UiTheme::TEXT_FONT_SIZE,
                             ..default()
                         },

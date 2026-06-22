@@ -30,4 +30,4 @@ pub mod systems;
 pub mod theme;
 
 pub use spawn::{WindowConfig, spawn_window};
-pub use theme::UiTheme;
+pub use theme::{UiTheme, load_ui_theme};

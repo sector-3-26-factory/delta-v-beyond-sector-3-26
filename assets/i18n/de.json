@@ -42,8 +42,8 @@
                     "ArrowLeft": "←",
                     "ArrowRight": "→",
                     "Space": "Leertaste",
-                    "KeyF2": "F2",
-                    "KeyLeftAlt": "Alt Links"
+                    "F2": "F2",
+                    "AltLeft": "Alt Links"
                 }
             }
         }
