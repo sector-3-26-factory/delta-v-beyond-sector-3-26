@@ -20,18 +20,18 @@
 
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
-use bevy_lunex::prelude::*;
 use delta_v_core::{I18n, KeybindingsResource};
 use delta_v_types::LogicalAction;
 
 use super::components::KeybindingsMenuRoot;
+use crate::window::spawn::RENDER_LAYER;
 use crate::window::{WindowConfig, spawn_window};
 
 // ============================================================================
-// Lunex-based keybindings menu
+// Bevy UI-based keybindings menu
 // ============================================================================
 
-/// Spawns the keybindings menu using Lunex UI.
+/// Spawns the keybindings menu using Bevy UI.
 ///
 /// Displays a 300x200px semi-transparent window centered on screen.
 /// The title and hint are positioned side by side in one row.
@@ -40,6 +40,7 @@ pub fn spawn_keybindings_menu(
     commands: &mut Commands<'_, '_>,
     i18n: &I18n,
     keybindings: &KeybindingsResource,
+    asset_server: &Res<'_, AssetServer>,
 ) {
     let title = i18n.ui.menu.keybindings.title.clone();
     let hint = i18n.ui.menu.keybindings.close.clone();
@@ -51,6 +52,7 @@ pub fn spawn_keybindings_menu(
             hint,
             ..default()
         },
+        asset_server,
         |ui| keybindings_menu_content(ui, i18n, keybindings),
     );
 
@@ -70,8 +72,10 @@ pub fn despawn_keybindings_menu(commands: &mut Commands<'_, '_>, entity: Entity)
 /// Displays all current keybindings grouped by category (flight, combat, systems).
 /// Each entry shows the translated action name and the translated key name(s).
 ///
-/// Uses the Lunex container pattern from [`crate::window::spawn_window`]: each visual element is wrapped in a `UiLayout` container with a fixed size;
-/// the text is spawned as a child with `.pack()` so it fills the container.
+/// Uses Bevy UI `Node` + `Text` pattern: each row is a `Node` with flex layout,
+/// containing `Text` children for action name and key binding.
+// This function is long because it manually constructs a multi-group, multi-row
+// Bevy UI tree with repetitive per-element Node/Text/RenderLayers boilerplate.
 #[allow(clippy::too_many_lines)]
 fn keybindings_menu_content(
     ui: &mut ChildSpawnerCommands<'_>,
@@ -109,18 +113,6 @@ fn keybindings_menu_content(
         ),
     ];
 
-    // Layout constants (in pixels / percentage units).
-    let row_height = 18.0_f32;
-    let header_offset = 4.0_f32;
-    let group_gap = 8.0_f32;
-    let action_col_pct = 50.0_f32; // percentage of width for action name column
-    let action_col_pad = 4.0_f32; // left padding inside action column
-    let key_col_start_pct = action_col_pct + 5.0; // percentage offset for key column
-    let key_col_pad = 2.0_f32; // right padding inside key column
-
-    // Track current vertical position as we stack rows.
-    let mut current_y = header_offset;
-
     for (group_key, actions) in groups {
         // Look up the translated group name, fall back to uppercase key.
         let group_name = i18n
@@ -134,33 +126,30 @@ fn keybindings_menu_content(
         // -- Group header --
         ui.spawn((
             Name::new(format!("GroupHeader_{group_key}")),
-            UiLayout::window()
-                .pos((Rl(2.0), Ab(current_y)))
-                .size((Rl(96.0), Ab(row_height)))
-                .anchor(Anchor::TOP_LEFT)
-                .pack(),
-            RenderLayers::layer(2),
+            Node {
+                width: Val::Percent(100.0),
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            RenderLayers::layer(RENDER_LAYER),
         ))
         .with_children(|header| {
             header.spawn((
                 Name::new(format!("GroupHeaderText_{group_key}")),
-                UiLayout::window().pack(),
-                UiTextSize::from(Rh(80.0)),
-                Text2d::new(group_name),
-                TextLayout {
-                    justify: Justify::Left,
-                    linebreak: LineBreak::WordBoundary,
-                },
+                Text::new(group_name),
                 TextFont {
                     font_size: 14.0,
                     ..default()
                 },
                 TextColor(Color::srgb(1.0, 0.85, 0.0)),
-                Pickable::IGNORE,
-                RenderLayers::layer(2),
+                TextLayout {
+                    linebreak: LineBreak::NoWrap,
+                    ..default()
+                },
+                RenderLayers::layer(RENDER_LAYER),
             ));
         });
-        current_y += row_height;
 
         // -- Action rows --
         for action in *actions {
@@ -196,70 +185,69 @@ fn keybindings_menu_content(
                 })
                 .unwrap_or_default();
 
-            // Action name container (left column).
+            // Action row — two columns
             ui.spawn((
-                Name::new(format!("Action_{action_name}")),
-                UiLayout::window()
-                    .pos((Rl(action_col_pad), Ab(current_y)))
-                    .size((Rl(action_col_pct - action_col_pad), Ab(row_height)))
-                    .anchor(Anchor::TOP_LEFT)
-                    .pack(),
-                RenderLayers::layer(2),
+                Name::new(format!("ActionRow_{action_name}")),
+                Node {
+                    width: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Row,
+                    ..default()
+                },
+                RenderLayers::layer(RENDER_LAYER),
             ))
-            .with_children(|action_row| {
-                action_row.spawn((
-                    Name::new(format!("ActionText_{action_name}")),
-                    UiLayout::window().pack(),
-                    UiTextSize::from(Rh(80.0)),
-                    Text2d::new(action_display),
-                    TextLayout {
-                        justify: Justify::Left,
-                        linebreak: LineBreak::WordBoundary,
-                    },
-                    TextFont {
-                        font_size: 12.0,
+            .with_children(|row| {
+                // Action name (left column, 50% width)
+                row.spawn((
+                    Name::new(format!("Action_{action_name}")),
+                    Node {
+                        width: Val::Percent(50.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
-                    Pickable::IGNORE,
-                    RenderLayers::layer(2),
-                ));
-            });
+                    RenderLayers::layer(RENDER_LAYER),
+                ))
+                .with_children(|action_col| {
+                    action_col.spawn((
+                        Name::new(format!("ActionText_{action_name}")),
+                        Text::new(action_display),
+                        TextFont {
+                            font_size: 12.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                        TextLayout {
+                            linebreak: LineBreak::NoWrap,
+                            ..default()
+                        },
+                        RenderLayers::layer(RENDER_LAYER),
+                    ));
+                });
 
-            // Key binding container (right column).
-            ui.spawn((
-                Name::new(format!("Key_{action_name}")),
-                UiLayout::window()
-                    .pos((Rl(key_col_start_pct), Ab(current_y)))
-                    .size((Rl(100.0 - key_col_start_pct - key_col_pad), Ab(row_height)))
-                    .anchor(Anchor::TOP_LEFT)
-                    .pack(),
-                RenderLayers::layer(2),
-            ))
-            .with_children(|key_row| {
-                key_row.spawn((
-                    Name::new(format!("KeyText_{action_name}")),
-                    UiLayout::window().pack(),
-                    UiTextSize::from(Rh(80.0)),
-                    Text2d::new(key_text),
-                    TextLayout {
-                        justify: Justify::Left,
-                        linebreak: LineBreak::WordBoundary,
-                    },
-                    TextFont {
-                        font_size: 12.0,
+                // Key binding (right column, 50% width)
+                row.spawn((
+                    Name::new(format!("Key_{action_name}")),
+                    Node {
+                        width: Val::Percent(50.0),
                         ..default()
                     },
-                    TextColor(Color::srgb(0.7, 1.0, 0.7)),
-                    Pickable::IGNORE,
-                    RenderLayers::layer(2),
-                ));
+                    RenderLayers::layer(RENDER_LAYER),
+                ))
+                .with_children(|key_col| {
+                    key_col.spawn((
+                        Name::new(format!("KeyText_{action_name}")),
+                        Text::new(key_text),
+                        TextFont {
+                            font_size: 12.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.7, 1.0, 0.7)),
+                        TextLayout {
+                            linebreak: LineBreak::NoWrap,
+                            ..default()
+                        },
+                        RenderLayers::layer(RENDER_LAYER),
+                    ));
+                });
             });
-
-            current_y += row_height;
         }
-
-        // Gap between groups.
-        current_y += group_gap;
     }
 }

@@ -20,9 +20,13 @@
 
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
-use bevy_lunex::prelude::*;
+use bevy::ui::{Overflow, ScrollPosition, ZIndex};
 
-use super::components::WindowRoot;
+use super::components::{BACKGROUND_COLOR, FADE_ZONE_HEIGHT, WindowScrollContainer};
+use super::fade_images::{create_fade_bottom_image, create_fade_top_image};
+
+/// Render layer for window UI elements.
+pub(crate) const RENDER_LAYER: usize = 2;
 
 /// Configuration for a window entity.
 pub struct WindowConfig {
@@ -32,8 +36,6 @@ pub struct WindowConfig {
     pub hint: String,
     /// Window size in pixels.
     pub size: Vec2,
-    /// Render layer for the window.
-    pub render_layer: usize,
 }
 
 // allow-default: WindowConfig is a pure Rust UI helper struct, not JSON-backed.
@@ -44,17 +46,20 @@ impl Default for WindowConfig {
             title: String::new(),
             hint: String::new(),
             size: Vec2::new(300.0, 200.0),
-            render_layer: 2,
         }
     }
 }
 
 /// Spawns a generic window with a title bar, hint, and content area.
 ///
+/// Uses pure Bevy UI (`Node` + `Text` + `ScrollPosition`) for layout and clipping.
+///
 /// The window consists of:
 /// - A semi-transparent black panel centered on screen.
 /// - A header row with the title on the left and hint on the right.
 /// - A content area that fills the remaining space below the header.
+/// - Fade-out zones at the top and bottom of the content area.
+/// - Mouse wheel scrolling for overflow content.
 ///
 /// The `content_fn` callback is called with the content area's child spawner,
 /// allowing the caller to spawn arbitrary content inside the window.
@@ -64,112 +69,184 @@ impl Default for WindowConfig {
 pub fn spawn_window(
     commands: &mut Commands<'_, '_>,
     config: &WindowConfig,
+    asset_server: &Res<'_, AssetServer>,
     content_fn: impl FnOnce(&mut ChildSpawnerCommands<'_>),
 ) -> Entity {
+    // Load fade gradient images into the asset server
+    let fade_top_image = asset_server.add(create_fade_top_image());
+    let fade_bottom_image = asset_server.add(create_fade_bottom_image());
+
+    let size = config.size;
+
     commands
         .spawn((
-            WindowRoot,
-            UiLayoutRoot::new_2d(),
-            UiFetchFromCamera::<2>,
-            RenderLayers::layer(config.render_layer),
+            Name::new("WindowRoot"),
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            RenderLayers::layer(RENDER_LAYER),
         ))
         .with_children(|ui| {
-            // Main panel
+            // Main panel — semi-transparent black background
             ui.spawn((
                 Name::new("Panel"),
-                UiLayout::window()
-                    .pos(Rl((50.0, 50.0)))
-                    .size((Ab(config.size.x), Ab(config.size.y)))
-                    .anchor(Anchor::CENTER)
-                    .pack(),
-                Sprite {
-                    color: Color::srgba(0.0, 0.0, 0.0, 0.8),
+                Node {
+                    width: Val::Px(size.x),
+                    height: Val::Px(size.y),
+                    flex_direction: FlexDirection::Column,
                     ..default()
                 },
-                RenderLayers::layer(config.render_layer),
+                BackgroundColor(BACKGROUND_COLOR),
+                RenderLayers::layer(RENDER_LAYER),
             ))
             .with_children(|ui| {
-                // Header row container: 20px height at position (5, 5)
+                // Header row — 20px tall, fixed height
                 ui.spawn((
                     Name::new("HeaderRow"),
-                    UiLayout::window()
-                        .pos((Ab(5.0), Ab(5.0)))
-                        .size((Rl(100.0) - Ab(10.0), Ab(20.0)))
-                        .pack(),
+                    Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(20.0),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::horizontal(Val::Px(5.0)),
+                        flex_shrink: 0.0,
+                        ..default()
+                    },
+                    RenderLayers::layer(RENDER_LAYER),
                 ))
                 .with_children(|ui| {
-                    // Title container: 50% width, full height of parent
+                    // Title text
                     ui.spawn((
-                        Name::new("TitleContainer"),
-                        UiLayout::window().size((Rl(50.0), Rh(100.0))).pack(),
-                    ))
-                    .with_children(|ui| {
-                        // Title text: Stays compact, anchors LEFT
-                        ui.spawn((
-                            Name::new("Title"),
-                            UiLayout::window()
-                                .pos((Rl(0.0), Rl(50.0)))
-                                .anchor(Anchor::CENTER_LEFT)
-                                .pack(),
-                            UiTextSize::from(Rh(80.0)),
-                            Text2d::new(&config.title),
-                            TextLayout {
-                                justify: Justify::Left,
-                                ..default()
-                            },
-                            TextFont {
-                                font_size: 20.0,
-                                ..default()
-                            },
-                            TextColor(Color::WHITE),
-                            Pickable::IGNORE,
-                            RenderLayers::layer(config.render_layer),
-                        ));
-                    });
+                        Name::new("Title"),
+                        Text::new(&config.title),
+                        TextFont {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                        RenderLayers::layer(RENDER_LAYER),
+                    ));
 
-                    // Hint container: 50% width, full height of parent
+                    // Hint text
                     ui.spawn((
-                        Name::new("HintContainer"),
-                        UiLayout::window()
-                            .pos((Rl(50.0), Ab(0.0)))
-                            .size((Rl(50.0), Rh(100.0)))
-                            .pack(),
-                    ))
-                    .with_children(|ui| {
-                        // Hint text: Stays compact, anchors RIGHT
-                        ui.spawn((
-                            Name::new("Hint"),
-                            UiLayout::window()
-                                .pos((Rl(100.0), Rl(50.0)))
-                                .anchor(Anchor::CENTER_RIGHT)
-                                .pack(),
-                            UiTextSize::from(Rh(60.0)),
-                            Text2d::new(&config.hint),
-                            TextLayout {
-                                justify: Justify::Right,
-                                ..default()
-                            },
-                            TextFont {
-                                font_size: 14.0,
-                                ..default()
-                            },
-                            TextColor(Color::srgb(0.7, 0.7, 0.7)),
-                            Pickable::IGNORE,
-                            RenderLayers::layer(config.render_layer),
-                        ));
-                    });
+                        Name::new("Hint"),
+                        Text::new(&config.hint),
+                        TextFont {
+                            font_size: 14.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.7, 0.7, 0.7)),
+                        RenderLayers::layer(RENDER_LAYER),
+                    ));
                 });
 
-                // Content container: fills remaining space below header
+                // Content area — fills remaining space, clips overflow on X.
+                // Y scrolling is handled by the inner ScrollContainer.
                 ui.spawn((
-                    Name::new("Content"),
-                    UiLayout::window()
-                        .pos((Ab(0.0), Ab(25.0)))
-                        .size((Rl(100.0), Rl(100.0) - Ab(25.0)))
-                        .pack(),
+                    Name::new("ContentContainer"),
+                    Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(size.y - 20.0),
+                        overflow: Overflow {
+                            x: OverflowAxis::Clip,
+                            y: OverflowAxis::Visible,
+                        },
+                        position_type: PositionType::Relative,
+                        ..default()
+                    },
+                    RenderLayers::layer(RENDER_LAYER),
                 ))
                 .with_children(|ui| {
-                    content_fn(ui);
+                    // Scrollable content — handles Y scrolling via Bevy's layout system
+                    ui.spawn((
+                        Name::new("ScrollContainer"),
+                        WindowScrollContainer,
+                        Node {
+                            width: Val::Percent(100.0),
+                            height: Val::Percent(100.0),
+                            overflow: Overflow {
+                                x: OverflowAxis::Clip,
+                                y: OverflowAxis::Scroll,
+                            },
+                            flex_direction: FlexDirection::Column,
+                            ..default()
+                        },
+                        ScrollPosition(Vec2::ZERO),
+                        RenderLayers::layer(RENDER_LAYER),
+                    ))
+                    .with_children(|ui| {
+                        // Top padding line
+                        ui.spawn((
+                            Name::new("PaddingTop"),
+                            Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Px(FADE_ZONE_HEIGHT),
+                                flex_shrink: 0.0,
+                                ..default()
+                            },
+                            RenderLayers::layer(RENDER_LAYER),
+                        ));
+
+                        // Actual content from the caller
+                        content_fn(ui);
+
+                        // Bottom padding line
+                        ui.spawn((
+                            Name::new("PaddingBottom"),
+                            Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Px(FADE_ZONE_HEIGHT),
+                                flex_shrink: 0.0,
+                                ..default()
+                            },
+                            RenderLayers::layer(RENDER_LAYER),
+                        ));
+                    });
+
+                    // Fade-out zone: top — absolutely positioned, NOT affected by scroll
+                    ui.spawn((
+                        Name::new("FadeTop"),
+                        Node {
+                            width: Val::Percent(100.0),
+                            height: Val::Px(FADE_ZONE_HEIGHT),
+                            position_type: PositionType::Absolute,
+                            top: Val::Px(0.0),
+                            left: Val::Px(0.0),
+                            ..default()
+                        },
+                        ZIndex(100),
+                        ImageNode {
+                            image: fade_top_image,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                        RenderLayers::layer(RENDER_LAYER),
+                    ));
+
+                    // Fade-out zone: bottom — absolutely positioned, NOT affected by scroll
+                    ui.spawn((
+                        Name::new("FadeBottom"),
+                        Node {
+                            width: Val::Percent(100.0),
+                            height: Val::Px(FADE_ZONE_HEIGHT),
+                            position_type: PositionType::Absolute,
+                            bottom: Val::Px(0.0),
+                            left: Val::Px(0.0),
+                            ..default()
+                        },
+                        ZIndex(100),
+                        ImageNode {
+                            image: fade_bottom_image,
+                            color: Color::WHITE,
+                            ..default()
+                        },
+                        RenderLayers::layer(RENDER_LAYER),
+                    ));
                 });
             });
         })

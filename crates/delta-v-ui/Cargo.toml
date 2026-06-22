@@ -16,7 +16,6 @@ dev = []
 
 [dependencies]
 bevy = { workspace = true }
-bevy_lunex = { workspace = true }
 tracing = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-types = { workspace = true }

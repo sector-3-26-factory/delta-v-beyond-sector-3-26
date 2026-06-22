@@ -2720,7 +2720,6 @@ name = "delta-v-ui"
 version = "0.0.1"
 dependencies = [
  "bevy",
- "bevy_lunex",
  "delta-v-core",
  "delta-v-types",
  "tracing",

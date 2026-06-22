@@ -39,6 +39,7 @@ pub fn keybindings_menu_toggle_system(
     query: Query<'_, '_, Entity, With<KeybindingsMenuRoot>>,
     i18n: Res<'_, I18n>,
     keybindings: Res<'_, KeybindingsResource>,
+    asset_server: Res<'_, AssetServer>,
 ) {
     // Check if F1 is pressed
     let f1_pressed = keyboard.just_pressed(KeyCode::F1);
@@ -56,7 +57,7 @@ pub fn keybindings_menu_toggle_system(
         tracing::debug!("keybindings menu: closed");
     } else {
         // Open the menu: spawn the menu UI
-        spawn_keybindings_menu(&mut commands, &i18n, &keybindings);
+        spawn_keybindings_menu(&mut commands, &i18n, &keybindings, &asset_server);
         menu_open.0 = true;
         tracing::debug!("keybindings menu: opened");
     }

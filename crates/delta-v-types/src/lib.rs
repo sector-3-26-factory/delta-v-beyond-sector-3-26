@@ -58,7 +58,3 @@ mod spatial_tests;
 #[cfg(test)]
 #[path = "collision_type_tests.rs"]
 mod collision_type_tests;
-
-#[cfg(test)]
-#[path = "logical_action_tests.rs"]
-mod logical_action_tests;

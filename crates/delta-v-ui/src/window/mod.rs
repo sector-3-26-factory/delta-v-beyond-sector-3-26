@@ -19,11 +19,13 @@
 //! Reusable window UI module.
 //!
 //! Provides a generic window frame with a title bar, hint text, and content area.
+//! Uses pure Bevy UI (`Node` + `Text` + `ScrollPosition`) for layout and clipping.
 //! The content area is populated via a callback function, making this module
 //! reusable for different window types (keybindings menu, settings, etc.).
 
 pub mod components;
+pub mod fade_images;
 pub mod spawn;
+pub mod systems;
 
-pub use components::WindowRoot;
 pub use spawn::{WindowConfig, spawn_window};

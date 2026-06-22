@@ -33,5 +33,6 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(overlays::OverlaysPlugin);
+        app.add_systems(Update, window::systems::window_scroll_system);
     }
 }
