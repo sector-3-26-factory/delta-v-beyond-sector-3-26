@@ -88,12 +88,39 @@ impl UiTheme {
 
     /// Value text color (e.g. key bindings, secondary text).
     pub const VALUE_COLOR: Color = Color::srgb(0.7, 1.0, 0.7);
+
+    // --- Border ---
+
+    /// Color for the corner bracket accents.
+    pub const BRACKET_COLOR: Color = Color::srgb(0.0, 1.0, 1.0);
+
+    /// Color for the animated scan lines.
+    pub const SCAN_LINE_COLOR: Color = Color::srgb(0.0, 1.0, 1.0);
+
+    /// Length of each corner bracket arm in pixels.
+    pub const BRACKET_LENGTH: f32 = 12.0;
+
+    /// Width of the corner bracket lines in pixels.
+    pub const BRACKET_WIDTH: f32 = 2.0;
+
+    /// Radius of the scan line dot in pixels.
+    pub const SCAN_DOT_RADIUS: f32 = 3.0;
+
+    /// Number of trail segments behind each scan line dot.
+    pub const SCAN_TRAIL_LENGTH: usize = 8;
+
+    /// Time in seconds for a scan line to travel from one corner to the next.
+    pub const SCAN_CORNER_TO_CORNER_TIME: f64 = 4.0;
+
+    /// Duration of the scan trail in seconds.
+    pub const SCAN_TRAIL_DURATION: f64 = 1.2;
 }
 
 /// Startup system that loads the UI font and inserts the [`UiTheme`] resource.
 ///
 /// Loads `fonts/DejaVuSansMono.ttf` and inserts it as a resource so that
 /// all UI systems can access the font handle.
+// Commands and Res are Bevy system parameters that must be passed by value per Bevy's API.
 #[allow(clippy::needless_pass_by_value)]
 pub fn load_ui_theme(mut commands: Commands<'_, '_>, asset_server: Res<'_, AssetServer>) {
     let font: Handle<Font> = asset_server.load("fonts/DejaVuSansMono.ttf");

@@ -32,3 +32,15 @@ pub struct WindowRoot;
 /// Added to the inner scroll container entity to identify it for the scroll system.
 #[derive(Component)]
 pub struct WindowScrollContainer;
+
+/// Component for window panel entities that have animated borders.
+///
+/// Stores the window's global time for scan line animation and the panel's
+/// computed bounds for positioning the border effects.
+#[derive(Component)]
+pub struct WindowBorder {
+    /// Global animation time in seconds.
+    pub anim_time: f64,
+    /// Panel bounds (min_x, min_y, max_x, max_y) in pixels.
+    pub bounds: Vec4,
+}

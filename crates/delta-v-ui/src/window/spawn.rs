@@ -22,6 +22,8 @@ use bevy::prelude::*;
 use bevy::ui::{Overflow, ScrollPosition, ZIndex};
 use delta_v_core::RenderLayer;
 
+use super::border::ScanLineDot;
+use super::components::WindowBorder;
 use super::components::WindowScrollContainer;
 use super::fade_images::{create_fade_bottom_image, create_fade_top_image};
 use super::theme::UiTheme;
@@ -48,6 +50,93 @@ impl Default for WindowConfig {
     }
 }
 
+/// Spawns a scan line dot entity.
+fn spawn_scan_line_dot(
+    commands: &mut ChildSpawnerCommands<'_>,
+    start_corner: u8,
+    is_main: bool,
+    trail_index: usize,
+) {
+    let dot_size = if is_main {
+        UiTheme::SCAN_DOT_RADIUS * 2.0
+    } else {
+        UiTheme::SCAN_DOT_RADIUS * 1.5
+    };
+
+    commands.spawn((
+        Name::new(format!(
+            "ScanDot_{}_{}_{}",
+            start_corner, is_main, trail_index
+        )),
+        Node {
+            width: Val::Px(dot_size),
+            height: Val::Px(dot_size),
+            position_type: PositionType::Absolute,
+            ..default()
+        },
+        BackgroundColor(UiTheme::SCAN_LINE_COLOR),
+        ZIndex(200),
+        ScanLineDot {
+            start_corner,
+            is_main,
+            trail_index,
+        },
+    ));
+}
+
+/// Spawns corner bracket entities for a specific corner.
+fn spawn_corner_bracket(commands: &mut ChildSpawnerCommands<'_>, corner: u8, size: Vec2) {
+    let bracket_len = UiTheme::BRACKET_LENGTH;
+    let bracket_width = UiTheme::BRACKET_WIDTH;
+
+    // Calculate positions based on corner
+    let (h_left, h_top) = match corner {
+        0 => (0.0, 0.0),                                     // top-left
+        1 => (size.x - bracket_len, 0.0),                    // top-right
+        2 => (0.0, size.y - bracket_width),                  // bottom-left
+        3 => (size.x - bracket_len, size.y - bracket_width), // bottom-right
+        _ => unreachable!(),
+    };
+
+    let (v_left, v_top) = match corner {
+        0 => (0.0, 0.0),                                     // top-left
+        1 => (size.x - bracket_width, 0.0),                  // top-right
+        2 => (0.0, size.y - bracket_len),                    // bottom-left
+        3 => (size.x - bracket_width, size.y - bracket_len), // bottom-right
+        _ => unreachable!(),
+    };
+
+    // Horizontal line of bracket
+    commands.spawn((
+        Name::new(format!("BracketH_{}", corner)),
+        Node {
+            width: Val::Px(bracket_len),
+            height: Val::Px(bracket_width),
+            position_type: PositionType::Absolute,
+            left: Val::Px(h_left),
+            top: Val::Px(h_top),
+            ..default()
+        },
+        BackgroundColor(UiTheme::BRACKET_COLOR),
+        ZIndex(200),
+    ));
+
+    // Vertical line of bracket
+    commands.spawn((
+        Name::new(format!("BracketV_{}", corner)),
+        Node {
+            width: Val::Px(bracket_width),
+            height: Val::Px(bracket_len),
+            position_type: PositionType::Absolute,
+            left: Val::Px(v_left),
+            top: Val::Px(v_top),
+            ..default()
+        },
+        BackgroundColor(UiTheme::BRACKET_COLOR),
+        ZIndex(200),
+    ));
+}
+
 /// Spawns a generic window with a title bar, hint, and content area.
 ///
 /// Uses pure Bevy UI (`Node` + `Text` + `ScrollPosition`) for layout and clipping.
@@ -58,11 +147,13 @@ impl Default for WindowConfig {
 /// - A content area that fills the remaining space below the header.
 /// - Fade-out zones at the top and bottom of the content area.
 /// - Mouse wheel scrolling for overflow content.
+/// - Animated corner brackets and scan lines on the border.
 ///
 /// The `content_fn` callback is called with the content area's child spawner,
 /// allowing the caller to spawn arbitrary content inside the window.
 ///
 /// Returns the spawned root entity.
+// Window layout has many required fields (header, content, fade zones, brackets, scan lines).
 #[allow(clippy::too_many_lines)]
 pub fn spawn_window(
     commands: &mut Commands<'_, '_>,
@@ -76,6 +167,8 @@ pub fn spawn_window(
     let fade_bottom_image = asset_server.add(create_fade_bottom_image());
 
     let size = config.size;
+    // Bounds relative to panel origin (top-left of panel)
+    let panel_bounds = Vec4::new(0.0, 0.0, size.x, size.y);
 
     commands
         .spawn((
@@ -100,8 +193,28 @@ pub fn spawn_window(
                     ..default()
                 },
                 BackgroundColor(UiTheme::BACKGROUND_COLOR),
+                WindowBorder {
+                    anim_time: 0.0,
+                    bounds: panel_bounds,
+                },
             ))
             .with_children(|ui| {
+                // Spawn corner brackets
+                for corner in 0..4u8 {
+                    spawn_corner_bracket(ui, corner, size);
+                }
+
+                // Spawn scan line dots (4 corners x (1 main + trail dots))
+                for corner in 0..4u8 {
+                    // Main dot
+                    spawn_scan_line_dot(ui, corner, true, 0);
+
+                    // Trail dots
+                    for trail_idx in 0..UiTheme::SCAN_TRAIL_LENGTH {
+                        spawn_scan_line_dot(ui, corner, false, trail_idx);
+                    }
+                }
+
                 // Header row — fixed height
                 ui.spawn((
                     Name::new("HeaderRow"),
