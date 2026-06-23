@@ -106,6 +106,12 @@ impl UiTheme {
     /// Radius of the scan line dot in pixels.
     pub const SCAN_DOT_RADIUS: f32 = 3.0;
 
+    /// Width of the scan line dot (oval shape) in pixels.
+    pub const SCAN_DOT_WIDTH: f32 = 6.0;
+
+    /// Height of the scan line dot (oval shape) in pixels.
+    pub const SCAN_DOT_HEIGHT: f32 = 3.0;
+
     /// Number of trail segments behind each scan line dot.
     pub const SCAN_TRAIL_LENGTH: usize = 8;
 
