@@ -18,8 +18,9 @@
 
 //! Internationalization (i18n) loading and validation.
 //!
-//! Loads the English translation file and validates it against the i18n schema.
-//! The loaded translations are inserted as an [`I18n`] resource for use by UI systems.
+//! Loads the translation file for the selected language and validates it against
+//! the i18n schema. The loaded translations are inserted as an [`I18n`] resource
+//! for use by UI systems.
 //!
 //! See ADR-0037 (Internationalization).
 
@@ -28,18 +29,23 @@ use std::path::PathBuf;
 use crate::ConfigError;
 use delta_v_assets::get_workspace_root;
 use delta_v_json::load;
-use delta_v_types::I18n;
+use delta_v_types::{I18n, PlayerSettings};
 
-/// Loads and validates the i18n file.
+/// Loads and validates the i18n file for the specified language.
 ///
-/// Uses the new `load()` builder pattern to load and validate the English
-/// translation file against the i18n schema.
+/// Uses the new `load()` builder pattern to load and validate the translation
+/// file against the i18n schema.
+///
+/// # Arguments
+///
+/// * `settings` - Player settings containing the selected language code.
 ///
 /// # Errors
 ///
 /// Returns [`ConfigError`] if the file cannot be read, parsed, or validated.
-pub fn load_i18n() -> Result<I18n, ConfigError> {
-    let json_path: PathBuf = get_workspace_root().join("assets/i18n/en.json");
+pub fn load_i18n(settings: &PlayerSettings) -> Result<I18n, ConfigError> {
+    let json_path: PathBuf =
+        get_workspace_root().join(format!("assets/i18n/{}.json", settings.language));
     let schema_path: PathBuf = get_workspace_root().join("assets/json/schema/i18n.schema.json");
 
     let value = load(json_path.clone(), schema_path)

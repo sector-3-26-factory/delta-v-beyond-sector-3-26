@@ -71,7 +71,9 @@ pub use spawn::WorldSpawnSet;
 pub use state::AppState;
 
 // Re-exports from delta-v-types for shared types (ADR-0046)
-pub use delta_v_types::{BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, Vec3Json};
+pub use delta_v_types::{
+    BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, PlayerSettings, Vec3Json,
+};
 
 #[cfg(test)]
 #[path = "state/tests.rs"]

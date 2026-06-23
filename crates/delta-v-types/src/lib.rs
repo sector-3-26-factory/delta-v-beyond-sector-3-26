@@ -37,6 +37,7 @@ pub mod i18n;
 pub mod ids;
 pub mod logical_action;
 pub mod physics;
+pub mod player_settings;
 pub mod spatial;
 pub mod weapons;
 
@@ -48,6 +49,7 @@ pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslatio
 pub use ids::{EntityId, TemplatePath};
 pub use logical_action::LogicalAction;
 pub use physics::PhysicalQuantityJson;
+pub use player_settings::PlayerSettings;
 pub use spatial::{BoundingBoxJson, QuatJson, Vec3Json};
 pub use weapons::WeaponTemplateJson;
 

@@ -59,7 +59,9 @@ pub use resources::KeybindingsResource;
 use bevy::prelude::*;
 use delta_v_core::{AppState, FlightAssistState};
 
-use crate::loader::{load_debug, load_diagnostics, load_flight_assist, load_keybindings};
+use crate::loader::{
+    load_debug, load_diagnostics, load_flight_assist, load_keybindings, load_player_settings,
+};
 
 /// Configuration plugin: loads and validates all JSON config files.
 ///
@@ -109,11 +111,24 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
         .collect();
     commands.insert_resource(KeybindingsResource(kb_map));
 
+    // Player settings (ADR-0010, ADR-0037).
+    // INVARIANT: a missing or invalid player settings file is a hard startup
+    // error (ADR-0013). The panic is intentional; no recovery is possible.
+    #[allow(clippy::panic)]
+    let player_settings = load_player_settings().unwrap_or_else(|e| {
+        panic!("fatal: failed to load player_settings: {e}");
+    });
+    tracing::info!(
+        "player_settings loaded (language: {})",
+        player_settings.language
+    );
+    commands.insert_resource(player_settings.clone());
+
     // i18n translations (ADR-0037).
     // INVARIANT: a missing or invalid i18n file is a hard startup
     // error (ADR-0013). The panic is intentional; no recovery is possible.
     #[allow(clippy::panic)]
-    let i18n = load_i18n().unwrap_or_else(|e| {
+    let i18n = load_i18n(&player_settings).unwrap_or_else(|e| {
         panic!("fatal: failed to load i18n: {e}");
     });
     tracing::info!("i18n loaded (title: {})", i18n.ui.menu.keybindings.title);
