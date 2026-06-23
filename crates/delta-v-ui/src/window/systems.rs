@@ -32,8 +32,13 @@ use super::components::WindowScrollContainer;
 // MessageReader<MouseWheel> is a Bevy message reader that must be passed by value
 // per Bevy's API design; it cannot be borrowed.
 pub fn window_scroll_system(
-    mut mouse_wheel_reader: MessageReader<MouseWheel>,
-    mut query: Query<(&mut ScrollPosition, &Node, &ComputedNode), With<WindowScrollContainer>>,
+    mut mouse_wheel_reader: MessageReader<'_, '_, MouseWheel>,
+    mut query: Query<
+        '_,
+        '_,
+        (&mut ScrollPosition, &Node, &ComputedNode),
+        With<WindowScrollContainer>,
+    >,
 ) {
     let _span = tracing::info_span!("delta_v_ui::window_scroll_system").entered();
 

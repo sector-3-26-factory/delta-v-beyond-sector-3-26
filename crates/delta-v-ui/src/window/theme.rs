@@ -94,8 +94,8 @@ impl UiTheme {
     /// Color for the corner bracket accents.
     pub const BRACKET_COLOR: Color = Color::srgb(0.0, 1.0, 1.0);
 
-    /// Color for the animated scan lines.
-    pub const SCAN_LINE_COLOR: Color = Color::srgb(0.0, 1.0, 1.0);
+    /// Color for the animated scan lines (semi-transparent cyan).
+    pub const SCAN_LINE_COLOR: Color = Color::srgba(0.0, 1.0, 1.0, 0.2);
 
     /// Length of each corner bracket arm in pixels.
     pub const BRACKET_LENGTH: f32 = 12.0;

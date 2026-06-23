@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://sector-3-26-factory.example/schema/diagnostics",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/diagnostics",
     "title": "Diagnostics configuration",
     "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nFrame-time watchdog thresholds for performance monitoring.",
     "type": "object",

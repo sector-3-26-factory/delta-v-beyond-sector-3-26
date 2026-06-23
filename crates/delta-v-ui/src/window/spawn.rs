@@ -64,10 +64,7 @@ fn spawn_scan_line_dot(
     };
 
     commands.spawn((
-        Name::new(format!(
-            "ScanDot_{}_{}_{}",
-            start_corner, is_main, trail_index
-        )),
+        Name::new(format!("ScanDot_{start_corner}_{is_main}_{trail_index}")),
         Node {
             width: Val::Px(dot_size),
             height: Val::Px(dot_size),
@@ -108,7 +105,7 @@ fn spawn_corner_bracket(commands: &mut ChildSpawnerCommands<'_>, corner: u8, siz
 
     // Horizontal line of bracket
     commands.spawn((
-        Name::new(format!("BracketH_{}", corner)),
+        Name::new(format!("BracketH_{corner}")),
         Node {
             width: Val::Px(bracket_len),
             height: Val::Px(bracket_width),
@@ -123,7 +120,7 @@ fn spawn_corner_bracket(commands: &mut ChildSpawnerCommands<'_>, corner: u8, siz
 
     // Vertical line of bracket
     commands.spawn((
-        Name::new(format!("BracketV_{}", corner)),
+        Name::new(format!("BracketV_{corner}")),
         Node {
             width: Val::Px(bracket_width),
             height: Val::Px(bracket_len),

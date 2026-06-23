@@ -46,7 +46,9 @@ pub struct ScanLineDot {
 ///
 /// Runs in `Update`. Increments the `anim_time` field on all `WindowBorder`
 /// components based on the frame delta time.
-pub fn update_border_anim_time(time: Res<Time>, mut query: Query<&mut WindowBorder>) {
+#[allow(clippy::needless_pass_by_value)]
+// Res<Time> must be passed by value per Bevy's system API design.
+pub fn update_border_anim_time(time: Res<'_, Time>, mut query: Query<'_, '_, &mut WindowBorder>) {
     let _span = tracing::info_span!("delta_v_ui::update_border_anim_time").entered();
 
     for mut border in &mut query {
@@ -60,6 +62,7 @@ pub fn update_border_anim_time(time: Res<Time>, mut query: Query<&mut WindowBord
 /// `CORNER_TO_CORNER_TIME` seconds to traverse each edge.
 ///
 /// Edge order: 0=top (left->right), 1=right (top->bottom), 2=bottom (right->left), 3=left (bottom->top)
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn get_scan_position(anim_time: f64, start_corner: u8, bounds: Vec4) -> Vec2 {
     let min_x = bounds.x;
     let min_y = bounds.y;
@@ -113,6 +116,7 @@ fn get_scan_position(anim_time: f64, start_corner: u8, bounds: Vec4) -> Vec2 {
 /// - Trail starts on left edge (bottom to top), reaches corner, then turns right
 ///
 /// The trail spans `trail_duration` seconds of movement time.
+#[allow(clippy::cast_precision_loss)]
 fn get_trail_positions(anim_time: f64, start_corner: u8, bounds: Vec4) -> Vec<Vec2> {
     let num_trail_points = UiTheme::SCAN_TRAIL_LENGTH;
     let trail_duration = UiTheme::SCAN_TRAIL_DURATION;
@@ -141,13 +145,19 @@ fn get_trail_positions(anim_time: f64, start_corner: u8, bounds: Vec4) -> Vec<Ve
     positions
 }
 
+/// Trail alpha multipliers indexed by `trail_index`.
+/// Index 0 = oldest (furthest back) = most transparent (0.1)
+/// Index 7 = newest (closest to main) = most opaque (0.9)
+/// These are multiplied by `SCAN_LINE_COLOR`'s alpha.
+const TRAIL_ALPHA_MULTIPLIERS: [f32; 8] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.9];
+
 /// Updates the positions of scan line dots based on the current animation time.
 ///
 /// Runs in `Update`. Updates the position and color of all scan line dot
 /// entities to create the animated border effect.
 pub fn update_scan_line_dots(
-    mut query: Query<(&mut Node, &mut BackgroundColor, &ScanLineDot)>,
-    border_query: Query<&WindowBorder>,
+    mut query: Query<'_, '_, (&mut Node, &mut BackgroundColor, &ScanLineDot)>,
+    border_query: Query<'_, '_, &WindowBorder>,
 ) {
     let _span = tracing::info_span!("delta_v_ui::update_scan_line_dots").entered();
 
@@ -157,6 +167,7 @@ pub fn update_scan_line_dots(
 
     let bounds = border.bounds;
     let scan_color = UiTheme::SCAN_LINE_COLOR;
+    let base_alpha = scan_color.to_linear().alpha;
 
     for (mut node, mut bg_color, dot) in &mut query {
         let anim_time = border.anim_time;
@@ -170,13 +181,15 @@ pub fn update_scan_line_dots(
         } else {
             // Trail dot
             let trail = get_trail_positions(anim_time, dot.start_corner, bounds);
-            if dot.trail_index < trail.len() {
-                let pos = trail[dot.trail_index];
+            if let Some(pos) = trail.get(dot.trail_index) {
                 node.left = Val::Px(pos.x - UiTheme::SCAN_DOT_RADIUS);
                 node.top = Val::Px(pos.y - UiTheme::SCAN_DOT_RADIUS);
 
-                // Alpha: oldest (index 0) is most transparent, newest is most opaque
-                let alpha = (dot.trail_index as f32 + 1.0) / trail.len() as f32;
+                let multiplier = TRAIL_ALPHA_MULTIPLIERS
+                    .get(dot.trail_index)
+                    .copied()
+                    .unwrap_or(0.1);
+                let alpha = base_alpha * multiplier;
                 bg_color.0 = Color::srgba(
                     scan_color.to_linear().red,
                     scan_color.to_linear().green,

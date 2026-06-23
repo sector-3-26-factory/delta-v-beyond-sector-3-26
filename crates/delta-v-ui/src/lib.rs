@@ -24,6 +24,9 @@
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
+// Multiple crate versions are unavoidable due to Bevy ecosystem dependencies
+// pulling in transitive duplicates that cannot be unified without upstream fixes.
+#![allow(clippy::multiple_crate_versions)]
 #![deny(
     clippy::unwrap_used,
     clippy::expect_used,

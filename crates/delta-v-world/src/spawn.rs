@@ -44,7 +44,7 @@ impl delta_v_spawn::mesh_attachment::PendingMesh for PendingAsteroidMesh {
 /// Panics if the asteroid template is missing required fields (mass, `collision_shape`).
 /// This is intentional per ADR-0013 (no silent fallbacks).
 #[allow(clippy::needless_pass_by_value, clippy::expect_used)]
-pub fn spawn_asteroid_system(
+pub fn spawn_asteroid(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
     mut reader: MessageReader<'_, '_, SpawnEntity>,

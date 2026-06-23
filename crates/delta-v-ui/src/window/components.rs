@@ -41,6 +41,6 @@ pub struct WindowScrollContainer;
 pub struct WindowBorder {
     /// Global animation time in seconds.
     pub anim_time: f64,
-    /// Panel bounds (min_x, min_y, max_x, max_y) in pixels.
+    /// Panel bounds (`min_x`, `min_y`, `max_x`, `max_y`) in pixels.
     pub bounds: Vec4,
 }
