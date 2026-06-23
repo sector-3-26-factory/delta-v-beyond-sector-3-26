@@ -39,6 +39,7 @@
 
 use bevy::prelude::*;
 
+pub mod layout;
 pub mod overlays;
 pub mod window;
 
