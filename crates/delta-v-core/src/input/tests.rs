@@ -60,7 +60,7 @@ mod tests {
     // parse_key_code (tested indirectly via action lookup)
     // ---------------------------------------------------------------------------
 
-    /// All 13 default key names used in keybindings.json must be recognized.
+    /// All default key names used in keybindings.json must be recognized.
     #[test]
     fn test_default_key_names_all_parse() {
         // These are the exact names in assets/config/keybindings.json.
@@ -78,19 +78,24 @@ mod tests {
             "ArrowDown",
             "ArrowLeft",
             "ArrowRight",
+            "Space",
+            "F2",
+            "ControlLeft",
+            "AltLeft",
         ];
         // We cannot call parse_key_code directly (private), but we can verify
         // the full round-trip by building a mock keybindings map and checking
         // that no WARN is emitted. In lieu of that (log capture requires extra
         // test infra), we verify the strings are the exact ones documented.
         let key_set: std::collections::BTreeSet<&str> = default_keys.iter().copied().collect();
-        assert_eq!(key_set.len(), 13, "all 13 default key names must be unique");
+        assert_eq!(key_set.len(), 17, "all 17 default key names must be unique");
 
         // Spot-check a few well-known ones.
         assert!(key_set.contains("KeyW"));
         assert!(key_set.contains("ArrowUp"));
         assert!(key_set.contains("KeyQ"));
         assert!(key_set.contains("KeyC"));
+        assert!(key_set.contains("ControlLeft"));
     }
 
     // ---------------------------------------------------------------------------

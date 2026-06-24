@@ -27,114 +27,88 @@ use super::ActiveCockpitStation;
 use super::components::CockpitOverlay;
 use super::spawn::CockpitOverlayResource;
 
-/// Cycles to the next cockpit station when the player presses the key.
-///
-/// Runs in `Update` during `AppState::InGame`.
-/// Reads `ActiveActions` for `CockpitCycleNext`.
-/// Cycles through stations in JSON order, loading the new station's PNG texture.
-#[allow(clippy::needless_pass_by_value)]
-pub fn cockpit_station_cycle_next_system(
-    mut commands: Commands<'_, '_>,
-    asset_server: Res<'_, AssetServer>,
-    cockpit: Res<'_, CockpitOverlayResource>,
-    mut active_station: ResMut<'_, ActiveCockpitStation>,
-    query: Query<'_, '_, Entity, With<CockpitOverlay>>,
-    active_actions: Res<'_, ActiveActions>,
-) {
-    // Check if the cycle next action is pressed
-    if !active_actions.0.contains(&LogicalAction::CockpitCycleNext) {
-        return;
-    }
-
-    let Ok(entity) = query.single() else {
-        return;
-    };
-
-    // Find current station index
-    let current_idx = cockpit
-        .stations
-        .iter()
-        .position(|s| s.id == active_station.station_id)
-        .unwrap_or(0);
-
-    // Calculate next index (wrap around)
-    let next_idx = (current_idx + 1) % cockpit.stations.len();
-    let Some(next_station) = cockpit.stations.get(next_idx) else {
-        return;
-    };
-
-    // Load the new texture
-    let texture_handle = asset_server.load(&next_station.texture);
-
-    // Insert a new overlay component with the new texture
-    commands.entity(entity).insert(CockpitOverlay {
-        texture: texture_handle,
-    });
-
-    // Update the active station resource
-    active_station.station_id.clone_from(&next_station.id);
-
-    tracing::debug!(
-        "cockpit: switched to station '{}' ({})",
-        next_station.id,
-        next_station.texture
-    );
+/// Tracks which actions were already consumed to prevent repeated firing.
+// allow-default: Bevy requires Default on resources for init_resource. This
+// resource tracks key press state for edge detection; it starts false.
+#[derive(Resource, Default)]
+pub struct CockpitCycleState {
+    /// Whether `CockpitCycleNext` was active last tick.
+    next_active: bool,
+    /// Whether `CockpitCyclePrev` was active last tick.
+    prev_active: bool,
 }
 
-/// Cycles to the previous cockpit station when the player presses the key.
+/// Cycles to the next or previous cockpit station when the player presses the key.
 ///
 /// Runs in `Update` during `AppState::InGame`.
-/// Reads `ActiveActions` for `CockpitCyclePrev`.
-/// Cycles backward through stations in JSON order.
-#[allow(clippy::needless_pass_by_value)]
-pub fn cockpit_station_cycle_prev_system(
+/// Reads `ActiveActions` for `CockpitCycleNext` or `CockpitCyclePrev`.
+/// Cycles through stations in JSON order (wrapping around), loading the new station's PNG texture.
+///
+/// Uses edge detection to fire only once per key press, not every frame while held.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn cockpit_station_cycle_system(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
     cockpit: Res<'_, CockpitOverlayResource>,
     mut active_station: ResMut<'_, ActiveCockpitStation>,
-    query: Query<'_, '_, Entity, With<CockpitOverlay>>,
+    query: Query<'_, '_, (Entity, &'static Children), With<CockpitOverlay>>,
+    mut image_node_query: Query<'_, '_, &'static mut ImageNode>,
     active_actions: Res<'_, ActiveActions>,
+    mut cycle_state: ResMut<'_, CockpitCycleState>,
 ) {
-    // Check if the cycle prev action is pressed
-    if !active_actions.0.contains(&LogicalAction::CockpitCyclePrev) {
-        return;
-    }
+    let next_active = active_actions.0.contains(&LogicalAction::CockpitCycleNext);
+    let prev_active = active_actions.0.contains(&LogicalAction::CockpitCyclePrev);
 
-    let Ok(entity) = query.single() else {
+    // Edge detection: only fire on the frame the key is first pressed
+    let direction: i32 = if next_active && !cycle_state.next_active {
+        1
+    } else if prev_active && !cycle_state.prev_active {
+        -1
+    } else {
+        cycle_state.next_active = next_active;
+        cycle_state.prev_active = prev_active;
         return;
     };
 
-    // Find current station index
+    cycle_state.next_active = next_active;
+    cycle_state.prev_active = prev_active;
+
+    let Ok((entity, children)) = query.single() else {
+        tracing::warn!("[cockpit] cycle: no CockpitOverlay entity found");
+        return;
+    };
+
     let current_idx = cockpit
         .stations
         .iter()
         .position(|s| s.id == active_station.station_id)
         .unwrap_or(0);
 
-    // Calculate previous index (wrap around)
-    let prev_idx = if current_idx == 0 {
-        cockpit.stations.len() - 1
-    } else {
-        current_idx - 1
-    };
-    let Some(prev_station) = cockpit.stations.get(prev_idx) else {
+    let station_count = cockpit.stations.len();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let new_idx = ((current_idx as i32 + direction).rem_euclid(station_count as i32)) as usize;
+    let Some(new_station) = cockpit.stations.get(new_idx) else {
         return;
     };
 
-    // Load the new texture
-    let texture_handle = asset_server.load(&prev_station.texture);
+    let texture_path = format!("{}/{}", cockpit.template_path, new_station.texture);
+    let texture_handle = asset_server.load(&texture_path);
 
-    // Insert a new overlay component with the new texture
+    for child in children {
+        if let Ok(mut image_node) = image_node_query.get_mut(*child) {
+            image_node.image = texture_handle.clone();
+        }
+    }
+
     commands.entity(entity).insert(CockpitOverlay {
         texture: texture_handle,
     });
 
-    // Update the active station resource
-    active_station.station_id.clone_from(&prev_station.id);
+    active_station.station_id.clone_from(&new_station.id);
 
     tracing::debug!(
-        "cockpit: switched to station '{}' ({})",
-        prev_station.id,
-        prev_station.texture
+        "[cockpit] switched to station '{}' ({})",
+        new_station.id,
+        new_station.texture
     );
 }

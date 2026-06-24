@@ -61,7 +61,7 @@ pub fn input_translation_system(
         let pressed = bindings
             .keyboard
             .iter()
-            .any(|key_name| parse_key_code(key_name).is_some_and(|kc| keyboard.pressed(kc)));
+            .all(|key_name| parse_key_code(key_name).is_some_and(|kc| keyboard.pressed(kc)));
         if pressed {
             active.0.insert(action);
         }
@@ -100,6 +100,7 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "KeyF" => Some(KeyCode::KeyF),
         "KeyC" => Some(KeyCode::KeyC),
         "F2" => Some(KeyCode::F2),
+        "ControlLeft" => Some(KeyCode::ControlLeft),
         "AltLeft" => Some(KeyCode::AltLeft),
         "ArrowUp" => Some(KeyCode::ArrowUp),
         "ArrowDown" => Some(KeyCode::ArrowDown),

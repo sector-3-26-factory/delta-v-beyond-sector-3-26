@@ -136,6 +136,7 @@ fn spawn_cameras(
 fn insert_player_resources(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
+    template_path: &str,
     template: &PlayerShipTemplate,
     main: &MainThrusterTemplate,
     maneuvering: &ManeuveringThrusterTemplate,
@@ -150,7 +151,15 @@ fn insert_player_resources(
         active_main_thruster_index,
         rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
     });
+    // Convert template file path to asset directory path.
+    // The template_path is a file path like "templates/ships/space-fighter-comrade1280/player_controlled_ship.json".
+    // We need the directory path relative to the assets/ root: "templates/ships/space-fighter-comrade1280".
+    // The asset server loads from "assets/" + directory_path + "/" + texture_name.
+    let cockpit_dir = template_path
+        .rsplit_once('/')
+        .map_or(template_path, |(d, _)| d);
     commands.insert_resource(CockpitOverlayResource {
+        template_path: cockpit_dir.to_string(),
         stations: template.cockpit.stations.clone(),
     });
 }
@@ -254,6 +263,7 @@ fn spawn_player_ship(
     insert_player_resources(
         commands,
         ship_entity,
+        &event.template_path,
         &template,
         main,
         maneuvering,
@@ -336,6 +346,7 @@ fn spawn_static_ship(
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
             CollisionShape(collision_shape_data),
+            CollisionLayersComponent::new(layers::SHIP),
             // Health component for damage model (M4)
             Health::new(template.health.value),
         ))

@@ -41,14 +41,11 @@ pub struct CockpitPlugin;
 
 impl Plugin for CockpitPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::InGame), spawn::spawn_cockpit_overlay)
+        app.init_resource::<systems::CockpitCycleState>()
+            .add_systems(OnEnter(AppState::InGame), spawn::spawn_cockpit_overlay)
             .add_systems(
                 Update,
-                (
-                    systems::cockpit_station_cycle_next_system,
-                    systems::cockpit_station_cycle_prev_system,
-                )
-                    .run_if(in_state(AppState::InGame)),
+                systems::cockpit_station_cycle_system.run_if(in_state(AppState::InGame)),
             );
     }
 }

@@ -111,6 +111,10 @@
             {
                 "id": "default",
                 "texture": "cockpit/default.png"
+            },
+            {
+                "id": "test",
+                "texture": "cockpit/cycle_test.png"
             }
         ]
     }
