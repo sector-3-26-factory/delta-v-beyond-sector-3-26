@@ -19,7 +19,8 @@
 //! Keybindings menu systems.
 
 use bevy::prelude::*;
-use delta_v_core::{I18n, KeybindingsResource};
+use delta_v_core::I18n;
+use delta_v_core::input::KeybindingsResource;
 
 use super::components::KeybindingsMenuRoot;
 use super::resources::KeybindingsMenuOpen;

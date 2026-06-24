@@ -67,9 +67,7 @@ mod spawn_tests;
 mod systems_tests;
 
 use bevy::prelude::*;
-use delta_v_core::{
-    AppState, InputSet, SectorBoundaryResource, WorldSpawnSet, check_sector_boundary_system,
-};
+use delta_v_core::{AppState, SectorBoundaryResource, WorldSpawnSet, check_sector_boundary_system};
 use delta_v_physics::PhysicsSet;
 use systems::{
     PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
@@ -163,7 +161,6 @@ impl Plugin for ShipsPlugin {
                 ShipInputSet::ClearCommands,
             )
                 .chain()
-                .after(InputSet::Translate)
                 .before(PhysicsSet::AccumulateForces)
                 .run_if(in_state(AppState::InGame)),
         )

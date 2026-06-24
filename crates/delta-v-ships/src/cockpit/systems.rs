@@ -20,7 +20,7 @@
 
 use bevy::prelude::*;
 
-use delta_v_core::input::ActiveActions;
+use delta_v_core::input::ActionState;
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
@@ -41,7 +41,7 @@ pub struct CockpitCycleState {
 /// Cycles to the next or previous cockpit station when the player presses the key.
 ///
 /// Runs in `Update` during `AppState::InGame`.
-/// Reads `ActiveActions` for `CockpitCycleNext` or `CockpitCyclePrev`.
+/// Reads `ActionState<LogicalAction>` for `CockpitCycleNext` or `CockpitCyclePrev`.
 /// Cycles through stations in JSON order (wrapping around), loading the new station's PNG texture.
 ///
 /// Uses edge detection to fire only once per key press, not every frame while held.
@@ -53,11 +53,11 @@ pub fn cockpit_station_cycle_system(
     mut active_station: ResMut<'_, ActiveCockpitStation>,
     query: Query<'_, '_, (Entity, &'static Children), With<CockpitOverlay>>,
     mut image_node_query: Query<'_, '_, &'static mut ImageNode>,
-    active_actions: Res<'_, ActiveActions>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
     mut cycle_state: ResMut<'_, CockpitCycleState>,
 ) {
-    let next_active = active_actions.0.contains(&LogicalAction::CockpitCycleNext);
-    let prev_active = active_actions.0.contains(&LogicalAction::CockpitCyclePrev);
+    let next_active = action_state.pressed(&LogicalAction::CockpitCycleNext);
+    let prev_active = action_state.pressed(&LogicalAction::CockpitCyclePrev);
 
     // Edge detection: only fire on the frame the key is first pressed
     let direction: i32 = if next_active && !cycle_state.next_active {

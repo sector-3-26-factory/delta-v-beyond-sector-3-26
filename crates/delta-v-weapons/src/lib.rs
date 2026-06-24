@@ -47,7 +47,7 @@ pub use resources::WeaponState;
 pub use systems::WeaponsSet;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, FireWeapon, InputSet, ProjectileHit};
+use delta_v_core::{AppState, FireWeapon, ProjectileHit};
 use delta_v_physics::PhysicsSet;
 
 /// Weapons plugin for managing projectiles and damage.
@@ -73,7 +73,6 @@ impl Plugin for WeaponsPlugin {
                     WeaponsSet::UpdateProjectiles,
                 )
                     .chain()
-                    .after(InputSet::Log)
                     .before(PhysicsSet::AccumulateForces)
                     .run_if(in_state(AppState::InGame)),
             )

@@ -12,8 +12,10 @@
 use bevy::prelude::*;
 use bevy::time::TimePlugin;
 
-use delta_v_core::{ActiveActions, FlightAssistState, LogicalAction};
+use delta_v_core::FlightAssistState;
+use delta_v_core::input::ActionState;
 use delta_v_physics::RigidBody;
+use delta_v_types::LogicalAction;
 
 use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 use crate::systems::{
@@ -30,7 +32,7 @@ fn build_input_app() -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.init_resource::<ActiveActions>();
+    app.init_resource::<ActionState<LogicalAction>>();
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
     app.init_resource::<PreviousActions>();
@@ -56,6 +58,12 @@ fn run_fixed_update(app: &mut App) {
     app.update();
 }
 
+/// Presses an action on the `ActionState` resource.
+fn press_action(app: &mut App, action: LogicalAction) {
+    let mut action_state = app.world_mut().resource_mut::<ActionState<LogicalAction>>();
+    action_state.press(&action);
+}
+
 // ---------------------------------------------------------------------------
 // input_reader_system
 // ---------------------------------------------------------------------------
@@ -64,10 +72,7 @@ fn run_fixed_update(app: &mut App) {
 fn test_input_reader_thrust_forward() {
     let mut app = build_input_app();
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ThrustForward);
-    }
+    press_action(&mut app, LogicalAction::ThrustForward);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -89,10 +94,7 @@ fn test_input_reader_thrust_forward() {
 fn test_input_reader_thrust_backward() {
     let mut app = build_input_app();
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ThrustBackward);
-    }
+    press_action(&mut app, LogicalAction::ThrustBackward);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -109,10 +111,7 @@ fn test_input_reader_thrust_backward() {
 fn test_input_reader_strafe_left() {
     let mut app = build_input_app();
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::StrafeLeft);
-    }
+    press_action(&mut app, LogicalAction::StrafeLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -129,10 +128,7 @@ fn test_input_reader_strafe_left() {
 fn test_input_reader_strafe_right() {
     let mut app = build_input_app();
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::StrafeRight);
-    }
+    press_action(&mut app, LogicalAction::StrafeRight);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -150,10 +146,7 @@ fn test_input_reader_pitch_up() {
     // Use ramp_ticks=1 so first tick gives full torque
     let mut app = build_ramp_app(1);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::PitchUp);
-    }
+    press_action(&mut app, LogicalAction::PitchUp);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -171,10 +164,7 @@ fn test_input_reader_yaw_left() {
     // Use ramp_ticks=1 so first tick gives full torque
     let mut app = build_ramp_app(1);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -192,10 +182,7 @@ fn test_input_reader_roll_left() {
     // Use ramp_ticks=1 so first tick gives full torque
     let mut app = build_ramp_app(1);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::RollLeft);
-    }
+    press_action(&mut app, LogicalAction::RollLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -213,11 +200,8 @@ fn test_input_reader_multiple_actions() {
     // Use ramp_ticks=1 so first tick gives full torque
     let mut app = build_ramp_app(1);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ThrustForward);
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::ThrustForward);
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -260,10 +244,7 @@ fn test_flight_assist_toggle_on_press() {
         state.enabled = false;
     }
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ToggleFlightAssist);
-    }
+    press_action(&mut app, LogicalAction::ToggleFlightAssist);
 
     app.add_systems(FixedUpdate, flight_assist_toggle_system);
     run_fixed_update(&mut app);
@@ -281,10 +262,7 @@ fn test_flight_assist_no_toggle_on_hold() {
         state.enabled = false;
     }
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ToggleFlightAssist);
-    }
+    press_action(&mut app, LogicalAction::ToggleFlightAssist);
 
     app.add_systems(FixedUpdate, flight_assist_toggle_system);
 
@@ -312,26 +290,21 @@ fn test_flight_assist_toggle_off_on_second_press() {
     }
 
     // First press
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ToggleFlightAssist);
-    }
+    press_action(&mut app, LogicalAction::ToggleFlightAssist);
 
     app.add_systems(FixedUpdate, flight_assist_toggle_system);
     run_fixed_update(&mut app);
 
-    // Release the key
+    // Release the key by creating a fresh ActionState with no pressed actions
     {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.clear();
+        let mut action_state = app.world_mut().resource_mut::<ActionState<LogicalAction>>();
+        // Re-initialize to clear all pressed actions
+        *action_state = ActionState::<LogicalAction>::default();
     }
     run_fixed_update(&mut app);
 
     // Second press
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ToggleFlightAssist);
-    }
+    press_action(&mut app, LogicalAction::ToggleFlightAssist);
     run_fixed_update(&mut app);
 
     let state = app.world().resource::<FlightAssistState>();
@@ -549,7 +522,7 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.init_resource::<ActiveActions>();
+    app.init_resource::<ActionState<LogicalAction>>();
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
     app.init_resource::<PreviousActions>();
@@ -571,10 +544,7 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
 fn test_ramp_first_tick() {
     let mut app = build_ramp_app(10);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -601,10 +571,7 @@ fn test_ramp_factor_with_different_ticks() {
     // With ramp_ticks=5, first tick should give 1/5 = 20% of max_torque
     let mut app = build_ramp_app(5);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -630,10 +597,7 @@ fn test_ramp_factor_with_different_ticks() {
 fn test_ramp_ticks_one_is_full() {
     let mut app = build_ramp_app(1);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -676,10 +640,7 @@ fn test_ramp_no_actions_zero() {
 fn test_ramp_active_then_inactive_same_tick() {
     let mut app = build_ramp_app(10);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -706,10 +667,7 @@ fn test_ramp_active_then_inactive_same_tick() {
 fn test_ramp_opposite_direction() {
     let mut app = build_ramp_app(10);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::YawRight);
-    }
+    press_action(&mut app, LogicalAction::YawRight);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -734,10 +692,7 @@ fn test_ramp_opposite_direction() {
 fn test_ramp_zero_means_instant_full() {
     let mut app = build_ramp_app(0);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -756,10 +711,7 @@ fn test_ramp_zero_means_instant_full() {
 fn test_ramp_does_not_affect_thrust() {
     let mut app = build_ramp_app(10);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::ThrustForward);
-    }
+    press_action(&mut app, LogicalAction::ThrustForward);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);
@@ -778,11 +730,8 @@ fn test_ramp_does_not_affect_thrust() {
 fn test_ramp_axes_independent() {
     let mut app = build_ramp_app(10);
 
-    {
-        let mut active = app.world_mut().resource_mut::<ActiveActions>();
-        active.0.insert(LogicalAction::PitchUp);
-        active.0.insert(LogicalAction::YawLeft);
-    }
+    press_action(&mut app, LogicalAction::PitchUp);
+    press_action(&mut app, LogicalAction::YawLeft);
 
     app.add_systems(FixedUpdate, input_reader_system);
     run_fixed_update(&mut app);

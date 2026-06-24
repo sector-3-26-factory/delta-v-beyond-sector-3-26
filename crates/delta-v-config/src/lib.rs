@@ -45,16 +45,17 @@ pub mod error;
 pub mod i18n;
 pub mod keybindings;
 pub mod loader;
-pub mod resources;
 
 #[cfg(test)]
 #[path = "loader_tests.rs"]
 mod loader_tests;
 
+pub use delta_v_core::input::KeybindingsResource;
 pub use error::ConfigError;
 pub use i18n::load_i18n;
 pub use keybindings::{ActionBindings, Keybindings};
-pub use resources::KeybindingsResource;
+
+use std::collections::HashMap;
 
 use bevy::prelude::*;
 use delta_v_core::{AppState, FlightAssistState};
@@ -94,21 +95,21 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     });
     tracing::info!("keybindings loaded ({} actions)", keybindings.actions.len());
 
-    // Convert delta-v-config::Keybindings into delta_v_core::KeybindingsResource.
     // KeybindingsResource is defined in delta-v-core to avoid a crate-dep cycle (ADR-0002).
-    let kb_map = keybindings
-        .actions
-        .into_iter()
-        .map(|(name, b)| {
-            (
-                name,
-                delta_v_core::input::keybindings_resource::ActionBindings {
-                    keyboard: b.keyboard,
-                    gamepad_button: b.gamepad_button,
-                },
-            )
-        })
-        .collect();
+    let kb_map: HashMap<String, delta_v_core::input::keybindings_resource::ActionBindings> =
+        keybindings
+            .actions
+            .into_iter()
+            .map(|(name, b)| {
+                (
+                    name,
+                    delta_v_core::input::keybindings_resource::ActionBindings {
+                        keyboard: b.keyboard,
+                        gamepad_button: b.gamepad_button,
+                    },
+                )
+            })
+            .collect();
     commands.insert_resource(KeybindingsResource(kb_map));
 
     // Player settings (ADR-0010, ADR-0037).

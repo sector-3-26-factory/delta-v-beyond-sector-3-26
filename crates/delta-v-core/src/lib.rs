@@ -66,7 +66,6 @@ pub use floating_origin::{
 };
 pub use health::{Health, Weapon};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
-pub use input::{ActiveActions, InputSet, KeybindingsResource, LogicalAction};
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;
 
@@ -84,16 +83,10 @@ mod state_tests;
 mod diagnostics_tests;
 
 #[cfg(test)]
-#[path = "input/tests.rs"]
-mod input_tests;
-
-#[cfg(test)]
 #[path = "boundary/tests.rs"]
 mod boundary_tests;
 
 use bevy::prelude::*;
-
-use crate::input::{input_log_system, input_translation_system};
 
 /// The core plugin that initialises fundamental ECS infrastructure.
 pub struct CorePlugin;
@@ -102,7 +95,9 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         info!(version = env!("CARGO_PKG_VERSION"), "Delta-V starting");
 
-        app.init_state::<AppState>().add_plugins(DiagnosticsPlugin);
+        app.init_state::<AppState>()
+            .add_plugins(DiagnosticsPlugin)
+            .add_plugins(input::InputManagerPlugin::<delta_v_types::LogicalAction>::default());
 
         // Initialize gizmo config with default render layer (will be updated dynamically).
         // The update_gizmo_render_layers system will set the correct layer based on active camera.
@@ -118,6 +113,11 @@ impl Plugin for CorePlugin {
             (log_in_game, spawn_ui_camera, spawn_menu_camera),
         );
         app.add_systems(OnEnter(AppState::SkirmishOver), log_skirmish_over);
+
+        // Build InputMap from KeybindingsResource after config is loaded.
+        // This must run after ConfigPlugin inserts KeybindingsResource
+        // and before any FixedUpdate systems that read ActionState.
+        app.add_systems(OnEnter(AppState::InGame), build_input_map_system);
 
         // Configure WorldSpawnSet ordering.
         app.configure_sets(
@@ -166,23 +166,6 @@ impl Plugin for CorePlugin {
             Update,
             debug::update_gizmo_render_layers.run_if(in_state(AppState::InGame)),
         );
-
-        // Input pipeline (ADR-0011, ADR-0017).
-        app.init_resource::<ActiveActions>()
-            .configure_sets(
-                FixedUpdate,
-                (InputSet::Translate, InputSet::Log)
-                    .chain()
-                    .run_if(in_state(AppState::InGame)),
-            )
-            .add_systems(
-                FixedUpdate,
-                (
-                    input_translation_system.in_set(InputSet::Translate),
-                    input_log_system.in_set(InputSet::Log),
-                )
-                    .run_if(in_state(AppState::InGame)),
-            );
 
         // Immediately leave Boot.
         app.add_systems(OnEnter(AppState::Boot), advance_from_boot);
@@ -240,4 +223,20 @@ fn log_skirmish_over() {
 
 fn advance_from_boot(mut next: ResMut<'_, NextState<AppState>>) {
     next.set(AppState::LoadingDefaults);
+}
+
+/// Builds the `InputMap<LogicalAction>` from the loaded `KeybindingsResource`
+/// and registers it as a Bevy resource.
+///
+/// This enables the leafwing-input-manager `InputState` system to populate
+/// `ActionState<LogicalAction>` from keyboard/gamepad input.
+// Bevy systems require `Res<T>` by value, not by reference.
+#[allow(clippy::needless_pass_by_value)]
+fn build_input_map_system(
+    keybindings: Res<'_, input::KeybindingsResource>,
+    mut commands: Commands<'_, '_>,
+) {
+    let input_map = input::build_input_map(&keybindings);
+    commands.insert_resource(input_map);
+    commands.init_resource::<input::ActionState<delta_v_types::LogicalAction>>();
 }

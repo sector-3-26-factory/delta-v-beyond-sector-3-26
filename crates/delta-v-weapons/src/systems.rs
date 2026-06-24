@@ -3,7 +3,8 @@
 //! Weapon and projectile systems.
 
 use bevy::prelude::*;
-use delta_v_core::{ActiveActions, FireWeapon, Health, PlayerShipEntity, ProjectileHit, Weapon};
+use delta_v_core::input::ActionState;
+use delta_v_core::{FireWeapon, Health, PlayerShipEntity, ProjectileHit, Weapon};
 use delta_v_physics::{CollisionDetected, RigidBody};
 use delta_v_types::LogicalAction;
 
@@ -24,16 +25,16 @@ pub enum WeaponsSet {
 
 /// Detects fire input and emits [`FireWeapon`] events.
 ///
-/// Runs in `FixedUpdate` after [`delta_v_core::InputSet::Translate`].
+/// Runs in `FixedUpdate` after the input translation systems.
 /// Uses edge detection to fire on press, not on hold.
 #[allow(clippy::needless_pass_by_value)]
 pub fn fire_input_system(
-    active: Res<'_, ActiveActions>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
     mut weapon_state: ResMut<'_, WeaponState>,
     mut events: MessageWriter<'_, FireWeapon>,
     ship_entity: Res<'_, PlayerShipEntity>,
 ) {
-    let fire_held = active.0.contains(&LogicalAction::FirePrimary);
+    let fire_held = action_state.pressed(&LogicalAction::FirePrimary);
     let was_held = weapon_state.fire_held_prev;
 
     // Edge detection: fire on press, not hold

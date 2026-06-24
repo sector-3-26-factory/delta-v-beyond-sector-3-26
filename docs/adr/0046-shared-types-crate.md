@@ -83,10 +83,11 @@ at the type level.
 
 1. `delta-v-types` MUST NOT depend on any other `delta-v-*` crate.
 2. `delta-v-types` MUST NOT contain systems, plugins, or Bevy resources — only plain types and serde structs.
-3. `delta-v-types` MAY depend on `serde` and `bevy` (math types only).
+3. `delta-v-types` MAY depend on `serde`, `bevy` (math types only: `Vec3`, `Quat`), and `leafwing-input-manager` (solely for the `Actionlike` derive on `LogicalAction` -- no other types, traits, macros, or modules from `leafwing-input-manager` may be used).
 4. `delta-v-types` MUST NOT derive `bevy::ecs::component::Component` — that's for domain crates.
 5. All domain crates that need shared types MUST import them from `delta-v-types`.
 6. There is ONE `CollisionShapeJson` for ALL entity types — NOT per-entity-type variants.
+7. `delta-v-types` MAY depend on `leafwing-input-manager` solely to provide the `Actionlike` derive macro for the `LogicalAction` enum. No other types, traits, macros, or modules from `leafwing-input-manager` may be used in `delta-v-types`. This is a narrow exception because `Actionlike` is a sealed trait that can only be implemented via its derive macro, and `LogicalAction` is the domain type that represents the canonical set of player actions.
 
 ### Migration of existing types
 

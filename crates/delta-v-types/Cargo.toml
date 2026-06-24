@@ -1,3 +1,4 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
 [package]
 name = "delta-v-types"
 version.workspace = true
@@ -12,6 +13,7 @@ categories = ["game-development"]
 [dependencies]
 serde = { workspace = true }
 bevy = { workspace = true }
+leafwing-input-manager = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"

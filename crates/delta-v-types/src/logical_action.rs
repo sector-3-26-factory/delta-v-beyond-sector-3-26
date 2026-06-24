@@ -8,11 +8,14 @@
 //!
 //! See ADR-0011 (Keybindings configuration) and ADR-0046 (Shared types crate).
 
+use bevy::prelude::Reflect;
+use leafwing_input_manager::prelude::Actionlike;
+
 /// All logical actions the player can perform.
 ///
 /// This enum is the canonical set of actions. The keybindings schema
 /// uses these names as string keys (see [`LogicalAction::as_str`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Reflect, Actionlike)]
 pub enum LogicalAction {
     /// Thrust along the ship's forward (-Z) axis.
     ThrustForward,

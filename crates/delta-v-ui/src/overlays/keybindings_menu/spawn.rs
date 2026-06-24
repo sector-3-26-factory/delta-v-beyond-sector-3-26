@@ -20,7 +20,8 @@
 
 use bevy::prelude::*;
 use bevy::ui::GridTrack;
-use delta_v_core::{I18n, KeybindingsResource};
+use delta_v_core::I18n;
+use delta_v_core::input::KeybindingsResource;
 use delta_v_types::LogicalAction;
 
 use super::components::KeybindingsMenuRoot;
