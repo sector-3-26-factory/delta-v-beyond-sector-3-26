@@ -98,3 +98,15 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/templates/ships/meshy-organic-1/mesh.glb`
 - **Modifications:** Technical optimizations to get the mesh.glb loaded.
   Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
+
+## Fonts
+
+### DejaVu Sans Mono
+
+- **Creator:** DejaVu Fonts project (Bitstream Vera + Arev Fonts)
+- **Source:** [GitHub](https://github.com/dejavu-fonts/dejavu-fonts)
+- **License:** GPL-2.0-or-later
+- **License URL:** https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+- **File:** `assets/fonts/DejaVuSansMono.ttf`
+- **Modifications:** *None*
+- **Usage:** Default UI font for all text rendering (replaces Bevy's embedded Fira Mono which lacks Unicode arrow glyphs U+2190–U+2193)

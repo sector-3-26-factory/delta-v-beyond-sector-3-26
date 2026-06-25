@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::axes::{AxisLabel, DebugAxes, DebugAxesEligible};
 use super::debug_config::DebugConfig;
-use crate::camera::ActiveMainCamera;
+use crate::camera::{ActiveMainCamera, RenderLayer};
 
 /// Updates gizmo render layers to match the active camera's layer.
 ///
@@ -22,10 +22,10 @@ pub fn update_gizmo_render_layers(
 
     // Extract the first layer from the camera's render layers
     // The active camera should have exactly one layer assigned
-    if let Some(layer) = camera_layers.iter().next() {
+    if let Some(_layer) = camera_layers.iter().next() {
         let (gizmo_config, _) =
             gizmo_config_store.config_mut::<bevy::gizmos::config::DefaultGizmoConfigGroup>();
-        gizmo_config.render_layers = bevy::camera::visibility::RenderLayers::layer(layer);
+        gizmo_config.render_layers = RenderLayer::Gameplay.render_layers();
     }
 }
 

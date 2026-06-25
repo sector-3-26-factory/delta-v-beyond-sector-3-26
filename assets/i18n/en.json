@@ -42,8 +42,9 @@
                     "ArrowLeft": "←",
                     "ArrowRight": "→",
                     "Space": "Space",
-                    "KeyF2": "F2",
-                    "KeyLeftAlt": "Alt Left"
+                    "F2": "F2",
+                    "ControlLeft": "Ctrl Left",
+                    "AltLeft": "Alt Left"
                 }
             }
         }

@@ -1,19 +1,13 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Loaded and validated keybindings.
+//! Keybindings resource for input map construction.
 //!
 //! [`KeybindingsResource`] is defined in `delta-v-core` (not in
-//! `delta-v-config`) so that [`crate::input::input_translation_system`]
+//! `delta-v-config`) so that [`crate::input::input_map::build_input_map`]
 //! can read it without creating a crate-dependency cycle.
 //!
-//! Dependency direction (ADR-0002):
-//! - `delta-v-config` → `delta-v-core`   (uses `AppState`, inserts this resource)
-//! - `delta-v-core`   (defines & reads this resource; does NOT depend on delta-v-config)
-//!
-//! `ConfigPlugin` in `delta-v-config` inserts this resource during
-//! [`crate::AppState::LoadingDefaults`].
-//!
-//! See ADR-0011 (Keybindings configuration).
+//! The actual JSON loading and validation happens in `delta-v-config`,
+//! which inserts this resource during startup.
 
 use std::collections::HashMap;
 
@@ -35,13 +29,8 @@ pub struct ActionBindings {
 /// Loaded and validated keybindings.
 ///
 /// Inserted as a Bevy resource by `ConfigPlugin` during
-/// [`crate::AppState::LoadingDefaults`]. All gameplay systems that need
-/// to query which keys are bound to which actions read this resource.
-///
-/// The inner map is keyed by the `snake_case` action name strings
-/// returned by [`crate::LogicalAction::as_str`].
-///
-/// The value is guaranteed to have passed schema validation (ADR-0012)
-/// and to contain no silent fallbacks (ADR-0013).
+/// [`crate::AppState::LoadingDefaults`]. The inner map is keyed by the
+/// `snake_case` action name strings returned by
+/// [`crate::LogicalAction::as_str`].
 #[derive(Resource)]
 pub struct KeybindingsResource(pub HashMap<String, ActionBindings>);

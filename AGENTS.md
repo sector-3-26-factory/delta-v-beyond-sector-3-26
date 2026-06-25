@@ -195,7 +195,39 @@ Git operations are reserved exclusively for human developers. This includes:
 
 ---
 
-## 8. Implementation plan execution
+## 8. Strict task adherence
+
+**ABSOLUTE RULE: An agent must never, ever do anything other than the explicitly given task.**
+
+1. **Do exactly what was asked — nothing more, nothing less.** If the task is to extract a method, only extract the method. Do not refactor, reformat, reorganize, or "improve" anything else. Do not rename variables, reorder imports, adjust whitespace, or make any other change that was not explicitly requested.
+
+2. **Never remove or modify comments without asking first.** All comments in the affected code must be preserved exactly as they are unless the user explicitly approves their removal. This applies to:
+   - Inline comments (`// ...`)
+   - Block comments (`/* ... */`)
+   - Doc comments (`/// ...`, `//! ...`, `/** ... */`)
+   - TODO/FIXME/HACK/NOTE comments
+   - Any comment, even if it appears unnecessary, redundant, or obvious to the agent
+
+   Comments are the author's intent and context. The agent does not get to decide which comments are worth keeping. If the agent believes a comment is obvious or unnecessary, it may **ask** the user whether it should be removed — but the agent must not remove it without explicit approval. **The agent must wait for the user's answer before proceeding.**
+
+3. **If the user issues a new task, the original task is immediately abandoned.** The agent must stop working on the previous task and focus exclusively on the new one. The agent must not try to "finish" the old task first, combine tasks, or ask whether the old task should still be completed.
+
+4. **No silent optimizations.** The agent must not:
+   - Remove code it considers "unused" or "dead"
+   - Simplify expressions it considers "unnecessarily complex"
+   - Merge or split constructs for "clarity"
+   - Change formatting beyond what is strictly required by the task
+   - Remove or alter any line that is not directly in scope of the task
+
+   If the agent believes an optimization would be beneficial, it may **ask** the user — but the agent must not perform the optimization without explicit approval. **The agent must wait for the user's answer before proceeding.**
+
+5. **If the user asks whether something was changed (e.g., "did you remove comments?"), the agent must stop and answer honestly.** The agent must not deflect, minimize, or continue working. The user's concern takes absolute priority.
+
+**VIOLATION:** Any deviation from the explicitly given task — including "helpful" cleanups, comment removal, or scope expansion — is a binding constraint violation. There is no exception.
+
+---
+
+## 9. Implementation plan execution
 
 When a user provides an implementation plan with numbered steps, the agent must only execute the steps explicitly requested by the user. **The agent's task is NOT to implement the whole plan or milestone.**
 

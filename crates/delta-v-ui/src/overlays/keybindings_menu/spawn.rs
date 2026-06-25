@@ -18,198 +18,226 @@
 
 //! Keybindings menu spawning functions.
 
-use std::collections::BTreeMap;
-
 use bevy::prelude::*;
-use delta_v_core::{I18n, KeybindingsResource};
+use bevy::ui::GridTrack;
+use delta_v_core::I18n;
+use delta_v_core::input::KeybindingsResource;
+use delta_v_types::LogicalAction;
 
 use super::components::KeybindingsMenuRoot;
+use crate::layout::spawn_group_header;
+use crate::window::{UiTheme, WindowConfig, spawn_window};
 
-/// Spawns the keybindings menu UI.
+// ============================================================================
+// Bevy UI-based keybindings menu
+// ============================================================================
+
+/// Spawns the keybindings menu using Bevy UI.
 ///
-/// Creates a full-screen semi-transparent background with:
-/// - Title bar using i18n translation
-/// - Close hint using i18n translation
-/// - Scrollable content area with grouped keybinding entries
-///
-/// Each action is displayed with its translated name and the translated
-/// key names for its bindings.
-#[allow(clippy::too_many_lines)]
+/// Displays a semi-transparent window centered on screen.
+/// The title and hint are positioned side by side in one row.
+/// Press F1 to toggle visibility.
 pub fn spawn_keybindings_menu(
     commands: &mut Commands<'_, '_>,
     i18n: &I18n,
     keybindings: &KeybindingsResource,
+    asset_server: &Res<'_, AssetServer>,
+    theme: &Res<'_, UiTheme>,
 ) {
     let title = i18n.ui.menu.keybindings.title.clone();
-    let close_hint = i18n.ui.menu.keybindings.close.clone();
-    let groups = i18n.ui.menu.keybindings.group.clone();
-    let actions = i18n.ui.menu.keybindings.action.clone();
-    let keys = i18n.ui.menu.keybindings.key.clone();
+    let hint = i18n.ui.menu.keybindings.close.clone();
 
-    commands
-        .spawn((
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
-            KeybindingsMenuRoot,
-        ))
-        .with_children(|parent| {
-            // Title bar at the top
-            parent.spawn((
-                Text::new(title),
-                TextFont {
-                    font_size: 24.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(50.0),
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-            ));
+    let menu_root = spawn_window(
+        commands,
+        &WindowConfig {
+            title,
+            hint,
+            ..default()
+        },
+        asset_server,
+        theme,
+        |ui| keybindings_menu_content(ui, i18n, keybindings, theme),
+    );
 
-            // Close hint below title
-            parent.spawn((
-                Text::new(close_hint),
-                TextFont {
-                    font_size: 14.0,
-                    ..default()
-                },
-                TextColor(Color::srgb(0.7, 0.7, 0.7)),
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(30.0),
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-            ));
+    // Add the keybindings-specific marker so the toggle system can find/despawn this entity.
+    commands.entity(menu_root).insert(KeybindingsMenuRoot);
 
-            // Content area with scrollable keybindings
-            parent
-                .spawn(Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(20.0)),
-                    ..default()
-                })
-                .with_children(|content_parent| {
-                    // Group actions by category
-                    let mut grouped: BTreeMap<&str, Vec<(&String, &Vec<String>)>> = BTreeMap::new();
-                    for (action_name, bindings) in &keybindings.0 {
-                        let group_key = get_action_group(action_name);
-                        grouped
-                            .entry(group_key)
-                            .or_default()
-                            .push((action_name, &bindings.keyboard));
-                    }
-
-                    // Create a section for each group
-                    for (group_key, actions_in_group) in &grouped {
-                        // Group header
-                        if let Some(group_name) = groups.get(*group_key) {
-                            content_parent.spawn((
-                                Text::new(group_name.clone()),
-                                TextFont {
-                                    font_size: 18.0,
-                                    ..default()
-                                },
-                                TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                                Node {
-                                    width: Val::Percent(100.0),
-                                    height: Val::Px(30.0),
-                                    margin: UiRect::bottom(Val::Px(10.0)),
-                                    ..default()
-                                },
-                            ));
-                        }
-
-                        // Actions in this group
-                        for (action_name, key_bindings) in actions_in_group {
-                            // Get translated action name
-                            let action_display = actions
-                                .get(*action_name)
-                                .cloned()
-                                .unwrap_or_else(|| (*action_name).clone());
-
-                            // Get translated key names
-                            let key_names: Vec<String> = key_bindings
-                                .iter()
-                                .filter_map(|k| keys.get(k).cloned())
-                                .collect();
-
-                            let key_display = if key_names.is_empty() {
-                                "None".to_string()
-                            } else {
-                                key_names.join(" + ")
-                            };
-
-                            // Create the keybinding entry row
-                            content_parent
-                                .spawn(Node {
-                                    width: Val::Percent(100.0),
-                                    height: Val::Px(25.0),
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    margin: UiRect::bottom(Val::Px(5.0)),
-                                    ..default()
-                                })
-                                .with_children(|row| {
-                                    row.spawn((
-                                        Text::new(action_display),
-                                        TextFont {
-                                            font_size: 14.0,
-                                            ..default()
-                                        },
-                                        TextColor(Color::WHITE),
-                                    ));
-
-                                    row.spawn((
-                                        Text::new(key_display),
-                                        TextFont {
-                                            font_size: 14.0,
-                                            ..default()
-                                        },
-                                        TextColor(Color::srgb(0.8, 0.8, 0.8)),
-                                    ));
-                                });
-                        }
-                    }
-                });
-        });
-}
-
-/// Determines the action group for a given action name.
-///
-/// Groups are based on the action name prefix:
-/// - `thrust_*`, `pitch_*`, `yaw_*`, `roll_*`, `strafe_*` → `flight`
-/// - `fire_*` → `combat`
-/// - `toggle_*` → `systems`
-/// - `cockpit_*` → `systems`
-/// - Everything else → `other`
-fn get_action_group(action_name: &str) -> &'static str {
-    if action_name.starts_with("thrust_")
-        || action_name.starts_with("pitch_")
-        || action_name.starts_with("yaw_")
-        || action_name.starts_with("roll_")
-        || action_name.starts_with("strafe_")
-    {
-        "flight"
-    } else if action_name.starts_with("fire_") {
-        "combat"
-    } else if action_name.starts_with("toggle_") || action_name.starts_with("cockpit_") {
-        "systems"
-    } else {
-        "other"
-    }
+    tracing::debug!("spawned keybindings menu root entity {menu_root:?}");
 }
 
 /// Recursively despawns the keybindings menu entity and all its children.
 pub fn despawn_keybindings_menu(commands: &mut Commands<'_, '_>, entity: Entity) {
     commands.entity(entity).despawn();
+}
+
+/// Spawns a single keybinding row with label and key text.
+fn spawn_keybinding_row(
+    grid: &mut ChildSpawnerCommands<'_>,
+    i18n: &I18n,
+    keybindings: &KeybindingsResource,
+    theme: &Res<'_, UiTheme>,
+    action: LogicalAction,
+) {
+    let action_name = action.as_str();
+
+    // Translated action display name.
+    let action_display = i18n
+        .ui
+        .menu
+        .keybindings
+        .action
+        .get(action_name)
+        .map_or_else(|| action_name.to_owned(), Clone::clone);
+
+    // Look up bound keys and translate each one.
+    let key_text = keybindings
+        .0
+        .get(action_name)
+        .map(|bindings| {
+            bindings
+                .keyboard
+                .iter()
+                .map(|key_name| {
+                    i18n.ui
+                        .menu
+                        .keybindings
+                        .key
+                        .get(key_name)
+                        .map_or_else(|| key_name.clone(), Clone::clone)
+                })
+                .collect::<Vec<_>>()
+                .join(" + ")
+        })
+        .unwrap_or_default();
+
+    // Label in column 1 (takes remaining space, wraps)
+    grid.spawn((
+        Name::new(format!("Label_{action_name}")),
+        Node {
+            grid_row: GridPlacement::auto(),
+            ..default()
+        },
+    ))
+    .with_children(|label_col| {
+        label_col.spawn((
+            Name::new(format!("LabelText_{action_name}")),
+            Text::new(&action_display),
+            TextFont {
+                font: theme.font.clone(),
+                font_size: UiTheme::TEXT_FONT_SIZE,
+                ..default()
+            },
+            TextColor(UiTheme::LABEL_COLOR),
+            // Text wraps within the column
+            TextLayout::default(),
+        ));
+    });
+
+    // Value in column 2 (sizes to content, stays on one line)
+    grid.spawn((
+        Name::new(format!("Value_{action_name}")),
+        Node {
+            grid_row: GridPlacement::auto(),
+            ..default()
+        },
+    ))
+    .with_children(|value_col| {
+        value_col.spawn((
+            Name::new(format!("ValueText_{action_name}")),
+            Text::new(&key_text),
+            TextFont {
+                font: theme.font.clone(),
+                font_size: UiTheme::TEXT_FONT_SIZE,
+                ..default()
+            },
+            TextColor(UiTheme::VALUE_COLOR),
+            TextLayout {
+                linebreak: LineBreak::NoWrap,
+                ..default()
+            },
+        ));
+    });
+}
+
+/// Spawns the keybindings menu content inside the window content area.
+///
+/// Displays all current keybindings grouped by category (flight, combat, systems).
+/// Each entry shows the translated action name and the translated key name(s).
+///
+/// Uses a CSS Grid layout for i18n-safe label/value pairs:
+/// - Column 1 (1fr): Label column — text wraps within the column
+/// - Column 2 (auto): Value column — sizes to content, stays on one line
+///
+/// Group headers span both columns and use the window's default styling.
+fn keybindings_menu_content(
+    ui: &mut ChildSpawnerCommands<'_>,
+    i18n: &I18n,
+    keybindings: &KeybindingsResource,
+    theme: &Res<'_, UiTheme>,
+) {
+    // Group definitions: (group_key, actions in group)
+    // The group key maps to `i18n.ui.menu.keybindings.group.<group_key>`.
+    let groups: &[(&str, &[LogicalAction])] = &[
+        (
+            "flight",
+            &[
+                LogicalAction::ThrustForward,
+                LogicalAction::ThrustBackward,
+                LogicalAction::PitchUp,
+                LogicalAction::PitchDown,
+                LogicalAction::YawLeft,
+                LogicalAction::YawRight,
+                LogicalAction::RollLeft,
+                LogicalAction::RollRight,
+                LogicalAction::StrafeLeft,
+                LogicalAction::StrafeRight,
+                LogicalAction::StrafeUp,
+                LogicalAction::StrafeDown,
+            ],
+        ),
+        ("combat", &[LogicalAction::FirePrimary]),
+        (
+            "systems",
+            &[
+                LogicalAction::ToggleFlightAssist,
+                LogicalAction::CockpitCycleNext,
+                LogicalAction::CockpitCyclePrev,
+            ],
+        ),
+    ];
+
+    // Spawn the grid container with label/value rows as children
+    ui.spawn((
+        Name::new("LabelValueGrid"),
+        Node {
+            width: Val::Percent(100.0),
+            display: Display::Grid,
+            grid_template_columns: vec![GridTrack::fr(1.0), GridTrack::auto()],
+            grid_auto_rows: vec![GridTrack::auto()],
+            column_gap: Val::Px(8.0),
+            row_gap: Val::Px(4.0),
+            ..default()
+        },
+    ))
+    .with_children(|grid| {
+        for (group_key, actions) in groups {
+            // Look up the translated group name, fall back to uppercase key.
+            let group_name = i18n
+                .ui
+                .menu
+                .keybindings
+                .group
+                .get(*group_key)
+                .map_or_else(|| group_key.to_uppercase(), Clone::clone);
+
+            // -- Group header --
+            // Spans both columns of the grid
+            spawn_group_header(grid, theme, &group_name);
+
+            // -- Action rows --
+            for action in *actions {
+                spawn_keybinding_row(grid, i18n, keybindings, theme, *action);
+            }
+        }
+    });
 }

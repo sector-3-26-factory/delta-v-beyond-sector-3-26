@@ -19,20 +19,14 @@
 //! Cockpit overlay spawning systems.
 
 use bevy::prelude::*;
+use bevy::ui::widget::NodeImageMode;
 
 use crate::ship_templates::CockpitStation;
+use delta_v_core::RenderLayer;
 
 use super::ActiveCockpitStation;
 
 /// Spawns the cockpit overlay for the player ship.
-///
-/// Runs during `OnEnter(AppState::InGame)`.
-/// Reads the `CockpitOverlayResource` to get the cockpit definition.
-/// Validates that `stations` is non-empty (hard error if empty).
-/// Uses the first station as the default.
-///
-/// The overlay is rendered as a full-screen 2D UI sprite with alpha transparency,
-/// allowing the 3D scene to show through transparent areas.
 #[allow(clippy::needless_pass_by_value)]
 pub fn spawn_cockpit_overlay(
     mut commands: Commands<'_, '_>,
@@ -40,48 +34,61 @@ pub fn spawn_cockpit_overlay(
     cockpit: Res<'_, CockpitOverlayResource>,
 ) {
     let Some(station) = cockpit.stations.first() else {
-        log::error!("cockpit.stations must contain at least one station");
+        tracing::error!("cockpit.stations must contain at least one station");
         return;
     };
 
-    let texture_handle = asset_server.load(&station.texture);
+    // The template_path is the asset directory relative to the assets/ root,
+    // e.g., "templates/ships/space-fighter-comrade1280".
+    // The station texture is relative to that directory, e.g., "cockpit/default.png".
+    // The asset server loads from "assets/" + template_path + "/" + texture.
+    let texture_path = format!("{}/{}", cockpit.template_path, station.texture);
+    let texture_handle = asset_server.load::<Image>(texture_path);
 
-    // Spawn a full-screen UI node for the cockpit overlay container.
-    // The sprite is spawned as a child of this node.
+    // Spawn a full-screen UI node with an ImageNode for the cockpit overlay.
+    // ImageNode with Stretch mode fills the entire viewport regardless of image size.
+    // The parent node uses PositionType::Absolute and ZIndex(100) to render on top.
     commands
-        .spawn(Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            ..default()
-        })
+        .spawn((
+            Node {
+                width: Val::Vw(100.0),
+                height: Val::Vh(100.0),
+                position_type: PositionType::Absolute,
+                ..default()
+            },
+            RenderLayer::Ui.render_layers(),
+            Visibility::Visible,
+            super::CockpitOverlay {
+                texture: texture_handle.clone(),
+            },
+        ))
         .with_children(|parent| {
             parent.spawn((
-                Sprite {
-                    image: texture_handle.clone(),
+                ImageNode {
+                    image: texture_handle,
+                    image_mode: NodeImageMode::Stretch,
                     ..default()
                 },
-                Transform::from_scale(Vec3::new(1.0, 1.0, 1.0)),
-                Visibility::default(),
-                super::CockpitOverlay {
-                    texture: texture_handle,
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..default()
                 },
+                Visibility::Visible,
             ));
         });
 
-    // Insert the active station resource.
     commands.insert_resource(ActiveCockpitStation {
         station_id: station.id.clone(),
     });
-
-    log::debug!("spawned cockpit overlay for station '{}'", station.id);
 }
 
 /// Resource holding the cockpit overlay definition for the player ship.
-///
-/// This resource is populated from the player ship template's cockpit definition
-/// when the player ship is spawned.
 #[derive(Resource)]
 pub struct CockpitOverlayResource {
+    /// Template asset directory path relative to the assets/ root
+    /// (e.g., `templates/ships/space-fighter-comrade1280`).
+    pub template_path: String,
     /// List of cockpit stations.
     pub stations: Vec<CockpitStation>,
 }

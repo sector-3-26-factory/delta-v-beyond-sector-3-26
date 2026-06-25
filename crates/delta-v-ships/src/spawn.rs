@@ -18,12 +18,10 @@ use crate::ship_templates::{
     MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
     StaticShipTemplate,
 };
-use bevy::camera::visibility::RenderLayers;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    ChaseCameraOffset, DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, SpawnEntity,
-    Weapon,
+    DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, RenderLayer, SpawnEntity, Weapon,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
@@ -63,7 +61,7 @@ pub fn spawn_ship(
             "ship" => spawn_static_ship(&mut commands, &asset_server, event),
             "npc_ship" => {
                 // NPC ships: future implementation
-                log::warn!("NPC ship spawning not yet implemented");
+                tracing::warn!("NPC ship spawning not yet implemented");
             }
             // Other entity types (e.g. "asteroid") are handled by other plugins.
             // Silently skip — a single plugin cannot know whether another plugin
@@ -88,37 +86,44 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
 ///
 /// Only cameras with `available: true` are spawned as child entities
 /// of the ship. Positions and targets are scaled by the entity scale.
-/// Each camera is assigned its own render layer (cockpit=0, chase=1, etc.).
+/// All ship cameras render on `Layer(0)` with `order: 0`.
+/// The chase camera gets the `ActiveMainCamera` marker.
 fn spawn_cameras(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
     template: &PlayerShipTemplate,
     scale: f32,
 ) {
-    for (name, camera, layer) in [
-        ("cockpit", &template.cameras.cockpit, 0),
-        ("chase", &template.cameras.chase, 1),
-        ("rear", &template.cameras.rear, 2),
-        ("front", &template.cameras.front, 3),
-        ("left", &template.cameras.left, 4),
-        ("right", &template.cameras.right, 5),
-        ("top", &template.cameras.top, 6),
-        ("bottom", &template.cameras.bottom, 7),
+    let active_camera_name = "chase";
+    for (name, camera) in [
+        ("cockpit", &template.cameras.cockpit),
+        ("chase", &template.cameras.chase),
+        ("rear", &template.cameras.rear),
+        ("front", &template.cameras.front),
+        ("left", &template.cameras.left),
+        ("right", &template.cameras.right),
+        ("top", &template.cameras.top),
+        ("bottom", &template.cameras.bottom),
     ] {
         if camera.available {
             let position =
                 Vec3::new(camera.position.x, camera.position.y, camera.position.z) * scale;
             let target = Vec3::new(camera.target.x, camera.target.y, camera.target.z) * scale;
             commands.entity(ship_entity).with_children(|parent| {
-                let _camera_entity = parent.spawn((
-                    Transform::from_translation(position).looking_at(target, Vec3::Y),
-                    delta_v_core::CameraFollow {
-                        target: ship_entity,
-                        offset: position,
+                let mut camera_entity = parent.spawn((
+                    Camera3d::default(),
+                    Camera {
+                        order: 0,
+                        is_active: name == active_camera_name,
+                        ..default()
                     },
-                    RenderLayers::layer(layer),
+                    Transform::from_translation(position).looking_at(target, Vec3::Y),
+                    RenderLayer::Gameplay.render_layers(),
                 ));
-                log::debug!("spawned {name} camera at {position:?} on layer {layer}");
+                if name == active_camera_name {
+                    camera_entity.insert(delta_v_core::ActiveMainCamera);
+                }
+                tracing::debug!("spawned {name} camera at {position:?} on layer 0");
             });
         }
     }
@@ -131,28 +136,30 @@ fn spawn_cameras(
 fn insert_player_resources(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
+    template_path: &str,
     template: &PlayerShipTemplate,
     main: &MainThrusterTemplate,
     maneuvering: &ManeuveringThrusterTemplate,
-    active_index: usize,
-    scale: f32,
+    active_main_thruster_index: usize,
 ) {
-    let chase_offset = Vec3::new(
-        template.cameras.chase.position.x,
-        template.cameras.chase.position.y,
-        template.cameras.chase.position.z,
-    ) * scale;
     commands.insert_resource(PlayerShipEntity(ship_entity));
-    commands.insert_resource(ChaseCameraOffset(chase_offset));
     commands.insert_resource(ShipPropulsionConfig {
         max_forward_thrust: main.max_forward_thrust.value,
         max_backward_thrust: main.max_backward_thrust.value,
         max_torque: maneuvering.max_torque.value,
         max_strafe_thrust: maneuvering.max_strafe_thrust.value,
-        active_main_thruster_index: active_index,
+        active_main_thruster_index,
         rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
     });
+    // Convert template file path to asset directory path.
+    // The template_path is a file path like "templates/ships/space-fighter-comrade1280/player_controlled_ship.json".
+    // We need the directory path relative to the assets/ root: "templates/ships/space-fighter-comrade1280".
+    // The asset server loads from "assets/" + directory_path + "/" + texture_name.
+    let cockpit_dir = template_path
+        .rsplit_once('/')
+        .map_or(template_path, |(d, _)| d);
     commands.insert_resource(CockpitOverlayResource {
+        template_path: cockpit_dir.to_string(),
         stations: template.cockpit.stations.clone(),
     });
 }
@@ -167,7 +174,7 @@ fn insert_player_resources(
 /// Only cameras with `available: true` are spawned as camera entities.
 ///
 /// Debug axes length is computed from the bounding box stored in the template JSON.
-// INVARIANT: Indexing is safe (active_index=0, weapons iter), expect used after JSON validation.
+// INVARIANT: Indexing is safe (active_main_thruster_index=0, weapons iter), expect used after JSON validation.
 #[allow(
     clippy::option_if_let_else,
     clippy::indexing_slicing,
@@ -183,8 +190,8 @@ fn spawn_player_ship(
     let template = deserialize_template(event);
 
     // Extract propulsion values from the active main thruster.
-    let active_index = 0_usize; // M2: single active thruster
-    let main = &template.propulsion.main_thrusters[active_index];
+    let active_main_thruster_index = 0_usize; // M2: single active thruster
+    let main = &template.propulsion.main_thrusters[active_main_thruster_index];
     let maneuvering = &template.propulsion.maneuvering_thruster;
 
     // Derive mesh path from the mesh template path (always mesh.glb in the template directory).
@@ -205,7 +212,7 @@ fn spawn_player_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!(
+    tracing::debug!(
         "spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
     );
 
@@ -252,18 +259,18 @@ fn spawn_player_ship(
     // Spawn cameras for each available camera definition, scaled by the entity scale.
     spawn_cameras(commands, ship_entity, &template, scale);
 
-    // Store player ship ID, chase camera offset, propulsion config, and cockpit overlay.
+    // Store player ship ID, propulsion config, and cockpit overlay.
     insert_player_resources(
         commands,
         ship_entity,
+        &event.template_path,
         &template,
         main,
         maneuvering,
-        active_index,
-        scale,
+        active_main_thruster_index,
     );
 
-    log::info!(
+    tracing::info!(
         "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
         event.position.x,
         event.position.y,
@@ -314,7 +321,7 @@ fn spawn_static_ship(
     );
     let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
 
-    log::debug!(
+    tracing::debug!(
         "spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
     );
 
@@ -339,6 +346,7 @@ fn spawn_static_ship(
             RigidBody::new(template.mass.value, template.inertia_scale),
             FlightAssist,
             CollisionShape(collision_shape_data),
+            CollisionLayersComponent::new(layers::SHIP),
             // Health component for damage model (M4)
             Health::new(template.health.value),
         ))
@@ -357,7 +365,7 @@ fn spawn_static_ship(
         });
     }
 
-    log::info!(
+    tracing::info!(
         "static ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",
         event.position.x,
         event.position.y,

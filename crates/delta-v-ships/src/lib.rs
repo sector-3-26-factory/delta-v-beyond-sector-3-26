@@ -67,9 +67,7 @@ mod spawn_tests;
 mod systems_tests;
 
 use bevy::prelude::*;
-use delta_v_core::{
-    AppState, InputSet, SectorBoundaryResource, WorldSpawnSet, check_sector_boundary_system,
-};
+use delta_v_core::{AppState, SectorBoundaryResource, WorldSpawnSet, check_sector_boundary_system};
 use delta_v_physics::PhysicsSet;
 use systems::{
     PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
@@ -144,11 +142,6 @@ impl Plugin for ShipsPlugin {
         .add_systems(
             Update,
             check_sector_boundary_system.run_if(in_state(AppState::InGame)),
-        )
-        // Debug: log positions each frame (can be disabled in production).
-        .add_systems(
-            Update,
-            delta_v_core::debug_camera_positions.run_if(in_state(AppState::InGame)),
         );
 
         // Cockpit overlay systems (M6).
@@ -168,7 +161,6 @@ impl Plugin for ShipsPlugin {
                 ShipInputSet::ClearCommands,
             )
                 .chain()
-                .after(InputSet::Translate)
                 .before(PhysicsSet::AccumulateForces)
                 .run_if(in_state(AppState::InGame)),
         )

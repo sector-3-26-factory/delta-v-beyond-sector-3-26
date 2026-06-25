@@ -51,8 +51,8 @@ pub use boundary::{
     BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
 };
 pub use camera::{
-    ActiveMainCamera, CameraDefinition, CameraFollow, ChaseCameraOffset, PlayerShipEntity,
-    ShipCamerasTemplate, debug_camera_positions, spawn_chase_camera, spawn_ui_camera,
+    ActiveMainCamera, CameraDefinition, PlayerShipEntity, RenderLayer, ShipCamerasTemplate,
+    spawn_menu_camera, spawn_ui_camera,
 };
 pub use debug::{
     AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, mark_debug_axes, render_debug_axes,
@@ -66,12 +66,13 @@ pub use floating_origin::{
 };
 pub use health::{Health, Weapon};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
-pub use input::{ActiveActions, InputSet, KeybindingsResource, LogicalAction};
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;
 
 // Re-exports from delta-v-types for shared types (ADR-0046)
-pub use delta_v_types::{BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, Vec3Json};
+pub use delta_v_types::{
+    BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, PlayerSettings, Vec3Json,
+};
 
 #[cfg(test)]
 #[path = "state/tests.rs"]
@@ -82,20 +83,10 @@ mod state_tests;
 mod diagnostics_tests;
 
 #[cfg(test)]
-#[path = "input/tests.rs"]
-mod input_tests;
-
-#[cfg(test)]
 #[path = "boundary/tests.rs"]
 mod boundary_tests;
 
-#[cfg(test)]
-#[path = "camera/tests.rs"]
-mod camera_tests;
-
 use bevy::prelude::*;
-
-use crate::input::{input_log_system, input_translation_system};
 
 /// The core plugin that initialises fundamental ECS infrastructure.
 pub struct CorePlugin;
@@ -104,7 +95,9 @@ impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         info!(version = env!("CARGO_PKG_VERSION"), "Delta-V starting");
 
-        app.init_state::<AppState>().add_plugins(DiagnosticsPlugin);
+        app.init_state::<AppState>()
+            .add_plugins(DiagnosticsPlugin)
+            .add_plugins(input::InputManagerPlugin::<delta_v_types::LogicalAction>::default());
 
         // Initialize gizmo config with default render layer (will be updated dynamically).
         // The update_gizmo_render_layers system will set the correct layer based on active camera.
@@ -117,9 +110,14 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
         app.add_systems(
             OnEnter(AppState::InGame),
-            (log_in_game, spawn_chase_camera, spawn_ui_camera),
+            (log_in_game, spawn_ui_camera, spawn_menu_camera),
         );
         app.add_systems(OnEnter(AppState::SkirmishOver), log_skirmish_over);
+
+        // Build InputMap from KeybindingsResource after config is loaded.
+        // This must run after ConfigPlugin inserts KeybindingsResource
+        // and before any FixedUpdate systems that read ActionState.
+        app.add_systems(OnEnter(AppState::InGame), build_input_map_system);
 
         // Configure WorldSpawnSet ordering.
         app.configure_sets(
@@ -146,14 +144,6 @@ impl Plugin for CorePlugin {
                 .in_set(WorldSpawnSet::MarkDebugAxes),
         );
 
-        // Chase camera follows the ship every frame.
-        app.add_systems(
-            Update,
-            camera::chase_camera_system.run_if(|state: Res<'_, State<AppState>>| {
-                *state.get() == AppState::InGame || *state.get() == AppState::SkirmishOver
-            }),
-        );
-
         // Add gameplay render layers to all entities that have Transform but no RenderLayers.
         // Runs every frame to catch dynamically spawned entities.
         app.add_systems(Update, apply_gameplay_render_layers);
@@ -177,31 +167,14 @@ impl Plugin for CorePlugin {
             debug::update_gizmo_render_layers.run_if(in_state(AppState::InGame)),
         );
 
-        // Input pipeline (ADR-0011, ADR-0017).
-        app.init_resource::<ActiveActions>()
-            .configure_sets(
-                FixedUpdate,
-                (InputSet::Translate, InputSet::Log)
-                    .chain()
-                    .run_if(in_state(AppState::InGame)),
-            )
-            .add_systems(
-                FixedUpdate,
-                (
-                    input_translation_system.in_set(InputSet::Translate),
-                    input_log_system.in_set(InputSet::Log),
-                )
-                    .run_if(in_state(AppState::InGame)),
-            );
-
         // Immediately leave Boot.
         app.add_systems(OnEnter(AppState::Boot), advance_from_boot);
     }
 }
 
-/// Adds gameplay render layers (0-7) to all entities that have a `Transform`
-/// but no `RenderLayers` component, excluding cameras.
-/// This ensures gameplay objects are visible to all cameras.
+/// Adds `RenderLayer::Gameplay` render layers to all entities that have a
+/// `Transform` but no `RenderLayers` component, excluding cameras.
+/// This ensures gameplay objects are visible to all ship cameras (all on layer 0).
 // INVARIANT: Query uses multiple With/Without clauses for precise entity filtering.
 #[allow(clippy::type_complexity)]
 fn apply_gameplay_render_layers(
@@ -220,7 +193,7 @@ fn apply_gameplay_render_layers(
     for entity in &query {
         commands
             .entity(entity)
-            .insert(camera::gameplay_render_layers());
+            .insert(RenderLayer::Gameplay.render_layers());
     }
 }
 
@@ -250,4 +223,20 @@ fn log_skirmish_over() {
 
 fn advance_from_boot(mut next: ResMut<'_, NextState<AppState>>) {
     next.set(AppState::LoadingDefaults);
+}
+
+/// Builds the `InputMap<LogicalAction>` from the loaded `KeybindingsResource`
+/// and registers it as a Bevy resource.
+///
+/// This enables the leafwing-input-manager `InputState` system to populate
+/// `ActionState<LogicalAction>` from keyboard/gamepad input.
+// Bevy systems require `Res<T>` by value, not by reference.
+#[allow(clippy::needless_pass_by_value)]
+fn build_input_map_system(
+    keybindings: Res<'_, input::KeybindingsResource>,
+    mut commands: Commands<'_, '_>,
+) {
+    let input_map = input::build_input_map(&keybindings);
+    commands.insert_resource(input_map);
+    commands.init_resource::<input::ActionState<delta_v_types::LogicalAction>>();
 }

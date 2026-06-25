@@ -22,9 +22,26 @@
 //! - Keybindings reference menu (F1)
 //! - Future: inventory, price lists, settings menu
 
+#![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
+#![warn(clippy::all, clippy::pedantic, clippy::cargo)]
+// Multiple crate versions are unavoidable due to Bevy ecosystem dependencies
+// pulling in transitive duplicates that cannot be unified without upstream fixes.
+#![allow(clippy::multiple_crate_versions)]
+#![deny(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::todo,
+    clippy::unimplemented,
+    clippy::dbg_macro
+)]
+
 use bevy::prelude::*;
 
+pub mod layout;
 pub mod overlays;
+pub mod window;
 
 /// Plugin for UI overlay systems.
 pub struct UiPlugin;
@@ -32,5 +49,8 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(overlays::OverlaysPlugin);
+        app.add_plugins(window::WindowBorderPlugin);
+        app.add_systems(Startup, window::load_ui_theme);
+        app.add_systems(Update, window::systems::window_scroll_system);
     }
 }

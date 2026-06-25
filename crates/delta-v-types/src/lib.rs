@@ -14,6 +14,7 @@
 //! - `ids` — Identifier types: `EntityId`, `TemplatePath`
 //! - `weapons` — Weapon types: `WeaponTemplateJson`
 //! - `ai` — AI types: `AiConfigJson`, `AiTaskJson`
+//! - `logical_action` — Input actions: `LogicalAction`
 
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
@@ -34,7 +35,9 @@ pub mod ai;
 pub mod collision;
 pub mod i18n;
 pub mod ids;
+pub mod logical_action;
 pub mod physics;
+pub mod player_settings;
 pub mod spatial;
 pub mod weapons;
 
@@ -44,7 +47,9 @@ pub use collision::layers::PROJECTILE;
 pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use ids::{EntityId, TemplatePath};
+pub use logical_action::LogicalAction;
 pub use physics::PhysicalQuantityJson;
+pub use player_settings::PlayerSettings;
 pub use spatial::{BoundingBoxJson, QuatJson, Vec3Json};
 pub use weapons::WeaponTemplateJson;
 

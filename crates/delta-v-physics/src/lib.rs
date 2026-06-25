@@ -222,7 +222,7 @@ fn collision_detection_system(
                     |_| "no-hp".to_string(),
                     |h| format!("hp={:.0}/{:.0}", h.current, h.max),
                 );
-                log::debug!(
+                tracing::debug!(
                     "Collision detected: {entity_a:?} ({health_a}) <-> {entity_b:?} ({health_b}), penetration={penetration_depth:.2}, normal={normal:?}"
                 );
 
@@ -556,7 +556,7 @@ fn collision_response_system(
             body_b.apply_impulse(impulse);
         }
 
-        log::debug!(
+        tracing::debug!(
             "Collision response: target={:?}, other={:?}, impulse_mag={:.2}, static={}/{}",
             response.target,
             response.other,

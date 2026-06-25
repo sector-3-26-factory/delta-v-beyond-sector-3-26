@@ -5,6 +5,9 @@ description: "ai driven review - prepare for human review"
 This is a REPORTING-ONLY task. Agents MUST NOT apply fixes, make edits, or modify any files.
 Output must be a structured report of violations found, not code changes.
 
+**REPORT ONLY ACTUAL VIOLATIONS:**
+During analysis, the agent will encounter items that look suspicious but turn out to be non-violations after checking exemptions, exceptions, or context. These items MUST NOT appear in the report. Only items that are genuine, unresolved ADR violations after full analysis should be listed. Do not clutter the report with "looks like X but is actually fine" entries.
+
 **STOP AND WAIT FOR USER INSTRUCTIONS:**
 After producing the report, STOP and wait for the user to read it.
 NEVER proceed to fix any issues without explicit user instructions.

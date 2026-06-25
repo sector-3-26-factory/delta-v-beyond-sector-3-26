@@ -45,21 +45,24 @@ pub mod error;
 pub mod i18n;
 pub mod keybindings;
 pub mod loader;
-pub mod resources;
 
 #[cfg(test)]
 #[path = "loader_tests.rs"]
 mod loader_tests;
 
+pub use delta_v_core::input::KeybindingsResource;
 pub use error::ConfigError;
 pub use i18n::load_i18n;
 pub use keybindings::{ActionBindings, Keybindings};
-pub use resources::KeybindingsResource;
+
+use std::collections::HashMap;
 
 use bevy::prelude::*;
 use delta_v_core::{AppState, FlightAssistState};
 
-use crate::loader::{load_debug, load_diagnostics, load_flight_assist, load_keybindings};
+use crate::loader::{
+    load_debug, load_diagnostics, load_flight_assist, load_keybindings, load_player_settings,
+};
 
 /// Configuration plugin: loads and validates all JSON config files.
 ///
@@ -90,33 +93,46 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let keybindings = load_keybindings().unwrap_or_else(|e| {
         panic!("fatal: failed to load keybindings: {e}");
     });
-    log::info!("keybindings loaded ({} actions)", keybindings.actions.len());
+    tracing::info!("keybindings loaded ({} actions)", keybindings.actions.len());
 
-    // Convert delta-v-config::Keybindings into delta_v_core::KeybindingsResource.
     // KeybindingsResource is defined in delta-v-core to avoid a crate-dep cycle (ADR-0002).
-    let kb_map = keybindings
-        .actions
-        .into_iter()
-        .map(|(name, b)| {
-            (
-                name,
-                delta_v_core::input::keybindings_resource::ActionBindings {
-                    keyboard: b.keyboard,
-                    gamepad_button: b.gamepad_button,
-                },
-            )
-        })
-        .collect();
+    let kb_map: HashMap<String, delta_v_core::input::keybindings_resource::ActionBindings> =
+        keybindings
+            .actions
+            .into_iter()
+            .map(|(name, b)| {
+                (
+                    name,
+                    delta_v_core::input::keybindings_resource::ActionBindings {
+                        keyboard: b.keyboard,
+                        gamepad_button: b.gamepad_button,
+                    },
+                )
+            })
+            .collect();
     commands.insert_resource(KeybindingsResource(kb_map));
+
+    // Player settings (ADR-0010, ADR-0037).
+    // INVARIANT: a missing or invalid player settings file is a hard startup
+    // error (ADR-0013). The panic is intentional; no recovery is possible.
+    #[allow(clippy::panic)]
+    let player_settings = load_player_settings().unwrap_or_else(|e| {
+        panic!("fatal: failed to load player_settings: {e}");
+    });
+    tracing::info!(
+        "player_settings loaded (language: {})",
+        player_settings.language
+    );
+    commands.insert_resource(player_settings.clone());
 
     // i18n translations (ADR-0037).
     // INVARIANT: a missing or invalid i18n file is a hard startup
     // error (ADR-0013). The panic is intentional; no recovery is possible.
     #[allow(clippy::panic)]
-    let i18n = load_i18n().unwrap_or_else(|e| {
+    let i18n = load_i18n(&player_settings).unwrap_or_else(|e| {
         panic!("fatal: failed to load i18n: {e}");
     });
-    log::info!("i18n loaded (title: {})", i18n.ui.menu.keybindings.title);
+    tracing::info!("i18n loaded (title: {})", i18n.ui.menu.keybindings.title);
     commands.insert_resource(i18n);
 
     // Diagnostics configuration (ADR-0022, ADR-0039).
@@ -126,7 +142,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let diagnostics_config = load_diagnostics().unwrap_or_else(|e| {
         panic!("fatal: failed to load diagnostics config: {e}");
     });
-    log::info!(
+    tracing::info!(
         "diagnostics config loaded (threshold: {:.1}ms)",
         diagnostics_config.frame_time_warn_threshold_secs() * 1000.0
     );
@@ -139,7 +155,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let debug_config = load_debug().unwrap_or_else(|e| {
         panic!("fatal: failed to load debug config: {e}");
     });
-    log::info!(
+    tracing::info!(
         "debug config loaded (show_axis_indicators: {})",
         debug_config.show_axis_indicators
     );
@@ -152,7 +168,7 @@ fn load_configs_system(mut commands: Commands<'_, '_>, mut next: ResMut<'_, Next
     let flight_assist_config = load_flight_assist().unwrap_or_else(|e| {
         panic!("fatal: failed to load flight-assist config: {e}");
     });
-    log::info!(
+    tracing::info!(
         "flight-assist config loaded (enabled_by_default: {}, damping_coefficient: {})",
         flight_assist_config.enabled_by_default,
         flight_assist_config.damping_coefficient

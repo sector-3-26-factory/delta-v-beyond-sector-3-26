@@ -51,7 +51,7 @@ pub use resources::SkirmishState;
 pub use systems::AiSet;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, InputSet, WorldSpawnSet};
+use delta_v_core::{AppState, WorldSpawnSet};
 use delta_v_physics::PhysicsSet;
 
 /// AI plugin for managing NPC behavior and skirmish tracking.
@@ -75,7 +75,6 @@ impl Plugin for AiPlugin {
                     AiSet::SkirmishCheck,
                 )
                     .chain()
-                    .after(InputSet::Log)
                     .before(PhysicsSet::AccumulateForces)
                     .run_if(in_state(AppState::InGame)),
             )

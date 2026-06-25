@@ -12,111 +12,90 @@ pub mod types;
 
 pub use types::{CameraDefinition, ShipCamerasTemplate};
 
+/// Named render layer indices for the camera/layer system.
+///
+/// | Layer | Name | What it renders |
+/// |-------|------|-----------------|
+/// | 0 | Gameplay | 3D world, ship cameras, gameplay entities |
+/// | 1 | Ui | Cockpit overlay PNG, Bevy UI |
+/// | 2 | Menu | Bevy UI windows, keybindings menu |
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RenderLayer {
+    /// Layer 0 — Gameplay: 3D world, ship cameras, all gameplay entities.
+    Gameplay,
+    /// Layer 1 — UI: Cockpit overlay PNG, Bevy UI.
+    Ui,
+    /// Layer 2 — Menu: Bevy UI windows, keybindings menu.
+    Menu,
+}
+
+impl RenderLayer {
+    /// Returns the raw layer index as `usize`.
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Gameplay => 0,
+            Self::Ui => 1,
+            Self::Menu => 2,
+        }
+    }
+
+    /// Returns a `RenderLayers` containing only this layer.
+    pub const fn render_layers(self) -> RenderLayers {
+        RenderLayers::layer(self.index())
+    }
+}
+
+impl From<RenderLayer> for RenderLayers {
+    fn from(layer: RenderLayer) -> Self {
+        layer.render_layers()
+    }
+}
+
 /// Stores the entity ID of the player-controlled ship.
 #[derive(Resource)]
 pub struct PlayerShipEntity(pub Entity);
-
-/// Stores the chase camera offset from the template.
-#[derive(Resource, Debug, Clone, Copy)]
-pub struct ChaseCameraOffset(pub Vec3);
 
 /// Marker component for the currently active main camera.
 #[derive(Component)]
 pub struct ActiveMainCamera;
 
-/// Instructs the chase-camera system to follow a target entity.
-#[derive(Component, Debug)]
-pub struct CameraFollow {
-    /// The entity to track.
-    pub target: Entity,
-    /// Offset from the target's position in the target's local space.
-    pub offset: Vec3,
-}
-
-/// Render layers for gameplay objects — belongs to ALL layers so every camera can see them.
-pub fn gameplay_render_layers() -> RenderLayers {
-    RenderLayers::layer(0)
-        .with(1)
-        .with(2)
-        .with(3)
-        .with(4)
-        .with(5)
-        .with(6)
-        .with(7)
-}
-
-/// Spawns the 3-D chase camera on layer 1 with `ActiveMainCamera` marker.
-#[allow(clippy::needless_pass_by_value)]
-pub fn spawn_chase_camera(
-    mut commands: Commands<'_, '_>,
-    ship_entity: Res<'_, PlayerShipEntity>,
-    camera_offset: Res<'_, ChaseCameraOffset>,
-) {
-    commands.spawn((
-        Camera3d::default(),
-        Camera {
-            order: 0,
-            ..default()
-        },
-        Transform::from_translation(camera_offset.0).looking_at(Vec3::ZERO, Vec3::Y),
-        Visibility::default(),
-        CameraFollow {
-            target: ship_entity.0,
-            offset: camera_offset.0,
-        },
-        RenderLayers::layer(1),
-        ActiveMainCamera,
-    ));
-
-    log::info!("chase camera spawned at offset {:?}", camera_offset.0);
-}
-
-/// Spawns the 2-D UI camera required for rendering UI elements.
+/// Spawns the 2-D UI camera required for rendering the cockpit overlay PNG.
+///
+/// Renders on `Layer(1)` with `order: 1`. This camera sees the cockpit
+/// interior view (`.png` with alpha transparency). The `ActiveMainCamera`'s
+/// 3D world is visible through the transparent areas.
 pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
     commands.spawn((
         Camera2d,
         Camera {
             order: 1,
+            is_active: true,
             ..default()
         },
         Transform::default(),
         Visibility::default(),
+        RenderLayer::Ui.render_layers(),
         bevy::ui::IsDefaultUiCamera,
     ));
-    log::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
+    tracing::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
 }
 
-/// Moves the camera to maintain its offset behind the followed entity.
-#[allow(clippy::needless_pass_by_value)]
-pub fn chase_camera_system(
-    mut camera_query: Query<'_, '_, (&mut Transform, &CameraFollow)>,
-    target_query: Query<'_, '_, &Transform, Without<CameraFollow>>,
-) {
-    for (mut cam_transform, follow) in &mut camera_query {
-        let Ok(target_transform) = target_query.get(follow.target) else {
-            continue;
-        };
-        let world_offset = target_transform.rotation * follow.offset;
-        cam_transform.translation = target_transform.translation + world_offset;
-        let ship_up = target_transform.rotation * Vec3::Y;
-        cam_transform.look_at(target_transform.translation, ship_up);
-    }
-}
-
-/// Debug system that logs camera positions each frame.
-#[allow(clippy::needless_pass_by_value)]
-pub fn debug_camera_positions(
-    camera_query: Query<'_, '_, (&Transform, &CameraFollow)>,
-    target_query: Query<'_, '_, (&Transform, &Name)>,
-) {
-    for (cam_transform, follow) in &camera_query {
-        if let Ok((target_transform, target_name)) = target_query.get(follow.target) {
-            log::debug!(
-                "Camera: pos={:?}, looking at '{}' at {:?}",
-                cam_transform.translation,
-                target_name,
-                target_transform.translation
-            );
-        }
-    }
+/// Spawns the menu camera for Bevy UI windows and menus.
+///
+/// Renders on `Layer(2)` with `order: 3`. This camera sees the keybindings
+/// menu, window overlays, and other UI elements that should render on top
+/// of the cockpit and 3D world.
+pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 3,
+            is_active: true,
+            ..default()
+        },
+        Transform::default(),
+        Visibility::default(),
+        RenderLayer::Menu.render_layers(),
+    ));
+    tracing::info!("Menu camera (Bevy UI) spawned on layer 2");
 }

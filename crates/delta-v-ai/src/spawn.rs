@@ -191,7 +191,7 @@ pub fn spawn_npc_ship(
             });
         }
 
-        log::info!(
+        tracing::info!(
             "AI ship '{}' spawned at ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, task={:?})",
             event.id,
             event.position.x,

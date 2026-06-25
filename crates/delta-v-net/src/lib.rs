@@ -28,6 +28,6 @@ pub struct NetPlugin;
 
 impl Plugin for NetPlugin {
     fn build(&self, _app: &mut App) {
-        log::info!("NetPlugin initialized");
+        tracing::info!("NetPlugin initialized");
     }
 }

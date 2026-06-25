@@ -99,68 +99,72 @@ fn main() {
     #[cfg(target_os = "linux")]
     print_x11_hint();
 
-    App::new()
-        .insert_resource(world_path)
-        .add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "Delta-V beyond Sector 3.26".to_string(),
-                        resolution: (1280, 720).into(),
-                        ..default()
-                    }),
+    let mut app = App::new();
+
+    app.insert_resource(world_path).add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Delta-V beyond Sector 3.26".to_string(),
+                    resolution: (1280, 720).into(),
                     ..default()
-                })
-                .set(bevy::asset::AssetPlugin {
-                    // SAFETY: This is a simple path transformation. If the env var is not set,
-                    // we fall back to "assets" which is the expected relative path.
-                    #[allow(clippy::map_unwrap_or)]
-                    file_path: std::env::var("CARGO_MANIFEST_DIR")
-                        .ok()
-                        .map(|dir| {
-                            std::path::PathBuf::from(dir)
-                                .join("../..")
-                                .join("assets")
-                                .to_string_lossy()
-                                .to_string()
-                        })
-                        .unwrap_or_else(|| "assets".to_string()),
-                    ..default()
-                })
-                .set(bevy::log::LogPlugin {
-                    #[cfg(not(feature = "dev"))]
-                    filter: "warn,delta_v=info,delta_v_core=info,delta_v_config=info,\
+                }),
+                ..default()
+            })
+            .set(bevy::asset::AssetPlugin {
+                // SAFETY: This is a simple path transformation. If the env var is not set,
+                // we fall back to "assets" which is the expected relative path.
+                #[allow(clippy::map_unwrap_or)]
+                file_path: std::env::var("CARGO_MANIFEST_DIR")
+                    .ok()
+                    .map(|dir| {
+                        std::path::PathBuf::from(dir)
+                            .join("../..")
+                            .join("assets")
+                            .to_string_lossy()
+                            .to_string()
+                    })
+                    .unwrap_or_else(|| "assets".to_string()),
+                ..default()
+            })
+            .set(bevy::log::LogPlugin {
+                #[cfg(not(feature = "dev"))]
+                filter: "warn,delta_v=info,delta_v_core=info,delta_v_config=info,\
                              delta_v_physics=info,delta_v_assets=info,delta_v_ships=info,\
                              delta_v_propulsion=info,delta_v_weapons=info,delta_v_stations=info,\
                              delta_v_items=info,delta_v_world=info,delta_v_ai=info"
-                        .to_string(),
-                    #[cfg(feature = "dev")]
-                    filter: "warn,delta_v=debug,delta_v_core=debug,delta_v_config=debug,\
+                    .to_string(),
+                #[cfg(feature = "dev")]
+                filter: "warn,delta_v=debug,delta_v_core=debug,delta_v_config=debug,\
                              delta_v_physics=debug,delta_v_assets=debug,delta_v_ships=debug,\
                              delta_v_propulsion=debug,delta_v_weapons=debug,delta_v_stations=debug,\
                              delta_v_items=debug,delta_v_world=debug,delta_v_ai=debug"
-                        .to_string(),
-                    level: bevy::log::Level::TRACE,
-                    ..default()
-                }),
-        )
-        // Technical plugins — must be added before domain plugins.
-        // CorePlugin owns AppState and must come first.
-        .add_plugins(CorePlugin)
+                    .to_string(),
+                level: bevy::log::Level::TRACE,
+                ..default()
+            }),
+    );
+
+    // Technical plugins — must be added before domain plugins.
+    // CorePlugin owns AppState and must come first.
+    app.add_plugins(CorePlugin)
         .add_plugins(ConfigPlugin)
         .add_plugins(PhysicsPlugin)
         .add_plugins(AssetsPlugin)
-        .add_plugins(NetPlugin)
-        // Domain plugins.
-        .add_plugins(ShipsPlugin)
+        .add_plugins(NetPlugin);
+
+    // Domain plugins.
+    app.add_plugins(ShipsPlugin)
         .add_plugins(PropulsionPlugin)
         .add_plugins(WeaponsPlugin)
         .add_plugins(StationsPlugin)
         .add_plugins(ItemsPlugin)
         .add_plugins(WorldPlugin)
-        .add_plugins(AiPlugin)
-        .add_plugins(UiPlugin)
-        .run();
+        .add_plugins(AiPlugin);
+
+    app.add_plugins(UiPlugin);
+
+    app.run();
 }
 
 /// Prints a display-forwarding hint on Linux so the developer sees
@@ -177,7 +181,7 @@ fn print_x11_hint() {
 [delta-v]   2. Compare DISPLAY on host vs inside the devcontainer:
 [delta-v]        host:      echo $DISPLAY   (e.g. :0)
 [delta-v]        container: echo $DISPLAY   (must match)
-[delta-v]   3. If they differ, inside the container run:
+[delta-v]   3. If they differ, inside the devcontainer run:
 [delta-v]        export DISPLAY=<host value>   (e.g. export DISPLAY=:0)
 [delta-v]      then retry: cargo run --bin delta-v
 [delta-v]   See .devcontainer/README.md for full troubleshooting."

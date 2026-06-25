@@ -19,11 +19,13 @@
 //! Keybindings menu systems.
 
 use bevy::prelude::*;
-use delta_v_core::{I18n, KeybindingsResource};
+use delta_v_core::I18n;
+use delta_v_core::input::KeybindingsResource;
 
 use super::components::KeybindingsMenuRoot;
 use super::resources::KeybindingsMenuOpen;
 use super::spawn::spawn_keybindings_menu;
+use crate::window::UiTheme;
 
 /// Toggles the keybindings menu open/closed when the player presses the key.
 ///
@@ -31,7 +33,7 @@ use super::spawn::spawn_keybindings_menu;
 /// Checks for `F1` key press.
 /// When opening: spawns the menu UI.
 /// When closing: despawns the menu entity.
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn keybindings_menu_toggle_system(
     mut commands: Commands<'_, '_>,
     keyboard: Res<'_, ButtonInput<KeyCode>>,
@@ -39,6 +41,8 @@ pub fn keybindings_menu_toggle_system(
     query: Query<'_, '_, Entity, With<KeybindingsMenuRoot>>,
     i18n: Res<'_, I18n>,
     keybindings: Res<'_, KeybindingsResource>,
+    asset_server: Res<'_, AssetServer>,
+    theme: Res<'_, UiTheme>,
 ) {
     // Check if F1 is pressed
     let f1_pressed = keyboard.just_pressed(KeyCode::F1);
@@ -53,11 +57,11 @@ pub fn keybindings_menu_toggle_system(
             commands.entity(entity).despawn();
         }
         menu_open.0 = false;
-        log::debug!("keybindings menu: closed");
+        tracing::debug!("keybindings menu: closed");
     } else {
         // Open the menu: spawn the menu UI
-        spawn_keybindings_menu(&mut commands, &i18n, &keybindings);
+        spawn_keybindings_menu(&mut commands, &i18n, &keybindings, &asset_server, &theme);
         menu_open.0 = true;
-        log::debug!("keybindings menu: opened");
+        tracing::debug!("keybindings menu: opened");
     }
 }

@@ -1,0 +1,18 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/player_settings",
+    "title": "Player Settings",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nPlayer preferences that control game behavior. Loaded from assets/config/player_settings.json with optional user overrides from $XDG_CONFIG_HOME/delta-v-beyond-sector-3-26/player_settings.json per ADR-0010.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "language"
+    ],
+    "properties": {
+        "language": {
+            "description": "ISO 639-1 language code for UI translations (e.g. 'en', 'de'). The game loads assets/i18n/<language>.json at startup.",
+            "type": "string",
+            "default": "en"
+        }
+    }
+}

@@ -35,6 +35,7 @@ use serde_json::Value;
 
 use crate::{error::ConfigError, keybindings::Keybindings};
 use delta_v_core::{DebugConfig, DiagnosticsConfig, FlightAssistConfig};
+use delta_v_types::PlayerSettings;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -86,6 +87,18 @@ pub fn load_keybindings() -> Result<Keybindings, ConfigError> {
 /// file path and a precise description (ADR-0016).
 pub fn load_flight_assist() -> Result<FlightAssistConfig, ConfigError> {
     load_with_user_override("flight-assist", user_flight_assist_path)
+}
+
+/// Loads, validates and merges player settings configuration.
+///
+/// Uses [`load_with_user_override`] to handle defaults + user override merging.
+/// See ADR-0010 (configuration system).
+///
+/// # Errors
+/// Returns [`ConfigError`] if any step fails. All errors include the
+/// file path and a precise description (ADR-0016).
+pub fn load_player_settings() -> Result<PlayerSettings, ConfigError> {
+    load_with_user_override("player_settings", user_player_settings_path)
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +184,16 @@ fn user_debug_path() -> Option<PathBuf> {
 fn user_flight_assist_path() -> Option<PathBuf> {
     ProjectDirs::from("com", "delta-v", "delta-v-beyond-sector-3-26")
         .map(|dirs| dirs.config_dir().join("flight-assist.json"))
+}
+
+/// Returns the platform-appropriate user player settings override path, if
+/// the base directory can be determined.
+///
+/// On Linux: `$XDG_CONFIG_HOME/delta-v-beyond-sector-3-26/player_settings.json`
+/// (or `~/.config/...` if `XDG_CONFIG_HOME` is unset). See ADR-0010.
+fn user_player_settings_path() -> Option<PathBuf> {
+    ProjectDirs::from("com", "delta-v", "delta-v-beyond-sector-3-26")
+        .map(|dirs| dirs.config_dir().join("player_settings.json"))
 }
 
 /// Generic helper to load a config file with user override support.

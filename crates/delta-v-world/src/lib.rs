@@ -28,6 +28,8 @@
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
+// Multiple crate versions are unavoidable due to Bevy ecosystem dependencies
+// pulling in transitive duplicates that cannot be unified without upstream fixes.
 #![allow(clippy::multiple_crate_versions)]
 #![deny(
     clippy::unwrap_used,
@@ -61,7 +63,7 @@ use delta_v_assets::template::{
     load_ai_controlled_ship, load_asteroid, load_player_controlled_ship, load_ship,
 };
 use delta_v_core::{AppState, WorldSpawnSet};
-use spawn::spawn_asteroid_system;
+use spawn::spawn_asteroid;
 
 use crate::loader::load_world;
 use world_def::EntitySpawn;
@@ -81,7 +83,7 @@ impl Plugin for WorldPlugin {
             // Asteroid spawning runs in Update during SpawningEntities
             .add_systems(
                 Update,
-                spawn_asteroid_system
+                spawn_asteroid
                     .in_set(WorldSpawnSet::SpawnAsteroids)
                     .run_if(in_state(AppState::SpawningEntities)),
             )
@@ -128,7 +130,7 @@ fn load_world_system(
     let world = load_world(world_path.as_ref()).unwrap_or_else(|e| {
         panic!("fatal: failed to load world: {e}");
     });
-    log::info!("world loaded: {}", world.name);
+    tracing::info!("world loaded: {}", world.name);
 
     // Validate: exactly one entity must have player_controlled: true
     let player_controlled_count = world

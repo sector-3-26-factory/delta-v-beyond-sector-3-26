@@ -1,6 +1,6 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Input → Forces pipeline: reads [`ActiveActions`] and produces thrust/torque
+//! Input → Forces pipeline: reads [`ActionState<LogicalAction>`] and produces thrust/torque
 //! commands, applies them to the player ship's [`RigidBody`], and handles
 //! flight-assist toggling and damping.
 //!
@@ -10,8 +10,8 @@
 //! populated from the ship template JSON at spawn time (ADR-0014).
 //!
 //! System execution order within `FixedUpdate`:
-//! 1. Input reader (Translate) — samples keybindings → [`ActiveActions`] (from `delta-v-core`)
-//! 2. Input reader (Ships) — [`ActiveActions`] → [`ThrustCommand`] + [`TorqueCommand`]
+//! 1. Input reader (Translate) — samples keybindings → [`ActionState<LogicalAction>`] (from `delta-v-core`)
+//! 2. Input reader (Ships) — [`ActionState<LogicalAction>`] → [`ThrustCommand`] + [`TorqueCommand`]
 //! 3. Flight-assist toggle — [`LogicalAction::ToggleFlightAssist`] action → flip [`FlightAssistState`]
 //! 4. Thrust system — [`ThrustCommand`] → `apply_force` on [`RigidBody`]
 //! 5. Torque system — [`TorqueCommand`] → `apply_torque` on [`RigidBody`]
@@ -21,21 +21,20 @@
 use std::collections::BTreeSet;
 
 use bevy::prelude::*;
-use delta_v_core::{
-    ActiveActions, FlightAssist, FlightAssistConfig, FlightAssistState, LogicalAction,
-    PlayerShipEntity,
-};
+use delta_v_core::input::ActionState;
+use delta_v_core::{FlightAssist, FlightAssistConfig, FlightAssistState, PlayerShipEntity};
 use delta_v_physics::RigidBody;
+use delta_v_types::LogicalAction;
 
 use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 
 /// System set for the input → forces pipeline within `FixedUpdate`.
 ///
-/// These sets are configured to run after [`delta_v_core::InputSet::Translate`] (which
-/// populates [`ActiveActions`]) and before the physics integration sets.
+/// These sets are configured to run after the input translation systems (which
+/// populate [`ActionState<LogicalAction>`]) and before the physics integration sets.
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ShipInputSet {
-    /// Read [`ActiveActions`] and accumulate [`ThrustCommand`] + [`TorqueCommand`].
+    /// Read [`ActionState<LogicalAction>`] and accumulate [`ThrustCommand`] + [`TorqueCommand`].
     AccumulateCommands,
     /// Toggle flight assist on/off based on [`LogicalAction::ToggleFlightAssist`].
     ToggleFlightAssist,
@@ -49,7 +48,7 @@ pub enum ShipInputSet {
     ClearCommands,
 }
 
-/// Tracks the previous tick's [`ActiveActions`] for edge detection.
+/// Tracks the previous tick's pressed actions for edge detection.
 ///
 /// Used by [`flight_assist_toggle_system`] to detect key press transitions
 /// (on press, not on hold).
@@ -78,9 +77,9 @@ pub struct RotationRampState {
     pub ramp_ticks: Vec3,
 }
 
-/// Reads [`ActiveActions`] and accumulates thrust/torque commands.
+/// Reads [`ActionState<LogicalAction>`] and accumulates thrust/torque commands.
 ///
-/// Runs in `FixedUpdate` after [`delta_v_core::InputSet::Translate`].
+/// Runs in `FixedUpdate` after the input translation systems.
 /// For each active action, applies the corresponding force or torque
 /// direction. The magnitude is read from [`ShipPropulsionConfig`], which
 /// comes from the ship template JSON (ADR-0014).
@@ -90,7 +89,7 @@ pub struct RotationRampState {
 /// until reaching full torque. This allows fine-grained rotation control.
 #[allow(clippy::needless_pass_by_value)]
 pub fn input_reader_system(
-    active: Res<'_, ActiveActions>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
     propulsion: Res<'_, ShipPropulsionConfig>,
     mut thrust_cmd: ResMut<'_, ThrustCommand>,
     mut torque_cmd: ResMut<'_, TorqueCommand>,
@@ -98,7 +97,7 @@ pub fn input_reader_system(
 ) {
     let ramp_ticks_max = propulsion.rotation_ramp_ticks;
 
-    for action in &active.0 {
+    for action in action_state.get_pressed() {
         match action {
             // Thrust: apply force in local frame
             // Forward = -Z, Backward = +Z (ADR-0006)
@@ -159,14 +158,18 @@ pub fn input_reader_system(
     }
 
     // Reset ramp counters for axes that are not actively rotating.
-    if !active.0.contains(&LogicalAction::PitchUp) && !active.0.contains(&LogicalAction::PitchDown)
+    if !action_state.pressed(&LogicalAction::PitchUp)
+        && !action_state.pressed(&LogicalAction::PitchDown)
     {
         ramp.ramp_ticks.x = 0.0;
     }
-    if !active.0.contains(&LogicalAction::YawLeft) && !active.0.contains(&LogicalAction::YawRight) {
+    if !action_state.pressed(&LogicalAction::YawLeft)
+        && !action_state.pressed(&LogicalAction::YawRight)
+    {
         ramp.ramp_ticks.y = 0.0;
     }
-    if !active.0.contains(&LogicalAction::RollLeft) && !active.0.contains(&LogicalAction::RollRight)
+    if !action_state.pressed(&LogicalAction::RollLeft)
+        && !action_state.pressed(&LogicalAction::RollRight)
     {
         ramp.ramp_ticks.z = 0.0;
     }
@@ -196,27 +199,30 @@ fn ramp_factor(ramp_counter: &mut f32, ramp_ticks_max: u32) -> f32 {
 
 /// Toggles flight assist on/off when the player presses the toggle key.
 ///
-/// Runs in `FixedUpdate` after [`delta_v_core::InputSet::Translate`].
+/// Runs in `FixedUpdate` after the input translation systems.
 /// Only toggles on the frame the action transitions from not-active to active
 /// (i.e. on press, not on hold). Uses [`PreviousActions`] for edge detection.
 #[allow(clippy::needless_pass_by_value)]
 pub fn flight_assist_toggle_system(
-    active: Res<'_, ActiveActions>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
     mut prev: ResMut<'_, PreviousActions>,
     mut state: ResMut<'_, FlightAssistState>,
 ) {
     let toggle = LogicalAction::ToggleFlightAssist;
-    let is_pressed = active.0.contains(&toggle);
+    let is_pressed = action_state.pressed(&toggle);
     let was_pressed = prev.0.contains(&toggle);
 
     // Edge detection: only toggle on the transition from not-pressed to pressed.
     if is_pressed && !was_pressed {
         state.enabled = !state.enabled;
-        log::info!("flight assist toggled: {}", state.enabled);
+        tracing::info!("flight assist toggled: {}", state.enabled);
     }
 
     // Update previous state for next tick.
-    prev.0.clone_from(&active.0);
+    prev.0.clear();
+    for action in action_state.get_pressed() {
+        prev.0.insert(action);
+    }
 }
 
 /// Applies accumulated thrust as a force on the player ship's [`RigidBody`].
