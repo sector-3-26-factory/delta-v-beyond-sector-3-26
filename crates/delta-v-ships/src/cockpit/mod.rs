@@ -46,6 +46,10 @@ impl Plugin for CockpitPlugin {
             .add_systems(
                 Update,
                 systems::cockpit_station_cycle_system.run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                Update,
+                systems::cockpit_visibility_system.run_if(in_state(AppState::InGame)),
             );
     }
 }

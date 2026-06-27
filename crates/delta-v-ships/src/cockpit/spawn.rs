@@ -27,6 +27,9 @@ use delta_v_core::RenderLayer;
 use super::ActiveCockpitStation;
 
 /// Spawns the cockpit overlay for the player ship.
+///
+/// The cockpit overlay is always spawned, but its visibility is controlled by
+/// [`cockpit_visibility_system`] based on the active camera.
 #[allow(clippy::needless_pass_by_value)]
 pub fn spawn_cockpit_overlay(
     mut commands: Commands<'_, '_>,
@@ -48,6 +51,7 @@ pub fn spawn_cockpit_overlay(
     // Spawn a full-screen UI node with an ImageNode for the cockpit overlay.
     // ImageNode with Stretch mode fills the entire viewport regardless of image size.
     // The parent node uses PositionType::Absolute and ZIndex(100) to render on top.
+    // Visibility starts as Visible, but will be toggled by cockpit_visibility_system.
     commands
         .spawn((
             Node {

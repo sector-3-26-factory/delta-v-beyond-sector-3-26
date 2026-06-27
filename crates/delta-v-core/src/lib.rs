@@ -51,16 +51,17 @@ pub use boundary::{
     BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
 };
 pub use camera::{
-    ActiveCameraName, ActiveMainCamera, CameraDefinition, CameraName, CameraSwitchCycleState,
-    PlayerShipEntity, RenderLayer, ShipCamerasTemplate, camera_switch_system, spawn_menu_camera,
-    spawn_ui_camera,
+    ActiveCameraName, ActiveMainCamera, CameraDefinition, CameraName, CameraSwitch,
+    CameraSwitchCycleState, PlayerShipEntity, RenderLayer, ShipCamerasTemplate,
+    camera_switch_system, spawn_menu_camera, spawn_ui_camera,
 };
 pub use debug::{
-    AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, mark_debug_axes, render_debug_axes,
+    AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig,
+    debug_axes_visibility_system, init_debug_axes_visibility, mark_debug_axes, render_debug_axes,
     spawn_debug_axis_labels, update_debug_axis_labels, update_gizmo_render_layers,
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
-pub use events::{FireWeapon, ProjectileHit, SpawnEntity};
+pub use events::{CameraSwitched, FireWeapon, ProjectileHit, SpawnEntity};
 pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
@@ -103,9 +104,15 @@ impl Plugin for CorePlugin {
         // Ensure ClashStrategy resource exists (required by update_action_state).
         app.init_resource::<leafwing_input_manager::prelude::ClashStrategy>();
 
+        // Initialize message channel for camera switch events.
+        app.add_message::<CameraSwitched>();
+
         // Initialize gizmo config with default render layer (will be updated dynamically).
         // The update_gizmo_render_layers system will set the correct layer based on active camera.
         app.init_gizmo_group::<bevy::gizmos::config::DefaultGizmoConfigGroup>();
+
+        // Initialize AxesVisibility resource for debug axes visibility control.
+        app.init_resource::<debug::AxesVisibility>();
 
         // Log every state entry at INFO level (ADR-0015, ADR-0018).
         app.add_systems(OnEnter(AppState::Boot), log_boot);
@@ -114,7 +121,12 @@ impl Plugin for CorePlugin {
         app.add_systems(OnEnter(AppState::SpawningEntities), log_spawning_entities);
         app.add_systems(
             OnEnter(AppState::InGame),
-            (log_in_game, spawn_ui_camera, spawn_menu_camera),
+            (
+                log_in_game,
+                spawn_ui_camera,
+                spawn_menu_camera,
+                init_debug_axes_visibility,
+            ),
         );
         app.add_systems(OnEnter(AppState::SkirmishOver), log_skirmish_over);
 
@@ -169,6 +181,12 @@ impl Plugin for CorePlugin {
         app.add_systems(
             Update,
             debug::update_gizmo_render_layers.run_if(in_state(AppState::InGame)),
+        );
+
+        // Debug axes visibility: show only on cockpit camera.
+        app.add_systems(
+            Update,
+            debug::debug_axes_visibility_system.run_if(in_state(AppState::InGame)),
         );
 
         // Immediately leave Boot.

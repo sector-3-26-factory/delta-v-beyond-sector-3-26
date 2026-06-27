@@ -2,9 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::axes::{AxisLabel, DebugAxes, DebugAxesEligible};
+use super::axes::{AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible};
 use super::debug_config::DebugConfig;
-use crate::camera::{ActiveMainCamera, RenderLayer};
+use crate::camera::{ActiveCameraName, ActiveMainCamera, RenderLayer};
+use crate::events::CameraSwitched;
 
 /// Updates gizmo render layers to match the active camera's layer.
 ///
@@ -130,10 +131,14 @@ pub fn spawn_debug_axis_labels(
 /// Uses the `ActiveMainCamera` marker to find the currently active camera,
 /// and computes world position as `translation() + offset` (world-space, no rotation)
 /// to match how `render_debug_axes` draws the gizmo lines.
+///
+/// Respects the `AxesVisibility` resource set by `debug_axes_visibility_system`.
+/// Labels are only shown when axes are visible AND the label is on screen.
 // INVARIANT: Query returns at most one camera and one window; type complexity from multiple query params.
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::type_complexity)]
 pub fn update_debug_axis_labels(
+    axes_visibility: Res<'_, AxesVisibility>,
     camera_query: Query<
         '_,
         '_,
@@ -143,6 +148,14 @@ pub fn update_debug_axis_labels(
     entity_query: Query<'_, '_, &GlobalTransform>,
     mut label_query: Query<'_, '_, (&AxisLabel, &mut Node, &mut Visibility)>,
 ) {
+    // If axes are not visible, hide all labels
+    if !axes_visibility.visible {
+        for (_label, _node, mut visibility) in &mut label_query {
+            *visibility = Visibility::Hidden;
+        }
+        return;
+    }
+
     let Ok((camera, camera_transform)) = camera_query.single() else {
         return;
     };
@@ -163,5 +176,83 @@ pub fn update_debug_axis_labels(
         } else {
             *visibility = Visibility::Hidden;
         }
+    }
+}
+
+/// Initializes debug axes visibility based on the initial camera state.
+///
+/// This runs once when entering `InGame` state to set the correct initial visibility.
+/// Without this, axes would be hidden on startup even if the cockpit camera is active.
+#[allow(clippy::needless_pass_by_value)]
+pub fn init_debug_axes_visibility(
+    active_camera: Res<'_, ActiveCameraName>,
+    debug_config: Res<'_, DebugConfig>,
+    mut gizmo_config_store: ResMut<'_, bevy::gizmos::config::GizmoConfigStore>,
+    mut axes_visibility: ResMut<'_, AxesVisibility>,
+) {
+    // Only process if debug axes are enabled at all
+    if !debug_config.show_axis_indicators {
+        return;
+    }
+
+    // Axes visible on cockpit and front cameras
+    let is_active = active_camera.0 == "cockpit" || active_camera.0 == "front";
+
+    // Toggle gizmo visibility
+    let (gizmo_config, _) =
+        gizmo_config_store.config_mut::<bevy::gizmos::config::DefaultGizmoConfigGroup>();
+    gizmo_config.enabled = is_active;
+
+    // Update the AxesVisibility resource
+    axes_visibility.visible = is_active;
+
+    tracing::debug!(
+        "[debug] axes visibility: initialized to {} for camera '{}'",
+        is_active,
+        active_camera.0
+    );
+}
+
+/// Toggles debug axes visibility based on the active camera.
+///
+/// Debug axes (gizmos and labels) are only visible when the cockpit or front camera is active.
+/// This system listens for `CameraSwitched` messages and updates the `AxesVisibility` resource.
+///
+/// Runs in `Update` during `AppState::InGame`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn debug_axes_visibility_system(
+    mut events: MessageReader<'_, '_, CameraSwitched>,
+    debug_config: Res<'_, DebugConfig>,
+    mut gizmo_config_store: ResMut<'_, bevy::gizmos::config::GizmoConfigStore>,
+    mut axes_visibility: ResMut<'_, AxesVisibility>,
+) {
+    let events: Vec<_> = events.read().collect();
+    if events.is_empty() {
+        return;
+    }
+
+    // Only process if debug axes are enabled at all
+    if !debug_config.show_axis_indicators {
+        tracing::debug!("[debug] axes visibility: debug axes disabled by config");
+        return;
+    }
+
+    for event in events {
+        // Axes visible on cockpit and front cameras
+        let is_active = event.camera_name == "cockpit" || event.camera_name == "front";
+
+        // Toggle gizmo visibility
+        let (gizmo_config, _) =
+            gizmo_config_store.config_mut::<bevy::gizmos::config::DefaultGizmoConfigGroup>();
+        gizmo_config.enabled = is_active;
+
+        // Update the AxesVisibility resource
+        axes_visibility.visible = is_active;
+
+        tracing::debug!(
+            "[debug] axes visibility: set to {} for camera '{}'",
+            is_active,
+            event.camera_name
+        );
     }
 }

@@ -62,3 +62,15 @@ impl DebugAxes {
         }
     }
 }
+
+/// Resource tracking whether debug axes should be visible based on active camera.
+///
+/// This is set by `debug_axes_visibility_system` and read by `update_debug_axis_labels`.
+/// Axes are visible when the cockpit or front camera is active.
+// allow-default: Bevy requires Default on resources for init_resource.
+// This is runtime state, not configuration.
+#[derive(Resource, Default)]
+pub struct AxesVisibility {
+    /// Whether axes should be visible.
+    pub visible: bool,
+}

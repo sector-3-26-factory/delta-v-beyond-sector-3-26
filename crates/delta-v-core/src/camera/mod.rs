@@ -7,6 +7,7 @@
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 
+use crate::events::CameraSwitched;
 use crate::input::ActionState;
 use delta_v_types::LogicalAction;
 
@@ -84,6 +85,9 @@ const CAMERA_ORDER: [&str; 8] = [
     "cockpit", "front", "rear", "left", "right", "top", "bottom", "drone",
 ];
 
+/// System label for the camera switch system.
+pub struct CameraSwitch;
+
 /// Cycles between available ship cameras when the player presses the switch keys.
 ///
 /// Runs in `Update` during `AppState::InGame`.
@@ -92,7 +96,7 @@ const CAMERA_ORDER: [&str; 8] = [
 /// Only cameras with `available: true` that were actually spawned are in the query results.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn camera_switch_system(
-    mut commands: Commands<'_, '_>,
+    mut events: MessageWriter<'_, CameraSwitched>,
     action_state: Res<'_, ActionState<LogicalAction>>,
     mut active_camera: ResMut<'_, ActiveCameraName>,
     mut cycle_state: ResMut<'_, CameraSwitchCycleState>,
@@ -155,22 +159,25 @@ pub fn camera_switch_system(
     });
 
     // Deactivate old camera
-    if let Some((old_entity, _, _, mut old_camera)) = query
+    if let Some((_, _, _, mut old_camera)) = query
         .iter_mut()
         .find(|(_, name, _, _)| *name.0 == active_camera.0)
     {
         old_camera.is_active = false;
-        commands.entity(old_entity).remove::<ActiveMainCamera>();
     }
 
     // Activate new camera
     if let Ok((_, _, _, mut new_camera)) = query.get_mut(new_entity) {
         new_camera.is_active = true;
-        commands.entity(new_entity).insert(ActiveMainCamera);
     }
 
     active_camera.0 = new_name.to_string();
     tracing::debug!("switched to camera '{}' (entity {new_entity:?})", new_name);
+
+    // Emit message for camera switch
+    events.write(CameraSwitched {
+        camera_name: new_name.to_string(),
+    });
 }
 
 /// Tracks which camera switch keys were already consumed to prevent repeated firing.

@@ -20,6 +20,7 @@
 
 use bevy::prelude::*;
 
+use delta_v_core::CameraSwitched;
 use delta_v_core::input::ActionState;
 use delta_v_types::LogicalAction;
 
@@ -111,4 +112,48 @@ pub fn cockpit_station_cycle_system(
         new_station.id,
         new_station.texture
     );
+}
+
+/// Toggles the visibility of the cockpit overlay based on camera switch events.
+///
+/// The cockpit overlay should only be visible when the ship camera "cockpit" is chosen.
+/// This system listens for `CameraSwitched` messages and updates visibility accordingly.
+///
+/// Runs in `Update` during `AppState::InGame`.
+pub fn cockpit_visibility_system(
+    mut events: MessageReader<'_, '_, CameraSwitched>,
+    mut query: Query<'_, '_, (&mut Visibility, &Children), With<CockpitOverlay>>,
+    mut commands: Commands<'_, '_>,
+) {
+    let events: Vec<_> = events.read().collect();
+    if events.is_empty() {
+        return;
+    }
+
+    tracing::debug!("[cockpit] received {} camera switch events", events.len());
+
+    for event in events {
+        let is_cockpit_active = event.camera_name == "cockpit";
+        let new_visibility = if is_cockpit_active {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+
+        for (mut visibility, children) in &mut query {
+            if *visibility != new_visibility {
+                *visibility = new_visibility;
+                // Also set visibility on all children (ImageNode, etc.)
+                // In Bevy's UI system, parent visibility doesn't automatically cascade to children
+                for child in children {
+                    commands.entity(*child).insert(new_visibility);
+                }
+                tracing::debug!(
+                    "[cockpit] visibility set to {:?} (active camera: '{}')",
+                    new_visibility,
+                    event.camera_name
+                );
+            }
+        }
+    }
 }
