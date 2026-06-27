@@ -25,7 +25,9 @@
                     "toggle_flight_assist": "Toggle Flight Assist",
                     "fire_primary": "Fire Primary",
                     "cockpit_cycle_next": "Cycle Cockpit Next",
-                    "cockpit_cycle_prev": "Cycle Cockpit Prev"
+                    "cockpit_cycle_prev": "Cycle Cockpit Prev",
+                    "camera_switch_next": "Switch Camera Next",
+                    "camera_switch_prev": "Switch Camera Prev"
                 },
                 "key": {
                     "KeyW": "W",
@@ -43,7 +45,9 @@
                     "ArrowRight": "→",
                     "Space": "Space",
                     "F2": "F2",
+                    "F3": "F3",
                     "ControlLeft": "Ctrl Left",
+                    "ShiftLeft": "Shift Left",
                     "AltLeft": "Alt Left"
                 }
             }

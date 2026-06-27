@@ -12,7 +12,13 @@ use crate::input::KeybindingsResource;
 use delta_v_types::LogicalAction;
 
 /// Builds an `InputMap<LogicalAction>` from the loaded keybindings.
+///
+/// Multi-key bindings (chords) are bound using [`ButtonlikeChord`] so that
+/// all keys must be pressed together to trigger the action. Single-key
+/// bindings are bound directly.
 pub fn build_input_map(keybindings: &KeybindingsResource) -> InputMap<LogicalAction> {
+    use leafwing_input_manager::user_input::ButtonlikeChord;
+
     let mut input_map = InputMap::<LogicalAction>::default();
 
     for action in LogicalAction::all() {
@@ -21,9 +27,19 @@ pub fn build_input_map(keybindings: &KeybindingsResource) -> InputMap<LogicalAct
             continue;
         };
 
-        for key_name in &bindings.keyboard {
-            if let Some(key_code) = parse_key_code(key_name) {
-                input_map = input_map.with(*action, key_code);
+        let key_codes: Vec<KeyCode> = bindings
+            .keyboard
+            .iter()
+            .filter_map(|k| parse_key_code(k.as_str()))
+            .collect();
+
+        match key_codes.as_slice() {
+            [] => {}
+            [single] => {
+                input_map = input_map.with(*action, *single);
+            }
+            keys => {
+                input_map = input_map.with(*action, ButtonlikeChord::new(keys.to_vec()));
             }
         }
 
@@ -49,7 +65,9 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "KeyF" => Some(KeyCode::KeyF),
         "KeyC" => Some(KeyCode::KeyC),
         "F2" => Some(KeyCode::F2),
+        "F3" => Some(KeyCode::F3),
         "ControlLeft" => Some(KeyCode::ControlLeft),
+        "ShiftLeft" => Some(KeyCode::ShiftLeft),
         "AltLeft" => Some(KeyCode::AltLeft),
         "ArrowUp" => Some(KeyCode::ArrowUp),
         "ArrowDown" => Some(KeyCode::ArrowDown),

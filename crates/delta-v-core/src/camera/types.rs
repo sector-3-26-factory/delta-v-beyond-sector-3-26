@@ -24,8 +24,8 @@ pub struct CameraDefinition {
 pub struct ShipCamerasTemplate {
     /// Cockpit camera (inside the cockpit, typically front-upper-center).
     pub cockpit: CameraDefinition,
-    /// Chase camera (behind and above the ship).
-    pub chase: CameraDefinition,
+    /// Drone camera (behind and above the ship).
+    pub drone: CameraDefinition,
     /// Rear view camera (behind at cockpit height).
     pub rear: CameraDefinition,
     /// Front/nose camera (forward view).

@@ -202,6 +202,8 @@ fn keybindings_menu_content(
                 LogicalAction::ToggleFlightAssist,
                 LogicalAction::CockpitCycleNext,
                 LogicalAction::CockpitCyclePrev,
+                LogicalAction::CameraSwitchNext,
+                LogicalAction::CameraSwitchPrev,
             ],
         ),
     ];

@@ -25,7 +25,9 @@
                     "toggle_flight_assist": "Flugassistenz Umschalten",
                     "fire_primary": "Primäre Waffe abfeuern",
                     "cockpit_cycle_next": "nächste Cockpit-Ansicht",
-                    "cockpit_cycle_prev": "vorherige Cockpit-Ansicht"
+                    "cockpit_cycle_prev": "vorherige Cockpit-Ansicht",
+                    "camera_switch_next": "nächste Kamera",
+                    "camera_switch_prev": "vorherige Kamera"
                 },
                 "key": {
                     "KeyW": "W",
@@ -43,7 +45,9 @@
                     "ArrowRight": "→",
                     "Space": "Leertaste",
                     "F2": "F2",
+                    "F3": "F3",
                     "ControlLeft": "Strg Links",
+                    "ShiftLeft": "Umschalt Links",
                     "AltLeft": "Alt Links"
                 }
             }

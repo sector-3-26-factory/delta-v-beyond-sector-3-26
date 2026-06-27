@@ -51,8 +51,9 @@ pub use boundary::{
     BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
 };
 pub use camera::{
-    ActiveMainCamera, CameraDefinition, PlayerShipEntity, RenderLayer, ShipCamerasTemplate,
-    spawn_menu_camera, spawn_ui_camera,
+    ActiveCameraName, ActiveMainCamera, CameraDefinition, CameraName, CameraSwitchCycleState,
+    PlayerShipEntity, RenderLayer, ShipCamerasTemplate, camera_switch_system, spawn_menu_camera,
+    spawn_ui_camera,
 };
 pub use debug::{
     AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, mark_debug_axes, render_debug_axes,
@@ -98,6 +99,9 @@ impl Plugin for CorePlugin {
         app.init_state::<AppState>()
             .add_plugins(DiagnosticsPlugin)
             .add_plugins(input::InputManagerPlugin::<delta_v_types::LogicalAction>::default());
+
+        // Ensure ClashStrategy resource exists (required by update_action_state).
+        app.init_resource::<leafwing_input_manager::prelude::ClashStrategy>();
 
         // Initialize gizmo config with default render layer (will be updated dynamically).
         // The update_gizmo_render_layers system will set the correct layer based on active camera.
@@ -227,9 +231,6 @@ fn advance_from_boot(mut next: ResMut<'_, NextState<AppState>>) {
 
 /// Builds the `InputMap<LogicalAction>` from the loaded `KeybindingsResource`
 /// and registers it as a Bevy resource.
-///
-/// This enables the leafwing-input-manager `InputState` system to populate
-/// `ActionState<LogicalAction>` from keyboard/gamepad input.
 // Bevy systems require `Res<T>` by value, not by reference.
 #[allow(clippy::needless_pass_by_value)]
 fn build_input_map_system(

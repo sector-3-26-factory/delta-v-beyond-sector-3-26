@@ -21,7 +21,8 @@ use crate::ship_templates::{
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    DebugAxesEligible, FlightAssist, Health, PlayerShipEntity, RenderLayer, SpawnEntity, Weapon,
+    ActiveCameraName, CameraName, DebugAxesEligible, FlightAssist, Health, PlayerShipEntity,
+    RenderLayer, SpawnEntity, Weapon,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
@@ -87,23 +88,23 @@ fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
 /// Only cameras with `available: true` are spawned as child entities
 /// of the ship. Positions and targets are scaled by the entity scale.
 /// All ship cameras render on `Layer(0)` with `order: 0`.
-/// The chase camera gets the `ActiveMainCamera` marker.
+/// The first available camera in the order gets the `ActiveMainCamera` marker.
 fn spawn_cameras(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
     template: &PlayerShipTemplate,
     scale: f32,
 ) {
-    let active_camera_name = "chase";
+    let active_camera_name = "cockpit";
     for (name, camera) in [
         ("cockpit", &template.cameras.cockpit),
-        ("chase", &template.cameras.chase),
-        ("rear", &template.cameras.rear),
         ("front", &template.cameras.front),
+        ("rear", &template.cameras.rear),
         ("left", &template.cameras.left),
         ("right", &template.cameras.right),
         ("top", &template.cameras.top),
         ("bottom", &template.cameras.bottom),
+        ("drone", &template.cameras.drone),
     ] {
         if camera.available {
             let position =
@@ -119,6 +120,7 @@ fn spawn_cameras(
                     },
                     Transform::from_translation(position).looking_at(target, Vec3::Y),
                     RenderLayer::Gameplay.render_layers(),
+                    CameraName(name),
                 ));
                 if name == active_camera_name {
                     camera_entity.insert(delta_v_core::ActiveMainCamera);
@@ -131,7 +133,7 @@ fn spawn_cameras(
 
 /// Inserts player-specific resources after the ship entity is spawned.
 ///
-/// Stores the player ship entity ID, chase camera offset, propulsion
+/// Stores the player ship entity ID, camera configuration, propulsion
 /// configuration, and cockpit overlay resource.
 fn insert_player_resources(
     commands: &mut Commands<'_, '_>,
@@ -151,6 +153,9 @@ fn insert_player_resources(
         active_main_thruster_index,
         rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
     });
+    // Initialize ActiveCameraName resource to track the current camera.
+    // The cockpit camera is the default active camera.
+    commands.insert_resource(ActiveCameraName("cockpit".to_string()));
     // Convert template file path to asset directory path.
     // The template_path is a file path like "templates/ships/space-fighter-comrade1280/player_controlled_ship.json".
     // We need the directory path relative to the assets/ root: "templates/ships/space-fighter-comrade1280".

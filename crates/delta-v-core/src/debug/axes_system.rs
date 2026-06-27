@@ -53,7 +53,7 @@ pub fn mark_debug_axes(
 
 /// Renders debug axis lines using gizmos.
 ///
-/// Gizmo render layers are configured at app startup to match the chase
+/// Gizmo render layers are configured at app startup to match the active
 /// camera's render layer, so gizmos are only rendered by the active camera.
 // INVARIANT: Gizmos are drawn in world space; no pass-by-value optimization applies.
 #[allow(clippy::needless_pass_by_value)]

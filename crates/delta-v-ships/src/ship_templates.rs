@@ -43,7 +43,7 @@ pub struct PlayerShipTemplate {
     pub inertia_scale: f32,
     /// Propulsion system configuration (from merged ship template).
     pub propulsion: ShipPropulsionTemplate,
-    /// Camera definitions (cockpit required, chase optional).
+    /// Camera definitions (cockpit required, others optional).
     pub cameras: ShipCamerasTemplate,
     /// Axis-aligned bounding box in ship-local coordinates (metres).
     /// Used for debug axes and spatial calculations.

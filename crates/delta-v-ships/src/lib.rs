@@ -102,7 +102,9 @@ impl Plugin for ShipsPlugin {
             .init_resource::<TorqueCommand>()
             .init_resource::<PreviousActions>()
             .init_resource::<RotationRampState>()
-            .init_resource::<SectorBoundaryResource>();
+            .init_resource::<SectorBoundaryResource>()
+            .init_resource::<delta_v_core::ActiveCameraName>()
+            .init_resource::<delta_v_core::CameraSwitchCycleState>();
 
         // Configure WorldSpawnSet ordering (ADR-0038).
         app.configure_sets(
@@ -146,6 +148,12 @@ impl Plugin for ShipsPlugin {
 
         // Cockpit overlay systems (M6).
         app.add_plugins(cockpit::CockpitPlugin);
+
+        // Camera switching system (M7).
+        app.add_systems(
+            Update,
+            delta_v_core::camera_switch_system.run_if(in_state(AppState::InGame)),
+        );
 
         // Input → Forces pipeline in FixedUpdate (ADR-0017).
         // Must run after InputSet::Translate (which populates ActiveActions)
