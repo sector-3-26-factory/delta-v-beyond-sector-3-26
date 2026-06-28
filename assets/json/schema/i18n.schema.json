@@ -14,7 +14,8 @@
             "type": "object",
             "additionalProperties": false,
             "required": [
-                "menu"
+                "menu",
+                "notification"
             ],
             "properties": {
                 "menu": {
@@ -66,6 +67,28 @@
                                         "type": "string"
                                     }
                                 }
+                            }
+                        }
+                    }
+                },
+                "notification": {
+                    "description": "Notification translations.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "camera",
+                        "camera_name"
+                    ],
+                    "properties": {
+                        "camera": {
+                            "description": "Camera notification template. Use `{camera_name}` as placeholder.",
+                            "type": "string"
+                        },
+                        "camera_name": {
+                            "description": "Camera name translations.",
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
                             }
                         }
                     }

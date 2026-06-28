@@ -39,6 +39,8 @@ pub struct I18n {
 pub struct UiTranslations {
     /// Menu translations.
     pub menu: MenuTranslations,
+    /// Notification translations.
+    pub notification: NotificationTranslations,
 }
 
 /// Menu translations.
@@ -61,4 +63,13 @@ pub struct KeybindingsMenuTranslations {
     pub action: std::collections::HashMap<String, String>,
     /// Physical key names.
     pub key: std::collections::HashMap<String, String>,
+}
+
+/// Notification translations.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NotificationTranslations {
+    /// Camera notification template. Use `{camera_name}` as placeholder.
+    pub camera: String,
+    /// Camera name translations.
+    pub camera_name: std::collections::HashMap<String, String>,
 }

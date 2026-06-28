@@ -51,6 +51,19 @@
                     "AltLeft": "Alt Links"
                 }
             }
+        },
+        "notification": {
+            "camera": "Kamera: {camera_name}",
+            "camera_name": {
+                "cockpit": "Cockpit",
+                "front": "Vorderseite",
+                "rear": "Rückseite",
+                "left": "Links",
+                "right": "Rechts",
+                "top": "Oben",
+                "bottom": "Unten",
+                "drone": "Drohne"
+            }
         }
     }
 }
