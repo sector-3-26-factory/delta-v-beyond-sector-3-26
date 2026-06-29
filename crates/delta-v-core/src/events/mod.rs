@@ -143,3 +143,13 @@ pub struct ProjectileHit {
     /// The hit point in world coordinates.
     pub hit_point: Vec3,
 }
+
+/// Event emitted when the active ship camera changes.
+///
+/// Emitted by `camera_switch_system` when the player switches cameras.
+/// The cockpit overlay system listens for this to show/hide the overlay.
+#[derive(Message, Debug)]
+pub struct CameraSwitched {
+    /// The name of the newly active camera (e.g., "cockpit", "front", "drone").
+    pub camera_name: String,
+}

@@ -49,6 +49,10 @@ pub enum LogicalAction {
     CockpitCycleNext,
     /// Cycle to the previous cockpit station.
     CockpitCyclePrev,
+    /// Switch to the next ship camera.
+    CameraSwitchNext,
+    /// Switch to the previous ship camera.
+    CameraSwitchPrev,
 }
 
 impl LogicalAction {
@@ -74,6 +78,8 @@ impl LogicalAction {
             Self::FirePrimary => "fire_primary",
             Self::CockpitCycleNext => "cockpit_cycle_next",
             Self::CockpitCyclePrev => "cockpit_cycle_prev",
+            Self::CameraSwitchNext => "camera_switch_next",
+            Self::CameraSwitchPrev => "camera_switch_prev",
         }
     }
 
@@ -99,6 +105,8 @@ impl LogicalAction {
             Self::FirePrimary,
             Self::CockpitCycleNext,
             Self::CockpitCyclePrev,
+            Self::CameraSwitchNext,
+            Self::CameraSwitchPrev,
         ]
     }
 }

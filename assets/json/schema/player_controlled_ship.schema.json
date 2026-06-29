@@ -22,7 +22,7 @@
             "additionalProperties": false,
             "required": [
                 "cockpit",
-                "chase",
+                "drone",
                 "rear",
                 "front",
                 "left",
@@ -35,8 +35,8 @@
                     "description": "Cockpit camera (inside the cockpit, typically front-upper-center).",
                     "$ref": "#/$defs/camera"
                 },
-                "chase": {
-                    "description": "Chase camera (behind and above the ship).",
+                "drone": {
+                    "description": "Drone camera (behind and above the ship).",
                     "$ref": "#/$defs/camera"
                 },
                 "rear": {

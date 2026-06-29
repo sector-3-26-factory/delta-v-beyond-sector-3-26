@@ -19,8 +19,8 @@ fn test_logical_action_str_keys_are_unique() {
 fn test_logical_action_all_count() {
     assert_eq!(
         LogicalAction::all().len(),
-        16,
-        "expected 16 LogicalAction variants"
+        18,
+        "expected 18 LogicalAction variants"
     );
 }
 
@@ -43,6 +43,8 @@ fn test_logical_action_str_keys_match_expected() {
         "fire_primary",
         "cockpit_cycle_next",
         "cockpit_cycle_prev",
+        "camera_switch_next",
+        "camera_switch_prev",
     ];
     for key in &expected_keys {
         let found = LogicalAction::all().iter().any(|a| a.as_str() == *key);

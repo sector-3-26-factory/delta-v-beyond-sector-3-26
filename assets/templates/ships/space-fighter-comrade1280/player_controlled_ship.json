@@ -14,7 +14,7 @@
             },
             "available": true
         },
-        "chase": {
+        "drone": {
             "position": {
                 "x": 0.0,
                 "y": 6.0,
@@ -31,12 +31,12 @@
             "position": {
                 "x": 0.0,
                 "y": 1.5,
-                "z": 8.0
+                "z": 18.0
             },
             "target": {
                 "x": 0.0,
                 "y": 1.5,
-                "z": -5.0
+                "z": 25.0
             },
             "available": true
         },
@@ -87,7 +87,7 @@
             },
             "target": {
                 "x": 0.0,
-                "y": -0.5,
+                "y": 5.5,
                 "z": 0.0
             },
             "available": true

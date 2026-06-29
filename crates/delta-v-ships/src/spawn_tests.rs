@@ -75,7 +75,7 @@ fn make_player_ship_event() -> SpawnEntity {
                 "target": { "x": 0.0, "y": 0.5, "z": -10.0 },
                 "available": true
             },
-            "chase": {
+            "drone": {
                 "position": { "x": 0.0, "y": 2.0, "z": 5.0 },
                 "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
                 "available": true

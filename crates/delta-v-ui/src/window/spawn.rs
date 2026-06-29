@@ -8,7 +8,7 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// This program is distributed in the hope that it will be useful
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
@@ -22,8 +22,10 @@ use bevy::prelude::*;
 use bevy::ui::{Overflow, ScrollPosition, ZIndex};
 use delta_v_core::RenderLayer;
 
+use super::animations::WindowAnimation;
 use super::border::ScanLineDot;
 use super::components::WindowBorder;
+use super::components::WindowRoot;
 use super::components::WindowScrollContainer;
 use super::fade_images::{create_fade_bottom_image, create_fade_top_image};
 use super::theme::UiTheme;
@@ -36,6 +38,16 @@ pub struct WindowConfig {
     pub hint: String,
     /// Window size in pixels.
     pub size: Vec2,
+    /// Header row height. Use 0.0 for content-only windows (notifications).
+    pub header_height: f32,
+    /// Animation to apply to the window. Use `None` for no animation.
+    /// When `Some`, the `WindowAnimation` component is automatically
+    /// attached to the spawned window root entity.
+    pub animation: Option<WindowAnimation>,
+    /// Whether the content area should be scrollable.
+    /// If `true`, a scroll container with fade zones is created.
+    /// If `false`, content is placed directly without fade zones or scrolling.
+    pub scrollable: bool,
 }
 
 // allow-default: WindowConfig is a pure Rust UI helper struct, not JSON-backed.
@@ -46,6 +58,9 @@ impl Default for WindowConfig {
             title: String::new(),
             hint: String::new(),
             size: UiTheme::DEFAULT_WINDOW_SIZE,
+            header_height: UiTheme::HEADER_HEIGHT,
+            animation: None,
+            scrollable: true,
         }
     }
 }
@@ -142,8 +157,8 @@ fn spawn_corner_bracket(commands: &mut ChildSpawnerCommands<'_>, corner: u8, siz
 /// - A semi-transparent black panel centered on screen.
 /// - A header row with the title on the left and hint on the right.
 /// - A content area that fills the remaining space below the header.
-/// - Fade-out zones at the top and bottom of the content area.
-/// - Mouse wheel scrolling for overflow content.
+/// - Optional fade-out zones at the top and bottom of the content area (if scrollable).
+/// - Optional mouse wheel scrolling for overflow content (if scrollable).
 /// - Animated corner brackets and scan lines on the border.
 ///
 /// The `content_fn` callback is called with the content area's child spawner,
@@ -164,12 +179,14 @@ pub fn spawn_window(
     let fade_bottom_image = asset_server.add(create_fade_bottom_image());
 
     let size = config.size;
+    let header_height = config.header_height;
     // Bounds relative to panel origin (top-left of panel)
     let panel_bounds = Vec4::new(0.0, 0.0, size.x, size.y);
 
-    commands
+    let window_root = commands
         .spawn((
             Name::new("WindowRoot"),
+            WindowRoot,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
@@ -212,53 +229,55 @@ pub fn spawn_window(
                     }
                 }
 
-                // Header row — fixed height
-                ui.spawn((
-                    Name::new("HeaderRow"),
-                    Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Px(UiTheme::HEADER_HEIGHT),
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::SpaceBetween,
-                        align_items: AlignItems::Center,
-                        padding: UiRect::horizontal(Val::Px(UiTheme::HEADER_PADDING)),
-                        flex_shrink: 0.0,
-                        ..default()
-                    },
-                ))
-                .with_children(|ui| {
-                    // Title text
+                // Header row — only when header_height > 0.0
+                if header_height > 0.0 {
                     ui.spawn((
-                        Name::new("Title"),
-                        Text::new(&config.title),
-                        TextFont {
-                            font: theme.font.clone(),
-                            font_size: UiTheme::TITLE_FONT_SIZE,
+                        Name::new("HeaderRow"),
+                        Node {
+                            width: Val::Percent(100.0),
+                            height: Val::Px(header_height),
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            padding: UiRect::horizontal(Val::Px(UiTheme::HEADER_PADDING)),
+                            flex_shrink: 0.0,
                             ..default()
                         },
-                        TextColor(UiTheme::TITLE_COLOR),
-                    ));
+                    ))
+                    .with_children(|ui| {
+                        // Title text
+                        ui.spawn((
+                            Name::new("Title"),
+                            Text::new(&config.title),
+                            TextFont {
+                                font: theme.font.clone(),
+                                font_size: UiTheme::TITLE_FONT_SIZE,
+                                ..default()
+                            },
+                            TextColor(UiTheme::TITLE_COLOR),
+                        ));
 
-                    // Hint text
-                    ui.spawn((
-                        Name::new("Hint"),
-                        Text::new(&config.hint),
-                        TextFont {
-                            font: theme.font.clone(),
-                            font_size: UiTheme::HINT_FONT_SIZE,
-                            ..default()
-                        },
-                        TextColor(UiTheme::HINT_COLOR),
-                    ));
-                });
+                        // Hint text
+                        ui.spawn((
+                            Name::new("Hint"),
+                            Text::new(&config.hint),
+                            TextFont {
+                                font: theme.font.clone(),
+                                font_size: UiTheme::HINT_FONT_SIZE,
+                                ..default()
+                            },
+                            TextColor(UiTheme::HINT_COLOR),
+                        ));
+                    });
+                }
 
                 // Content area — fills remaining space, clips overflow on X.
-                // Y scrolling is handled by the inner ScrollContainer.
+                // Y scrolling is handled by the inner ScrollContainer (if scrollable).
                 ui.spawn((
                     Name::new("ContentContainer"),
                     Node {
                         width: Val::Percent(100.0),
-                        height: Val::Px(size.y - UiTheme::HEADER_HEIGHT),
+                        height: Val::Px(size.y - header_height),
                         overflow: Overflow {
                             x: OverflowAxis::Clip,
                             y: OverflowAxis::Visible,
@@ -268,88 +287,100 @@ pub fn spawn_window(
                     },
                 ))
                 .with_children(|ui| {
-                    // Scrollable content — handles Y scrolling via Bevy's layout system
-                    ui.spawn((
-                        Name::new("ScrollContainer"),
-                        WindowScrollContainer,
-                        Node {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
-                            overflow: Overflow {
-                                x: OverflowAxis::Clip,
-                                y: OverflowAxis::Scroll,
-                            },
-                            flex_direction: FlexDirection::Column,
-                            ..default()
-                        },
-                        ScrollPosition(Vec2::ZERO),
-                    ))
-                    .with_children(|ui| {
-                        // Top padding line
+                    if config.scrollable {
+                        // Scrollable content — handles Y scrolling via Bevy's layout system
                         ui.spawn((
-                            Name::new("PaddingTop"),
+                            Name::new("ScrollContainer"),
+                            WindowScrollContainer,
+                            Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(100.0),
+                                overflow: Overflow {
+                                    x: OverflowAxis::Clip,
+                                    y: OverflowAxis::Scroll,
+                                },
+                                flex_direction: FlexDirection::Column,
+                                ..default()
+                            },
+                            ScrollPosition(Vec2::ZERO),
+                        ))
+                        .with_children(|ui| {
+                            // Top padding line (fade zone)
+                            ui.spawn((
+                                Name::new("PaddingTop"),
+                                Node {
+                                    width: Val::Percent(100.0),
+                                    height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
+                                    flex_shrink: 0.0,
+                                    ..default()
+                                },
+                            ));
+
+                            // Actual content from the caller
+                            content_fn(ui);
+
+                            // Bottom padding line (fade zone)
+                            ui.spawn((
+                                Name::new("PaddingBottom"),
+                                Node {
+                                    width: Val::Percent(100.0),
+                                    height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
+                                    flex_shrink: 0.0,
+                                    ..default()
+                                },
+                            ));
+                        });
+
+                        // Fade-out zone: top — absolutely positioned, NOT affected by scroll
+                        ui.spawn((
+                            Name::new("FadeTop"),
                             Node {
                                 width: Val::Percent(100.0),
                                 height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
-                                flex_shrink: 0.0,
+                                position_type: PositionType::Absolute,
+                                top: Val::Px(0.0),
+                                left: Val::Px(0.0),
+                                ..default()
+                            },
+                            ZIndex(100),
+                            ImageNode {
+                                image: fade_top_image,
+                                color: Color::WHITE,
                                 ..default()
                             },
                         ));
 
-                        // Actual content from the caller
+                        // Fade-out zone: bottom — absolutely positioned, NOT affected by scroll
+                        ui.spawn((
+                            Name::new("FadeBottom"),
+                            Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
+                                position_type: PositionType::Absolute,
+                                bottom: Val::Px(0.0),
+                                left: Val::Px(0.0),
+                                ..default()
+                            },
+                            ZIndex(100),
+                            ImageNode {
+                                image: fade_bottom_image,
+                                color: Color::WHITE,
+                                ..default()
+                            },
+                        ));
+                    } else {
+                        // Non-scrollable content — no fade zones, no scroll container
                         content_fn(ui);
-
-                        // Bottom padding line
-                        ui.spawn((
-                            Name::new("PaddingBottom"),
-                            Node {
-                                width: Val::Percent(100.0),
-                                height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
-                                flex_shrink: 0.0,
-                                ..default()
-                            },
-                        ));
-                    });
-
-                    // Fade-out zone: top — absolutely positioned, NOT affected by scroll
-                    ui.spawn((
-                        Name::new("FadeTop"),
-                        Node {
-                            width: Val::Percent(100.0),
-                            height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
-                            position_type: PositionType::Absolute,
-                            top: Val::Px(0.0),
-                            left: Val::Px(0.0),
-                            ..default()
-                        },
-                        ZIndex(100),
-                        ImageNode {
-                            image: fade_top_image,
-                            color: Color::WHITE,
-                            ..default()
-                        },
-                    ));
-
-                    // Fade-out zone: bottom — absolutely positioned, NOT affected by scroll
-                    ui.spawn((
-                        Name::new("FadeBottom"),
-                        Node {
-                            width: Val::Percent(100.0),
-                            height: Val::Px(UiTheme::FADE_ZONE_HEIGHT),
-                            position_type: PositionType::Absolute,
-                            bottom: Val::Px(0.0),
-                            left: Val::Px(0.0),
-                            ..default()
-                        },
-                        ZIndex(100),
-                        ImageNode {
-                            image: fade_bottom_image,
-                            color: Color::WHITE,
-                            ..default()
-                        },
-                    ));
+                    }
                 });
             });
         })
-        .id()
+        .id();
+
+    // Insert animation component if configured
+    if let Some(anim) = &config.animation {
+        commands.entity(window_root).insert(anim.clone());
+    }
+
+    window_root
 }

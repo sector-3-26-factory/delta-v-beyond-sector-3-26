@@ -77,8 +77,19 @@
     },
     "cockpit_cycle_prev": {
       "keyboard": [
-        "ControlLeft",
+        "ShiftLeft",
         "F2"
+      ]
+    },
+    "camera_switch_next": {
+      "keyboard": [
+        "F3"
+      ]
+    },
+    "camera_switch_prev": {
+      "keyboard": [
+        "ShiftLeft",
+        "F3"
       ]
     }
   }

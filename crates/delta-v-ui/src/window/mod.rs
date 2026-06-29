@@ -23,6 +23,9 @@
 //! The content area is populated via a callback function, making this module
 //! reusable for different window types (keybindings menu, settings, etc.).
 
+use bevy::prelude::*;
+
+pub mod animations;
 pub mod border;
 pub mod components;
 pub mod fade_images;
@@ -30,6 +33,17 @@ pub mod spawn;
 pub mod systems;
 pub mod theme;
 
+pub use animations::{WindowAnimation, WindowAnimationFlicker, WindowAnimationFlickerPhase};
 pub use border::WindowBorderPlugin;
 pub use spawn::{WindowConfig, spawn_window};
+pub use systems::window_animation_system;
 pub use theme::{UiTheme, load_ui_theme};
+
+/// Plugin for window animation effects (flicker, etc.).
+pub struct WindowAnimationPlugin;
+
+impl Plugin for WindowAnimationPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, window_animation_system);
+    }
+}

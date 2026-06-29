@@ -151,8 +151,10 @@ pub fn input_reader_system(
             LogicalAction::ToggleFlightAssist
             | LogicalAction::FirePrimary
             | LogicalAction::CockpitCycleNext
-            | LogicalAction::CockpitCyclePrev => {
-                // Handled by other systems (flight_assist_toggle_system / weapons plugin / cockpit module)
+            | LogicalAction::CockpitCyclePrev
+            | LogicalAction::CameraSwitchNext
+            | LogicalAction::CameraSwitchPrev => {
+                // Handled by other systems (flight_assist_toggle_system / weapons plugin / cockpit module / camera module)
             }
         }
     }

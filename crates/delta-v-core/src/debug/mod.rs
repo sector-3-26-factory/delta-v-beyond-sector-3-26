@@ -31,9 +31,9 @@ pub mod debug_config;
 #[path = "axes_tests.rs"]
 mod axes_tests;
 
-pub use axes::{AxisLabel, DebugAxes, DebugAxesEligible};
+pub use axes::{AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible};
 pub use axes_system::{
-    mark_debug_axes, render_debug_axes, spawn_debug_axis_labels, update_debug_axis_labels,
-    update_gizmo_render_layers,
+    debug_axes_visibility_system, init_debug_axes_visibility, mark_debug_axes, render_debug_axes,
+    spawn_debug_axis_labels, update_debug_axis_labels, update_gizmo_render_layers,
 };
 pub use debug_config::DebugConfig;

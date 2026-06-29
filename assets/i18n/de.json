@@ -1,4 +1,15 @@
 {
+    "number_format": {
+        "decimal_separator": ",",
+        "thousands_separator": "."
+    },
+    "speed": {
+        "unit_ms": "m/s",
+        "unit_kmh": "km/h",
+        "unit_kms": "km/s",
+        "unit_pch": "pc/h",
+        "unit_c": "c"
+    },
     "ui": {
         "menu": {
             "keybindings": {
@@ -25,7 +36,9 @@
                     "toggle_flight_assist": "Flugassistenz Umschalten",
                     "fire_primary": "Primäre Waffe abfeuern",
                     "cockpit_cycle_next": "nächste Cockpit-Ansicht",
-                    "cockpit_cycle_prev": "vorherige Cockpit-Ansicht"
+                    "cockpit_cycle_prev": "vorherige Cockpit-Ansicht",
+                    "camera_switch_next": "nächste Kamera",
+                    "camera_switch_prev": "vorherige Kamera"
                 },
                 "key": {
                     "KeyW": "W",
@@ -43,9 +56,24 @@
                     "ArrowRight": "→",
                     "Space": "Leertaste",
                     "F2": "F2",
+                    "F3": "F3",
                     "ControlLeft": "Strg Links",
+                    "ShiftLeft": "Umschalt Links",
                     "AltLeft": "Alt Links"
                 }
+            }
+        },
+        "notification": {
+            "camera": "Kamera: {camera_name}",
+            "camera_name": {
+                "cockpit": "Cockpit",
+                "front": "Vorderseite",
+                "rear": "Rückseite",
+                "left": "Links",
+                "right": "Rechts",
+                "top": "Oben",
+                "bottom": "Unten",
+                "drone": "Drohne"
             }
         }
     }

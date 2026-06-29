@@ -83,9 +83,11 @@ Each milestone ends on a runnable, demoable build.
 
 ### M6 -- HUD and feel
 *Status: in progress.*
-- Cockpit overlay system with PNG overlays and station switching (Step 5 implemented).
-- Velocity vector indicator, thrust gauges, target reticle.
-- Sound effects, camera shake, basic VFX.
+- Cockpit overlay system with PNG overlays and station switching (Steps 1–9 implemented).
+- Velocity vector indicator implemented (visible in all cameras, projects onto active camera's view plane).
+- Status gauges (health, weapon heat) with slot-based positioning (planned).
+- Player-controlled targeting & navigation list with bearing indicator (planned). No auto-targeting — player explicitly selects targets/nav objects.
+- Sound effects (code complete, audio output requires PulseAudio socket forwarding in devcontainer), camera shake, basic VFX.
 
 ### M7 -- Multiplayer prototype
 - Concrete networking decisions

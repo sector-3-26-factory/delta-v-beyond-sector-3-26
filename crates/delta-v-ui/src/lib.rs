@@ -20,6 +20,7 @@
 //!
 //! This crate contains UI-related systems that are not ship-specific:
 //! - Keybindings reference menu (F1)
+//! - Notification system (camera switch, etc.)
 //! - Future: inventory, price lists, settings menu
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
@@ -40,6 +41,7 @@
 use bevy::prelude::*;
 
 pub mod layout;
+pub mod notification;
 pub mod overlays;
 pub mod window;
 
@@ -50,6 +52,8 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(overlays::OverlaysPlugin);
         app.add_plugins(window::WindowBorderPlugin);
+        app.add_plugins(window::WindowAnimationPlugin);
+        app.add_plugins(notification::NotificationPlugin);
         app.add_systems(Startup, window::load_ui_theme);
         app.add_systems(Update, window::systems::window_scroll_system);
     }

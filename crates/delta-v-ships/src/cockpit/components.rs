@@ -42,5 +42,20 @@ pub struct ActiveCockpitStation {
     pub station_id: String,
 }
 
+/// Marker component for the velocity vector indicator entity.
+///
+/// The indicator is a small UI element (arrow/reticle) that points in the
+/// direction of the ship's velocity vector, projected onto the active camera's
+/// view plane. Visible in all cameras (not just cockpit).
+#[derive(Component)]
+pub struct VelocityVectorIndicator;
+
+/// Marker component for the speed display text entity.
+///
+/// Displays the ship's current speed next to the velocity vector indicator.
+/// Positioned independently (not a child of the rotating arrow sprite).
+#[derive(Component)]
+pub struct SpeedText;
+
 // Re-export types from ship_templates for convenience
 pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};
