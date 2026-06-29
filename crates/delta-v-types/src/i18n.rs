@@ -32,6 +32,36 @@ use serde::Deserialize;
 pub struct I18n {
     /// UI translations.
     pub ui: UiTranslations,
+    /// Number formatting configuration.
+    pub number_format: NumberFormat,
+    /// Speed display unit strings.
+    pub speed: SpeedTranslations,
+}
+
+/// Number formatting configuration.
+///
+/// Uses Java-style format patterns for locale-aware number formatting.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NumberFormat {
+    /// Decimal separator character (e.g. `.` for English, `,` for German).
+    pub decimal_separator: String,
+    /// Thousands separator character (e.g. `,` for English, `.` for German).
+    pub thousands_separator: String,
+}
+
+/// Speed display translations.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SpeedTranslations {
+    /// Unit abbreviation for meters per second.
+    pub unit_ms: String,
+    /// Unit abbreviation for kilometers per hour.
+    pub unit_kmh: String,
+    /// Unit abbreviation for kilometers per second.
+    pub unit_kms: String,
+    /// Unit abbreviation for parsecs per hour.
+    pub unit_pch: String,
+    /// Unit abbreviation for fraction of light speed.
+    pub unit_c: String,
 }
 
 /// UI translations.

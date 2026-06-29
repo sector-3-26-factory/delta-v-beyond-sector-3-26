@@ -25,6 +25,9 @@ use crate::ship_templates::CockpitStation;
 use delta_v_core::RenderLayer;
 
 use super::ActiveCockpitStation;
+use super::components::SpeedText;
+use super::components::VelocityVectorIndicator;
+use super::velocity_indicator::create_arrow_image;
 
 /// Spawns the cockpit overlay for the player ship.
 ///
@@ -60,6 +63,7 @@ pub fn spawn_cockpit_overlay(
                 position_type: PositionType::Absolute,
                 ..default()
             },
+            Transform::default(),
             RenderLayer::Ui.render_layers(),
             Visibility::Visible,
             super::CockpitOverlay {
@@ -87,11 +91,64 @@ pub fn spawn_cockpit_overlay(
     });
 }
 
+/// Spawns the velocity vector indicator as a Sprite + Text on the Ui render layer.
+///
+/// `Sprite` in Bevy 0.18 is rendered by the UI camera (orthographic).
+/// The sprite is centered on screen. The `velocity_vector_system` rotates
+/// it via `Transform::rotation` each frame to point in the velocity direction.
+/// A `Text` child entity displays the current speed.
+///
+/// Runs during `OnEnter(AppState::InGame)`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn spawn_velocity_vector_indicator(
+    mut commands: Commands<'_, '_>,
+    asset_server: Res<'_, AssetServer>,
+) {
+    let arrow_image = create_arrow_image();
+    let arrow_handle = asset_server.add(arrow_image);
+
+    commands.spawn((
+        Sprite {
+            image: arrow_handle,
+            ..default()
+        },
+        Transform::default(),
+        RenderLayer::Ui.render_layers(),
+        Visibility::Visible,
+        VelocityVectorIndicator,
+    ));
+
+    // Spawn speed text as a separate entity (not a child of the rotating sprite).
+    commands.spawn((
+        Text::new(""),
+        TextFont {
+            font_size: 14.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.0, 1.0, 0.0)),
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Percent(50.0),
+            top: Val::Percent(50.0),
+            margin: UiRect {
+                left: Val::Px(20.0),
+                top: Val::Px(-8.0),
+                ..default()
+            },
+            ..default()
+        },
+        RenderLayer::Ui.render_layers(),
+        Visibility::Visible,
+        SpeedText,
+    ));
+
+    tracing::info!("velocity vector indicator sprite + text spawned");
+}
+
 /// Resource holding the cockpit overlay definition for the player ship.
 #[derive(Resource)]
 pub struct CockpitOverlayResource {
-    /// Template asset directory path relative to the assets/ root
-    /// (e.g., `templates/ships/space-fighter-comrade1280`).
+    /// Template asset directory path relative to the assets/ root.
     pub template_path: String,
     /// List of cockpit stations.
     pub stations: Vec<CockpitStation>,

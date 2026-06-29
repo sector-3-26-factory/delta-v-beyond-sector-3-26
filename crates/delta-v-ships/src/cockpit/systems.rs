@@ -20,12 +20,18 @@
 
 use bevy::prelude::*;
 
-use delta_v_core::CameraSwitched;
 use delta_v_core::input::ActionState;
+use delta_v_core::{ActiveCameraName, CameraName, CameraSwitched, I18n, PlayerShipEntity};
+use delta_v_physics::RigidBody;
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
 use super::components::CockpitOverlay;
+use super::components::SpeedText;
+use super::components::VelocityVectorIndicator;
+use super::velocity_indicator::create_thrust_arrow_presets;
+use super::velocity_indicator::format_speed;
+
 use super::spawn::CockpitOverlayResource;
 
 /// Tracks which actions were already consumed to prevent repeated firing.
@@ -143,8 +149,6 @@ pub fn cockpit_visibility_system(
         for (mut visibility, children) in &mut query {
             if *visibility != new_visibility {
                 *visibility = new_visibility;
-                // Also set visibility on all children (ImageNode, etc.)
-                // In Bevy's UI system, parent visibility doesn't automatically cascade to children
                 for child in children {
                     commands.entity(*child).insert(new_visibility);
                 }
@@ -156,4 +160,213 @@ pub fn cockpit_visibility_system(
             }
         }
     }
+}
+
+/// Cached preset arrow texture handles for different thrust levels.
+#[derive(Resource, Default)]
+pub struct ArrowTextureCache {
+    /// Preset handles keyed by (level, direction).
+    /// direction: "forward" (green), "backward" (red), "white" (no thrust).
+    handles:
+        std::collections::HashMap<(usize, &'static str), bevy::asset::Handle<bevy::image::Image>>,
+}
+
+impl ArrowTextureCache {
+    /// Gets a cached handle for the given level and direction.
+    pub fn get(
+        &self,
+        level: usize,
+        direction: &'static str,
+    ) -> Option<&bevy::asset::Handle<bevy::image::Image>> {
+        self.handles.get(&(level, direction))
+    }
+
+    /// Inserts a handle for the given level and direction.
+    pub fn insert(
+        &mut self,
+        level: usize,
+        direction: &'static str,
+        handle: bevy::asset::Handle<bevy::image::Image>,
+    ) {
+        self.handles.insert((level, direction), handle);
+    }
+}
+
+/// Speed threshold below which the velocity vector indicator is hidden.
+const MIN_SPEED_THRESHOLD: f32 = 0.1;
+
+/// Updates the velocity vector indicator (sprite + speed text).
+///
+/// The indicator is a `Sprite` on the `Ui` render layer, centered on screen.
+/// The system sets `Transform::rotation` to rotate the arrow to point in the
+/// velocity direction relative to the active camera's view plane.
+/// A child `Text` entity displays the formatted speed.
+///
+/// `Sprite` is not a layout element, so the UI layout system does not modify
+/// its `Transform`. The rotation and scale are preserved.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::type_complexity,
+    clippy::indexing_slicing,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::collapsible_if
+)]
+pub fn velocity_vector_system(
+    active_camera: Res<'_, ActiveCameraName>,
+    camera_query: Query<'_, '_, (&CameraName, &'static GlobalTransform), With<Camera3d>>,
+    player_ship: Res<'_, PlayerShipEntity>,
+    ship_query: Query<'_, '_, &'static RigidBody>,
+    i18n: Res<'_, I18n>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
+    asset_server: Res<'_, AssetServer>,
+    mut cache: ResMut<'_, ArrowTextureCache>,
+    mut indicator_query: Query<
+        '_,
+        '_,
+        (&mut Transform, &mut Visibility, &mut Sprite),
+        (With<VelocityVectorIndicator>, Without<SpeedText>),
+    >,
+    mut text_query: Query<
+        '_,
+        '_,
+        (&'static mut Text, &'static mut Visibility),
+        (With<SpeedText>, Without<VelocityVectorIndicator>),
+    >,
+) {
+    let _span = tracing::info_span!("delta_v_ships::velocity_vector_system").entered();
+    let Ok(ship_body) = ship_query.get(player_ship.0) else {
+        return;
+    };
+
+    let speed = ship_body.velocity.length();
+
+    let (mut transform, mut visibility, mut sprite) = match indicator_query.single_mut() {
+        Ok(result) => result,
+        Err(e) => {
+            tracing::debug!("[vvi] indicator query failed: {e}");
+            return;
+        }
+    };
+
+    if speed < MIN_SPEED_THRESHOLD {
+        if *visibility != Visibility::Hidden {
+            *visibility = Visibility::Hidden;
+        }
+        if let Ok((_, mut text_visibility)) = text_query.single_mut() {
+            if *text_visibility != Visibility::Hidden {
+                *text_visibility = Visibility::Hidden;
+            }
+        }
+        return;
+    }
+
+    if *visibility != Visibility::Visible {
+        *visibility = Visibility::Visible;
+    }
+
+    // Find the active camera's orientation.
+    let mut camera_forward = Vec3::NEG_Z;
+    let mut camera_right = Vec3::X;
+    for (name, gtransform) in &camera_query {
+        if name.0 == active_camera.0 {
+            camera_forward = gtransform.forward().as_vec3();
+            camera_right = gtransform.right().as_vec3();
+            break;
+        }
+    }
+
+    // Project velocity onto camera basis.
+    let vel_forward = ship_body.velocity.dot(camera_forward);
+    let vel_right = ship_body.velocity.dot(camera_right);
+
+    // Compute rotation angle around Z axis (screen-space rotation).
+    // The arrow texture points "up" by default.
+    // Negate vel_right so the arrow points in the correct direction.
+    let angle = (-vel_right).atan2(vel_forward);
+    transform.rotation = Quat::from_rotation_z(angle);
+
+    // Scale based on speed.
+    let scale = (speed / 300.0).mul_add(1.5, 0.5);
+    transform.scale = Vec3::new(scale, scale, scale);
+
+    // Update arrow texture based on thrust using preset textures.
+    // Use ActionState to detect thrust keys directly (ThrustCommand is cleared before Update).
+    let forward_pressed = action_state.pressed(&LogicalAction::ThrustForward);
+    let backward_pressed = action_state.pressed(&LogicalAction::ThrustBackward);
+    let (thrust_ratio, is_forward) = if forward_pressed {
+        (1.0, true)
+    } else if backward_pressed {
+        (1.0, false)
+    } else {
+        (0.0, true)
+    };
+    if thrust_ratio > 0.0 {
+        let level = (thrust_ratio * 10.0f32).round() as usize;
+        let cache_key = if is_forward { "forward" } else { "backward" };
+        if let Some(handle) = cache.get(level, cache_key) {
+            sprite.image = handle.clone();
+        } else {
+            let color = if is_forward { [0, 255, 0] } else { [255, 0, 0] };
+            let presets = create_thrust_arrow_presets(color);
+            let handle = asset_server.add(presets[level].clone());
+            cache.insert(level, cache_key, handle.clone());
+            sprite.image = handle;
+        }
+    } else {
+        // No thrust: use default white arrow (level 0).
+        if let Some(handle) = cache.get(0, "white") {
+            sprite.image = handle.clone();
+        } else {
+            let new_image = super::velocity_indicator::create_arrow_image();
+            let handle = asset_server.add(new_image);
+            cache.insert(0, "white", handle.clone());
+            sprite.image = handle;
+        }
+    }
+
+    // Update speed text.
+    let decimal_sep = i18n
+        .number_format
+        .decimal_separator
+        .chars()
+        .next()
+        .unwrap_or('.');
+    let thousands_sep = i18n
+        .number_format
+        .thousands_separator
+        .chars()
+        .next()
+        .unwrap_or(',');
+    let speed_text = format_speed(
+        speed,
+        decimal_sep,
+        thousands_sep,
+        &i18n.speed.unit_ms,
+        &i18n.speed.unit_kmh,
+        &i18n.speed.unit_kms,
+        &i18n.speed.unit_pch,
+        &i18n.speed.unit_c,
+    );
+
+    // Update the speed text entity.
+    if let Ok((mut text, mut text_visibility)) = text_query.single_mut() {
+        if *text_visibility != Visibility::Visible {
+            *text_visibility = Visibility::Visible;
+        }
+        text.0 = speed_text;
+    }
+
+    tracing::debug!(
+        "[vvi] vel=({:.1},{:.1},{:.1}) speed={:.1} m/s angle={:.3} scale={:.2}",
+        ship_body.velocity.x,
+        ship_body.velocity.y,
+        ship_body.velocity.z,
+        speed,
+        angle,
+        scale,
+    );
 }

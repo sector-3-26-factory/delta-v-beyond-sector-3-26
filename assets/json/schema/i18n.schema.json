@@ -2,13 +2,72 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://delta-v-beyond-sector-3-26/schema/i18n",
     "title": "Internationalization",
-    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nTranslation files with a fixed nested structure that mirrors a typed Rust hierarchy. Keys are validated at compile time; missing or mistyped keys are compiler errors.\n\nSee ADR-0037.",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md.\n\nTranslation files with a fixed nested structure that mirrors a typed Rust hierarchy. Keys are validated at compile time; missing or mistyped keys are compiler errors.\n\nSee ADR-0037.",
     "type": "object",
     "additionalProperties": false,
     "required": [
-        "ui"
+        "ui",
+        "number_format",
+        "speed"
     ],
     "properties": {
+        "number_format": {
+            "description": "Number formatting configuration.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "decimal_separator",
+                "thousands_separator"
+            ],
+            "properties": {
+                "decimal_separator": {
+                    "description": "Decimal separator character (e.g. '.' for English, ',' for German).",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1
+                },
+                "thousands_separator": {
+                    "description": "Thousands separator character (e.g. ',' for English, '.' for German).",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1
+                }
+            }
+        },
+        "speed": {
+            "description": "Speed display unit strings.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "unit_ms",
+                "unit_kmh",
+                "unit_kms",
+                "unit_pch",
+                "unit_c"
+            ],
+            "properties": {
+                "unit_ms": {
+                    "description": "Unit abbreviation for meters per second.",
+                    "type": "string"
+                },
+                "unit_kmh": {
+                    "description": "Unit abbreviation for kilometers per hour.",
+                    "type": "string"
+                },
+                "unit_kms": {
+                    "description": "Unit abbreviation for kilometers per second.",
+                    "type": "string"
+                },
+                "unit_pch": {
+                    "description": "Unit abbreviation for parsecs per hour.",
+                    "type": "string"
+                },
+                "unit_c": {
+                    "description": "Unit abbreviation for fraction of light speed.",
+                    "type": "string"
+                }
+            }
+        },
         "ui": {
             "description": "UI translations.",
             "type": "object",

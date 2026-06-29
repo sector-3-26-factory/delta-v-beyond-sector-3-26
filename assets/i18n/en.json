@@ -1,4 +1,15 @@
 {
+    "number_format": {
+        "decimal_separator": ".",
+        "thousands_separator": ","
+    },
+    "speed": {
+        "unit_ms": "m/s",
+        "unit_kmh": "km/h",
+        "unit_kms": "km/s",
+        "unit_pch": "pc/h",
+        "unit_c": "c"
+    },
     "ui": {
         "menu": {
             "keybindings": {
