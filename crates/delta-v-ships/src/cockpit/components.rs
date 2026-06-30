@@ -57,5 +57,25 @@ pub struct VelocityVectorIndicator;
 #[derive(Component)]
 pub struct SpeedText;
 
+/// A status gauge UI element rendered in a cockpit slot.
+///
+/// Gauges display gameplay state (health, weapon heat) as a fill indicator.
+/// The gauge type is determined by the `default_gauge` field of the [`GaugeSlot`]
+/// definition in the cockpit JSON. Supported types: `"health"`, `"weapon_heat"`.
+///
+/// The gauge is spawned as a UI node at the position/size defined by the slot shape.
+/// The `status_gauge_system` updates the fill level each frame.
+#[derive(Component)]
+pub struct StatusGauge {
+    /// The station ID this gauge belongs to.
+    pub station_id: String,
+    /// The gauge slot ID this gauge is bound to.
+    pub slot_id: String,
+    /// The shape defining the gauge position and size.
+    pub shape: GaugeShape,
+    /// The gauge type (e.g., "health", "`weapon_heat`").
+    pub gauge_type: String,
+}
+
 // Re-export types from ship_templates for convenience
 pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};

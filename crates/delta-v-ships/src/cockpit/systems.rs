@@ -21,13 +21,14 @@
 use bevy::prelude::*;
 
 use delta_v_core::input::ActionState;
-use delta_v_core::{ActiveCameraName, CameraName, CameraSwitched, I18n, PlayerShipEntity};
+use delta_v_core::{ActiveCameraName, CameraName, CameraSwitched, Health, I18n, PlayerShipEntity};
 use delta_v_physics::RigidBody;
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
 use super::components::CockpitOverlay;
 use super::components::SpeedText;
+use super::components::StatusGauge;
 use super::components::VelocityVectorIndicator;
 use super::velocity_indicator::create_thrust_arrow_presets;
 use super::velocity_indicator::format_speed;
@@ -62,6 +63,12 @@ pub fn cockpit_station_cycle_system(
     mut image_node_query: Query<'_, '_, &'static mut ImageNode>,
     action_state: Res<'_, ActionState<LogicalAction>>,
     mut cycle_state: ResMut<'_, CockpitCycleState>,
+    mut gauge_query: Query<
+        '_,
+        '_,
+        (&mut Visibility, &Children, &StatusGauge),
+        Without<CockpitOverlay>,
+    >,
 ) {
     let next_active = action_state.pressed(&LogicalAction::CockpitCycleNext);
     let prev_active = action_state.pressed(&LogicalAction::CockpitCyclePrev);
@@ -110,8 +117,28 @@ pub fn cockpit_station_cycle_system(
     commands.entity(entity).insert(CockpitOverlay {
         texture: texture_handle,
     });
-
     active_station.station_id.clone_from(&new_station.id);
+
+    // Update gauge visibility: only show gauges for the new active station.
+    // Propagate visibility to children so the fill node is also hidden/shown.
+    for (mut visibility, gauge_children, gauge) in &mut gauge_query {
+        let target = if gauge.station_id == new_station.id {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        if *visibility != target {
+            *visibility = target;
+            for child in gauge_children {
+                commands.entity(*child).insert(target);
+            }
+            tracing::debug!(
+                "[cockpit] gauge '{}' visibility set to {:?} (station switch)",
+                gauge.slot_id,
+                target
+            );
+        }
+    }
 
     tracing::debug!(
         "[cockpit] switched to station '{}' ({})",
@@ -126,17 +153,28 @@ pub fn cockpit_station_cycle_system(
 /// This system listens for `CameraSwitched` messages and updates visibility accordingly.
 ///
 /// Runs in `Update` during `AppState::InGame`.
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
 pub fn cockpit_visibility_system(
+    active_station: Res<'_, ActiveCockpitStation>,
     mut events: MessageReader<'_, '_, CameraSwitched>,
-    mut query: Query<'_, '_, (&mut Visibility, &Children), With<CockpitOverlay>>,
+    mut overlay_query: Query<
+        '_,
+        '_,
+        (&mut Visibility, &Children),
+        (With<CockpitOverlay>, Without<StatusGauge>),
+    >,
+    mut gauge_query: Query<
+        '_,
+        '_,
+        (&mut Visibility, &Children, &StatusGauge),
+        Without<CockpitOverlay>,
+    >,
     mut commands: Commands<'_, '_>,
 ) {
     let events: Vec<_> = events.read().collect();
     if events.is_empty() {
         return;
     }
-
-    tracing::debug!("[cockpit] received {} camera switch events", events.len());
 
     for event in events {
         let is_cockpit_active = event.camera_name == "cockpit";
@@ -146,19 +184,77 @@ pub fn cockpit_visibility_system(
             Visibility::Hidden
         };
 
-        for (mut visibility, children) in &mut query {
+        for (mut visibility, children) in &mut overlay_query {
             if *visibility != new_visibility {
                 *visibility = new_visibility;
                 for child in children {
                     commands.entity(*child).insert(new_visibility);
                 }
                 tracing::debug!(
-                    "[cockpit] visibility set to {:?} (active camera: '{}')",
+                    "[cockpit] overlay visibility set to {:?} (active camera: '{}')",
                     new_visibility,
                     event.camera_name
                 );
             }
         }
+
+        // Also toggle gauge visibility — only show gauges for the active station when cockpit is active.
+        // Propagate visibility to children so the fill node is also hidden/shown.
+        for (mut visibility, gauge_children, gauge) in &mut gauge_query {
+            let target = if is_cockpit_active && gauge.station_id == active_station.station_id {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            };
+            if *visibility != target {
+                *visibility = target;
+                for child in gauge_children {
+                    commands.entity(*child).insert(target);
+                }
+                tracing::debug!(
+                    "[cockpit] gauge '{}' visibility set to {:?}",
+                    gauge.slot_id,
+                    target
+                );
+            }
+        }
+    }
+}
+
+/// Initializes gauge visibility on startup.
+///
+/// Runs during `OnEnter(AppState::InGame)` after all spawn systems.
+/// Shows gauges for the active station if the cockpit camera is active,
+/// hides all gauges otherwise.
+#[allow(clippy::needless_pass_by_value)]
+pub fn init_gauge_visibility(
+    active_station: Res<'_, ActiveCockpitStation>,
+    active_camera: Res<'_, ActiveCameraName>,
+    mut gauge_query: Query<
+        '_,
+        '_,
+        (&mut Visibility, &Children, &StatusGauge),
+        Without<CockpitOverlay>,
+    >,
+    mut commands: Commands<'_, '_>,
+) {
+    let is_cockpit_active = active_camera.0 == "cockpit";
+    for (mut visibility, gauge_children, gauge) in &mut gauge_query {
+        let target = if is_cockpit_active && gauge.station_id == active_station.station_id {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        *visibility = target;
+        for child in gauge_children {
+            commands.entity(*child).insert(target);
+        }
+        tracing::debug!(
+            "[init_gauges] gauge '{}' station='{}' visibility={:?}",
+            gauge.slot_id,
+            gauge.station_id,
+            target
+        );
     }
 }
 
@@ -200,7 +296,7 @@ const MIN_SPEED_THRESHOLD: f32 = 0.1;
 /// The indicator is a `Sprite` on the `Ui` render layer, centered on screen.
 /// The system sets `Transform::rotation` to rotate the arrow to point in the
 /// velocity direction relative to the active camera's view plane.
-/// A child `Text` entity displays the formatted speed.
+/// A child `Text` entity displays the current speed.
 ///
 /// `Sprite` is not a layout element, so the UI layout system does not modify
 /// its `Transform`. The rotation and scale are preserved.
@@ -369,4 +465,93 @@ pub fn velocity_vector_system(
         angle,
         scale,
     );
+}
+
+/// Updates the fill level of all [`StatusGauge`] UI elements.
+///
+/// Runs in `Update` during `AppState::InGame`. For each gauge:
+/// - `"health"`: reads the player ship's [`Health`] component and sets the fill
+///   to `current / max` as a percentage.
+/// - `"weapon_heat"`: reads the player ship's weapon cooldown and sets the fill
+///   to `cooldown / fire_interval` as a percentage (1.0 = fully cooled).
+///
+/// The fill is applied by setting the child node's `width` percentage and
+/// updating the `ImageNode` texture color.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::cast_precision_loss
+)]
+pub fn status_gauge_system(
+    player_ship: Res<'_, PlayerShipEntity>,
+    health_query: Query<'_, '_, &'static Health>,
+    gauge_query: Query<'_, '_, (Entity, &'static StatusGauge, &'static Children)>,
+    mut child_node_query: Query<'_, '_, (&mut Node, &mut BackgroundColor)>,
+) {
+    let _span = tracing::info_span!("delta_v_ships::status_gauge_system").entered();
+
+    // Read player health once (used by all health gauges).
+    #[allow(clippy::option_if_let_else, clippy::single_match_else)]
+    let health_ratio = match health_query.get(player_ship.0) {
+        Ok(health) => {
+            if health.max > 0.0 {
+                (health.current / health.max).clamp(0.0, 1.0)
+            } else {
+                0.0
+            }
+        }
+        Err(_) => {
+            tracing::debug!("[status_gauge] player ship has no Health component");
+            0.0
+        }
+    };
+
+    for (entity, gauge, children) in &gauge_query {
+        let fill_ratio = match gauge.gauge_type.as_str() {
+            "health" => health_ratio,
+            "weapon_heat" => {
+                // Weapon heat: read the Weapon component's cooldown.
+                // For now, default to 0.0 (no heat) since weapon cooldown
+                // tracking is per-weapon and the player ship may have multiple.
+                // TODO: M7+ — aggregate weapon heat across all weapon slots.
+                0.0
+            }
+            _ => {
+                tracing::debug!(
+                    "[status_gauge] unknown gauge type '{}' on entity {entity:?}",
+                    gauge.gauge_type
+                );
+                continue;
+            }
+        };
+
+        // Compute fill color based on gauge type and fill level.
+        let fill_color = if gauge.gauge_type == "health" {
+            if fill_ratio > 0.6 {
+                Color::srgb(0.0, 0.8, 0.0) // Green
+            } else if fill_ratio > 0.3 {
+                Color::srgb(0.8, 0.8, 0.0) // Yellow
+            } else {
+                Color::srgb(0.8, 0.0, 0.0) // Red
+            }
+        } else {
+            // Weapon heat: blue (cool) → red (hot).
+            Color::srgb(fill_ratio, 0.2, 1.0 - fill_ratio)
+        };
+
+        // Update the child fill node's width percentage and color.
+        for child in children {
+            if let Ok((mut node, mut background_color)) = child_node_query.get_mut(*child) {
+                node.width = Val::Percent(fill_ratio * 100.0);
+                background_color.0 = fill_color;
+            }
+        }
+
+        tracing::debug!(
+            "[status_gauge] entity {entity:?} type={} fill={:.1}%",
+            gauge.gauge_type,
+            fill_ratio * 100.0
+        );
+    }
 }
