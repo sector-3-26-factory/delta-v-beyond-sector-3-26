@@ -91,5 +91,66 @@ pub struct CircularGaugeNeedle {
     pub center_y: f32,
 }
 
+/// Marker component for entities that can be targeted in combat.
+///
+/// These entities appear in the targeting list and can be selected as the
+/// player's current target.
+#[derive(Component)]
+pub struct Targetable;
+
+/// Marker component for entities that appear in the navigation list.
+///
+/// These entities can be selected for navigation purposes (ships, fleets,
+/// planets, stations, asteroids).
+#[derive(Component)]
+pub struct Navigable;
+
+/// Resource holding the currently selected target entity.
+///
+/// The target reticle will appear around this entity when it's on-screen.
+// allow-default: Bevy requires Default on resources for init_resource. Starts as None (no target selected).
+#[derive(Resource, Default)]
+pub struct SelectedTarget(pub Option<Entity>);
+
+/// Resource holding the currently selected navigation object entity.
+///
+/// Used in Nav mode for navigation purposes.
+// allow-default: Bevy requires Default on resources for init_resource. Starts as None (no nav object selected).
+#[derive(Resource, Default)]
+pub struct SelectedNavObject(pub Option<Entity>);
+
+/// Resource tracking the current targeting mode.
+///
+/// Determines which list (combat targets or nav objects) is displayed.
+// allow-default: Bevy requires Default on resources for init_resource. Defaults to Combat mode.
+#[derive(Resource, Default)]
+pub struct TargetingMode {
+    /// Current mode: Combat (targeting) or Nav (navigation).
+    pub mode: TargetingModeType,
+}
+
+/// The targeting mode type.
+// allow-default: Bevy requires Default on resources for init_resource. Combat is the default mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TargetingModeType {
+    /// Combat mode: targeting enemies.
+    #[default]
+    Combat,
+    /// Navigation mode: selecting objects to navigate to.
+    Nav,
+}
+
+/// Marker component for the bearing indicator arrow.
+///
+/// Points toward the selected target when it's off-screen.
+#[derive(Component)]
+pub struct BearingIndicator;
+
+/// Marker component for the on-screen target reticle.
+///
+/// Appears around the selected target when it's on-screen.
+#[derive(Component)]
+pub struct TargetReticle;
+
 // Re-export types from ship_templates for convenience
 pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};

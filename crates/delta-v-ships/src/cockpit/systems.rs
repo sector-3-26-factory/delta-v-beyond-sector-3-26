@@ -28,8 +28,11 @@ use delta_v_types::LogicalAction;
 use super::ActiveCockpitStation;
 use super::components::CircularGaugeNeedle;
 use super::components::CockpitOverlay;
+use super::components::SelectedTarget;
 use super::components::SpeedText;
 use super::components::StatusGauge;
+use super::components::Targetable;
+use super::components::TargetingMode;
 use super::components::VelocityVectorIndicator;
 use super::velocity_indicator::create_thrust_arrow_presets;
 use super::velocity_indicator::format_speed;
@@ -763,4 +766,118 @@ pub fn status_gauge_system(
             fill_ratio * 100.0
         );
     }
+}
+
+/// Toggles the targeting mode between Combat and Nav.
+///
+/// Runs in `Update` during `AppState::InGame`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn targeting_mode_toggle_system(
+    mut mode: ResMut<'_, TargetingMode>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
+) {
+    use super::components::TargetingModeType;
+    if action_state.just_pressed(&LogicalAction::ToggleTargetingMode) {
+        mode.mode = match mode.mode {
+            TargetingModeType::Combat => TargetingModeType::Nav,
+            TargetingModeType::Nav => TargetingModeType::Combat,
+        };
+        tracing::debug!("[targeting] mode switched to {:?}", mode.mode);
+    }
+}
+
+/// Cycles to the next or previous target in the list.
+///
+/// Runs in `Update` during `AppState::InGame`.
+/// `T` key: selects next target (closest to the right in sorted list).
+/// `ShiftLeft + T` key: selects previous target.
+#[allow(clippy::needless_pass_by_value)]
+pub fn cycle_target_system(
+    player_ship: Res<'_, PlayerShipEntity>,
+    mut selected_target: ResMut<'_, SelectedTarget>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
+    query: Query<'_, '_, (Entity, &Transform), With<Targetable>>,
+) {
+    let is_next = action_state.just_pressed(&LogicalAction::CycleTargetNext);
+    let is_prev = action_state.just_pressed(&LogicalAction::CycleTargetPrev);
+
+    if !is_next && !is_prev {
+        return;
+    }
+
+    // Collect all targetable entities with their distances from player
+    let Some(player_pos) = query.iter().find_map(|(entity, transform)| {
+        if entity == player_ship.0 {
+            Some(transform.translation)
+        } else {
+            None
+        }
+    }) else {
+        return;
+    };
+
+    // Collect all targetable entities (excluding player) with their distances
+    let mut targets: Vec<(Entity, f32)> = query
+        .iter()
+        .filter_map(|(entity, transform)| {
+            if entity == player_ship.0 {
+                return None;
+            }
+            let distance = (transform.translation - player_pos).length();
+            Some((entity, distance))
+        })
+        .collect();
+
+    // Sort by distance
+    targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+
+    if targets.is_empty() {
+        return;
+    }
+
+    // Find current selection index
+    let current_idx = selected_target
+        .0
+        .and_then(|current| targets.iter().position(|(e, _)| *e == current))
+        .unwrap_or(0);
+
+    // Select next or previous
+    let new_idx = if is_next {
+        (current_idx + 1) % targets.len()
+    } else {
+        (current_idx + targets.len() - 1) % targets.len()
+    };
+
+    let Some((new_target, distance)) = targets.get(new_idx) else {
+        return;
+    };
+    let new_target = *new_target;
+    selected_target.0 = Some(new_target);
+    tracing::debug!(
+        "[targeting] selected target {:?} (distance: {:.1}m)",
+        new_target,
+        distance
+    );
+}
+
+/// Updates bearing indicator visibility and position.
+///
+/// Shows an arrow at screen edge pointing to the selected target when off-screen.
+#[allow(clippy::missing_const_for_fn)]
+pub fn bearing_indicator_system(
+    _selected_target: Res<'_, SelectedTarget>,
+    _active_camera: Res<'_, ActiveCameraName>,
+) {
+    // TODO: Implement bearing indicator logic
+    // This requires projecting the target position to screen space
+    // and computing the edge position and rotation.
+}
+
+/// Updates the on-screen reticle for the selected target.
+///
+/// Shows a bracket/circle around the target when it's on-screen.
+#[allow(clippy::missing_const_for_fn)]
+pub fn target_reticle_system(_selected_target: Res<'_, SelectedTarget>) {
+    // TODO: Implement reticle logic
+    // This requires projecting the target's 3D position to 2D screen coordinates.
 }

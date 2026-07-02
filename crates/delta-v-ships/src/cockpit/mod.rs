@@ -44,6 +44,9 @@ impl Plugin for CockpitPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<systems::ArrowTextureCache>()
             .init_resource::<systems::CockpitCycleState>()
+            .init_resource::<components::TargetingMode>()
+            .init_resource::<components::SelectedTarget>()
+            .init_resource::<components::SelectedNavObject>()
             .add_systems(OnEnter(AppState::InGame), spawn::spawn_cockpit_overlay)
             .add_systems(
                 OnEnter(AppState::InGame),
@@ -69,6 +72,10 @@ impl Plugin for CockpitPlugin {
                     systems::velocity_vector_system,
                     systems::status_gauge_system,
                     systems::update_needle_visibility,
+                    systems::targeting_mode_toggle_system,
+                    systems::cycle_target_system,
+                    systems::bearing_indicator_system,
+                    systems::target_reticle_system,
                 )
                     .run_if(in_state(AppState::InGame)),
             );
