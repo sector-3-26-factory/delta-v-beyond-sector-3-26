@@ -38,7 +38,11 @@
                     "cockpit_cycle_next": "Cycle Cockpit Next",
                     "cockpit_cycle_prev": "Cycle Cockpit Prev",
                     "camera_switch_next": "Switch Camera Next",
-                    "camera_switch_prev": "Switch Camera Prev"
+                    "camera_switch_prev": "Switch Camera Prev",
+                    "toggle_navigation_menu": "Navigation",
+                    "cycle_target_next": "Cycle Target Next",
+                    "cycle_target_prev": "Cycle Target Prev",
+                    "toggle_targeting_mode": "Toggle Navigation/Targeting"
                 },
                 "key": {
                     "KeyW": "W",
@@ -50,17 +54,24 @@
                     "KeyR": "R",
                     "KeyF": "F",
                     "KeyC": "C",
+                    "KeyN": "N",
+                    "KeyT": "T",
                     "ArrowUp": "↑",
                     "ArrowDown": "↓",
                     "ArrowLeft": "←",
                     "ArrowRight": "→",
                     "Space": "Space",
+                    "F1": "F1",
                     "F2": "F2",
                     "F3": "F3",
                     "ControlLeft": "Ctrl Left",
                     "ShiftLeft": "Shift Left",
                     "AltLeft": "Alt Left"
                 }
+            },
+            "navigation": {
+                "title": "NAVIGATION",
+                "close": "Close [N]"
             }
         },
         "notification": {

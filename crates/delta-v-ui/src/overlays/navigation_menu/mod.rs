@@ -16,19 +16,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Overlay UI systems.
+//! Navigation menu module.
+//!
+//! This module handles the player-controlled navigation list UI.
+//! It is triggered by user interaction (N key press).
 
 use bevy::prelude::*;
+use delta_v_core::AppState;
 
-pub mod keybindings_menu;
-pub mod navigation_menu;
+pub mod components;
+pub mod resources;
+pub mod spawn;
+pub mod systems;
 
-/// Plugin for overlay systems.
-pub struct OverlaysPlugin;
+pub use components::*;
+pub use resources::NavigationMenuOpen;
 
-impl Plugin for OverlaysPlugin {
+/// Plugin for navigation menu systems.
+pub struct NavigationMenuPlugin;
+
+impl Plugin for NavigationMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(keybindings_menu::KeybindingsMenuPlugin);
-        app.add_plugins(navigation_menu::NavigationMenuPlugin);
+        app.init_resource::<NavigationMenuOpen>().add_systems(
+            Update,
+            systems::navigation_menu_toggle_system.run_if(in_state(AppState::InGame)),
+        );
     }
 }

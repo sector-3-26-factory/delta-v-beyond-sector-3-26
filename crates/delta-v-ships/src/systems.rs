@@ -154,7 +154,7 @@ pub fn input_reader_system(
             | LogicalAction::CockpitCyclePrev
             | LogicalAction::CameraSwitchNext
             | LogicalAction::CameraSwitchPrev
-            | LogicalAction::ToggleTargetingMenu
+            | LogicalAction::ToggleNavigationMenu
             | LogicalAction::CycleTargetNext
             | LogicalAction::CycleTargetPrev
             | LogicalAction::ToggleTargetingMode => {

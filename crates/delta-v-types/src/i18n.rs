@@ -78,6 +78,8 @@ pub struct UiTranslations {
 pub struct MenuTranslations {
     /// Keybindings menu translations.
     pub keybindings: KeybindingsMenuTranslations,
+    /// Navigation menu translations.
+    pub navigation: NavigationMenuTranslations,
 }
 
 /// Keybindings menu translations.
@@ -93,6 +95,15 @@ pub struct KeybindingsMenuTranslations {
     pub action: std::collections::HashMap<String, String>,
     /// Physical key names.
     pub key: std::collections::HashMap<String, String>,
+}
+
+/// Navigation menu translations.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NavigationMenuTranslations {
+    /// Menu title.
+    pub title: String,
+    /// Close button hint.
+    pub close: String,
 }
 
 /// Notification translations.

@@ -45,7 +45,7 @@ fn test_logical_action_str_keys_match_expected() {
         "cockpit_cycle_prev",
         "camera_switch_next",
         "camera_switch_prev",
-        "toggle_targeting_menu",
+        "toggle_navigation_menu",
         "cycle_target_next",
         "cycle_target_prev",
         "toggle_targeting_mode",

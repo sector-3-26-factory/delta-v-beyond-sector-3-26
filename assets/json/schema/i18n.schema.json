@@ -82,7 +82,8 @@
                     "type": "object",
                     "additionalProperties": false,
                     "required": [
-                        "keybindings"
+                        "keybindings",
+                        "navigation"
                     ],
                     "properties": {
                         "keybindings": {
@@ -125,6 +126,25 @@
                                     "additionalProperties": {
                                         "type": "string"
                                     }
+                                }
+                            }
+                        },
+                        "navigation": {
+                            "description": "Navigation menu translations.",
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "title",
+                                "close"
+                            ],
+                            "properties": {
+                                "title": {
+                                    "description": "Menu title.",
+                                    "type": "string"
+                                },
+                                "close": {
+                                    "description": "Close button hint.",
+                                    "type": "string"
                                 }
                             }
                         }

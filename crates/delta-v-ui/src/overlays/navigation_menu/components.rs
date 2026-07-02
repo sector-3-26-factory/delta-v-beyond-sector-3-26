@@ -16,19 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Overlay UI systems.
+//! Navigation menu components.
 
 use bevy::prelude::*;
 
-pub mod keybindings_menu;
-pub mod navigation_menu;
-
-/// Plugin for overlay systems.
-pub struct OverlaysPlugin;
-
-impl Plugin for OverlaysPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(keybindings_menu::KeybindingsMenuPlugin);
-        app.add_plugins(navigation_menu::NavigationMenuPlugin);
-    }
-}
+/// Marker component for the navigation menu root entity.
+#[derive(Component)]
+pub struct NavigationMenuRoot;

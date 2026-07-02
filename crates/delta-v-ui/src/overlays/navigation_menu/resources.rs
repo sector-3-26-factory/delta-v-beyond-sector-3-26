@@ -16,19 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Overlay UI systems.
+//! Navigation menu resources.
 
 use bevy::prelude::*;
 
-pub mod keybindings_menu;
-pub mod navigation_menu;
-
-/// Plugin for overlay systems.
-pub struct OverlaysPlugin;
-
-impl Plugin for OverlaysPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(keybindings_menu::KeybindingsMenuPlugin);
-        app.add_plugins(navigation_menu::NavigationMenuPlugin);
-    }
-}
+/// Resource tracking whether the navigation menu is open.
+///
+/// This resource is toggled by the `ToggleNavigationMenu` action.
+// allow-default: Bevy requires Default on resources for init_resource.
+// This starts as false (menu closed).
+#[derive(Resource, Default)]
+pub struct NavigationMenuOpen(pub bool);
