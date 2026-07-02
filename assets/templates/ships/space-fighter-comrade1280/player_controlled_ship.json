@@ -121,6 +121,15 @@
                             "y2": 391
                         },
                         "default_gauge": "health"
+                    },
+                    {
+                        "shape": {
+                            "type": "circle",
+                            "cx": 610,
+                            "cy": 343,
+                            "r": 30
+                        },
+                        "default_gauge": "health"
                     }
                 ]
             },

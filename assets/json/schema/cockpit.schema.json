@@ -72,6 +72,18 @@
                                         "y2": {
                                             "description": "Rectangle bottom edge (pixels).",
                                             "type": "number"
+                                        },
+                                        "cx": {
+                                            "description": "Circle center X (pixels).",
+                                            "type": "number"
+                                        },
+                                        "cy": {
+                                            "description": "Circle center Y (pixels).",
+                                            "type": "number"
+                                        },
+                                        "r": {
+                                            "description": "Circle radius (pixels).",
+                                            "type": "number"
                                         }
                                     }
                                 },

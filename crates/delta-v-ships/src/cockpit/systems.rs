@@ -26,6 +26,7 @@ use delta_v_physics::RigidBody;
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
+use super::components::CircularGaugeNeedle;
 use super::components::CockpitOverlay;
 use super::components::SpeedText;
 use super::components::StatusGauge;
@@ -258,6 +259,58 @@ pub fn init_gauge_visibility(
     }
 }
 
+/// Initializes needle visibility on startup.
+///
+/// Runs during `OnEnter(AppState::InGame)` after all spawn systems.
+/// Shows needles for the active station if the cockpit camera is active,
+/// hides all needles otherwise.
+#[allow(clippy::needless_pass_by_value)]
+pub fn init_needle_visibility(
+    active_station: Res<'_, ActiveCockpitStation>,
+    active_camera: Res<'_, ActiveCameraName>,
+    mut needle_query: Query<'_, '_, (&mut Visibility, &CircularGaugeNeedle)>,
+) {
+    let is_cockpit_active = active_camera.0 == "cockpit";
+    for (mut visibility, needle) in &mut needle_query {
+        let target = if is_cockpit_active && needle.station_id == active_station.station_id {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        *visibility = target;
+        tracing::debug!(
+            "[init_needles] needle station='{}' slot='{}' visibility={:?}",
+            needle.station_id,
+            needle.slot_id,
+            target
+        );
+    }
+}
+
+/// Updates needle visibility when the cockpit station or camera changes.
+///
+/// Runs during `Update` in the `InGame` state.
+/// Shows needles for the active station if the cockpit camera is active,
+/// hides all needles otherwise.
+#[allow(clippy::needless_pass_by_value)]
+pub fn update_needle_visibility(
+    active_station: Res<'_, ActiveCockpitStation>,
+    active_camera: Res<'_, ActiveCameraName>,
+    mut needle_query: Query<'_, '_, (&mut Visibility, &CircularGaugeNeedle)>,
+) {
+    let is_cockpit_active = active_camera.0 == "cockpit";
+    for (mut visibility, needle) in &mut needle_query {
+        let target = if is_cockpit_active && needle.station_id == active_station.station_id {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        if *visibility != target {
+            *visibility = target;
+        }
+    }
+}
+
 /// Cached preset arrow texture handles for different thrust levels.
 #[derive(Resource, Default)]
 pub struct ArrowTextureCache {
@@ -324,7 +377,11 @@ pub fn velocity_vector_system(
         '_,
         '_,
         (&mut Transform, &mut Visibility, &mut Sprite),
-        (With<VelocityVectorIndicator>, Without<SpeedText>),
+        (
+            With<VelocityVectorIndicator>,
+            Without<SpeedText>,
+            Without<CircularGaugeNeedle>,
+        ),
     >,
     mut text_query: Query<
         '_,
@@ -481,14 +538,44 @@ pub fn velocity_vector_system(
     clippy::needless_pass_by_value,
     clippy::too_many_arguments,
     clippy::type_complexity,
-    clippy::cast_precision_loss
+    clippy::cast_precision_loss,
+    clippy::too_many_lines,
+    clippy::items_after_statements,
+    clippy::manual_let_else,
+    clippy::suboptimal_flops,
+    clippy::similar_names,
+    clippy::match_same_arms,
+    clippy::used_underscore_binding
 )]
 pub fn status_gauge_system(
     player_ship: Res<'_, PlayerShipEntity>,
     health_query: Query<'_, '_, &'static Health>,
-    gauge_query: Query<'_, '_, (Entity, &'static StatusGauge, &'static Children)>,
-    mut child_node_query: Query<'_, '_, (&mut Node, &mut BackgroundColor)>,
+    mut queries: ParamSet<
+        '_,
+        '_,
+        (
+            Query<
+                '_,
+                '_,
+                (
+                    Entity,
+                    &'static StatusGauge,
+                    &'static Children,
+                    &'static Node,
+                ),
+            >,
+            Query<'_, '_, (&mut Node, &mut BackgroundColor)>,
+            Query<
+                '_,
+                '_,
+                (&mut Transform, &'static CircularGaugeNeedle),
+                Without<VelocityVectorIndicator>,
+            >,
+        ),
+    >,
+    window_query: Query<'_, '_, &'static Window>,
 ) {
+    tracing::debug!("[status_gauge] status_gauge_system running");
     let _span = tracing::info_span!("delta_v_ships::status_gauge_system").entered();
 
     // Read player health once (used by all health gauges).
@@ -507,8 +594,128 @@ pub fn status_gauge_system(
         }
     };
 
-    for (entity, gauge, children) in &gauge_query {
-        let fill_ratio = match gauge.gauge_type.as_str() {
+    // Get the primary window for screen size
+    let window = match window_query.single() {
+        Ok(w) => w,
+        Err(_) => return,
+    };
+    let _screen_width = window.width();
+    let _screen_height = window.height();
+
+    // Collect gauge data first (to avoid holding multiple ParamSet borrows simultaneously)
+    struct GaugeUpdate {
+        entity: Entity,
+        station_id: String,
+        slot_id: String,
+        shape: crate::ship_templates::GaugeShape,
+        gauge_type: String,
+        children: Vec<Entity>,
+        node: Node,
+    }
+
+    let mut gauge_updates: Vec<GaugeUpdate> = Vec::new();
+    for (entity, gauge, children, node) in queries.p0() {
+        gauge_updates.push(GaugeUpdate {
+            entity,
+            station_id: gauge.station_id.clone(),
+            slot_id: gauge.slot_id.clone(),
+            shape: gauge.shape.clone(),
+            gauge_type: gauge.gauge_type.clone(),
+            children: children.into_iter().copied().collect(),
+            node: Node {
+                left: node.left,
+                top: node.top,
+                width: node.width,
+                height: node.height,
+                ..Default::default()
+            },
+        });
+    }
+
+    // Process each gauge
+    for update in &gauge_updates {
+        // Handle circular gauges - update the needle rotation and position.
+        if let crate::ship_templates::GaugeShape::Circle { .. } = update.shape {
+            // For circular gauges, update the needle rotation based on health.
+            // The scale arc is 240° (from 240° to 120°, wrapping).
+            // Counter-clockwise movement:
+            // - 100% health = 120° (right-bottom, green)
+            // - 50% health = 0° (top, yellow)
+            // - 0% health = -120° (left-bottom, red)
+            // The needle texture points UP (0° = 12 o'clock), so we rotate it to point at the gauge angle.
+            let angle_deg = (1.0 - health_ratio) * 240.0 - 120.0;
+            let angle_rad = angle_deg.to_radians();
+
+            // Get the gauge's computed position (in viewport percentages)
+            let gauge_x = match update.node.left {
+                Val::Vw(v) => v,
+                Val::Percent(v) => v,
+                _ => 0.0,
+            };
+            let gauge_y = match update.node.top {
+                Val::Vh(v) => v,
+                Val::Percent(v) => v,
+                _ => 0.0,
+            };
+            let gauge_w = match update.node.width {
+                Val::Vw(v) => v,
+                Val::Percent(v) => v,
+                _ => 0.0,
+            };
+            let gauge_h = match update.node.height {
+                Val::Vh(v) => v,
+                Val::Percent(v) => v,
+                _ => 0.0,
+            };
+
+            // Update all needles matching this gauge
+            let mut needle_count = 0;
+            for (mut transform, needle) in queries.p2() {
+                if needle.station_id == update.station_id && needle.slot_id == update.slot_id {
+                    needle_count += 1;
+                    // Position the needle at the center of the gauge.
+                    // Sprites with RenderLayer::CockpitForeground are rendered by the cockpit foreground camera.
+                    // The cockpit foreground camera uses a centered coordinate system where (0, 0) is at the center of the screen.
+                    // Positive X goes right, positive Y goes up.
+                    // Viewport: (0%, 0%) is at top-left, (100%, 100%) is at bottom-right.
+                    let gauge_center_x_vp = gauge_x + gauge_w / 2.0;
+                    let gauge_center_y_vp = gauge_y + gauge_h / 2.0;
+                    // Convert from viewport percentages to cockpit background camera coordinates
+                    // UI X: -width/2 at 0%, +width/2 at 100%
+                    // UI Y: +height/2 at 0%, -height/2 at 100%
+                    transform.translation.x = (gauge_center_x_vp / 100.0 - 0.5) * _screen_width;
+                    transform.translation.y = (0.5 - gauge_center_y_vp / 100.0) * _screen_height;
+                    // Scale the needle to fit the gauge size.
+                    // The gauge radius is half the width (in screen pixels).
+                    // We want the needle to be about 85% of the gauge radius.
+                    // The needle image is 256x256 pixels, so we need to scale it up.
+                    let gauge_radius = gauge_w / 2.0 * _screen_width / 100.0;
+                    let needle_scale = gauge_radius * 0.85 / 128.0; // 128 is half the needle image size (radius)
+                    transform.scale = Vec3::new(needle_scale, needle_scale, 1.0);
+                    // Rotate the needle around its center.
+                    // The needle texture points up (0° = 12 o'clock).
+                    // We need to rotate it to point at the health position.
+                    transform.rotation = Quat::from_rotation_z(angle_rad);
+                    tracing::debug!(
+                        "[status_gauge] needle pos: gauge_center_vp=({:.1}%, {:.1}%) ui_pos=({:.1}, {:.1}) scale={:.3}",
+                        gauge_center_x_vp,
+                        gauge_center_y_vp,
+                        transform.translation.x,
+                        transform.translation.y,
+                        needle_scale
+                    );
+                }
+            }
+            tracing::debug!(
+                "[status_gauge] updated {} needle(s) for gauge {:?} rotation={:.1}°",
+                needle_count,
+                update.entity,
+                angle_deg
+            );
+            continue;
+        }
+
+        let fill_ratio = match update.gauge_type.as_str() {
             "health" => health_ratio,
             "weapon_heat" => {
                 // Weapon heat: read the Weapon component's cooldown.
@@ -519,15 +726,16 @@ pub fn status_gauge_system(
             }
             _ => {
                 tracing::debug!(
-                    "[status_gauge] unknown gauge type '{}' on entity {entity:?}",
-                    gauge.gauge_type
+                    "[status_gauge] unknown gauge type '{}' on entity {:?}",
+                    update.gauge_type,
+                    update.entity
                 );
                 continue;
             }
         };
 
         // Compute fill color based on gauge type and fill level.
-        let fill_color = if gauge.gauge_type == "health" {
+        let fill_color = if update.gauge_type == "health" {
             if fill_ratio > 0.6 {
                 Color::srgb(0.0, 0.8, 0.0) // Green
             } else if fill_ratio > 0.3 {
@@ -541,16 +749,17 @@ pub fn status_gauge_system(
         };
 
         // Update the child fill node's width percentage and color.
-        for child in children {
-            if let Ok((mut node, mut background_color)) = child_node_query.get_mut(*child) {
+        for child in &update.children {
+            if let Ok((mut node, mut background_color)) = queries.p1().get_mut(*child) {
                 node.width = Val::Percent(fill_ratio * 100.0);
                 background_color.0 = fill_color;
             }
         }
 
         tracing::debug!(
-            "[status_gauge] entity {entity:?} type={} fill={:.1}%",
-            gauge.gauge_type,
+            "[status_gauge] entity {:?} type={} fill={:.1}%",
+            update.entity,
+            update.gauge_type,
             fill_ratio * 100.0
         );
     }

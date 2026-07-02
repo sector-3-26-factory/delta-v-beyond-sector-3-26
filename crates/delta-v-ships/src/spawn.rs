@@ -167,15 +167,12 @@ fn insert_player_resources(
     // Read the first station's texture dimensions from the PNG file.
     // Slot coordinates are in texture pixel space and must be scaled to viewport percentages.
     // Per ADR-0013, missing or invalid PNG is a hard error — no silent fallback.
-    let (texture_width, texture_height) = template
-        .cockpit
-        .stations
-        .first()
-        .map(|s| {
+    let (texture_width, texture_height) =
+        template.cockpit.stations.first().map_or((1.0, 1.0), |s| {
             let path = format!("assets/{}/{}", cockpit_dir, s.texture);
+            #[allow(clippy::expect_used)]
             png_dimensions(&path).expect("failed to read cockpit texture PNG dimensions (ADR-0013)")
-        })
-        .unwrap_or((1.0, 1.0));
+        });
     commands.insert_resource(CockpitOverlayResource {
         template_path: cockpit_dir.to_string(),
         stations: template.cockpit.stations.clone(),

@@ -77,5 +77,19 @@ pub struct StatusGauge {
     pub gauge_type: String,
 }
 
+/// Marker component for the circular gauge needle/pointer.
+/// Used to identify the needle sprite for rotation updates.
+#[derive(Component)]
+pub struct CircularGaugeNeedle {
+    /// The station ID this needle belongs to.
+    pub station_id: String,
+    /// The gauge slot ID this needle is bound to.
+    pub slot_id: String,
+    /// The center X position of the gauge in viewport coordinates (0-100).
+    pub center_x: f32,
+    /// The center Y position of the gauge in viewport coordinates (0-100).
+    pub center_y: f32,
+}
+
 // Re-export types from ship_templates for convenience
 pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};

@@ -53,7 +53,8 @@ pub use boundary::{
 pub use camera::{
     ActiveCameraName, ActiveMainCamera, CameraDefinition, CameraName, CameraSwitch,
     CameraSwitchCycleState, PlayerShipEntity, RenderLayer, ShipCamerasTemplate,
-    camera_switch_system, spawn_menu_camera, spawn_ui_camera,
+    camera_switch_system, spawn_cockpit_background_camera, spawn_cockpit_foreground_camera,
+    spawn_menu_camera,
 };
 pub use debug::{
     AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig,
@@ -123,7 +124,8 @@ impl Plugin for CorePlugin {
             OnEnter(AppState::InGame),
             (
                 log_in_game,
-                spawn_ui_camera,
+                spawn_cockpit_background_camera,
+                spawn_cockpit_foreground_camera,
                 spawn_menu_camera,
                 init_debug_axes_visibility,
             ),

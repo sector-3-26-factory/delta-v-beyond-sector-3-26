@@ -58,15 +58,19 @@ impl Plugin for CockpitPlugin {
                 systems::init_gauge_visibility.after(spawn::spawn_status_gauges),
             )
             .add_systems(
+                OnEnter(AppState::InGame),
+                systems::init_needle_visibility.after(spawn::spawn_status_gauges),
+            )
+            .add_systems(
                 Update,
                 (
                     systems::cockpit_station_cycle_system,
                     systems::cockpit_visibility_system,
                     systems::velocity_vector_system,
                     systems::status_gauge_system,
+                    systems::update_needle_visibility,
                 )
-                    .run_if(in_state(AppState::InGame))
-                    .chain(),
+                    .run_if(in_state(AppState::InGame)),
             );
     }
 }
