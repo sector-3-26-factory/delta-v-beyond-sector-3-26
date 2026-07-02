@@ -117,7 +117,7 @@ pub struct GaugeSlot {
 
 /// Shape for a gauge slot: either rectangle or circle.
 #[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "type", content = "$content")]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum GaugeShape {
     /// Rectangle shape with pixel coordinates.
     Rectangle {

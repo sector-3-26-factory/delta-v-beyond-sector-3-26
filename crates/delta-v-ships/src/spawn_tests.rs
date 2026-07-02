@@ -114,13 +114,7 @@ fn make_player_ship_event() -> SpawnEntity {
         "weapons": [],
         "health": { "value": 100.0, "unit": "hp" },
         "cockpit": {
-                    "stations": [
-                        {
-                            "id": "default",
-                            "texture": "cockpit-default.png",
-                            "slots": []
-                        }
-                    ]
+                    "stations": []
                 }
     });
 
@@ -128,7 +122,7 @@ fn make_player_ship_event() -> SpawnEntity {
         "test_player_ship".to_string(),
         "player_controlled_ship".to_string(),
         template,
-        "templates/ships/player_ship/template.json".to_string(),
+        "templates/ships/space-fighter-comrade1280/player_controlled_ship.json".to_string(),
         "templates/ships/space-fighter-comrade1280/template.json".to_string(),
         Vec3::new(1.0, 2.0, 3.0),
     )

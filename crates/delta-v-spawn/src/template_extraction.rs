@@ -107,3 +107,21 @@ pub fn compute_debug_axis_length(bbox: &BoundingBoxJson) -> f32 {
     let max_dim = size.x.max(size.y).max(size.z);
     max_dim * 1.2
 }
+
+/// Reads the dimensions of a PNG file from its IHDR chunk.
+///
+/// # Errors
+/// Returns an error if the file cannot be read or is not a valid PNG.
+pub fn png_dimensions(path: &str) -> Result<(f32, f32), std::io::Error> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut header = [0u8; 24];
+    file.read_exact(&mut header)?;
+    // PNG signature: 8 bytes, then IHDR length (4 bytes) + "IHDR" (4 bytes) + width (4 bytes) + height (4 bytes)
+    // PNG dimensions are always small (<2^24), so f32 conversion is lossless.
+    #[allow(clippy::cast_precision_loss)]
+    let width = u32::from_be_bytes([header[16], header[17], header[18], header[19]]) as f32;
+    #[allow(clippy::cast_precision_loss)]
+    let height = u32::from_be_bytes([header[20], header[21], header[22], header[23]]) as f32;
+    Ok((width, height))
+}

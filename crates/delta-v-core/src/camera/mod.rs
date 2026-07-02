@@ -21,15 +21,18 @@ pub use types::{CameraDefinition, ShipCamerasTemplate};
 /// | Layer | Name | What it renders |
 /// |-------|------|-----------------|
 /// | 0 | Gameplay | 3D world, ship cameras, gameplay entities |
-/// | 1 | Ui | Cockpit overlay PNG, Bevy UI |
-/// | 2 | Menu | Bevy UI windows, keybindings menu |
+/// | 1 | CockpitBackground | Cockpit overlay PNG, gauge backgrounds, Bevy UI |
+/// | 2 | CockpitForeground | Needles, velocity indicator, dynamic cockpit elements |
+/// | 3 | Menu | Bevy UI windows, keybindings menu |
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RenderLayer {
-    /// Layer 0 — Gameplay: 3D world, ship cameras, all gameplay entities.
+    /// Layer 0 — `Gameplay`: 3D world, ship cameras, all gameplay entities.
     Gameplay,
-    /// Layer 1 — UI: Cockpit overlay PNG, Bevy UI.
-    Ui,
-    /// Layer 2 — Menu: Bevy UI windows, keybindings menu.
+    /// Layer 1 — `CockpitBackground`: Cockpit overlay PNG, gauge backgrounds, Bevy UI.
+    CockpitBackground,
+    /// Layer 2 — `CockpitForeground`: Needles, velocity indicator, dynamic cockpit elements.
+    CockpitForeground,
+    /// Layer 3 — `Menu`: Bevy UI windows, keybindings menu.
     Menu,
 }
 
@@ -38,8 +41,9 @@ impl RenderLayer {
     pub const fn index(self) -> usize {
         match self {
             Self::Gameplay => 0,
-            Self::Ui => 1,
-            Self::Menu => 2,
+            Self::CockpitBackground => 1,
+            Self::CockpitForeground => 2,
+            Self::Menu => 3,
         }
     }
 
@@ -191,12 +195,12 @@ pub struct CameraSwitchCycleState {
     prev_pressed: bool,
 }
 
-/// Spawns the 2-D UI camera required for rendering the cockpit overlay PNG.
+/// Spawns the 2-D cockpit background camera.
 ///
-/// Renders on `Layer(1)` with `order: 1`. This camera sees the cockpit
-/// interior view (`.png` with alpha transparency). The `ActiveMainCamera`'s
-/// 3D world is visible through the transparent areas.
-pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
+/// Renders on layer `CockpitBackground` with `order: 1`. This camera sees the cockpit
+/// interior view (`.png` with alpha transparency). The `ActiveMainCamera`'s 3D world
+/// is visible through the transparent areas.
+pub fn spawn_cockpit_background_camera(mut commands: Commands<'_, '_>) {
     commands.spawn((
         Camera2d,
         Camera {
@@ -206,15 +210,34 @@ pub fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
         },
         Transform::default(),
         Visibility::default(),
-        RenderLayer::Ui.render_layers(),
+        RenderLayer::CockpitBackground.render_layers(),
         bevy::ui::IsDefaultUiCamera,
     ));
-    tracing::info!("UI camera (Camera2d) spawned with IsDefaultUiCamera");
+    tracing::info!("Cockpit background camera (Camera2d) spawned with IsDefaultUiCamera");
+}
+
+/// Spawns a 2-D camera for cockpit foreground elements (needles, velocity indicator).
+///
+/// Renders on layer `CockpitForeground` with `order: 2`. This camera sees dynamic
+/// cockpit elements that should render on top of the cockpit background.
+pub fn spawn_cockpit_foreground_camera(mut commands: Commands<'_, '_>) {
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 2,
+            is_active: true,
+            ..default()
+        },
+        Transform::default(),
+        Visibility::default(),
+        RenderLayer::CockpitForeground.render_layers(),
+    ));
+    tracing::info!("Cockpit foreground camera (Camera2d) spawned on layer 2");
 }
 
 /// Spawns the menu camera for Bevy UI windows and menus.
 ///
-/// Renders on `Layer(2)` with `order: 3`. This camera sees the keybindings
+/// Renders on layer `menu` with `order: 3`. This camera sees the keybindings
 /// menu, window overlays, and other UI elements that should render on top
 /// of the cockpit and 3D world.
 pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
@@ -229,5 +252,5 @@ pub fn spawn_menu_camera(mut commands: Commands<'_, '_>) {
         Visibility::default(),
         RenderLayer::Menu.render_layers(),
     ));
-    tracing::info!("Menu camera (Bevy UI) spawned on layer 2");
+    tracing::info!("Menu camera (Bevy UI) spawned on layer 3");
 }

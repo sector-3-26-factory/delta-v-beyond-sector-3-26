@@ -26,6 +26,7 @@ use delta_v_core::{
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
+use delta_v_spawn::template_extraction::png_dimensions;
 use delta_v_types::collision::layers;
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
@@ -163,9 +164,20 @@ fn insert_player_resources(
     let cockpit_dir = template_path
         .rsplit_once('/')
         .map_or(template_path, |(d, _)| d);
+    // Read the first station's texture dimensions from the PNG file.
+    // Slot coordinates are in texture pixel space and must be scaled to viewport percentages.
+    // Per ADR-0013, missing or invalid PNG is a hard error — no silent fallback.
+    let (texture_width, texture_height) =
+        template.cockpit.stations.first().map_or((1.0, 1.0), |s| {
+            let path = format!("assets/{}/{}", cockpit_dir, s.texture);
+            #[allow(clippy::expect_used)]
+            png_dimensions(&path).expect("failed to read cockpit texture PNG dimensions (ADR-0013)")
+        });
     commands.insert_resource(CockpitOverlayResource {
         template_path: cockpit_dir.to_string(),
         stations: template.cockpit.stations.clone(),
+        texture_width,
+        texture_height,
     });
 }
 

@@ -110,7 +110,28 @@
         "stations": [
             {
                 "id": "default",
-                "texture": "cockpit/default.png"
+                "texture": "cockpit/default.png",
+                "slots": [
+                    {
+                        "shape": {
+                            "type": "rectangle",
+                            "x1": 377,
+                            "y1": 300,
+                            "x2": 520,
+                            "y2": 391
+                        },
+                        "default_gauge": "health"
+                    },
+                    {
+                        "shape": {
+                            "type": "circle",
+                            "cx": 610,
+                            "cy": 343,
+                            "r": 30
+                        },
+                        "default_gauge": "health"
+                    }
+                ]
             },
             {
                 "id": "test",

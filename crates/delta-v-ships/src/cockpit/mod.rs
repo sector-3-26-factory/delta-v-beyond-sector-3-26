@@ -22,6 +22,7 @@
 //! - Cockpit overlay PNG rendering with alpha transparency
 //! - Station switching (F2 / Shift+F2)
 //! - Velocity vector indicator (direction of ship movement)
+//! - Status gauges (health, weapon heat) with slot-based positioning
 //!
 //! See M6 -- HUD and Feel plan.
 
@@ -49,14 +50,27 @@ impl Plugin for CockpitPlugin {
                 spawn::spawn_velocity_vector_indicator,
             )
             .add_systems(
+                OnEnter(AppState::InGame),
+                spawn::spawn_status_gauges.after(spawn::spawn_cockpit_overlay),
+            )
+            .add_systems(
+                OnEnter(AppState::InGame),
+                systems::init_gauge_visibility.after(spawn::spawn_status_gauges),
+            )
+            .add_systems(
+                OnEnter(AppState::InGame),
+                systems::init_needle_visibility.after(spawn::spawn_status_gauges),
+            )
+            .add_systems(
                 Update,
                 (
                     systems::cockpit_station_cycle_system,
                     systems::cockpit_visibility_system,
                     systems::velocity_vector_system,
+                    systems::status_gauge_system,
+                    systems::update_needle_visibility,
                 )
-                    .run_if(in_state(AppState::InGame))
-                    .chain(),
+                    .run_if(in_state(AppState::InGame)),
             );
     }
 }
