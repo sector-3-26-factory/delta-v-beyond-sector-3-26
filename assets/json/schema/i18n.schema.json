@@ -8,7 +8,8 @@
     "required": [
         "ui",
         "number_format",
-        "speed"
+        "speed",
+        "entity_types"
     ],
     "properties": {
         "number_format": {
@@ -64,6 +65,30 @@
                 },
                 "unit_c": {
                     "description": "Unit abbreviation for fraction of light speed.",
+                    "type": "string"
+                }
+            }
+        },
+        "entity_types": {
+            "description": "Entity type translations (e.g., ship, asteroid, station).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "ship",
+                "asteroid",
+                "station"
+            ],
+            "properties": {
+                "ship": {
+                    "description": "Ship entity type translation.",
+                    "type": "string"
+                },
+                "asteroid": {
+                    "description": "Asteroid entity type translation.",
+                    "type": "string"
+                },
+                "station": {
+                    "description": "Station entity type translation.",
                     "type": "string"
                 }
             }
@@ -135,7 +160,8 @@
                             "additionalProperties": false,
                             "required": [
                                 "title",
-                                "close"
+                                "close",
+                                "empty_list"
                             ],
                             "properties": {
                                 "title": {
@@ -144,6 +170,10 @@
                                 },
                                 "close": {
                                     "description": "Close button hint.",
+                                    "type": "string"
+                                },
+                                "empty_list": {
+                                    "description": "Empty list placeholder text.",
                                     "type": "string"
                                 }
                             }
@@ -156,12 +186,37 @@
                     "additionalProperties": false,
                     "required": [
                         "camera",
+                        "targeting_mode",
+                        "targeting_mode_name",
                         "camera_name"
                     ],
                     "properties": {
                         "camera": {
                             "description": "Camera notification template. Use `{camera_name}` as placeholder.",
                             "type": "string"
+                        },
+                        "targeting_mode": {
+                            "description": "Targeting mode notification template. Use `{mode}` as placeholder.",
+                            "type": "string"
+                        },
+                        "targeting_mode_name": {
+                            "description": "Targeting mode name translations.",
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "combat",
+                                "nav"
+                            ],
+                            "properties": {
+                                "combat": {
+                                    "description": "Combat targeting mode name.",
+                                    "type": "string"
+                                },
+                                "nav": {
+                                    "description": "Navigation targeting mode name.",
+                                    "type": "string"
+                                }
+                            }
                         },
                         "camera_name": {
                             "description": "Camera name translations.",

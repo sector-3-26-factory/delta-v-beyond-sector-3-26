@@ -10,6 +10,11 @@
         "unit_pch": "pc/h",
         "unit_c": "c"
     },
+    "entity_types": {
+        "ship": "Raumschiff",
+        "asteroid": "Asteroid",
+        "station": "Raumstation"
+    },
     "ui": {
         "menu": {
             "keybindings": {
@@ -71,11 +76,17 @@
             },
             "navigation": {
                 "title": "NAVIGATION",
-                "close": "Schließen [N]"
+                "close": "Schließen [N]",
+                "empty_list": "Keine Objekte in Reichweite"
             }
         },
         "notification": {
             "camera": "Kamera: {camera_name}",
+            "targeting_mode": "Zielmodus: {mode}",
+            "targeting_mode_name": {
+                "combat": "Kampf",
+                "nav": "Navigation"
+            },
             "camera_name": {
                 "cockpit": "Cockpit",
                 "front": "Vorderseite",

@@ -41,6 +41,7 @@ pub fn navigation_menu_toggle_system(
     asset_server: Res<'_, AssetServer>,
     theme: Res<'_, UiTheme>,
     i18n: Res<'_, I18n>,
+    list_data: Res<'_, delta_v_core::NavigationListData>,
 ) {
     // Check if N is pressed
     let n_pressed = keyboard.just_pressed(KeyCode::KeyN);
@@ -60,7 +61,15 @@ pub fn navigation_menu_toggle_system(
         // Open the menu: spawn the menu UI
         let title = &i18n.ui.menu.navigation.title;
         let hint = &i18n.ui.menu.navigation.close;
-        spawn_navigation_menu(&mut commands, &asset_server, &theme, title, hint);
+        spawn_navigation_menu(
+            &mut commands,
+            &asset_server,
+            &theme,
+            &i18n,
+            title,
+            hint,
+            &list_data.entries,
+        );
         menu_open.0 = true;
         tracing::debug!("navigation menu: opened");
     }

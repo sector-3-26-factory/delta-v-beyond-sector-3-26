@@ -23,6 +23,7 @@
 //! - Station switching (F2 / Shift+F2)
 //! - Velocity vector indicator (direction of ship movement)
 //! - Status gauges (health, weapon heat) with slot-based positioning
+//! - Player-controlled targeting & navigation list
 //!
 //! See M6 -- HUD and Feel plan.
 
@@ -30,6 +31,7 @@ use bevy::prelude::*;
 use delta_v_core::AppState;
 
 pub mod components;
+pub mod navigation_list;
 pub mod spawn;
 pub mod systems;
 pub mod velocity_indicator;
@@ -47,6 +49,7 @@ impl Plugin for CockpitPlugin {
             .init_resource::<components::TargetingMode>()
             .init_resource::<components::SelectedTarget>()
             .init_resource::<components::SelectedNavObject>()
+            .init_resource::<delta_v_core::NavigationListData>()
             .add_systems(OnEnter(AppState::InGame), spawn::spawn_cockpit_overlay)
             .add_systems(
                 OnEnter(AppState::InGame),
@@ -76,6 +79,14 @@ impl Plugin for CockpitPlugin {
                     systems::cycle_target_system,
                     systems::bearing_indicator_system,
                     systems::target_reticle_system,
+                )
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                Update,
+                (
+                    navigation_list::update_navigation_list_system,
+                    navigation_list::update_selection_system,
                 )
                     .run_if(in_state(AppState::InGame)),
             );

@@ -105,6 +105,10 @@ pub struct Targetable;
 #[derive(Component)]
 pub struct Navigable;
 
+// EntityType and WorldEntityId are now defined in delta-v-core::navigation
+// Re-export them for convenience
+pub use delta_v_core::{EntityType, WorldEntityId};
+
 /// Resource holding the currently selected target entity.
 ///
 /// The target reticle will appear around this entity when it's on-screen.

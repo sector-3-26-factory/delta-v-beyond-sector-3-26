@@ -14,6 +14,7 @@
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
 use crate::cockpit::CockpitOverlayResource;
+use crate::cockpit::components::{Navigable, Targetable};
 use crate::ship_templates::{
     MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
     StaticShipTemplate,
@@ -21,8 +22,8 @@ use crate::ship_templates::{
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{
-    ActiveCameraName, CameraName, DebugAxesEligible, FlightAssist, Health, PlayerShipEntity,
-    RenderLayer, SpawnEntity, Weapon,
+    ActiveCameraName, CameraName, DebugAxesEligible, EntityType, FlightAssist, Health,
+    PlayerShipEntity, RenderLayer, SpawnEntity, Weapon, WorldEntityId,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
@@ -257,8 +258,17 @@ fn spawn_player_ship(
             CollisionLayersComponent::new(layers::SHIP),
             // Health component for damage model (M4)
             Health::new(template.health.value),
+            // Targetable and Navigable for targeting/navigation menu (M6 step 11a)
+            Targetable,
+            Navigable,
         ))
         .id();
+
+    // Entity type and ID for navigation list display (inserted separately to avoid tuple limit)
+    commands.entity(ship_entity).insert((
+        EntityType(event.entity_type.clone()),
+        WorldEntityId(event.id.clone()),
+    ));
 
     // Add Weapon components from template (M4).
     // Per ADR-0014, all gameplay values come from JSON.
@@ -366,8 +376,17 @@ fn spawn_static_ship(
             CollisionLayersComponent::new(layers::SHIP),
             // Health component for damage model (M4)
             Health::new(template.health.value),
+            // Targetable and Navigable for targeting/navigation menu (M6 step 11a)
+            Targetable,
+            Navigable,
         ))
         .id();
+
+    // Entity type and ID for navigation list display (inserted separately to avoid tuple limit)
+    commands.entity(ship_entity).insert((
+        EntityType(event.entity_type.clone()),
+        WorldEntityId(event.id.clone()),
+    ));
 
     // Add Weapon components from template (M4).
     for (i, weapon_json) in template.weapons.iter().enumerate() {

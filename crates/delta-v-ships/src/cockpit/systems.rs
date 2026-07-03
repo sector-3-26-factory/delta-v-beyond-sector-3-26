@@ -771,10 +771,15 @@ pub fn status_gauge_system(
 /// Toggles the targeting mode between Combat and Nav.
 ///
 /// Runs in `Update` during `AppState::InGame`.
-#[allow(clippy::needless_pass_by_value)]
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::literal_string_with_formatting_args
+)]
 pub fn targeting_mode_toggle_system(
     mut mode: ResMut<'_, TargetingMode>,
     action_state: Res<'_, ActionState<LogicalAction>>,
+    mut events: MessageWriter<'_, delta_v_core::events::TargetingModeChanged>,
 ) {
     use super::components::TargetingModeType;
     if action_state.just_pressed(&LogicalAction::ToggleTargetingMode) {
@@ -783,6 +788,14 @@ pub fn targeting_mode_toggle_system(
             TargetingModeType::Nav => TargetingModeType::Combat,
         };
         tracing::debug!("[targeting] mode switched to {:?}", mode.mode);
+
+        // Emit event for UI to handle notification
+        events.write(delta_v_core::events::TargetingModeChanged {
+            mode: match mode.mode {
+                TargetingModeType::Combat => delta_v_core::events::TargetingModeType::Combat,
+                TargetingModeType::Nav => delta_v_core::events::TargetingModeType::Nav,
+            },
+        });
     }
 }
 

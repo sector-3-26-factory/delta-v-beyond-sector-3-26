@@ -30,12 +30,14 @@ use serde::Deserialize;
 /// Root i18n struct containing all translation hierarchies.
 #[derive(Debug, Clone, Deserialize, Resource)]
 pub struct I18n {
-    /// UI translations.
-    pub ui: UiTranslations,
     /// Number formatting configuration.
     pub number_format: NumberFormat,
     /// Speed display unit strings.
     pub speed: SpeedTranslations,
+    /// Entity type translations (e.g., "ship", "asteroid", "station").
+    pub entity_types: EntityTypeTranslations,
+    /// UI translations.
+    pub ui: UiTranslations,
 }
 
 /// Number formatting configuration.
@@ -62,6 +64,20 @@ pub struct SpeedTranslations {
     pub unit_pch: String,
     /// Unit abbreviation for fraction of light speed.
     pub unit_c: String,
+}
+
+/// Entity type translations (e.g., "ship", "asteroid", "station").
+///
+/// This is a typed struct hierarchy for compile-time verified translations.
+/// Known entity types are defined as fields; unknown types fall back to the raw key.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EntityTypeTranslations {
+    /// Ship entity type translation.
+    pub ship: String,
+    /// Asteroid entity type translation.
+    pub asteroid: String,
+    /// Station entity type translation.
+    pub station: String,
 }
 
 /// UI translations.
@@ -104,6 +120,17 @@ pub struct NavigationMenuTranslations {
     pub title: String,
     /// Close button hint.
     pub close: String,
+    /// Empty list placeholder text.
+    pub empty_list: String,
+}
+
+/// Targeting mode name translations.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TargetingModeNameTranslations {
+    /// Combat targeting mode name.
+    pub combat: String,
+    /// Navigation targeting mode name.
+    pub nav: String,
 }
 
 /// Notification translations.
@@ -111,6 +138,10 @@ pub struct NavigationMenuTranslations {
 pub struct NotificationTranslations {
     /// Camera notification template. Use `{camera_name}` as placeholder.
     pub camera: String,
+    /// Targeting mode notification template. Use `{mode}` as placeholder.
+    pub targeting_mode: String,
+    /// Targeting mode name translations.
+    pub targeting_mode_name: TargetingModeNameTranslations,
     /// Camera name translations.
     pub camera_name: std::collections::HashMap<String, String>,
 }

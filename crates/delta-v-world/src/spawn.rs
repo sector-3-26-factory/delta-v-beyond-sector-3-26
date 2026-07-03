@@ -9,7 +9,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::{DebugAxesEligible, SpawnEntity};
+use delta_v_core::{DebugAxesEligible, EntityType, SpawnEntity, WorldEntityId};
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, DynamicBody, RigidBody};
 use delta_v_spawn::collision::shape_from_json;
 use delta_v_spawn::template_extraction::{
@@ -84,22 +84,39 @@ pub fn spawn_asteroid(
         // Spawn the asteroid as a dynamic body with a pending mesh marker.
         // The mesh will be attached asynchronously once the glTF is loaded.
         // Dynamic asteroids respond to collisions based on their mass.
-        commands.spawn((
-            DynamicBody,
-            RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
-            CollisionShape(collision_shape_data),
-            CollisionLayersComponent::new(layers::ASTEROID),
-            Transform::from_translation(event.position)
-                .with_rotation(event.rotation)
-                .with_scale(scale),
-            GlobalTransform::default(),
-            Visibility::default(),
-            InheritedVisibility::default(),
-            Name::new(event.id.clone()),
-            PendingAsteroidMesh { gltf_handle },
-            DebugAxesEligible::new(event.id.clone(), axis_length),
+        let asteroid_entity = commands
+            .spawn((
+                DynamicBody,
+                RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
+                CollisionShape(collision_shape_data),
+                CollisionLayersComponent::new(layers::ASTEROID),
+                Transform::from_translation(event.position)
+                    .with_rotation(event.rotation)
+                    .with_scale(scale),
+                GlobalTransform::default(),
+                Visibility::default(),
+                InheritedVisibility::default(),
+                Name::new(event.id.clone()),
+                PendingAsteroidMesh { gltf_handle },
+                DebugAxesEligible::new(event.id.clone(), axis_length),
+            ))
+            .id();
+
+        // Navigation list components - all entities are navigatable
+        commands.entity(asteroid_entity).insert((
+            EntityType(event.entity_type.clone()),
+            WorldEntityId(event.id.clone()),
         ));
 
         info!("Spawned asteroid '{}' with mass {} kg", event.id, mass);
+        tracing::debug!(
+            "[spawn_asteroid] Added EntityType='{}' EntityId='{}' to asteroid entity",
+            event.entity_type,
+            event.id
+        );
+        // Verify the components were added
+        tracing::debug!(
+            "[spawn_asteroid] Asteroid entity spawned with components: DynamicBody, RigidBody, CollisionShape, CollisionLayersComponent, Transform, GlobalTransform, Visibility, InheritedVisibility, Name, PendingAsteroidMesh, DebugAxesEligible, EntityType, EntityId"
+        );
     }
 }

@@ -153,3 +153,23 @@ pub struct CameraSwitched {
     /// The name of the newly active camera (e.g., "cockpit", "front", "drone").
     pub camera_name: String,
 }
+
+/// Event emitted when the targeting mode changes.
+///
+/// Emitted by `targeting_mode_toggle_system` when the player toggles
+/// between Combat and Nav targeting modes.
+/// The UI system listens for this to show a notification.
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TargetingModeChanged {
+    /// The new targeting mode.
+    pub mode: TargetingModeType,
+}
+
+/// The targeting mode type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TargetingModeType {
+    /// Combat mode: targeting enemies.
+    Combat,
+    /// Navigation mode: selecting objects to navigate to.
+    Nav,
+}

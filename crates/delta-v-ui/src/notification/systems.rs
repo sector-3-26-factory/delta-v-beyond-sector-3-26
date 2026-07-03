@@ -90,3 +90,49 @@ pub fn notification_spawn_system(
         );
     }
 }
+
+/// Listens for `TargetingModeChanged` messages and spawns notification windows.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::literal_string_with_formatting_args
+)]
+pub fn targeting_mode_notification_system(
+    mut events: MessageReader<'_, '_, delta_v_core::events::TargetingModeChanged>,
+    i18n: Res<'_, delta_v_core::I18n>,
+    config: Res<'_, super::resources::NotificationConfig>,
+    mut stack: ResMut<'_, NotificationStack>,
+    theme: Res<'_, crate::window::theme::UiTheme>,
+    asset_server: Res<'_, AssetServer>,
+    mut commands: Commands<'_, '_>,
+) {
+    for event in events.read() {
+        let mode_name = match event.mode {
+            delta_v_core::events::TargetingModeType::Combat => {
+                i18n.ui.notification.targeting_mode_name.combat.clone()
+            }
+            delta_v_core::events::TargetingModeType::Nav => {
+                i18n.ui.notification.targeting_mode_name.nav.clone()
+            }
+        };
+
+        let message = i18n
+            .ui
+            .notification
+            .targeting_mode
+            .replace("{mode}", &mode_name);
+
+        tracing::debug!(
+            "[notification] spawning targeting mode notification: '{}'",
+            message
+        );
+
+        super::spawn::spawn_notification(
+            &mut commands,
+            &config,
+            &mut stack,
+            message,
+            &theme,
+            &asset_server,
+        );
+    }
+}

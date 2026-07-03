@@ -74,6 +74,7 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "ArrowLeft" => Some(KeyCode::ArrowLeft),
         "ArrowRight" => Some(KeyCode::ArrowRight),
         "Space" => Some(KeyCode::Space),
+        "Tab" => Some(KeyCode::Tab),
         _ => {
             tracing::warn!("keybindings: unknown key name '{name}' (ignored)");
             None

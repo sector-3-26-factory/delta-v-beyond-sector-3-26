@@ -10,6 +10,11 @@
         "unit_pch": "pc/h",
         "unit_c": "c"
     },
+    "entity_types": {
+        "ship": "Ship",
+        "asteroid": "Asteroid",
+        "station": "Station"
+    },
     "ui": {
         "menu": {
             "keybindings": {
@@ -71,11 +76,17 @@
             },
             "navigation": {
                 "title": "NAVIGATION",
-                "close": "Close [N]"
+                "close": "Close [N]",
+                "empty_list": "No objects in range"
             }
         },
         "notification": {
             "camera": "Camera: {camera_name}",
+            "targeting_mode": "Targeting mode: {mode}",
+            "targeting_mode_name": {
+                "combat": "Combat",
+                "nav": "Navigation"
+            },
             "camera_name": {
                 "cockpit": "Cockpit",
                 "front": "Front",
