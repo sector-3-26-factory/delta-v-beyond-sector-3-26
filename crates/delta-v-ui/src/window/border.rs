@@ -40,6 +40,8 @@ pub struct ScanLineDot {
     pub is_main: bool,
     /// Trail index (0 = oldest/furthest back, higher = closer to main dot).
     pub trail_index: usize,
+    /// The entity of the window/panel that owns this scan line (has the WindowBorder component).
+    pub parent_entity: Entity,
 }
 
 /// Updates the animation time for window border scan lines.
@@ -181,22 +183,25 @@ fn get_oval_dimensions(edge: EdgeIndex) -> (f32, f32) {
 /// Updates the positions of scan line dots based on the current animation time.
 ///
 /// Runs in `Update`. Updates the position and color of all scan line dot
-/// entities to create the animated border effect.
+/// entities to create the animated border effect. Each scan line dot references
+/// its parent window/panel entity (which has the WindowBorder component) to get
+/// the correct bounds and animation time for that specific window.
 pub fn update_scan_line_dots(
     mut query: Query<'_, '_, (&mut Node, &mut BackgroundColor, &ScanLineDot)>,
     border_query: Query<'_, '_, &WindowBorder>,
 ) {
     let _span = tracing::info_span!("delta_v_ui::update_scan_line_dots").entered();
 
-    let Some(border) = border_query.iter().next() else {
-        return;
-    };
-
-    let bounds = border.bounds;
     let scan_color = UiTheme::SCAN_LINE_COLOR;
     let base_alpha = scan_color.to_linear().alpha;
 
     for (mut node, mut bg_color, dot) in &mut query {
+        // Get the WindowBorder component from the parent entity
+        let Ok(border) = border_query.get(dot.parent_entity) else {
+            continue;
+        };
+
+        let bounds = border.bounds;
         let anim_time = border.anim_time;
 
         if dot.is_main {
