@@ -40,7 +40,7 @@ pub struct ScanLineDot {
     pub is_main: bool,
     /// Trail index (0 = oldest/furthest back, higher = closer to main dot).
     pub trail_index: usize,
-    /// The entity of the window/panel that owns this scan line (has the WindowBorder component).
+    /// The entity of the window/panel that owns this scan line (has the `WindowBorder` component).
     pub parent_entity: Entity,
 }
 
@@ -184,7 +184,7 @@ fn get_oval_dimensions(edge: EdgeIndex) -> (f32, f32) {
 ///
 /// Runs in `Update`. Updates the position and color of all scan line dot
 /// entities to create the animated border effect. Each scan line dot references
-/// its parent window/panel entity (which has the WindowBorder component) to get
+/// its parent window/panel entity (which has the `WindowBorder` component) to get
 /// the correct bounds and animation time for that specific window.
 pub fn update_scan_line_dots(
     mut query: Query<'_, '_, (&mut Node, &mut BackgroundColor, &ScanLineDot)>,
