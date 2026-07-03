@@ -162,14 +162,12 @@ pub struct CameraSwitched {
 #[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TargetingModeChanged {
     /// The new targeting mode.
-    pub mode: TargetingModeType,
+    pub mode: super::navigation::TargetingModeType,
 }
 
-/// The targeting mode type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TargetingModeType {
-    /// Combat mode: targeting enemies.
-    Combat,
-    /// Navigation mode: selecting objects to navigate to.
-    Nav,
-}
+/// Event emitted when the navigation list is updated.
+///
+/// Emitted by `update_navigation_list_system` after rebuilding the navigation
+/// list entries. The navigation menu UI listens for this to refresh its content.
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NavigationListChanged;

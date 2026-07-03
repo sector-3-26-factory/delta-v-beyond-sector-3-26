@@ -779,23 +779,28 @@ pub fn status_gauge_system(
 pub fn targeting_mode_toggle_system(
     mut mode: ResMut<'_, TargetingMode>,
     action_state: Res<'_, ActionState<LogicalAction>>,
-    mut events: MessageWriter<'_, delta_v_core::events::TargetingModeChanged>,
+    mut events: MessageWriter<'_, delta_v_core::TargetingModeChanged>,
 ) {
     use super::components::TargetingModeType;
     if action_state.just_pressed(&LogicalAction::ToggleTargetingMode) {
+        let old_mode = mode.mode;
         mode.mode = match mode.mode {
             TargetingModeType::Combat => TargetingModeType::Nav,
             TargetingModeType::Nav => TargetingModeType::Combat,
         };
-        tracing::debug!("[targeting] mode switched to {:?}", mode.mode);
+        tracing::debug!(
+            "[targeting] mode switched from {:?} to {:?}, emitting TargetingModeChanged event",
+            old_mode,
+            mode.mode
+        );
 
         // Emit event for UI to handle notification
-        events.write(delta_v_core::events::TargetingModeChanged {
-            mode: match mode.mode {
-                TargetingModeType::Combat => delta_v_core::events::TargetingModeType::Combat,
-                TargetingModeType::Nav => delta_v_core::events::TargetingModeType::Nav,
-            },
-        });
+        let event_mode = match mode.mode {
+            TargetingModeType::Combat => delta_v_core::TargetingModeType::Combat,
+            TargetingModeType::Nav => delta_v_core::TargetingModeType::Nav,
+        };
+        tracing::debug!("[targeting] emitting event with mode: {:?}", event_mode);
+        events.write(delta_v_core::TargetingModeChanged { mode: event_mode });
     }
 }
 

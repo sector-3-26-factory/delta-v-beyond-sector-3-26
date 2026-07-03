@@ -123,26 +123,8 @@ pub struct SelectedTarget(pub Option<Entity>);
 #[derive(Resource, Default)]
 pub struct SelectedNavObject(pub Option<Entity>);
 
-/// Resource tracking the current targeting mode.
-///
-/// Determines which list (combat targets or nav objects) is displayed.
-// allow-default: Bevy requires Default on resources for init_resource. Defaults to Combat mode.
-#[derive(Resource, Default)]
-pub struct TargetingMode {
-    /// Current mode: Combat (targeting) or Nav (navigation).
-    pub mode: TargetingModeType,
-}
-
-/// The targeting mode type.
-// allow-default: Bevy requires Default on resources for init_resource. Combat is the default mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TargetingModeType {
-    /// Combat mode: targeting enemies.
-    #[default]
-    Combat,
-    /// Navigation mode: selecting objects to navigate to.
-    Nav,
-}
+/// Re-export `TargetingMode` and `TargetingModeType` from `delta_v_core`.
+pub use delta_v_core::{TargetingMode, TargetingModeType};
 
 /// Marker component for the bearing indicator arrow.
 ///

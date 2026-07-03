@@ -68,6 +68,10 @@ impl Plugin for CockpitPlugin {
                 systems::init_needle_visibility.after(spawn::spawn_status_gauges),
             )
             .add_systems(
+                OnEnter(AppState::InGame),
+                navigation_list::init_navigation_list_system.after(systems::init_needle_visibility),
+            )
+            .add_systems(
                 Update,
                 (
                     systems::cockpit_station_cycle_system,

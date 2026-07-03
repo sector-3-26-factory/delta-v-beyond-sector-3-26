@@ -92,12 +92,17 @@ pub fn notification_spawn_system(
 }
 
 /// Listens for `TargetingModeChanged` messages and spawns notification windows.
+///
+/// Reads the `TargetingMode` resource directly to ensure consistency with
+/// the navigation menu content.
 #[allow(
     clippy::needless_pass_by_value,
-    clippy::literal_string_with_formatting_args
+    clippy::literal_string_with_formatting_args,
+    clippy::too_many_arguments
 )]
 pub fn targeting_mode_notification_system(
-    mut events: MessageReader<'_, '_, delta_v_core::events::TargetingModeChanged>,
+    mut events: MessageReader<'_, '_, delta_v_core::TargetingModeChanged>,
+    targeting_mode: Res<'_, delta_v_core::TargetingMode>,
     i18n: Res<'_, delta_v_core::I18n>,
     config: Res<'_, super::resources::NotificationConfig>,
     mut stack: ResMut<'_, NotificationStack>,
@@ -105,34 +110,48 @@ pub fn targeting_mode_notification_system(
     asset_server: Res<'_, AssetServer>,
     mut commands: Commands<'_, '_>,
 ) {
-    for event in events.read() {
-        let mode_name = match event.mode {
-            delta_v_core::events::TargetingModeType::Combat => {
-                i18n.ui.notification.targeting_mode_name.combat.clone()
-            }
-            delta_v_core::events::TargetingModeType::Nav => {
-                i18n.ui.notification.targeting_mode_name.nav.clone()
-            }
-        };
+    // Only spawn notification if there was a mode change event
+    let Some(event) = events.read().next() else {
+        return;
+    };
 
-        let message = i18n
-            .ui
-            .notification
-            .targeting_mode
-            .replace("{mode}", &mode_name);
+    // Read the current mode from the resource for consistency
+    let resource_mode = targeting_mode.mode;
+    let event_mode = event.mode;
 
-        tracing::debug!(
-            "[notification] spawning targeting mode notification: '{}'",
-            message
-        );
+    tracing::debug!(
+        "[notification] received TargetingModeChanged event: event_mode={:?}, resource_mode={:?}",
+        event_mode,
+        resource_mode
+    );
 
-        super::spawn::spawn_notification(
-            &mut commands,
-            &config,
-            &mut stack,
-            message,
-            &theme,
-            &asset_server,
-        );
-    }
+    let mode_name = match resource_mode {
+        delta_v_core::TargetingModeType::Combat => {
+            i18n.ui.notification.targeting_mode_name.combat.clone()
+        }
+        delta_v_core::TargetingModeType::Nav => {
+            i18n.ui.notification.targeting_mode_name.nav.clone()
+        }
+    };
+
+    let message = i18n
+        .ui
+        .notification
+        .targeting_mode
+        .replace("{mode}", &mode_name);
+
+    tracing::debug!(
+        "[notification] spawning targeting mode notification: '{}' (resource_mode={:?})",
+        message,
+        resource_mode
+    );
+
+    super::spawn::spawn_notification(
+        &mut commands,
+        &config,
+        &mut stack,
+        message,
+        &theme,
+        &asset_server,
+    );
 }

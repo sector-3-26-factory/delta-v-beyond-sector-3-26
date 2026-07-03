@@ -26,5 +26,7 @@
 //! that is updated by `delta-v-ships` and displayed by `delta-v-ui`.
 
 pub mod navigation_list;
+pub mod targeting_mode;
 
 pub use navigation_list::{EntityType, NavEntry, NavigationListData, WorldEntityId};
+pub use targeting_mode::{TargetingMode, TargetingModeType};

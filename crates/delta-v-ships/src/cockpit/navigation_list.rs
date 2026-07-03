@@ -25,22 +25,20 @@ use bevy::prelude::*;
 use super::components::SelectedNavObject;
 use super::components::SelectedTarget;
 use super::components::Targetable;
-use super::components::TargetingMode;
-use super::components::TargetingModeType;
-use delta_v_core::navigation::{EntityType, NavigationListData, WorldEntityId};
+use delta_v_core::events::NavigationListChanged;
+use delta_v_core::navigation::{
+    EntityType, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,
+};
 
-/// Updates the navigation list based on the current targeting mode.
+/// Internal function to rebuild the navigation list entries.
 ///
-/// Runs in `Update` during `AppState::InGame`.
-/// - Combat mode: queries entities with `Targetable` + `Transform` (ships, stations)
-/// - Nav mode: queries ALL entities with `EntityType` + `EntityId` + `Transform` (all entities are navigatable)
+/// Shared by `init_navigation_list_system` and `update_navigation_list_system`.
 #[allow(
     clippy::too_many_arguments,
     clippy::needless_pass_by_value,
-    clippy::type_complexity,
-    clippy::too_many_lines
+    clippy::type_complexity
 )]
-pub fn update_navigation_list_system(
+fn rebuild_navigation_list(
     player_ship: Res<'_, delta_v_core::PlayerShipEntity>,
     targeting_mode: Res<'_, TargetingMode>,
     mut list_data: ResMut<'_, NavigationListData>,
@@ -56,7 +54,6 @@ pub fn update_navigation_list_system(
         ),
         With<Targetable>,
     >,
-    // Nav mode: all entities with EntityType + WorldEntityId are navigatable
     navigable_query: Query<
         '_,
         '_,
@@ -69,8 +66,6 @@ pub fn update_navigation_list_system(
         ),
     >,
 ) {
-    let _span = tracing::info_span!("delta_v_ships::update_navigation_list_system").entered();
-
     // Get player position - find the player ship by checking all entities with Transform
     // We use the player_ship resource to identify which entity is the player
     let player_pos = targetable_query
@@ -83,35 +78,6 @@ pub fn update_navigation_list_system(
             }
         })
         .unwrap_or(Vec3::ZERO);
-
-    // Debug: log all entities found by each query
-    tracing::debug!(
-        "[nav_list] Combat query found {} entities",
-        targetable_query.iter().count()
-    );
-    for (entity, _, name, entity_type, entity_id) in targetable_query.iter() {
-        tracing::debug!(
-            "[nav_list] Combat entity: {:?} name={:?} type={} id={}",
-            entity,
-            name,
-            entity_type.0,
-            entity_id.0
-        );
-    }
-
-    tracing::debug!(
-        "[nav_list] Nav query found {} entities",
-        navigable_query.iter().count()
-    );
-    for (entity, _, name, entity_type, entity_id) in navigable_query.iter() {
-        tracing::debug!(
-            "[nav_list] Nav entity: {:?} name={:?} type={} id={}",
-            entity,
-            name,
-            entity_type.0,
-            entity_id.0
-        );
-    }
 
     // Collect entries based on mode
     let mut entries: Vec<delta_v_core::NavEntry> = match targeting_mode.mode {
@@ -149,20 +115,6 @@ pub fn update_navigation_list_system(
             .collect(),
     };
 
-    // Debug: log all entities found by the navigable query
-    if targeting_mode.mode == TargetingModeType::Nav {
-        tracing::debug!("[nav_list] Nav mode - all entities with EntityType+EntityId:");
-        for (entity, _, name, entity_type, entity_id) in navigable_query.iter() {
-            tracing::debug!(
-                "[nav_list]   entity={:?} name={:?} type={} id={}",
-                entity,
-                name,
-                entity_type.0,
-                entity_id.0
-            );
-        }
-    }
-
     // Sort by distance
     entries.sort_by(|a, b| {
         a.distance
@@ -185,6 +137,116 @@ pub fn update_navigation_list_system(
             entry.distance
         );
     }
+}
+
+/// Updates the navigation list based on the current targeting mode.
+///
+/// Runs in `Update` during `AppState::InGame`.
+/// - Combat mode: queries entities with `Targetable` + `Transform` (ships, stations)
+/// - Nav mode: queries ALL entities with `EntityType` + `EntityId` + `Transform` (all entities are navigatable)
+///
+/// Triggered by `TargetingModeChanged` events. Emits `NavigationListChanged` after updating.
+#[allow(
+    clippy::too_many_arguments,
+    clippy::needless_pass_by_value,
+    clippy::type_complexity,
+    clippy::too_many_lines
+)]
+pub fn update_navigation_list_system(
+    player_ship: Res<'_, delta_v_core::PlayerShipEntity>,
+    targeting_mode: Res<'_, TargetingMode>,
+    list_data: ResMut<'_, NavigationListData>,
+    targetable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+        With<Targetable>,
+    >,
+    // Nav mode: all entities with EntityType + WorldEntityId are navigatable
+    navigable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+    >,
+    mut events: MessageReader<'_, '_, delta_v_core::TargetingModeChanged>,
+    mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
+) {
+    // Only run when targeting mode changes
+    if events.read().next().is_none() {
+        return;
+    }
+    let _span = tracing::info_span!("delta_v_ships::update_navigation_list_system").entered();
+
+    // Debug: log all entities found by each query
+    tracing::debug!(
+        "[nav_list] Combat query found {} entities",
+        targetable_query.iter().count()
+    );
+    for (entity, _, name, entity_type, entity_id) in targetable_query.iter() {
+        tracing::debug!(
+            "[nav_list] Combat entity: {:?} name={:?} type={} id={}",
+            entity,
+            name,
+            entity_type.0,
+            entity_id.0
+        );
+    }
+
+    tracing::debug!(
+        "[nav_list] Nav query found {} entities",
+        navigable_query.iter().count()
+    );
+    for (entity, _, name, entity_type, entity_id) in navigable_query.iter() {
+        tracing::debug!(
+            "[nav_list] Nav entity: {:?} name={:?} type={} id={}",
+            entity,
+            name,
+            entity_type.0,
+            entity_id.0
+        );
+    }
+
+    // Store the mode before moving targeting_mode into rebuild_navigation_list
+    let current_mode = targeting_mode.mode;
+
+    // Rebuild the navigation list using shared function
+    rebuild_navigation_list(
+        player_ship,
+        targeting_mode,
+        list_data,
+        targetable_query,
+        navigable_query,
+    );
+
+    // Debug: log all entities found by the navigable query
+    if current_mode == TargetingModeType::Nav {
+        tracing::debug!("[nav_list] Nav mode - all entities with EntityType+EntityId:");
+        for (entity, _, name, entity_type, entity_id) in navigable_query.iter() {
+            tracing::debug!(
+                "[nav_list]   entity={:?} name={:?} type={} id={}",
+                entity,
+                name,
+                entity_type.0,
+                entity_id.0
+            );
+        }
+    }
+
+    // Emit event to notify UI that the navigation list has changed
+    nav_list_events.write(NavigationListChanged);
+    tracing::debug!("[nav_list] emitted NavigationListChanged event");
 }
 
 /// Updates the selected target/nav object based on the current selection.
@@ -215,4 +277,60 @@ pub fn update_selection_system(
             }
         }
     }
+}
+
+/// Initializes the navigation list on game start.
+///
+/// Runs in `OnEnter(AppState::InGame)` to populate the initial navigation list
+/// before any mode changes occur. Emits `NavigationListChanged` after updating.
+#[allow(
+    clippy::too_many_arguments,
+    clippy::needless_pass_by_value,
+    clippy::type_complexity,
+    clippy::too_many_lines
+)]
+pub fn init_navigation_list_system(
+    player_ship: Res<'_, delta_v_core::PlayerShipEntity>,
+    targeting_mode: Res<'_, TargetingMode>,
+    list_data: ResMut<'_, NavigationListData>,
+    targetable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+        With<Targetable>,
+    >,
+    // Nav mode: all entities with EntityType + WorldEntityId are navigatable
+    navigable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+    >,
+    mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
+) {
+    let _span = tracing::info_span!("delta_v_ships::init_navigation_list_system").entered();
+
+    // Rebuild the navigation list using shared function
+    rebuild_navigation_list(
+        player_ship,
+        targeting_mode,
+        list_data,
+        targetable_query,
+        navigable_query,
+    );
+
+    // Emit event to notify UI that the navigation list has changed
+    nav_list_events.write(NavigationListChanged);
+    tracing::debug!("[nav_list] emitted NavigationListChanged event (init)");
 }
