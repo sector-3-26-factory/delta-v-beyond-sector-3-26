@@ -94,6 +94,11 @@ impl Plugin for CockpitPlugin {
                     navigation_list::update_selection_system,
                 )
                     .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                FixedUpdate,
+                navigation_list::update_navigation_list_distances_system
+                    .run_if(in_state(AppState::InGame)),
             );
     }
 }

@@ -23,3 +23,25 @@ use bevy::prelude::*;
 /// Marker component for the navigation menu root entity.
 #[derive(Component)]
 pub struct NavigationMenuRoot;
+
+/// Marker component for distance text entities in the navigation menu.
+///
+/// Each distance text entity corresponds to a navigation list entry by index.
+/// The `update_navigation_menu_distances_system` uses this to find and update
+/// the distance text for each entry without despawning the entire menu.
+#[derive(Component)]
+pub struct NavMenuDistanceText {
+    /// Index of the entry in the navigation list this text corresponds to.
+    pub index: usize,
+}
+
+/// Marker component for row background entities in the navigation menu.
+///
+/// Each row (type, id, distance columns) has this component with the same index.
+/// The `update_navigation_menu_selection_system` uses this to update the
+/// background color for the selected row without despawning the entire menu.
+#[derive(Component)]
+pub struct NavMenuRowBackground {
+    /// Index of the entry in the navigation list this row corresponds to.
+    pub index: usize,
+}

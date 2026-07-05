@@ -22,6 +22,7 @@ use bevy::prelude::*;
 use bevy::ui::{GridPlacement, GridTrack};
 
 use super::components::NavigationMenuRoot;
+use super::distance_format::format_distance;
 use crate::window::{UiTheme, WindowConfig, spawn_window};
 
 /// Spawns the navigation menu window.
@@ -106,11 +107,7 @@ fn navigation_menu_content(
     .with_children(|grid| {
         // Spawn entries
         for (index, entry) in list_data.iter().enumerate() {
-            let distance_str = if entry.distance < 1000.0 {
-                format!("{:.0} m", entry.distance)
-            } else {
-                format!("{:.1} km", entry.distance / 1000.0)
-            };
+            let distance_str = format_distance(entry.distance);
 
             // Get i18n'd entity type, fallback to the raw type string
             let entity_type_str = match entry.entity_type.as_str() {
@@ -145,6 +142,7 @@ fn navigation_menu_content(
                     ..default()
                 },
                 TextColor(UiTheme::LABEL_COLOR),
+                super::components::NavMenuRowBackground { index },
             ));
 
             // ID column
@@ -162,6 +160,7 @@ fn navigation_menu_content(
                     ..default()
                 },
                 TextColor(UiTheme::VALUE_COLOR),
+                super::components::NavMenuRowBackground { index },
             ));
 
             // Distance column
@@ -179,6 +178,8 @@ fn navigation_menu_content(
                     ..default()
                 },
                 TextColor(UiTheme::HINT_COLOR),
+                super::components::NavMenuDistanceText { index },
+                super::components::NavMenuRowBackground { index },
             ));
         }
 

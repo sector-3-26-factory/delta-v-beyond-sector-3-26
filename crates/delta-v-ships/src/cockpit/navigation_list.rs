@@ -68,6 +68,7 @@ fn rebuild_navigation_list(
 ) {
     // Get player position - find the player ship by checking all entities with Transform
     // We use the player_ship resource to identify which entity is the player
+    #[allow(clippy::expect_used)]
     let player_pos = targetable_query
         .iter()
         .find_map(|(entity, transform, _, _, _)| {
@@ -77,8 +78,7 @@ fn rebuild_navigation_list(
                 None
             }
         })
-        .unwrap_or(Vec3::ZERO);
-
+        .expect("PlayerShipEntity resource references an entity not found in targetable_query. This indicates the player ship is missing the Targetable component or the entity was despawned.");
     // Collect entries based on mode
     let mut entries: Vec<delta_v_core::NavEntry> = match targeting_mode.mode {
         TargetingModeType::Combat => targetable_query
@@ -276,6 +276,122 @@ pub fn update_selection_system(
                 selected_nav_object.0 = Some(first.entity);
             }
         }
+    }
+}
+
+/// Updates navigation list distances at fixed timestep while the menu is open.
+///
+/// Runs in `FixedUpdate` during `AppState::InGame` (60 Hz).
+/// Recalculates distances from player to all tracked entities and re-sorts
+/// the list if any distance changed significantly (>1m per tick).
+/// Emits `NavigationListChanged` when the list is re-sorted.
+///
+/// The 1.0m threshold is evaluated at fixed 60 Hz timestep, making the
+/// re-sort behavior deterministic regardless of render frame rate.
+///
+/// # Panics
+/// Panics if `PlayerShipEntity` resource references an entity not found in
+/// the `targetable_query` (i.e., player ship missing `Targetable` component
+/// or entity was despawned). This indicates a world definition or spawn bug.
+#[allow(
+    clippy::too_many_arguments,
+    clippy::needless_pass_by_value,
+    clippy::type_complexity,
+    clippy::missing_panics_doc
+)]
+pub fn update_navigation_list_distances_system(
+    player_ship: Res<'_, delta_v_core::PlayerShipEntity>,
+    targeting_mode: Res<'_, TargetingMode>,
+    mut list_data: ResMut<'_, NavigationListData>,
+    targetable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+        With<Targetable>,
+    >,
+    navigable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+    >,
+    mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
+) {
+    // Get player position
+    #[allow(clippy::expect_used)]
+    let player_pos = targetable_query
+        .iter()
+        .find_map(|(entity, transform, _, _, _)| {
+            if entity == player_ship.0 {
+                Some(transform.translation)
+            } else {
+                None
+            }
+        })
+        .expect("PlayerShipEntity resource references an entity not found in targetable_query. This indicates the player ship is missing the Targetable component or the entity was despawned.");
+
+    let mut any_distance_changed = false;
+
+    // Update distances for existing entries
+    for entry in &mut list_data.entries {
+        // Find the entity in the appropriate query
+        let new_distance = match targeting_mode.mode {
+            TargetingModeType::Combat => {
+                targetable_query
+                    .iter()
+                    .find_map(|(entity, transform, _, _, _)| {
+                        if entity == entry.entity {
+                            Some((transform.translation - player_pos).length())
+                        } else {
+                            None
+                        }
+                    })
+            }
+            TargetingModeType::Nav => {
+                navigable_query
+                    .iter()
+                    .find_map(|(entity, transform, _, _, _)| {
+                        if entity == entry.entity {
+                            Some((transform.translation - player_pos).length())
+                        } else {
+                            None
+                        }
+                    })
+            }
+        };
+
+        if let Some(new_distance) = new_distance {
+            // Check if distance changed significantly (more than 1 meter)
+            if (entry.distance - new_distance).abs() > 1.0 {
+                entry.distance = new_distance;
+                any_distance_changed = true;
+            }
+        }
+    }
+
+    // Re-sort by distance if any changed
+    if any_distance_changed {
+        list_data.entries.sort_by(|a, b| {
+            a.distance
+                .partial_cmp(&b.distance)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        nav_list_events.write(NavigationListChanged);
+        tracing::debug!(
+            "[nav_list] distances updated and re-sorted ({} entries)",
+            list_data.entries.len()
+        );
     }
 }
 

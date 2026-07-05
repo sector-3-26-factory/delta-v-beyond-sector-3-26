@@ -25,11 +25,13 @@ use bevy::prelude::*;
 use delta_v_core::AppState;
 
 pub mod components;
+pub mod distance_format;
 pub mod resources;
 pub mod spawn;
 pub mod systems;
 
 pub use components::*;
+pub use distance_format::format_distance;
 pub use resources::NavigationMenuOpen;
 
 /// Plugin for navigation menu systems.
@@ -48,6 +50,10 @@ impl Plugin for NavigationMenuPlugin {
         app.add_systems(
             Update,
             systems::navigation_menu_selection_refresh_system.run_if(in_state(AppState::InGame)),
+        );
+        app.add_systems(
+            Update,
+            systems::update_navigation_menu_distances_system.run_if(in_state(AppState::InGame)),
         );
     }
 }

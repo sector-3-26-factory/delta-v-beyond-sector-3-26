@@ -24,7 +24,8 @@ use delta_v_core::events::{NavigationListChanged, TargetSelected};
 use delta_v_types::LogicalAction;
 use leafwing_input_manager::prelude::ActionState;
 
-use super::components::NavigationMenuRoot;
+use super::components::{NavMenuDistanceText, NavMenuRowBackground, NavigationMenuRoot};
+use super::distance_format::format_distance;
 use super::resources::NavigationMenuOpen;
 use super::spawn::spawn_navigation_menu;
 use crate::window::UiTheme;
@@ -84,24 +85,20 @@ pub fn navigation_menu_toggle_system(
     }
 }
 
-/// Refreshes the navigation menu when the selected target changes.
+/// Updates the selection highlight in the navigation menu when the selected target changes.
 ///
 /// Runs in `Update` during `AppState::InGame`.
-/// Processes `TargetSelected` events and re-spawns the menu
-/// if it is currently open, ensuring the selection highlight is updated.
+/// Processes `TargetSelected` events and updates the background color of the
+/// selected row directly without despawning the entire menu.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn navigation_menu_selection_refresh_system(
-    mut commands: Commands<'_, '_>,
-    mut menu_open: ResMut<'_, NavigationMenuOpen>,
-    query: Query<'_, '_, Entity, With<NavigationMenuRoot>>,
-    asset_server: Res<'_, AssetServer>,
-    theme: Res<'_, UiTheme>,
-    i18n: Res<'_, I18n>,
+    menu_open: Res<'_, NavigationMenuOpen>,
     list_data: Res<'_, delta_v_core::NavigationListData>,
     selected_target: Res<'_, delta_v_core::navigation::SelectedTarget>,
     selected_nav_object: Res<'_, delta_v_core::navigation::SelectedNavObject>,
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
     mut events: MessageReader<'_, '_, TargetSelected>,
+    mut row_bg_query: Query<'_, '_, (&mut BackgroundColor, &NavMenuRowBackground)>,
 ) {
     // Only process if there's a target selection change event
     let Some(_event) = events.read().next() else {
@@ -113,35 +110,36 @@ pub fn navigation_menu_selection_refresh_system(
         menu_open.0
     );
 
-    // Menu is open - despawn and re-spawn with updated selection highlight
-    if menu_open.0 {
-        if let Ok(entity) = query.single() {
-            commands.entity(entity).despawn();
-        }
-        menu_open.0 = false;
-
-        // Re-open the menu with refreshed selection highlight
-        let title = &i18n.ui.menu.navigation.title;
-        let hint = &i18n.ui.menu.navigation.close;
-        spawn_navigation_menu(
-            &mut commands,
-            &asset_server,
-            &theme,
-            &i18n,
-            title,
-            hint,
-            &list_data.entries,
-            selected_target.0,
-            selected_nav_object.0,
-            targeting_mode.mode,
-        );
-        menu_open.0 = true;
-        tracing::debug!("[navigation_menu] refreshed after target selection change");
-    } else {
+    // Only update if menu is open
+    if !menu_open.0 {
         tracing::debug!(
             "[navigation_menu] target selection change event received but menu is closed"
         );
+        return;
     }
+
+    // Determine which entity is currently selected based on targeting mode
+    let selected_entity = match targeting_mode.mode {
+        delta_v_core::navigation::TargetingModeType::Combat => selected_target.0,
+        delta_v_core::navigation::TargetingModeType::Nav => selected_nav_object.0,
+    };
+
+    // Update background color for all row background entities
+    for (mut bg_color, marker) in &mut row_bg_query {
+        let is_selected = selected_entity.is_some_and(|e| {
+            list_data
+                .entries
+                .get(marker.index)
+                .is_some_and(|entry| entry.entity == e)
+        });
+        bg_color.0 = if is_selected {
+            UiTheme::SELECTED_ROW_COLOR
+        } else {
+            Color::NONE
+        };
+    }
+
+    tracing::debug!("[navigation_menu] updated selection highlight");
 }
 
 /// Refreshes the navigation menu content when the navigation list changes.
@@ -201,5 +199,29 @@ pub fn navigation_menu_refresh_system(
         tracing::debug!(
             "[navigation_menu] navigation list change event received but menu is closed"
         );
+    }
+}
+
+/// Updates the distance text in the navigation menu every frame.
+///
+/// Runs in `Update` during `AppState::InGame`.
+/// Only runs when the menu is open. Updates the distance text for each
+/// entry by reading the current `NavigationListData` and updating the
+/// corresponding `NavMenuDistanceText` entities.
+#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+pub fn update_navigation_menu_distances_system(
+    menu_open: Res<'_, NavigationMenuOpen>,
+    list_data: Res<'_, delta_v_core::NavigationListData>,
+    mut distance_text_query: Query<'_, '_, (&mut Text, &NavMenuDistanceText)>,
+) {
+    // Only update if menu is open
+    if !menu_open.0 {
+        return;
+    }
+
+    for (mut text, marker) in &mut distance_text_query {
+        if let Some(entry) = list_data.entries.get(marker.index) {
+            text.0 = format_distance(entry.distance);
+        }
     }
 }
