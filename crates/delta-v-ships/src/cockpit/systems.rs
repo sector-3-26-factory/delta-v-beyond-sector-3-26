@@ -1122,8 +1122,122 @@ pub fn bearing_indicator_system(
 /// Updates the on-screen reticle for the selected target.
 ///
 /// Shows a bracket/circle around the target when it's on-screen.
-#[allow(clippy::missing_const_for_fn)]
-pub fn target_reticle_system(_selected_target: Res<'_, SelectedTarget>) {
-    // TODO: Implement reticle logic
-    // This requires projecting the target's 3D position to 2D screen coordinates.
+/// Hides the reticle when no target is selected or when the target is off-screen.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::type_complexity
+)]
+pub fn target_reticle_system(
+    selected_target: Res<'_, SelectedTarget>,
+    selected_nav_object: Res<'_, SelectedNavObject>,
+    targeting_mode: Res<'_, super::components::TargetingMode>,
+    active_camera: Res<'_, ActiveCameraName>,
+    camera_query: Query<'_, '_, (&Camera, &CameraName, &GlobalTransform), With<Camera3d>>,
+    entity_query: Query<'_, '_, &GlobalTransform>,
+    mut reticle_query: Query<
+        '_,
+        '_,
+        (&mut Transform, &mut Visibility),
+        With<super::components::TargetReticle>,
+    >,
+    window_query: Query<'_, '_, &Window>,
+) {
+    // Constants for screen margins
+    const MARGIN: f32 = 50.0;
+
+    let _span = tracing::info_span!("delta_v_ships::target_reticle_system").entered();
+
+    // Determine which entity to track based on targeting mode
+    let target_entity = match targeting_mode.mode {
+        super::components::TargetingModeType::Combat => selected_target.0,
+        super::components::TargetingModeType::Nav => selected_nav_object.0,
+    };
+
+    let Some(target_entity) = target_entity else {
+        // No target selected - hide reticle
+        if let Ok((_, mut visibility)) = reticle_query.single_mut()
+            && *visibility != Visibility::Hidden
+        {
+            *visibility = Visibility::Hidden;
+        }
+        return;
+    };
+
+    // Get target world position
+    let Ok(target_transform) = entity_query.get(target_entity) else {
+        // Target entity doesn't exist or has no transform - hide reticle
+        if let Ok((_, mut visibility)) = reticle_query.single_mut()
+            && *visibility != Visibility::Hidden
+        {
+            *visibility = Visibility::Hidden;
+        }
+        return;
+    };
+
+    // Find the active camera and project target position to viewport
+    let mut reticle_hidden = true;
+
+    for (camera, camera_name, camera_transform) in &camera_query {
+        if camera_name.0 != active_camera.0 {
+            continue;
+        }
+
+        // Project target position to viewport
+        if let Ok(viewport_pos) =
+            camera.world_to_viewport(camera_transform, target_transform.translation())
+        {
+            let Ok(window) = window_query.single() else {
+                return;
+            };
+
+            let screen_width = window.width();
+            let screen_height = window.height();
+
+            // Check if target is on screen (with margin)
+            let on_screen = viewport_pos.x >= MARGIN
+                && viewport_pos.x <= screen_width - MARGIN
+                && viewport_pos.y >= MARGIN
+                && viewport_pos.y <= screen_height - MARGIN;
+
+            if let Ok((mut transform, mut visibility)) = reticle_query.single_mut() {
+                if on_screen {
+                    // Target is on screen - show reticle at screen position
+                    *visibility = Visibility::Visible;
+
+                    // Convert viewport position to UI coordinates (center = 0,0)
+                    let ui_x = viewport_pos.x - screen_width / 2.0;
+                    let ui_y = screen_height / 2.0 - viewport_pos.y;
+
+                    transform.translation = Vec3::new(ui_x, ui_y, 0.0);
+                    transform.rotation = Quat::default();
+                    transform.scale = Vec3::splat(1.0);
+
+                    tracing::debug!(
+                        "[reticle] target={:?} viewport=({:.1},{:.1}) ui_pos=({:.1},{:.1})",
+                        target_entity,
+                        viewport_pos.x,
+                        viewport_pos.y,
+                        ui_x,
+                        ui_y
+                    );
+                    reticle_hidden = false;
+                } else {
+                    // Target is off screen - hide reticle (bearing indicator handles this)
+                    if *visibility != Visibility::Hidden {
+                        *visibility = Visibility::Hidden;
+                    }
+                }
+            }
+            break;
+        }
+    }
+
+    // Hide reticle if camera not found or viewport projection failed
+    if reticle_hidden
+        && let Ok((_, mut visibility)) = reticle_query.single_mut()
+        && *visibility != Visibility::Hidden
+    {
+        *visibility = Visibility::Hidden;
+    }
 }

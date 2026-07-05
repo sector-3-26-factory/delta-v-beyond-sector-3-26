@@ -28,6 +28,7 @@ use super::ActiveCockpitStation;
 use super::components::CircularGaugeNeedle;
 use super::components::SpeedText;
 use super::components::StatusGauge;
+use super::components::TargetReticle;
 use super::components::VelocityVectorIndicator;
 use super::velocity_indicator::create_arrow_image;
 
@@ -629,6 +630,79 @@ pub fn create_bearing_indicator_image(pixel_size: f32) -> Image {
     )
 }
 
+/// Creates a reticle/bracket image for the target indicator.
+///
+/// A simple bracket shape that points to the center of the target.
+/// Designed to be centered on the target's screen position.
+///
+/// # Arguments
+/// * `pixel_size` - Size of the image in pixels (square image will be created)
+pub fn create_target_reticle_image(pixel_size: f32) -> Image {
+    #![allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    use bevy::asset::RenderAssetUsages;
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+
+    let size = pixel_size as usize;
+    let center = size as f32 / 2.0;
+    let arm_length = center * 0.6; // Length of each arm from center
+    let line_width = 3.0; // Thickness of the bracket lines
+
+    let mut data = vec![0u8; size * size * 4];
+
+    for y in 0..size {
+        for x in 0..size {
+            let idx = (y * size + x) * 4;
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+
+            // Check if pixel is part of the bracket
+            // Top arm: horizontal line at y = -arm_length
+            let top_arm = dy >= -arm_length - line_width / 2.0
+                && dy <= -arm_length + line_width / 2.0
+                && dx.abs() <= arm_length;
+            // Bottom arm: horizontal line at y = arm_length
+            let bottom_arm = dy >= arm_length - line_width / 2.0
+                && dy <= arm_length + line_width / 2.0
+                && dx.abs() <= arm_length;
+            // Left arm: vertical line at x = -arm_length
+            let left_arm = dx >= -arm_length - line_width / 2.0
+                && dx <= -arm_length + line_width / 2.0
+                && dy.abs() <= arm_length;
+            // Right arm: vertical line at x = arm_length
+            let right_arm = dx >= arm_length - line_width / 2.0
+                && dx <= arm_length + line_width / 2.0
+                && dy.abs() <= arm_length;
+
+            if top_arm || bottom_arm || left_arm || right_arm {
+                // White bracket
+                *data.get_mut(idx).unwrap_or(&mut 0) = 255;
+                *data.get_mut(idx + 1).unwrap_or(&mut 0) = 255;
+                *data.get_mut(idx + 2).unwrap_or(&mut 0) = 255;
+                *data.get_mut(idx + 3).unwrap_or(&mut 0) = 255;
+            } else {
+                // Transparent
+                *data.get_mut(idx + 3).unwrap_or(&mut 0) = 0;
+            }
+        }
+    }
+
+    Image::new(
+        Extent3d {
+            width: size as u32,
+            height: size as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    )
+}
+
 /// Spawns the bearing indicator as a Sprite on the `CockpitForeground` render layer.
 ///
 /// The bearing indicator is an arrow that appears at the screen edge pointing
@@ -654,4 +728,30 @@ pub fn spawn_bearing_indicator(mut commands: Commands<'_, '_>, asset_server: Res
     ));
 
     tracing::info!("bearing indicator spawned");
+}
+
+/// Spawns the target reticle as a Sprite on the `CockpitForeground` render layer.
+///
+/// The reticle is a bracket/circle that appears around the selected target when
+/// it's on-screen. It starts hidden and is shown/hidden by the `target_reticle_system`.
+///
+/// Runs during `OnEnter(AppState::InGame)`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn spawn_target_reticle(mut commands: Commands<'_, '_>, asset_server: Res<'_, AssetServer>) {
+    let reticle_image = create_target_reticle_image(64.0);
+    let reticle_handle = asset_server.add(reticle_image);
+
+    // Use CockpitForeground layer (layer 2) to render on top of UI layer (layer 1).
+    commands.spawn((
+        Sprite {
+            image: reticle_handle,
+            ..default()
+        },
+        Transform::default(),
+        RenderLayer::CockpitForeground.render_layers(),
+        Visibility::Hidden,
+        TargetReticle,
+    ));
+
+    tracing::info!("target reticle spawned");
 }
