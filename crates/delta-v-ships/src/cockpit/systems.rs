@@ -21,13 +21,17 @@
 use bevy::prelude::*;
 
 use delta_v_core::input::ActionState;
-use delta_v_core::{ActiveCameraName, CameraName, CameraSwitched, Health, I18n, PlayerShipEntity};
+use delta_v_core::{
+    ActiveCameraName, CameraName, CameraSwitched, EntityType, Health, I18n, PlayerShipEntity,
+    TargetSelected, WorldEntityId,
+};
 use delta_v_physics::RigidBody;
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
 use super::components::CircularGaugeNeedle;
 use super::components::CockpitOverlay;
+use super::components::SelectedNavObject;
 use super::components::SelectedTarget;
 use super::components::SpeedText;
 use super::components::StatusGauge;
@@ -809,12 +813,42 @@ pub fn targeting_mode_toggle_system(
 /// Runs in `Update` during `AppState::InGame`.
 /// `T` key: selects next target (closest to the right in sorted list).
 /// `ShiftLeft + T` key: selects previous target.
-#[allow(clippy::needless_pass_by_value)]
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::manual_let_else
+)]
 pub fn cycle_target_system(
     player_ship: Res<'_, PlayerShipEntity>,
     mut selected_target: ResMut<'_, SelectedTarget>,
+    mut selected_nav_object: ResMut<'_, SelectedNavObject>,
+    targeting_mode: Res<'_, super::components::TargetingMode>,
     action_state: Res<'_, ActionState<LogicalAction>>,
-    query: Query<'_, '_, (Entity, &Transform), With<Targetable>>,
+    targetable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+        With<Targetable>,
+    >,
+    navigable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+        ),
+    >,
+    mut events: MessageWriter<'_, TargetSelected>,
 ) {
     let is_next = action_state.just_pressed(&LogicalAction::CycleTargetNext);
     let is_prev = action_state.just_pressed(&LogicalAction::CycleTargetPrev);
@@ -823,40 +857,70 @@ pub fn cycle_target_system(
         return;
     }
 
-    // Collect all targetable entities with their distances from player
-    let Some(player_pos) = query.iter().find_map(|(entity, transform)| {
-        if entity == player_ship.0 {
-            Some(transform.translation)
-        } else {
-            None
-        }
-    }) else {
+    // Get player position
+    let Some(player_pos) = targetable_query
+        .iter()
+        .find_map(|(entity, transform, _, _, _)| {
+            if entity == player_ship.0 {
+                Some(transform.translation)
+            } else {
+                None
+            }
+        })
+    else {
         return;
     };
 
-    // Collect all targetable entities (excluding player) with their distances
-    let mut targets: Vec<(Entity, f32)> = query
-        .iter()
-        .filter_map(|(entity, transform)| {
-            if entity == player_ship.0 {
-                return None;
-            }
-            let distance = (transform.translation - player_pos).length();
-            Some((entity, distance))
-        })
-        .collect();
-
-    // Sort by distance
-    targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    // Determine which query to use based on targeting mode
+    let (targets, selected_resource, mode) = match targeting_mode.mode {
+        super::components::TargetingModeType::Combat => {
+            let mut targets: Vec<(Entity, f32, String, String)> = targetable_query
+                .iter()
+                .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+                    if entity == player_ship.0 {
+                        return None;
+                    }
+                    let distance = (transform.translation - player_pos).length();
+                    let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
+                    Some((entity, distance, name_str, entity_type.0.clone()))
+                })
+                .collect();
+            targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+            (
+                targets,
+                &mut selected_target.0,
+                super::components::TargetingModeType::Combat,
+            )
+        }
+        super::components::TargetingModeType::Nav => {
+            let mut targets: Vec<(Entity, f32, String, String)> = navigable_query
+                .iter()
+                .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+                    if entity == player_ship.0 {
+                        return None;
+                    }
+                    let distance = (transform.translation - player_pos).length();
+                    let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
+                    Some((entity, distance, name_str, entity_type.0.clone()))
+                })
+                .collect();
+            targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+            (
+                targets,
+                &mut selected_nav_object.0,
+                super::components::TargetingModeType::Nav,
+            )
+        }
+    };
 
     if targets.is_empty() {
         return;
     }
 
     // Find current selection index
-    let current_idx = selected_target
-        .0
-        .and_then(|current| targets.iter().position(|(e, _)| *e == current))
+    let current_idx = selected_resource
+        .as_ref()
+        .and_then(|current| targets.iter().position(|(e, _, _, _)| e == current))
         .unwrap_or(0);
 
     // Select next or previous
@@ -866,14 +930,36 @@ pub fn cycle_target_system(
         (current_idx + targets.len() - 1) % targets.len()
     };
 
-    let Some((new_target, distance)) = targets.get(new_idx) else {
+    let Some((new_target, distance, name_str, entity_type_str)) = targets.get(new_idx) else {
         return;
     };
     let new_target = *new_target;
-    selected_target.0 = Some(new_target);
+    *selected_resource = Some(new_target);
+
+    // Emit TargetSelected event for notification
+    let event_mode = match mode {
+        super::components::TargetingModeType::Combat => {
+            delta_v_core::navigation::TargetingModeType::Combat
+        }
+        super::components::TargetingModeType::Nav => {
+            delta_v_core::navigation::TargetingModeType::Nav
+        }
+    };
     tracing::debug!(
-        "[targeting] selected target {:?} (distance: {:.1}m)",
+        "[targeting] emitting TargetSelected event: target={:?} mode={:?}",
         new_target,
+        event_mode
+    );
+    events.write(TargetSelected {
+        target: new_target,
+        mode: event_mode,
+    });
+
+    tracing::debug!(
+        "[targeting] selected target {:?} '{}' ({}) (distance: {:.1}m)",
+        new_target,
+        name_str,
+        entity_type_str,
         distance
     );
 }
@@ -881,14 +967,156 @@ pub fn cycle_target_system(
 /// Updates bearing indicator visibility and position.
 ///
 /// Shows an arrow at screen edge pointing to the selected target when off-screen.
-#[allow(clippy::missing_const_for_fn)]
+/// The arrow is positioned at the edge of the screen and rotated to point toward
+/// the target's direction. Hidden when the target is on-screen or no target is selected.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::type_complexity
+)]
 pub fn bearing_indicator_system(
-    _selected_target: Res<'_, SelectedTarget>,
-    _active_camera: Res<'_, ActiveCameraName>,
+    selected_target: Res<'_, SelectedTarget>,
+    selected_nav_object: Res<'_, SelectedNavObject>,
+    targeting_mode: Res<'_, super::components::TargetingMode>,
+    active_camera: Res<'_, ActiveCameraName>,
+    camera_query: Query<'_, '_, (&Camera, &CameraName, &GlobalTransform), With<Camera3d>>,
+    entity_query: Query<'_, '_, &GlobalTransform>,
+    mut indicator_query: Query<
+        '_,
+        '_,
+        (&mut Transform, &mut Visibility),
+        With<super::components::BearingIndicator>,
+    >,
+    window_query: Query<'_, '_, &Window>,
 ) {
-    // TODO: Implement bearing indicator logic
-    // This requires projecting the target position to screen space
-    // and computing the edge position and rotation.
+    // Constants for screen margins
+    const MARGIN: f32 = 50.0;
+    const EDGE_MARGIN: f32 = 80.0;
+
+    let _span = tracing::info_span!("delta_v_ships::bearing_indicator_system").entered();
+
+    // Determine which entity to track based on targeting mode
+    let target_entity = match targeting_mode.mode {
+        super::components::TargetingModeType::Combat => selected_target.0,
+        super::components::TargetingModeType::Nav => selected_nav_object.0,
+    };
+
+    let Some(target_entity) = target_entity else {
+        // No target selected - hide indicator
+        if let Ok((_, mut visibility)) = indicator_query.single_mut()
+            && *visibility != Visibility::Hidden
+        {
+            *visibility = Visibility::Hidden;
+        }
+        return;
+    };
+
+    // Get target world position
+    let Ok(target_transform) = entity_query.get(target_entity) else {
+        // Target entity doesn't exist or has no transform - hide indicator
+        if let Ok((_, mut visibility)) = indicator_query.single_mut()
+            && *visibility != Visibility::Hidden
+        {
+            *visibility = Visibility::Hidden;
+        }
+        return;
+    };
+
+    // Find the active camera (query for Camera + CameraName + GlobalTransform)
+    let camera_query_with_name: Query<
+        '_,
+        '_,
+        (&Camera, &CameraName, &GlobalTransform),
+        With<Camera3d>,
+    > = camera_query;
+
+    // Find the camera matching the active camera name
+    let mut active_camera_found = false;
+    for (camera, camera_name, camera_transform) in &camera_query_with_name {
+        if camera_name.0 == active_camera.0 {
+            active_camera_found = true;
+
+            // Project target position to viewport
+            if let Ok(viewport_pos) =
+                camera.world_to_viewport(camera_transform, target_transform.translation())
+            {
+                let Ok(window) = window_query.single() else {
+                    return;
+                };
+
+                let screen_width = window.width();
+                let screen_height = window.height();
+
+                // Check if target is on screen (with some margin)
+                let on_screen = viewport_pos.x >= MARGIN
+                    && viewport_pos.x <= screen_width - MARGIN
+                    && viewport_pos.y >= MARGIN
+                    && viewport_pos.y <= screen_height - MARGIN;
+
+                if let Ok((mut transform, mut visibility)) = indicator_query.single_mut() {
+                    if on_screen {
+                        // Target is on screen - hide bearing indicator
+                        if *visibility != Visibility::Hidden {
+                            *visibility = Visibility::Hidden;
+                        }
+                    } else {
+                        // Target is off screen - show bearing indicator at screen edge
+                        *visibility = Visibility::Visible;
+
+                        // Compute direction from screen center to target
+                        let center_x = screen_width / 2.0;
+                        let center_y = screen_height / 2.0;
+                        let dir_x = viewport_pos.x - center_x;
+                        let dir_y = viewport_pos.y - center_y;
+
+                        // Compute angle (0 = up, positive = clockwise)
+                        // Screen coordinates have Y down, but atan2 expects Y up.
+                        // Negate dir_y to convert from screen to math coordinates.
+                        let angle = (-dir_y).atan2(dir_x) - std::f32::consts::FRAC_PI_2;
+
+                        // Position at screen edge
+                        // Clamp to screen bounds with margin
+                        let edge_x = viewport_pos
+                            .x
+                            .clamp(EDGE_MARGIN, screen_width - EDGE_MARGIN);
+                        let edge_y = viewport_pos
+                            .y
+                            .clamp(EDGE_MARGIN, screen_height - EDGE_MARGIN);
+
+                        // Convert to UI coordinates (center = 0,0)
+                        // UI coordinates: X right, Y up
+                        // Screen coordinates: X right, Y down
+                        let ui_x = edge_x - center_x;
+                        let ui_y = center_y - edge_y;
+
+                        transform.translation = Vec3::new(ui_x, ui_y, 0.0);
+                        transform.rotation = Quat::from_rotation_z(angle);
+                        transform.scale = Vec3::splat(1.0);
+
+                        tracing::debug!(
+                            "[bearing] target={:?} viewport=({:.1},{:.1}) edge=({:.1},{:.1}) angle={:.2}",
+                            target_entity,
+                            viewport_pos.x,
+                            viewport_pos.y,
+                            edge_x,
+                            edge_y,
+                            angle
+                        );
+                    }
+                }
+            }
+            break;
+        }
+    }
+
+    if !active_camera_found {
+        // Active camera not found - hide indicator
+        if let Ok((_, mut visibility)) = indicator_query.single_mut()
+            && *visibility != Visibility::Hidden
+        {
+            *visibility = Visibility::Hidden;
+        }
+    }
 }
 
 /// Updates the on-screen reticle for the selected target.

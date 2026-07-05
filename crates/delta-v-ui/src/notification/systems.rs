@@ -8,6 +8,7 @@ use crate::window::{WindowAnimation, WindowAnimationFlickerPhase};
 
 use super::components::Notification;
 use super::resources::NotificationStack;
+use delta_v_core::{EntityType, WorldEntityId};
 
 /// Despawns notification entities whose animation has finished.
 ///
@@ -78,6 +79,76 @@ pub fn notification_spawn_system(
         tracing::debug!(
             "[notification] spawning camera switch notification: '{}'",
             message
+        );
+
+        super::spawn::spawn_notification(
+            &mut commands,
+            &config,
+            &mut stack,
+            message,
+            &theme,
+            &asset_server,
+        );
+    }
+}
+
+/// Listens for `TargetSelected` messages and spawns notification windows.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::literal_string_with_formatting_args,
+    clippy::too_many_arguments
+)]
+pub fn target_selected_notification_system(
+    mut events: MessageReader<'_, '_, delta_v_core::TargetSelected>,
+    i18n: Res<'_, delta_v_core::I18n>,
+    config: Res<'_, super::resources::NotificationConfig>,
+    mut stack: ResMut<'_, NotificationStack>,
+    theme: Res<'_, crate::window::theme::UiTheme>,
+    asset_server: Res<'_, AssetServer>,
+    mut commands: Commands<'_, '_>,
+    entity_query: Query<'_, '_, (Option<&Name>, &EntityType, &WorldEntityId)>,
+) {
+    let events_vec: Vec<_> = events.read().collect();
+    if !events_vec.is_empty() {
+        tracing::debug!(
+            "[notification] received {} TargetSelected event(s)",
+            events_vec.len()
+        );
+    }
+    for event in events_vec {
+        tracing::debug!(
+            "[notification] processing TargetSelected event: target={:?} mode={:?}",
+            event.target,
+            event.mode
+        );
+        // Get entity info for the notification
+        let (name_str, entity_type_str) = match entity_query.get(event.target) {
+            Ok((name, entity_type, entity_id)) => {
+                let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
+                (name_str, entity_type.0.clone())
+            }
+            Err(_) => ("Unknown".to_string(), "Unknown".to_string()),
+        };
+
+        let message = match event.mode {
+            delta_v_core::navigation::TargetingModeType::Combat => i18n
+                .ui
+                .notification
+                .target_selected
+                .replace("{entity_id}", &name_str)
+                .replace("{entity_type}", &entity_type_str),
+            delta_v_core::navigation::TargetingModeType::Nav => i18n
+                .ui
+                .notification
+                .nav_object_selected
+                .replace("{entity_id}", &name_str)
+                .replace("{entity_type}", &entity_type_str),
+        };
+
+        tracing::debug!(
+            "[notification] spawning target selected notification: '{}' (mode={:?})",
+            message,
+            event.mode
         );
 
         super::spawn::spawn_notification(

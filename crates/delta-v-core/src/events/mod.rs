@@ -171,3 +171,15 @@ pub struct TargetingModeChanged {
 /// list entries. The navigation menu UI listens for this to refresh its content.
 #[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NavigationListChanged;
+
+/// Event emitted when the selected target changes.
+///
+/// Emitted by `cycle_target_system` when the player cycles to a new target.
+/// The notification system listens for this to show a notification.
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TargetSelected {
+    /// The newly selected target entity.
+    pub target: Entity,
+    /// The targeting mode when the target was selected.
+    pub mode: super::navigation::TargetingModeType,
+}

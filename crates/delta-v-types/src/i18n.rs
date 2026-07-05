@@ -144,4 +144,12 @@ pub struct NotificationTranslations {
     pub targeting_mode_name: TargetingModeNameTranslations,
     /// Camera name translations.
     pub camera_name: std::collections::HashMap<String, String>,
+    /// Target selected notification template. Use `{entity_id}` and `{entity_type}` as placeholders.
+    pub target_selected: String,
+    /// Nav object selected notification template. Use `{entity_id}` and `{entity_type}` as placeholders.
+    pub nav_object_selected: String,
+    /// No targets available notification.
+    pub no_targets: String,
+    /// No nav objects available notification.
+    pub no_nav_objects: String,
 }

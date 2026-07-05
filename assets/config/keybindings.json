@@ -97,6 +97,11 @@
         "KeyN"
       ]
     },
+    "toggle_keybindings_menu": {
+      "keyboard": [
+        "F1"
+      ]
+    },
     "cycle_target_next": {
       "keyboard": [
         "KeyT"

@@ -19,8 +19,8 @@ fn test_logical_action_str_keys_are_unique() {
 fn test_logical_action_all_count() {
     assert_eq!(
         LogicalAction::all().len(),
-        22,
-        "expected 22 LogicalAction variants"
+        23,
+        "expected 23 LogicalAction variants"
     );
 }
 
@@ -46,6 +46,7 @@ fn test_logical_action_str_keys_match_expected() {
         "camera_switch_next",
         "camera_switch_prev",
         "toggle_navigation_menu",
+        "toggle_keybindings_menu",
         "cycle_target_next",
         "cycle_target_prev",
         "toggle_targeting_mode",

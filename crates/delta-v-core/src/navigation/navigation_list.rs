@@ -68,3 +68,21 @@ pub struct NavigationListData {
     /// List of entries, sorted by distance.
     pub entries: Vec<NavEntry>,
 }
+
+/// Resource holding the currently selected target entity (Combat mode).
+///
+/// The target reticle will appear around this entity when it's on-screen.
+/// The navigation menu highlights this entity's row.
+/// Updated by `delta-v-ships` when the player cycles targets.
+/// Read by `delta-v-ui` to highlight the selected row.
+#[derive(Resource, Default)]
+pub struct SelectedTarget(pub Option<Entity>);
+
+/// Resource holding the currently selected navigation object entity (Nav mode).
+///
+/// Used in Nav mode for navigation purposes.
+/// The navigation menu highlights this entity's row.
+/// Updated by `delta-v-ships` when the player cycles nav objects.
+/// Read by `delta-v-ui` to highlight the selected row.
+#[derive(Resource, Default)]
+pub struct SelectedNavObject(pub Option<Entity>);

@@ -105,26 +105,12 @@ pub struct Targetable;
 #[derive(Component)]
 pub struct Navigable;
 
-// EntityType and WorldEntityId are now defined in delta-v-core::navigation
+// EntityType, WorldEntityId, SelectedTarget, SelectedNavObject, TargetingMode, TargetingModeType
+// are now defined in delta-v-core::navigation
 // Re-export them for convenience
-pub use delta_v_core::{EntityType, WorldEntityId};
-
-/// Resource holding the currently selected target entity.
-///
-/// The target reticle will appear around this entity when it's on-screen.
-// allow-default: Bevy requires Default on resources for init_resource. Starts as None (no target selected).
-#[derive(Resource, Default)]
-pub struct SelectedTarget(pub Option<Entity>);
-
-/// Resource holding the currently selected navigation object entity.
-///
-/// Used in Nav mode for navigation purposes.
-// allow-default: Bevy requires Default on resources for init_resource. Starts as None (no nav object selected).
-#[derive(Resource, Default)]
-pub struct SelectedNavObject(pub Option<Entity>);
-
-/// Re-export `TargetingMode` and `TargetingModeType` from `delta_v_core`.
-pub use delta_v_core::{TargetingMode, TargetingModeType};
+pub use delta_v_core::navigation::{
+    EntityType, SelectedNavObject, SelectedTarget, TargetingMode, TargetingModeType, WorldEntityId,
+};
 
 /// Marker component for the bearing indicator arrow.
 ///

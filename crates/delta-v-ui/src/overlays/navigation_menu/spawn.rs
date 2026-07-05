@@ -28,6 +28,7 @@ use crate::window::{UiTheme, WindowConfig, spawn_window};
 ///
 /// Displays a list of navigable entities with type, ID, and distance.
 /// Key `N` toggles visibility.
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_navigation_menu(
     commands: &mut Commands<'_, '_>,
     asset_server: &Res<'_, AssetServer>,
@@ -36,6 +37,9 @@ pub fn spawn_navigation_menu(
     title: &str,
     hint: &str,
     list_data: &[delta_v_core::NavEntry],
+    selected_target: Option<Entity>,
+    selected_nav_object: Option<Entity>,
+    targeting_mode: delta_v_core::navigation::TargetingModeType,
 ) {
     let menu_root = spawn_window(
         commands,
@@ -47,7 +51,15 @@ pub fn spawn_navigation_menu(
         asset_server,
         theme,
         |ui| {
-            navigation_menu_content(ui, theme, i18n, list_data);
+            navigation_menu_content(
+                ui,
+                theme,
+                i18n,
+                list_data,
+                selected_target,
+                selected_nav_object,
+                targeting_mode,
+            );
         },
     );
 
@@ -63,12 +75,22 @@ pub fn spawn_navigation_menu(
 /// - Column 1: Entity type (i18n'd)
 /// - Column 2: Entity ID
 /// - Column 3: Distance from player
+#[allow(clippy::too_many_arguments)]
 fn navigation_menu_content(
     ui: &mut ChildSpawnerCommands<'_>,
     theme: &Res<'_, UiTheme>,
     i18n: &delta_v_core::I18n,
     list_data: &[delta_v_core::NavEntry],
+    selected_target: Option<Entity>,
+    selected_nav_object: Option<Entity>,
+    targeting_mode: delta_v_core::navigation::TargetingModeType,
 ) {
+    // Determine which entity is currently selected based on targeting mode
+    let selected_entity = match targeting_mode {
+        delta_v_core::navigation::TargetingModeType::Combat => selected_target,
+        delta_v_core::navigation::TargetingModeType::Nav => selected_nav_object,
+    };
+
     // Spawn the grid container with 3 columns
     ui.spawn((
         Name::new("NavListGrid"),
@@ -98,6 +120,16 @@ fn navigation_menu_content(
                 _ => entry.entity_type.clone(),
             };
 
+            // Check if this entry is the selected one
+            let is_selected = selected_entity.is_some_and(|e| e == entry.entity);
+
+            // Background color for selected row
+            let row_bg_color = if is_selected {
+                UiTheme::SELECTED_ROW_COLOR
+            } else {
+                Color::NONE
+            };
+
             // Type column
             grid.spawn((
                 Name::new(format!("Type_{index}")),
@@ -105,6 +137,7 @@ fn navigation_menu_content(
                     grid_column: GridPlacement::start(1),
                     ..default()
                 },
+                BackgroundColor(row_bg_color),
                 Text::new(&entity_type_str),
                 TextFont {
                     font: theme.font.clone(),
@@ -121,6 +154,7 @@ fn navigation_menu_content(
                     grid_column: GridPlacement::start(2),
                     ..default()
                 },
+                BackgroundColor(row_bg_color),
                 Text::new(&entry.entity_id),
                 TextFont {
                     font: theme.font.clone(),
@@ -137,6 +171,7 @@ fn navigation_menu_content(
                     grid_column: GridPlacement::start(3),
                     ..default()
                 },
+                BackgroundColor(row_bg_color),
                 Text::new(&distance_str),
                 TextFont {
                     font: theme.font.clone(),

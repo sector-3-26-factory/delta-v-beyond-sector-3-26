@@ -55,6 +55,7 @@ impl Plugin for CockpitPlugin {
                 OnEnter(AppState::InGame),
                 spawn::spawn_velocity_vector_indicator,
             )
+            .add_systems(OnEnter(AppState::InGame), spawn::spawn_bearing_indicator)
             .add_systems(
                 OnEnter(AppState::InGame),
                 spawn::spawn_status_gauges.after(spawn::spawn_cockpit_overlay),

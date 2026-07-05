@@ -45,5 +45,9 @@ impl Plugin for NavigationMenuPlugin {
             Update,
             systems::navigation_menu_refresh_system.run_if(in_state(AppState::InGame)),
         );
+        app.add_systems(
+            Update,
+            systems::navigation_menu_selection_refresh_system.run_if(in_state(AppState::InGame)),
+        );
     }
 }

@@ -569,3 +569,89 @@ pub fn create_circular_gauge_needle_image(pixel_size: f32) -> Image {
         RenderAssetUsages::default(),
     )
 }
+
+/// Creates a bearing indicator arrow texture.
+///
+/// The arrow points upward (0° = 12 o'clock) and is designed to be rotated
+/// to point toward off-screen targets. It's a simple triangle with a shaft.
+///
+/// # Arguments
+/// * `pixel_size` - Size of the image in pixels (square image will be created)
+pub fn create_bearing_indicator_image(pixel_size: f32) -> Image {
+    #![allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    use bevy::asset::RenderAssetUsages;
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+
+    let size = pixel_size as usize;
+    let center = size as f32 / 2.0;
+    let arrow_length = center * 0.8; // Arrow reaches near the outer edge
+    let arrow_width = center * 0.25; // Arrow head width
+
+    let mut data = vec![0u8; size * size * 4];
+
+    for y in 0..size {
+        for x in 0..size {
+            let idx = (y * size + x) * 4;
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+            let dist = dx.hypot(dy);
+
+            // Arrow is a triangle pointing up (negative y direction)
+            // Tip at (0, -arrow_length), base at y = 0
+            // Width increases linearly from 0 at tip to arrow_width at base
+            if dy <= 0.0 && dist <= arrow_length {
+                let max_width_at_y = arrow_width * (1.0 + dy / arrow_length) / 2.0;
+                if dx.abs() <= max_width_at_y {
+                    // Bright yellow/orange for visibility
+                    *data.get_mut(idx).unwrap_or(&mut 0) = 255;
+                    *data.get_mut(idx + 1).unwrap_or(&mut 0) = 200;
+                    *data.get_mut(idx + 2).unwrap_or(&mut 0) = 0;
+                    *data.get_mut(idx + 3).unwrap_or(&mut 0) = 255;
+                }
+            }
+        }
+    }
+
+    Image::new(
+        Extent3d {
+            width: size as u32,
+            height: size as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    )
+}
+
+/// Spawns the bearing indicator as a Sprite on the `CockpitForeground` render layer.
+///
+/// The bearing indicator is an arrow that appears at the screen edge pointing
+/// toward the selected target when it's off-screen. It starts hidden and is
+/// shown/hidden by the `bearing_indicator_system`.
+///
+/// Runs during `OnEnter(AppState::InGame)`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn spawn_bearing_indicator(mut commands: Commands<'_, '_>, asset_server: Res<'_, AssetServer>) {
+    let arrow_image = create_bearing_indicator_image(64.0);
+    let arrow_handle = asset_server.add(arrow_image);
+
+    // Use CockpitForeground layer (layer 2) to render on top of UI layer (layer 1).
+    commands.spawn((
+        Sprite {
+            image: arrow_handle,
+            ..default()
+        },
+        Transform::default(),
+        RenderLayer::CockpitForeground.render_layers(),
+        Visibility::Hidden,
+        super::components::BearingIndicator,
+    ));
+
+    tracing::info!("bearing indicator spawned");
+}

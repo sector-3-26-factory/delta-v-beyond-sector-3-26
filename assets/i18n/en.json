@@ -45,6 +45,7 @@
                     "camera_switch_next": "Switch Camera Next",
                     "camera_switch_prev": "Switch Camera Prev",
                     "toggle_navigation_menu": "Navigation",
+                    "toggle_keybindings_menu": "Keybindings",
                     "cycle_target_next": "Cycle Target Next",
                     "cycle_target_prev": "Cycle Target Prev",
                     "toggle_targeting_mode": "Toggle Navigation/Targeting"
@@ -96,7 +97,11 @@
                 "top": "Top",
                 "bottom": "Bottom",
                 "drone": "Drone"
-            }
+            },
+            "target_selected": "Target selected: {entity_id} ({entity_type})",
+            "nav_object_selected": "Nav object selected: {entity_id} ({entity_type})",
+            "no_targets": "No targets available",
+            "no_nav_objects": "No navigation objects available"
         }
     }
 }

@@ -188,7 +188,11 @@
                         "camera",
                         "targeting_mode",
                         "targeting_mode_name",
-                        "camera_name"
+                        "camera_name",
+                        "target_selected",
+                        "nav_object_selected",
+                        "no_targets",
+                        "no_nav_objects"
                     ],
                     "properties": {
                         "camera": {
@@ -224,6 +228,22 @@
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        },
+                        "target_selected": {
+                            "description": "Target selected notification template. Use `{entity_id}` and `{entity_type}` as placeholders.",
+                            "type": "string"
+                        },
+                        "nav_object_selected": {
+                            "description": "Nav object selected notification template. Use `{entity_id}` and `{entity_type}` as placeholders.",
+                            "type": "string"
+                        },
+                        "no_targets": {
+                            "description": "No targets available notification.",
+                            "type": "string"
+                        },
+                        "no_nav_objects": {
+                            "description": "No navigation objects available notification.",
+                            "type": "string"
                         }
                     }
                 }

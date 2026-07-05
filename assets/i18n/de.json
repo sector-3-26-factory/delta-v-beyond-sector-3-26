@@ -45,6 +45,7 @@
                     "camera_switch_next": "nächste Kamera",
                     "camera_switch_prev": "vorherige Kamera",
                     "toggle_navigation_menu": "Navigation",
+                    "toggle_keybindings_menu": "Tastenbelegung",
                     "cycle_target_next": "nächstes Ziel",
                     "cycle_target_prev": "vorheriges Ziel",
                     "toggle_targeting_mode": "Navigation/Targeting umschalten"
@@ -96,7 +97,11 @@
                 "top": "Oben",
                 "bottom": "Unten",
                 "drone": "Drohne"
-            }
+            },
+            "target_selected": "Ziel ausgewählt: {entity_id} ({entity_type})",
+            "nav_object_selected": "Nav-Objekt ausgewählt: {entity_id} ({entity_type})",
+            "no_targets": "Keine Ziele verfügbar",
+            "no_nav_objects": "Keine Navigationsobjekte verfügbar"
         }
     }
 }

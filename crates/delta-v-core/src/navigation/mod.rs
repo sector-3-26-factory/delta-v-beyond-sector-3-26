@@ -28,5 +28,7 @@
 pub mod navigation_list;
 pub mod targeting_mode;
 
-pub use navigation_list::{EntityType, NavEntry, NavigationListData, WorldEntityId};
+pub use navigation_list::{
+    EntityType, NavEntry, NavigationListData, SelectedNavObject, SelectedTarget, WorldEntityId,
+};
 pub use targeting_mode::{TargetingMode, TargetingModeType};

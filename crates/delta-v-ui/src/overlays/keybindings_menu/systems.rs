@@ -21,6 +21,8 @@
 use bevy::prelude::*;
 use delta_v_core::I18n;
 use delta_v_core::input::KeybindingsResource;
+use delta_v_types::LogicalAction;
+use leafwing_input_manager::prelude::ActionState;
 
 use super::components::KeybindingsMenuRoot;
 use super::resources::KeybindingsMenuOpen;
@@ -30,13 +32,13 @@ use crate::window::UiTheme;
 /// Toggles the keybindings menu open/closed when the player presses the key.
 ///
 /// Runs in `Update` during `AppState::InGame`.
-/// Checks for `F1` key press.
+/// Checks for `ToggleKeybindingsMenu` action via `InputMap`.
 /// When opening: spawns the menu UI.
 /// When closing: despawns the menu entity.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn keybindings_menu_toggle_system(
     mut commands: Commands<'_, '_>,
-    keyboard: Res<'_, ButtonInput<KeyCode>>,
+    action_state: Res<'_, ActionState<LogicalAction>>,
     mut menu_open: ResMut<'_, KeybindingsMenuOpen>,
     query: Query<'_, '_, Entity, With<KeybindingsMenuRoot>>,
     i18n: Res<'_, I18n>,
@@ -44,10 +46,10 @@ pub fn keybindings_menu_toggle_system(
     asset_server: Res<'_, AssetServer>,
     theme: Res<'_, UiTheme>,
 ) {
-    // Check if F1 is pressed
-    let f1_pressed = keyboard.just_pressed(KeyCode::F1);
+    // Check if ToggleKeybindingsMenu action is pressed
+    let toggle_pressed = action_state.just_pressed(&LogicalAction::ToggleKeybindingsMenu);
 
-    if !f1_pressed {
+    if !toggle_pressed {
         return;
     }
 

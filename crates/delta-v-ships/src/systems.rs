@@ -155,6 +155,7 @@ pub fn input_reader_system(
             | LogicalAction::CameraSwitchNext
             | LogicalAction::CameraSwitchPrev
             | LogicalAction::ToggleNavigationMenu
+            | LogicalAction::ToggleKeybindingsMenu
             | LogicalAction::CycleTargetNext
             | LogicalAction::CycleTargetPrev
             | LogicalAction::ToggleTargetingMode => {

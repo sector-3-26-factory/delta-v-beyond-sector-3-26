@@ -205,6 +205,7 @@ fn keybindings_menu_content(
                 LogicalAction::CameraSwitchNext,
                 LogicalAction::CameraSwitchPrev,
                 LogicalAction::ToggleNavigationMenu,
+                LogicalAction::ToggleKeybindingsMenu,
                 LogicalAction::CycleTargetNext,
                 LogicalAction::CycleTargetPrev,
                 LogicalAction::ToggleTargetingMode,

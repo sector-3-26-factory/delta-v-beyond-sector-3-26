@@ -64,7 +64,7 @@ pub use debug::{
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::{
-    CameraSwitched, FireWeapon, NavigationListChanged, ProjectileHit, SpawnEntity,
+    CameraSwitched, FireWeapon, NavigationListChanged, ProjectileHit, SpawnEntity, TargetSelected,
     TargetingModeChanged,
 };
 pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
@@ -118,6 +118,8 @@ impl Plugin for CorePlugin {
         app.add_message::<TargetingModeChanged>();
         // Initialize message channel for navigation list change events.
         app.add_message::<NavigationListChanged>();
+        // Initialize message channel for target selected events.
+        app.add_message::<TargetSelected>();
 
         // Initialize gizmo config with default render layer (will be updated dynamically).
         // The update_gizmo_render_layers system will set the correct layer based on active camera.
