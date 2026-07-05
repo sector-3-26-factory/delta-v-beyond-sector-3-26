@@ -76,7 +76,7 @@ pub fn spawn_navigation_menu(
 /// - Column 1: Entity type (i18n'd)
 /// - Column 2: Entity ID
 /// - Column 3: Distance from player
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn navigation_menu_content(
     ui: &mut ChildSpawnerCommands<'_>,
     theme: &Res<'_, UiTheme>,
@@ -143,6 +143,10 @@ fn navigation_menu_content(
                 },
                 TextColor(UiTheme::LABEL_COLOR),
                 super::components::NavMenuRowBackground { index },
+                super::components::NavMenuRowEntity {
+                    entity: entry.entity,
+                },
+                Interaction::default(),
             ));
 
             // ID column
@@ -161,6 +165,10 @@ fn navigation_menu_content(
                 },
                 TextColor(UiTheme::VALUE_COLOR),
                 super::components::NavMenuRowBackground { index },
+                super::components::NavMenuRowEntity {
+                    entity: entry.entity,
+                },
+                Interaction::default(),
             ));
 
             // Distance column
@@ -180,6 +188,10 @@ fn navigation_menu_content(
                 TextColor(UiTheme::HINT_COLOR),
                 super::components::NavMenuDistanceText { index },
                 super::components::NavMenuRowBackground { index },
+                super::components::NavMenuRowEntity {
+                    entity: entry.entity,
+                },
+                Interaction::default(),
             ));
         }
 

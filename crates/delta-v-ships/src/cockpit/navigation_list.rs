@@ -21,11 +21,12 @@
 //! Provides the player-controlled targeting & navigation list functionality.
 
 use bevy::prelude::*;
+use tracing::info_span;
 
 use super::components::SelectedNavObject;
 use super::components::SelectedTarget;
 use super::components::Targetable;
-use delta_v_core::events::NavigationListChanged;
+use delta_v_core::events::{NavigationListChanged, TargetSelected};
 use delta_v_core::navigation::{
     EntityType, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,
 };
@@ -260,6 +261,7 @@ pub fn update_selection_system(
     targeting_mode: Res<'_, TargetingMode>,
     list_data: Res<'_, NavigationListData>,
 ) {
+    let _span = info_span!("delta_v_ships::update_selection_system").entered();
     // If no selection exists and list has entries, select the first one
     match targeting_mode.mode {
         TargetingModeType::Combat => {
@@ -328,6 +330,7 @@ pub fn update_navigation_list_distances_system(
     >,
     mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
 ) {
+    let _span = info_span!("delta_v_ships::update_navigation_list_distances_system").entered();
     // Get player position
     #[allow(clippy::expect_used)]
     let player_pos = targetable_query
@@ -449,4 +452,35 @@ pub fn init_navigation_list_system(
     // Emit event to notify UI that the navigation list has changed
     nav_list_events.write(NavigationListChanged);
     tracing::debug!("[nav_list] emitted NavigationListChanged event (init)");
+}
+
+/// Handles `TargetSelected` events from the navigation menu click system.
+///
+/// Runs in `Update` during `AppState::InGame`.
+/// When a `TargetSelected` event is received, updates the appropriate
+/// `SelectedTarget` or `SelectedNavObject` resource based on the targeting mode.
+/// This ensures that clicking a row in the navigation menu actually selects the target.
+#[allow(clippy::needless_pass_by_value)]
+pub fn handle_target_selected_system(
+    mut events: MessageReader<'_, '_, TargetSelected>,
+    mut selected_target: ResMut<'_, SelectedTarget>,
+    mut selected_nav_object: ResMut<'_, SelectedNavObject>,
+) {
+    let _span = info_span!("delta_v_ships::handle_target_selected_system").entered();
+    for event in events.read() {
+        tracing::debug!(
+            "[nav_list] received TargetSelected event: target={:?} mode={:?}",
+            event.target,
+            event.mode
+        );
+
+        match event.mode {
+            TargetingModeType::Combat => {
+                selected_target.0 = Some(event.target);
+            }
+            TargetingModeType::Nav => {
+                selected_nav_object.0 = Some(event.target);
+            }
+        }
+    }
 }

@@ -10,7 +10,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
@@ -23,8 +23,11 @@ use delta_v_core::I18n;
 use delta_v_core::events::{NavigationListChanged, TargetSelected};
 use delta_v_types::LogicalAction;
 use leafwing_input_manager::prelude::ActionState;
+use tracing::info_span;
 
-use super::components::{NavMenuDistanceText, NavMenuRowBackground, NavigationMenuRoot};
+use super::components::{
+    NavMenuDistanceText, NavMenuRowBackground, NavMenuRowEntity, NavigationMenuRoot,
+};
 use super::distance_format::format_distance;
 use super::resources::NavigationMenuOpen;
 use super::spawn::spawn_navigation_menu;
@@ -50,6 +53,7 @@ pub fn navigation_menu_toggle_system(
     selected_nav_object: Res<'_, delta_v_core::navigation::SelectedNavObject>,
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
 ) {
+    let _span = info_span!("delta_v_ui::navigation_menu_toggle_system").entered();
     // Check if ToggleNavigationMenu action is pressed
     let toggle_pressed = action_state.just_pressed(&LogicalAction::ToggleNavigationMenu);
 
@@ -85,11 +89,12 @@ pub fn navigation_menu_toggle_system(
     }
 }
 
-/// Updates the selection highlight in the navigation menu when the selected target changes.
+/// Updates the selection highlight in the navigation menu every frame when open.
 ///
 /// Runs in `Update` during `AppState::InGame`.
-/// Processes `TargetSelected` events and updates the background color of the
-/// selected row directly without despawning the entire menu.
+/// Reads the current selection from `SelectedTarget`/`SelectedNavObject` resources
+/// and updates the background color of the selected row directly without
+/// despawning the entire menu. Does not consume events.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn navigation_menu_selection_refresh_system(
     menu_open: Res<'_, NavigationMenuOpen>,
@@ -97,24 +102,11 @@ pub fn navigation_menu_selection_refresh_system(
     selected_target: Res<'_, delta_v_core::navigation::SelectedTarget>,
     selected_nav_object: Res<'_, delta_v_core::navigation::SelectedNavObject>,
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
-    mut events: MessageReader<'_, '_, TargetSelected>,
     mut row_bg_query: Query<'_, '_, (&mut BackgroundColor, &NavMenuRowBackground)>,
 ) {
-    // Only process if there's a target selection change event
-    let Some(_event) = events.read().next() else {
-        return;
-    };
-
-    tracing::debug!(
-        "[navigation_menu] received TargetSelected event, menu_open={}",
-        menu_open.0
-    );
-
+    let _span = info_span!("delta_v_ui::navigation_menu_selection_refresh_system").entered();
     // Only update if menu is open
     if !menu_open.0 {
-        tracing::debug!(
-            "[navigation_menu] target selection change event received but menu is closed"
-        );
         return;
     }
 
@@ -138,8 +130,6 @@ pub fn navigation_menu_selection_refresh_system(
             Color::NONE
         };
     }
-
-    tracing::debug!("[navigation_menu] updated selection highlight");
 }
 
 /// Refreshes the navigation menu content when the navigation list changes.
@@ -161,6 +151,7 @@ pub fn navigation_menu_refresh_system(
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
     mut events: MessageReader<'_, '_, NavigationListChanged>,
 ) {
+    let _span = info_span!("delta_v_ui::navigation_menu_refresh_system").entered();
     // Only process if there's a navigation list change event
     let Some(_event) = events.read().next() else {
         return;
@@ -214,6 +205,7 @@ pub fn update_navigation_menu_distances_system(
     list_data: Res<'_, delta_v_core::NavigationListData>,
     mut distance_text_query: Query<'_, '_, (&mut Text, &NavMenuDistanceText)>,
 ) {
+    let _span = info_span!("delta_v_ui::update_navigation_menu_distances_system").entered();
     // Only update if menu is open
     if !menu_open.0 {
         return;
@@ -222,6 +214,51 @@ pub fn update_navigation_menu_distances_system(
     for (mut text, marker) in &mut distance_text_query {
         if let Some(entry) = list_data.entries.get(marker.index) {
             text.0 = format_distance(entry.distance);
+        }
+    }
+}
+
+/// Handles click interactions on navigation menu rows.
+///
+/// Runs in `Update` during `AppState::InGame`.
+/// When a row is clicked, emits a `TargetSelected` event with the entity
+/// associated with that row. The row entities have `NavMenuRowEntity` components
+/// that store the target entity.
+#[allow(clippy::needless_pass_by_value)]
+pub fn navigation_menu_click_system(
+    menu_open: Res<'_, NavigationMenuOpen>,
+    mut interaction_query: Query<
+        '_,
+        '_,
+        (&Interaction, &NavMenuRowEntity, &NavMenuRowBackground),
+        Changed<Interaction>,
+    >,
+    mut events: MessageWriter<'_, TargetSelected>,
+    targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
+) {
+    let _span = info_span!("delta_v_ui::navigation_menu_click_system").entered();
+    // Only process clicks if menu is open
+    if !menu_open.0 {
+        return;
+    }
+
+    for (interaction, row_entity, row_bg) in &mut interaction_query {
+        if *interaction == Interaction::Pressed {
+            let target_entity = row_entity.entity;
+            let mode = targeting_mode.mode;
+
+            tracing::debug!(
+                "[navigation_menu] row clicked: index={} entity={:?} mode={:?}",
+                row_bg.index,
+                target_entity,
+                mode
+            );
+
+            // Emit TargetSelected event
+            events.write(TargetSelected {
+                target: target_entity,
+                mode,
+            });
         }
     }
 }

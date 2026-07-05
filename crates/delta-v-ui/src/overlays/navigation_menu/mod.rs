@@ -55,5 +55,9 @@ impl Plugin for NavigationMenuPlugin {
             Update,
             systems::update_navigation_menu_distances_system.run_if(in_state(AppState::InGame)),
         );
+        app.add_systems(
+            Update,
+            systems::navigation_menu_click_system.run_if(in_state(AppState::InGame)),
+        );
     }
 }

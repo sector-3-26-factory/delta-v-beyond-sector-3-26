@@ -45,3 +45,13 @@ pub struct NavMenuRowBackground {
     /// Index of the entry in the navigation list this row corresponds to.
     pub index: usize,
 }
+
+/// Component linking a navigation menu row to its target entity.
+///
+/// This is used for click handling - when a row is clicked, we need to know
+/// which entity it represents to emit a `TargetSelected` event.
+#[derive(Component)]
+pub struct NavMenuRowEntity {
+    /// The Bevy Entity this row represents.
+    pub entity: Entity,
+}
