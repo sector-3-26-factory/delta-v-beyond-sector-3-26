@@ -17,7 +17,7 @@ unused-ignored-advisory = "warn"
 # RUSTSEC-2026-0195: Unbounded namespace-declaration allocation in NsReader enables memory-exhaustion denial of service in quick-xml
 # Both are transitive dependencies via bevy -> winit -> wayland-scanner -> quick-xml
 # wayland-scanner 0.31.10 pins quick-xml = "^0.39", fix requires wayland-scanner 0.31.1+ (not yet published)
-# Tracking issue: .github/ISSUE_TEMPLATE/quick-xml-vulnerability-tracking.md
+# Tracking issue: https://github.com/sector-3-26-factory/delta-v-beyond-sector-3-26/issues/34
 ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
 
 [licenses]
