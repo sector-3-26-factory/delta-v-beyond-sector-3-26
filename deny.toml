@@ -12,6 +12,14 @@ unsound = "workspace"
 yanked = "warn"
 unused-ignored-advisory = "warn"
 
+# Ignored advisories - waiting for upstream fixes
+# RUSTSEC-2026-0194: Quadratic run time when checking a start tag for duplicate attribute names in quick-xml
+# RUSTSEC-2026-0195: Unbounded namespace-declaration allocation in NsReader enables memory-exhaustion denial of service in quick-xml
+# Both are transitive dependencies via bevy -> winit -> wayland-scanner -> quick-xml
+# wayland-scanner 0.31.10 pins quick-xml = "^0.39", fix requires wayland-scanner 0.31.1+ (not yet published)
+# Tracking issue: .github/ISSUE_TEMPLATE/quick-xml-vulnerability-tracking.md
+ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
+
 [licenses]
 allow = [
     "GPL-3.0-or-later",
