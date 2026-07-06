@@ -17,6 +17,7 @@ tracing = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+rand = { workspace = true }
 delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
 delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }
 delta-v-types = { workspace = true }

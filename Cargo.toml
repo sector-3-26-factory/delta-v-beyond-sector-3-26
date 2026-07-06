@@ -40,6 +40,7 @@ jsonschema = { version = "0.46", default-features = false }
 referencing = "0.46"
 directories = "6.0"
 clap = { version = "4.5", features = ["derive"] }
+rand = "0.9"
 delta-v-json = { path = "crates/delta-v-json", version = "0.0.1" }
 delta-v-types = { path = "crates/delta-v-types", version = "0.0.1" }
 delta-v-physics = { path = "crates/delta-v-physics", version = "0.0.1" }

@@ -85,6 +85,8 @@ impl Plugin for CockpitPlugin {
                     systems::cycle_target_system,
                     systems::bearing_indicator_system,
                     systems::target_reticle_system,
+                    systems::camera_shake_system,
+                    systems::trigger_camera_shake_system,
                 )
                     .run_if(in_state(AppState::InGame)),
             )

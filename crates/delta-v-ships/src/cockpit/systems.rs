@@ -19,16 +19,18 @@
 //! Cockpit-related systems.
 
 use bevy::prelude::*;
+use rand::Rng;
 
 use delta_v_core::input::ActionState;
 use delta_v_core::{
-    ActiveCameraName, CameraName, CameraSwitched, EntityType, Health, I18n, PlayerShipEntity,
-    TargetSelected, WorldEntityId,
+    ActiveCameraName, CameraName, CameraSwitched, EntityType, FireWeapon, Health, I18n,
+    PlayerShipEntity, ProjectileHit, TargetSelected, WorldEntityId,
 };
-use delta_v_physics::RigidBody;
+use delta_v_physics::{CollisionDetected, RigidBody};
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
+use super::components::CameraShake;
 use super::components::CircularGaugeNeedle;
 use super::components::CockpitOverlay;
 use super::components::SelectedNavObject;
@@ -1239,5 +1241,157 @@ pub fn target_reticle_system(
         && *visibility != Visibility::Hidden
     {
         *visibility = Visibility::Hidden;
+    }
+}
+
+/// Updates the camera shake effect on the active camera.
+///
+/// Runs in `Update` during `AppState::InGame`. If a `CameraShake` component
+/// is present on the player ship, applies a random offset to the active camera's
+/// local position that decays over time. The shake is applied to the camera's
+/// local transform (relative to the ship), not the ship's world position.
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
+pub fn camera_shake_system(
+    player_ship: Res<'_, PlayerShipEntity>,
+    active_camera_name: Res<'_, delta_v_core::ActiveCameraName>,
+    mut shake_query: Query<'_, '_, (&mut CameraShake, &Children)>,
+    mut camera_query: Query<'_, '_, (&delta_v_core::CameraName, &mut Transform)>,
+    mut commands: Commands<'_, '_>,
+) {
+    let _span = tracing::info_span!("delta_v_ships::camera_shake_system").entered();
+
+    // Check if the ship has a CameraShake component
+    let Ok((mut shake, children)) = shake_query.get_mut(player_ship.0) else {
+        return;
+    };
+
+    // Find the active camera among the ship's children
+    #[allow(clippy::unnecessary_find_map)]
+    let active_camera_entity = children.iter().find_map(|child| {
+        camera_query.get(child).ok().and_then(|(name, _)| {
+            if name.0 == active_camera_name.0 {
+                Some(child)
+            } else {
+                None
+            }
+        })
+    });
+
+    let Some(camera_entity) = active_camera_entity else {
+        return;
+    };
+
+    // Store original translation on first frame
+    if shake.elapsed_ticks == 0
+        && let Ok((_camera_name, camera_transform)) = camera_query.get(camera_entity)
+    {
+        shake.original_translation = camera_transform.translation;
+    }
+
+    // Increment elapsed ticks
+    shake.elapsed_ticks += 1;
+
+    // Calculate progress (0.0 to 1.0)
+    // allow-cast-precision-loss: u32 to f32 cast is acceptable here as tick counts
+    // are small (max ~600 for 10 seconds at 60 Hz) and well within f32 precision.
+    #[allow(clippy::cast_precision_loss)]
+    let progress = shake.elapsed_ticks as f32 / shake.duration_ticks as f32;
+
+    if progress >= 1.0 {
+        // Shake complete - restore camera transform and remove the component
+        tracing::debug!("[camera_shake] shake complete, restoring camera and removing component");
+        // Restore the camera's transform to its original position to prevent drift
+        if let Ok((_camera_name, mut camera_transform)) = camera_query.get_mut(camera_entity) {
+            camera_transform.translation = shake.original_translation;
+        }
+        // Remove the component from the ship
+        commands.entity(player_ship.0).remove::<CameraShake>();
+        return;
+    }
+
+    // Decay intensity over time (ease out)
+    let current_intensity = shake.intensity * (1.0 - progress).powi(2);
+
+    // Generate random offset
+    let mut rng = rand::rng();
+    let offset = Vec3::new(
+        rng.random_range(-1.0..1.0) * current_intensity,
+        rng.random_range(-1.0..1.0) * current_intensity,
+        rng.random_range(-1.0..1.0) * current_intensity,
+    );
+
+    // Add the offset to the camera's local position (relative to ship)
+    if let Ok((_camera_name, mut camera_transform)) = camera_query.get_mut(camera_entity) {
+        camera_transform.translation = shake.original_translation + offset;
+    }
+
+    tracing::debug!(
+        "[camera_shake] tick {}/{} intensity={:.3} offset={:?}",
+        shake.elapsed_ticks,
+        shake.duration_ticks,
+        current_intensity,
+        offset
+    );
+}
+
+/// Triggers camera shake on specific events.
+///
+/// Listens for `FireWeapon`, `ProjectileHit`, and `CollisionDetected` events.
+/// When any of these events occur involving the player ship, inserts a
+/// `CameraShake` component on the player ship entity.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn trigger_camera_shake_system(
+    mut commands: Commands<'_, '_>,
+    player_ship: Res<'_, PlayerShipEntity>,
+    mut fire_events: MessageReader<'_, '_, FireWeapon>,
+    mut hit_events: MessageReader<'_, '_, ProjectileHit>,
+    mut collision_events: MessageReader<'_, '_, CollisionDetected>,
+) {
+    let _span = tracing::info_span!("delta_v_ships::trigger_camera_shake_system").entered();
+
+    // Fire weapon shake - small, short
+    for event in fire_events.read() {
+        if event.source == player_ship.0 {
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(0.5, 10));
+            tracing::debug!("[camera_shake] triggered by FireWeapon");
+        }
+    }
+
+    // Projectile hit shake - medium
+    for event in hit_events.read() {
+        if event.target == player_ship.0 {
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(1.0, 15));
+            tracing::debug!("[camera_shake] triggered by ProjectileHit (target)");
+        }
+        if event.projectile == player_ship.0 {
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(0.8, 12));
+            tracing::debug!("[camera_shake] triggered by ProjectileHit (projectile)");
+        }
+    }
+
+    // Collision shake - larger, longer
+    for event in collision_events.read() {
+        if event.target == player_ship.0 || event.other == player_ship.0 {
+            // Scale intensity by penetration depth
+            let intensity = (event.penetration_depth * 2.0).clamp(0.5, 3.0);
+            // allow-cast-possible-truncation, cast-sign-loss: intensity is clamped to [0.5, 3.0],
+            // so intensity * 10.0 is in [5.0, 30.0], well within u32 cast is safe and positive.
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let duration = (intensity * 10.0).round() as u32;
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(intensity, duration));
+            tracing::debug!(
+                "[camera_shake] triggered by CollisionDetected intensity={:.2} duration={}",
+                intensity,
+                duration
+            );
+        }
     }
 }
