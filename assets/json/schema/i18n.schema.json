@@ -8,7 +8,8 @@
     "required": [
         "ui",
         "number_format",
-        "speed"
+        "speed",
+        "entity_types"
     ],
     "properties": {
         "number_format": {
@@ -68,6 +69,30 @@
                 }
             }
         },
+        "entity_types": {
+            "description": "Entity type translations (e.g., ship, asteroid, station).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "ship",
+                "asteroid",
+                "station"
+            ],
+            "properties": {
+                "ship": {
+                    "description": "Ship entity type translation.",
+                    "type": "string"
+                },
+                "asteroid": {
+                    "description": "Asteroid entity type translation.",
+                    "type": "string"
+                },
+                "station": {
+                    "description": "Station entity type translation.",
+                    "type": "string"
+                }
+            }
+        },
         "ui": {
             "description": "UI translations.",
             "type": "object",
@@ -82,7 +107,8 @@
                     "type": "object",
                     "additionalProperties": false,
                     "required": [
-                        "keybindings"
+                        "keybindings",
+                        "navigation"
                     ],
                     "properties": {
                         "keybindings": {
@@ -127,6 +153,30 @@
                                     }
                                 }
                             }
+                        },
+                        "navigation": {
+                            "description": "Navigation menu translations.",
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "title",
+                                "close",
+                                "empty_list"
+                            ],
+                            "properties": {
+                                "title": {
+                                    "description": "Menu title.",
+                                    "type": "string"
+                                },
+                                "close": {
+                                    "description": "Close button hint.",
+                                    "type": "string"
+                                },
+                                "empty_list": {
+                                    "description": "Empty list placeholder text.",
+                                    "type": "string"
+                                }
+                            }
                         }
                     }
                 },
@@ -136,12 +186,41 @@
                     "additionalProperties": false,
                     "required": [
                         "camera",
-                        "camera_name"
+                        "targeting_mode",
+                        "targeting_mode_name",
+                        "camera_name",
+                        "target_selected",
+                        "nav_object_selected",
+                        "no_targets",
+                        "no_nav_objects"
                     ],
                     "properties": {
                         "camera": {
                             "description": "Camera notification template. Use `{camera_name}` as placeholder.",
                             "type": "string"
+                        },
+                        "targeting_mode": {
+                            "description": "Targeting mode notification template. Use `{mode}` as placeholder.",
+                            "type": "string"
+                        },
+                        "targeting_mode_name": {
+                            "description": "Targeting mode name translations.",
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "combat",
+                                "nav"
+                            ],
+                            "properties": {
+                                "combat": {
+                                    "description": "Combat targeting mode name.",
+                                    "type": "string"
+                                },
+                                "nav": {
+                                    "description": "Navigation targeting mode name.",
+                                    "type": "string"
+                                }
+                            }
                         },
                         "camera_name": {
                             "description": "Camera name translations.",
@@ -149,6 +228,22 @@
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        },
+                        "target_selected": {
+                            "description": "Target selected notification template. Use `{entity_id}` and `{entity_type}` as placeholders.",
+                            "type": "string"
+                        },
+                        "nav_object_selected": {
+                            "description": "Nav object selected notification template. Use `{entity_id}` and `{entity_type}` as placeholders.",
+                            "type": "string"
+                        },
+                        "no_targets": {
+                            "description": "No targets available notification.",
+                            "type": "string"
+                        },
+                        "no_nav_objects": {
+                            "description": "No navigation objects available notification.",
+                            "type": "string"
                         }
                     }
                 }

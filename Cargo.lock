@@ -2647,6 +2647,7 @@ dependencies = [
  "bevy",
  "delta-v-core",
  "delta-v-types",
+ "leafwing-input-manager",
  "tracing",
 ]
 

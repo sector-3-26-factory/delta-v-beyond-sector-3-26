@@ -64,6 +64,9 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "KeyR" => Some(KeyCode::KeyR),
         "KeyF" => Some(KeyCode::KeyF),
         "KeyC" => Some(KeyCode::KeyC),
+        "KeyN" => Some(KeyCode::KeyN),
+        "KeyT" => Some(KeyCode::KeyT),
+        "F1" => Some(KeyCode::F1),
         "F2" => Some(KeyCode::F2),
         "F3" => Some(KeyCode::F3),
         "ControlLeft" => Some(KeyCode::ControlLeft),
@@ -74,6 +77,7 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "ArrowLeft" => Some(KeyCode::ArrowLeft),
         "ArrowRight" => Some(KeyCode::ArrowRight),
         "Space" => Some(KeyCode::Space),
+        "Tab" => Some(KeyCode::Tab),
         _ => {
             tracing::warn!("keybindings: unknown key name '{name}' (ignored)");
             None

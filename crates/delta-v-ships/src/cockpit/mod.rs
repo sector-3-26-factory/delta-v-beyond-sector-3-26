@@ -23,6 +23,7 @@
 //! - Station switching (F2 / Shift+F2)
 //! - Velocity vector indicator (direction of ship movement)
 //! - Status gauges (health, weapon heat) with slot-based positioning
+//! - Player-controlled targeting & navigation list
 //!
 //! See M6 -- HUD and Feel plan.
 
@@ -30,6 +31,7 @@ use bevy::prelude::*;
 use delta_v_core::AppState;
 
 pub mod components;
+pub mod navigation_list;
 pub mod spawn;
 pub mod systems;
 pub mod velocity_indicator;
@@ -44,11 +46,17 @@ impl Plugin for CockpitPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<systems::ArrowTextureCache>()
             .init_resource::<systems::CockpitCycleState>()
+            .init_resource::<components::TargetingMode>()
+            .init_resource::<components::SelectedTarget>()
+            .init_resource::<components::SelectedNavObject>()
+            .init_resource::<delta_v_core::NavigationListData>()
             .add_systems(OnEnter(AppState::InGame), spawn::spawn_cockpit_overlay)
             .add_systems(
                 OnEnter(AppState::InGame),
                 spawn::spawn_velocity_vector_indicator,
             )
+            .add_systems(OnEnter(AppState::InGame), spawn::spawn_bearing_indicator)
+            .add_systems(OnEnter(AppState::InGame), spawn::spawn_target_reticle)
             .add_systems(
                 OnEnter(AppState::InGame),
                 spawn::spawn_status_gauges.after(spawn::spawn_cockpit_overlay),
@@ -62,6 +70,10 @@ impl Plugin for CockpitPlugin {
                 systems::init_needle_visibility.after(spawn::spawn_status_gauges),
             )
             .add_systems(
+                OnEnter(AppState::InGame),
+                navigation_list::init_navigation_list_system.after(systems::init_needle_visibility),
+            )
+            .add_systems(
                 Update,
                 (
                     systems::cockpit_station_cycle_system,
@@ -69,7 +81,25 @@ impl Plugin for CockpitPlugin {
                     systems::velocity_vector_system,
                     systems::status_gauge_system,
                     systems::update_needle_visibility,
+                    systems::targeting_mode_toggle_system,
+                    systems::cycle_target_system,
+                    systems::bearing_indicator_system,
+                    systems::target_reticle_system,
                 )
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                Update,
+                (
+                    navigation_list::update_navigation_list_system,
+                    navigation_list::update_selection_system,
+                    navigation_list::handle_target_selected_system,
+                )
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                FixedUpdate,
+                navigation_list::update_navigation_list_distances_system
                     .run_if(in_state(AppState::InGame)),
             );
     }

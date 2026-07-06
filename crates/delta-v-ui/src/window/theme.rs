@@ -89,6 +89,9 @@ impl UiTheme {
     /// Value text color (e.g. key bindings, secondary text).
     pub const VALUE_COLOR: Color = Color::srgb(0.7, 1.0, 0.7);
 
+    /// Selected row background color (yellow highlight).
+    pub const SELECTED_ROW_COLOR: Color = Color::srgba(0.5, 0.5, 0.0, 0.3);
+
     // --- Border ---
 
     /// Color for the corner bracket accents.

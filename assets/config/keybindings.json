@@ -91,6 +91,32 @@
         "ShiftLeft",
         "F3"
       ]
+    },
+    "toggle_navigation_menu": {
+      "keyboard": [
+        "KeyN"
+      ]
+    },
+    "toggle_keybindings_menu": {
+      "keyboard": [
+        "F1"
+      ]
+    },
+    "cycle_target_next": {
+      "keyboard": [
+        "KeyT"
+      ]
+    },
+    "cycle_target_prev": {
+      "keyboard": [
+        "ShiftLeft",
+        "KeyT"
+      ]
+    },
+    "toggle_targeting_mode": {
+      "keyboard": [
+        "Tab"
+      ]
     }
   }
 }

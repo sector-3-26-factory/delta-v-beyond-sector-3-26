@@ -91,5 +91,38 @@ pub struct CircularGaugeNeedle {
     pub center_y: f32,
 }
 
+/// Marker component for entities that can be targeted in combat.
+///
+/// These entities appear in the targeting list and can be selected as the
+/// player's current target.
+#[derive(Component)]
+pub struct Targetable;
+
+/// Marker component for entities that appear in the navigation list.
+///
+/// These entities can be selected for navigation purposes (ships, fleets,
+/// planets, stations, asteroids).
+#[derive(Component)]
+pub struct Navigable;
+
+// EntityType, WorldEntityId, SelectedTarget, SelectedNavObject, TargetingMode, TargetingModeType
+// are now defined in delta-v-core::navigation
+// Re-export them for convenience
+pub use delta_v_core::navigation::{
+    EntityType, SelectedNavObject, SelectedTarget, TargetingMode, TargetingModeType, WorldEntityId,
+};
+
+/// Marker component for the bearing indicator arrow.
+///
+/// Points toward the selected target when it's off-screen.
+#[derive(Component)]
+pub struct BearingIndicator;
+
+/// Marker component for the on-screen target reticle.
+///
+/// Appears around the selected target when it's on-screen.
+#[derive(Component)]
+pub struct TargetReticle;
+
 // Re-export types from ship_templates for convenience
 pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};

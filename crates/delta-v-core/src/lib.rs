@@ -43,6 +43,7 @@ pub mod floating_origin;
 pub mod health;
 pub mod i18n;
 pub mod input;
+pub mod navigation;
 pub mod spawn;
 pub mod state;
 
@@ -62,13 +63,19 @@ pub use debug::{
     spawn_debug_axis_labels, update_debug_axis_labels, update_gizmo_render_layers,
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
-pub use events::{CameraSwitched, FireWeapon, ProjectileHit, SpawnEntity};
+pub use events::{
+    CameraSwitched, FireWeapon, NavigationListChanged, ProjectileHit, SpawnEntity, TargetSelected,
+    TargetingModeChanged,
+};
 pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
 pub use health::{Health, Weapon};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
+pub use navigation::{
+    EntityType, NavEntry, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,
+};
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;
 
@@ -107,6 +114,12 @@ impl Plugin for CorePlugin {
 
         // Initialize message channel for camera switch events.
         app.add_message::<CameraSwitched>();
+        // Initialize message channel for targeting mode change events.
+        app.add_message::<TargetingModeChanged>();
+        // Initialize message channel for navigation list change events.
+        app.add_message::<NavigationListChanged>();
+        // Initialize message channel for target selected events.
+        app.add_message::<TargetSelected>();
 
         // Initialize gizmo config with default render layer (will be updated dynamically).
         // The update_gizmo_render_layers system will set the correct layer based on active camera.

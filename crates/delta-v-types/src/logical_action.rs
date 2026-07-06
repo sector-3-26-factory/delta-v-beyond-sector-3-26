@@ -53,6 +53,16 @@ pub enum LogicalAction {
     CameraSwitchNext,
     /// Switch to the previous ship camera.
     CameraSwitchPrev,
+    /// Toggle the navigation menu (open/close).
+    ToggleNavigationMenu,
+    /// Toggle the keybindings menu (open/close).
+    ToggleKeybindingsMenu,
+    /// Cycle to the next target in the list.
+    CycleTargetNext,
+    /// Cycle to the previous target in the list.
+    CycleTargetPrev,
+    /// Toggle between Combat and Nav targeting modes.
+    ToggleTargetingMode,
 }
 
 impl LogicalAction {
@@ -80,6 +90,11 @@ impl LogicalAction {
             Self::CockpitCyclePrev => "cockpit_cycle_prev",
             Self::CameraSwitchNext => "camera_switch_next",
             Self::CameraSwitchPrev => "camera_switch_prev",
+            Self::ToggleNavigationMenu => "toggle_navigation_menu",
+            Self::ToggleKeybindingsMenu => "toggle_keybindings_menu",
+            Self::CycleTargetNext => "cycle_target_next",
+            Self::CycleTargetPrev => "cycle_target_prev",
+            Self::ToggleTargetingMode => "toggle_targeting_mode",
         }
     }
 
@@ -107,6 +122,11 @@ impl LogicalAction {
             Self::CockpitCyclePrev,
             Self::CameraSwitchNext,
             Self::CameraSwitchPrev,
+            Self::ToggleNavigationMenu,
+            Self::ToggleKeybindingsMenu,
+            Self::CycleTargetNext,
+            Self::CycleTargetPrev,
+            Self::ToggleTargetingMode,
         ]
     }
 }

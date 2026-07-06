@@ -29,6 +29,8 @@ impl Plugin for NotificationPlugin {
                 Update,
                 (
                     systems::notification_spawn_system.run_if(in_state(AppState::InGame)),
+                    systems::targeting_mode_notification_system.run_if(in_state(AppState::InGame)),
+                    systems::target_selected_notification_system.run_if(in_state(AppState::InGame)),
                     systems::notification_cleanup_system.run_if(in_state(AppState::InGame)),
                 ),
             );
