@@ -80,7 +80,8 @@
             "projectile_radius": {
                 "value": 0.1,
                 "unit": "m"
-            }
+            },
+            "sound": "fire.wav"
         }
     ]
 }

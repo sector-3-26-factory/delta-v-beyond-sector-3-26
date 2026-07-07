@@ -68,6 +68,22 @@
         "cockpit": {
             "description": "Cockpit overlay definition with stations and gauge slots. See cockpit.schema.json.",
             "$ref": "https://delta-v-beyond-sector-3-26/schema/cockpit"
+        },
+        "sounds": {
+            "description": "Sound file paths relative to assets/audio/. Optional; if not provided, no sounds are played. Only player-controlled ships play sounds.",
+            "type": "object",
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+                "thrust": {
+                    "description": "Engine thrust sound (looped while thrusting).",
+                    "type": "string"
+                },
+                "hit": {
+                    "description": "Hit/impact sound.",
+                    "type": "string"
+                }
+            }
         }
     },
     "$defs": {

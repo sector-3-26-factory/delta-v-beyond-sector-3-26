@@ -46,6 +46,7 @@ pub mod input;
 pub mod navigation;
 pub mod spawn;
 pub mod state;
+pub mod weapon;
 
 // Re-exports from subdirectories
 pub use boundary::{
@@ -71,13 +72,14 @@ pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
-pub use health::{Health, Weapon};
+pub use health::Health;
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use navigation::{
     EntityType, NavEntry, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,
 };
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;
+pub use weapon::Weapon;
 
 // Re-exports from delta-v-types for shared types (ADR-0046)
 pub use delta_v_types::{

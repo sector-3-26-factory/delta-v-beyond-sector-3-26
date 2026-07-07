@@ -136,7 +136,7 @@ fn spawn_cameras(
 /// Inserts player-specific resources after the ship entity is spawned.
 ///
 /// Stores the player ship entity ID, camera configuration, propulsion
-/// configuration, and cockpit overlay resource.
+/// configuration, cockpit overlay resource, and ship sounds.
 fn insert_player_resources(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
@@ -180,6 +180,11 @@ fn insert_player_resources(
         texture_width,
         texture_height,
     });
+    // Insert ShipSounds resource from template.
+    // Schema provides default {} for sounds, so template.sounds is always present.
+    // Audio systems handle None values by skipping playback.
+    let ship_sounds = template.sounds.clone();
+    commands.insert_resource(ship_sounds);
 }
 
 /// Spawns the player-controlled ship from a template event.
@@ -273,6 +278,16 @@ fn spawn_player_ship(
     // Add Weapon components from template (M4).
     // Per ADR-0014, all gameplay values come from JSON.
     for (i, weapon_json) in template.weapons.iter().enumerate() {
+        // Validate weapon sound file exists (ADR-0013: no silent fallbacks).
+        if let Some(ref sound) = weapon_json.sound {
+            let path = format!("assets/audio/{sound}");
+            if !std::path::Path::new(&path).exists() {
+                tracing::warn!(
+                    "[audio] weapon sound file not found: {} (referenced in template)",
+                    path
+                );
+            }
+        }
         commands.entity(ship_entity).insert(Weapon {
             slot: i as u32,
             cooldown: 0.0,
@@ -281,6 +296,7 @@ fn spawn_player_ship(
             fire_rate: weapon_json.fire_rate.value,
             lifetime: weapon_json.lifetime.value,
             projectile_radius: weapon_json.projectile_radius.value,
+            sound: weapon_json.sound.clone(),
         });
     }
     // Spawn cameras for each available camera definition, scaled by the entity scale.
@@ -390,6 +406,16 @@ fn spawn_static_ship(
 
     // Add Weapon components from template (M4).
     for (i, weapon_json) in template.weapons.iter().enumerate() {
+        // Validate weapon sound file exists (ADR-0013: no silent fallbacks).
+        if let Some(ref sound) = weapon_json.sound {
+            let path = format!("assets/audio/{sound}");
+            if !std::path::Path::new(&path).exists() {
+                tracing::warn!(
+                    "[audio] weapon sound file not found: {} (referenced in template)",
+                    path
+                );
+            }
+        }
         commands.entity(ship_entity).insert(Weapon {
             slot: i as u32,
             cooldown: 0.0,
@@ -398,6 +424,7 @@ fn spawn_static_ship(
             fire_rate: weapon_json.fire_rate.value,
             lifetime: weapon_json.lifetime.value,
             projectile_radius: weapon_json.projectile_radius.value,
+            sound: weapon_json.sound.clone(),
         });
     }
 

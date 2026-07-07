@@ -43,6 +43,10 @@
         "projectile_radius": {
             "description": "Projectile collision shape radius in metres.",
             "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+        },
+        "sound": {
+            "description": "Sound file path relative to assets/audio/ (e.g., \"fire.wav\"). Optional; if not provided, no sound is played on fire.",
+            "type": "string"
         }
     }
 }

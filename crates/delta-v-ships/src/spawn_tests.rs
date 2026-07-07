@@ -115,7 +115,8 @@ fn make_player_ship_event() -> SpawnEntity {
         "health": { "value": 100.0, "unit": "hp" },
         "cockpit": {
                     "stations": []
-                }
+                },
+        "sounds": {}
     });
 
     SpawnEntity::new(

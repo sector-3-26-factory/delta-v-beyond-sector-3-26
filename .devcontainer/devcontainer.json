@@ -12,13 +12,18 @@
     "containerEnv": {
         "DISPLAY": "${localEnv:DISPLAY}",
         "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+        // PulseAudio socket for audio playback in the container.
+        // Requires PulseAudio running on the host with module-native-protocol-unix loaded.
+        "PULSE_SERVER": "unix:/run/user/1000/pulse/native",
         // Use mold as the default linker for faster iteration.
         "RUSTFLAGS": "-C link-arg=-fuse-ld=mold"
         // XDG_RUNTIME_DIR remains deliberately unset.
     },
     "mounts": [
         // We only need the X11 sockets. No .Xauthority mount needed when using 'xhost +local:'
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+        // PulseAudio socket for audio playback.
+        "source=/run/user/1000/pulse/native,target=/run/user/1000/pulse/native,type=bind,consistency=cached"
     ],
     "runArgs": [
         // GPU passthrough (DRI render node).

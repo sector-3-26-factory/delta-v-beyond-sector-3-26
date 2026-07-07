@@ -32,6 +32,49 @@ use serde_json::Value;
 use crate::error::AssetError;
 use crate::paths::{get_workspace_root, resolve_template_path};
 
+/// Validates that referenced sound files exist in the assets/audio directory.
+/// Per ADR-0013, missing referenced files are hard errors at load time.
+fn validate_sound_files(template: &Value, template_path: &Path) -> Result<(), AssetError> {
+    let workspace_root = get_workspace_root();
+    let audio_root = workspace_root.join("assets/audio");
+
+    // Check ship sounds (thrust, hit) from player_controlled_ship template
+    if let Some(sounds) = template.get("sounds").and_then(|s| s.as_object()) {
+        for (key, value) in sounds {
+            if let Some(sound_path) = value.as_str() {
+                let full_path = audio_root.join(sound_path);
+                if !full_path.exists() {
+                    return Err(AssetError::Validation(format!(
+                        "sound file not found: {} (referenced in {} at .sounds.{})",
+                        full_path.display(),
+                        template_path.display(),
+                        key
+                    )));
+                }
+            }
+        }
+    }
+
+    // Check weapon sounds from ship template
+    if let Some(weapons) = template.get("weapons").and_then(|w| w.as_array()) {
+        for (i, weapon) in weapons.iter().enumerate() {
+            if let Some(sound) = weapon.get("sound").and_then(|s| s.as_str()) {
+                let full_path = audio_root.join(sound);
+                if !full_path.exists() {
+                    return Err(AssetError::Validation(format!(
+                        "weapon sound file not found: {} (referenced in {} at .weapons[{}].sound)",
+                        full_path.display(),
+                        template_path.display(),
+                        i
+                    )));
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Loads a template from a path, validates it, and returns the JSON value.
 ///
 /// This is the SINGLE function for loading templates. All crates should use
@@ -117,6 +160,10 @@ pub fn load_player_controlled_ship(
         );
     }
 
+    // Validate referenced sound files exist (ADR-0013: no silent fallbacks).
+    let full_template_path = get_workspace_root().join(&template_path);
+    validate_sound_files(&merged, &full_template_path)?;
+
     Ok((
         "player_controlled_ship".to_string(),
         template_path,
@@ -165,6 +212,10 @@ pub fn load_ai_controlled_ship(
         );
     }
 
+    // Validate referenced sound files exist (ADR-0013: no silent fallbacks).
+    let full_template_path = get_workspace_root().join(&template_path);
+    validate_sound_files(&merged, &full_template_path)?;
+
     Ok((
         "ai_controlled_ship".to_string(),
         template_path,
@@ -210,6 +261,11 @@ pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetErr
     let template_path = format!("templates/ships/{template_name}/ship.json");
     let mesh_path = template_path.replace("ship.json", "mesh.glb");
     let template = load_template("ships", name, "ship.json", "ship.schema.json")?;
+
+    // Validate referenced sound files exist (ADR-0013: no silent fallbacks).
+    let full_template_path = get_workspace_root().join(&template_path);
+    validate_sound_files(&template, &full_template_path)?;
+
     Ok(("ship".to_string(), template_path, template, mesh_path))
 }
 

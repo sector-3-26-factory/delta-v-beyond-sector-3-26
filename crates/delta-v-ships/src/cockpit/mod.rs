@@ -73,6 +73,7 @@ impl Plugin for CockpitPlugin {
                 OnEnter(AppState::InGame),
                 navigation_list::init_navigation_list_system.after(systems::init_needle_visibility),
             )
+            .add_systems(OnEnter(AppState::InGame), systems::init_audio_availability)
             .add_systems(
                 Update,
                 (
@@ -87,6 +88,9 @@ impl Plugin for CockpitPlugin {
                     systems::target_reticle_system,
                     systems::camera_shake_system,
                     systems::trigger_camera_shake_system,
+                    systems::play_thrust_sound_system,
+                    systems::play_fire_sound_system,
+                    systems::play_hit_sound_system,
                 )
                     .run_if(in_state(AppState::InGame)),
             )

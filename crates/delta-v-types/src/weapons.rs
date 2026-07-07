@@ -25,4 +25,7 @@ pub struct WeaponTemplateJson {
     pub lifetime: PhysicalQuantityJson,
     /// Projectile collision shape radius in metres.
     pub projectile_radius: PhysicalQuantityJson,
+    /// Sound file path relative to assets/audio/ (e.g., "fire.wav").
+    /// Optional; if not provided, no sound is played on fire.
+    pub sound: Option<String>,
 }

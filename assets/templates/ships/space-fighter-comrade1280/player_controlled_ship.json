@@ -138,5 +138,9 @@
                 "texture": "cockpit/cycle_test.png"
             }
         ]
+    },
+    "sounds": {
+        "thrust": "thrust.wav",
+        "hit": "hit.wav"
     }
 }

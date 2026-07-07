@@ -188,6 +188,7 @@ pub fn spawn_npc_ship(
                 fire_rate: weapon_json.fire_rate.value,
                 lifetime: weapon_json.lifetime.value,
                 projectile_radius: weapon_json.projectile_radius.value,
+                sound: weapon_json.sound.clone(),
             });
         }
 

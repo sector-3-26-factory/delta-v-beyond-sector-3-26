@@ -113,5 +113,9 @@
                 "texture": "cockpit/default.png"
             }
         ]
+    },
+    "sounds": {
+        "thrust": "thrust.wav",
+        "hit": "hit.wav"
     }
 }
