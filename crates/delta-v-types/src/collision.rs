@@ -47,9 +47,9 @@ pub mod layers {
     /// Asteroids are on layer 2 and can collide with ships (`SHIP_LAYER`).
     pub const ASTEROID_LAYER: u32 = 2;
 
-    /// Collision layers for ships: on `SHIP_LAYER`, can collide with `ASTEROID_LAYER` only.
+    /// Collision layers for ships: on `SHIP_LAYER`, can collide with `SHIP_LAYER` and `ASTEROID_LAYER`.
     pub const SHIP: super::CollisionLayers =
-        super::CollisionLayers::new(SHIP_LAYER, ASTEROID_LAYER);
+        super::CollisionLayers::new(SHIP_LAYER, SHIP_LAYER | ASTEROID_LAYER);
 
     /// Collision layers for asteroids: on `ASTEROID_LAYER`, can collide with `SHIP_LAYER`.
     pub const ASTEROID: super::CollisionLayers =
