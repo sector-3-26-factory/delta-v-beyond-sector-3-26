@@ -75,6 +75,7 @@ impl RigidBodyData {
     ///
     /// Panics if `mass` is not positive and finite, per ADR-0009 (every rigid
     /// body MUST have mass) and ADR-0013 (no silent fallbacks).
+    #[must_use]
     pub fn new(mass: f32, inertia_scale: f32) -> Self {
         assert!(
             mass > 0.0 && mass.is_finite(),
