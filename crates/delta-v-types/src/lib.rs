@@ -51,10 +51,10 @@ pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslatio
 pub use ids::{EntityId, TemplatePath};
 pub use logical_action::LogicalAction;
 pub use navigation::{EntityType, WorldEntityId};
-pub use physics::PhysicalQuantityJson;
+pub use physics::{PhysicalQuantityJson, RigidBodyData};
 pub use player_settings::PlayerSettings;
 pub use spatial::{BoundingBoxJson, QuatJson, Vec3Json};
-pub use weapons::WeaponTemplateJson;
+pub use weapons::{ProjectileDefinitionJson, WeaponReference, WeaponTemplateJson};
 
 #[cfg(test)]
 #[path = "spatial_tests.rs"]

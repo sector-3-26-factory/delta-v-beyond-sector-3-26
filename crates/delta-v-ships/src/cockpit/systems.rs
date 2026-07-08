@@ -37,11 +37,11 @@ use super::components::SelectedNavObject;
 use super::components::SelectedTarget;
 use super::components::SpeedText;
 use super::components::StatusGauge;
-use super::components::Targetable;
 use super::components::TargetingMode;
 use super::components::VelocityVectorIndicator;
 use super::velocity_indicator::create_thrust_arrow_presets;
 use super::velocity_indicator::format_speed;
+use delta_v_core::Targetable;
 
 use super::spawn::CockpitOverlayResource;
 use crate::ship_templates::ShipSounds;

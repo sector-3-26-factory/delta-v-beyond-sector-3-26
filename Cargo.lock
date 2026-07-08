@@ -2492,6 +2492,7 @@ name = "delta-v-ai"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-assets",
  "delta-v-core",
  "delta-v-physics",
  "delta-v-spawn",
@@ -2599,6 +2600,7 @@ name = "delta-v-ships"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-assets",
  "delta-v-core",
  "delta-v-physics",
  "delta-v-spawn",
@@ -2616,10 +2618,14 @@ name = "delta-v-spawn"
 version = "0.0.1"
 dependencies = [
  "bevy",
+ "delta-v-assets",
+ "delta-v-core",
  "delta-v-json",
+ "delta-v-physics",
  "delta-v-types",
  "serde_json",
  "tempfile",
+ "tracing",
 ]
 
 [[package]]

@@ -1,0 +1,19 @@
+{
+    "entity_type": "projectile",
+    "speed": {
+        "value": 800.0,
+        "unit": "m/s"
+    },
+    "damage": {
+        "value": 25.0,
+        "unit": "hp"
+    },
+    "lifetime": {
+        "value": 3.0,
+        "unit": "s"
+    },
+    "radius": {
+        "value": 0.2,
+        "unit": "m"
+    }
+}

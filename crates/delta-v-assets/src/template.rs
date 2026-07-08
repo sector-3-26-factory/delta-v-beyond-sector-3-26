@@ -312,3 +312,32 @@ fn map_json_error(e: delta_v_json::error::JsonError, _context: &Path) -> AssetEr
         },
     }
 }
+
+/// Loads a weapon definition by name.
+///
+/// Weapon definitions are stored at `assets/weapons/<name>/weapon.json`.
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the weapon file does not exist.
+/// Returns [`AssetError::Validation`] if the weapon fails schema validation.
+pub fn load_weapon_definition(name: &str) -> Result<Value, AssetError> {
+    let template_path = get_workspace_root().join(format!("assets/weapons/{name}/weapon.json"));
+    let schema_path = get_workspace_root().join("assets/json/schema/weapon.schema.json");
+    load_template_from_paths(&template_path, &schema_path)
+}
+
+/// Loads a projectile definition by name.
+///
+/// Projectile definitions are stored at `assets/projectiles/<name>/projectile.json`.
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the projectile file does not exist.
+/// Returns [`AssetError::Validation`] if the projectile fails schema validation.
+pub fn load_projectile_definition(name: &str) -> Result<Value, AssetError> {
+    let template_path =
+        get_workspace_root().join(format!("assets/projectiles/{name}/projectile.json"));
+    let schema_path = get_workspace_root().join("assets/json/schema/projectile.schema.json");
+    load_template_from_paths(&template_path, &schema_path)
+}

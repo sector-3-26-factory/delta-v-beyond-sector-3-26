@@ -15,6 +15,7 @@ categories = ["game-development"]
 bevy = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
+delta-v-assets = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-physics = { workspace = true }
 delta-v-types = { workspace = true }

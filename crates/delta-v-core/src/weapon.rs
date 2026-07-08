@@ -14,6 +14,8 @@ pub struct Weapon {
     pub slot: u32,
     /// Cooldown remaining in seconds.
     pub cooldown: f32,
+    /// Name of the weapon definition (e.g., "laser-standard").
+    pub weapon_name: String,
     /// Projectile speed in m/s.
     pub projectile_speed: f32,
     /// Damage per hit.

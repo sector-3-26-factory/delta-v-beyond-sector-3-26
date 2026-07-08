@@ -106,10 +106,20 @@
             }
         },
         "weapons": {
-            "description": "Array of weapon configurations. Optional; ships may have no weapons.",
+            "description": "Array of weapon references. Each entry references a weapon definition by name.",
             "type": "array",
             "items": {
-                "$ref": "https://delta-v-beyond-sector-3-26/schema/weapon"
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "description": "Name of the weapon definition (e.g., 'laser-standard').",
+                        "type": "string"
+                    }
+                }
             },
             "default": []
         },

@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 use delta_v_core::camera::ShipCamerasTemplate;
-use delta_v_types::{BoundingBoxJson, PhysicalQuantityJson};
+use delta_v_types::{BoundingBoxJson, PhysicalQuantityJson, WeaponReference};
 
 /// Base deserialized ship template JSON.
 ///
@@ -61,7 +61,7 @@ pub struct PlayerShipTemplate {
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
     /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
+    pub weapons: Vec<WeaponReference>,
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,
@@ -92,7 +92,7 @@ pub struct StaticShipTemplate {
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
     /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
+    pub weapons: Vec<WeaponReference>,
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,

@@ -138,7 +138,7 @@ impl Plugin for ShipsPlugin {
         // Uses the generic attach_meshes system from delta-v-spawn (ADR-0047).
         .add_systems(
             Update,
-            delta_v_spawn::mesh_attachment::attach_meshes::<spawn::PendingShipMesh>
+            delta_v_spawn::mesh_attachment::attach_meshes::<delta_v_spawn::PendingShipMesh>
                 .run_if(in_state(AppState::InGame)),
         )
         // Boundary checking during InGame.

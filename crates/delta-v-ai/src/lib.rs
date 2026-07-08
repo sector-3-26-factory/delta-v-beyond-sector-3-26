@@ -84,7 +84,7 @@ impl Plugin for AiPlugin {
                     spawn::spawn_npc_ship
                         .in_set(WorldSpawnSet::SpawnNpcs)
                         .run_if(in_state(AppState::SpawningEntities)),
-                    delta_v_spawn::mesh_attachment::attach_meshes::<spawn::PendingNpcShipMesh>
+                    delta_v_spawn::mesh_attachment::attach_meshes::<delta_v_spawn::PendingShipMesh>
                         .run_if(in_state(AppState::InGame)),
                 ),
             )

@@ -38,3 +38,10 @@ impl Health {
         self.current <= 0.0
     }
 }
+
+/// Marker component for entities that can be targeted in combat.
+///
+/// These entities appear in the targeting list and can be selected as the
+/// player's current target.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct Targetable;

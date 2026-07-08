@@ -14,14 +14,11 @@
 //!
 //! See also ADR-0005 (plugin architecture) and ADR-0017 (Fixed timestep).
 
-use bevy::gltf::Gltf;
 use bevy::prelude::*;
-use delta_v_core::{DebugAxesEligible, Health, SpawnEntity, Weapon};
-use delta_v_physics::{CollisionShape, RigidBody};
-use delta_v_spawn::collision::shape_from_json;
-use delta_v_spawn::template_extraction::compute_debug_axis_length;
+use delta_v_core::SpawnEntity;
+use delta_v_spawn::{ShipTemplateBase, build_physical_ship};
 use delta_v_types::{
-    AiConfigJson, BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, WeaponTemplateJson,
+    AiConfigJson, BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, WeaponReference,
 };
 use serde::Deserialize;
 
@@ -49,21 +46,33 @@ pub struct AiControlledShipTemplate {
     /// Axis-aligned bounding box in ship-local coordinates (metres).
     pub bounding_box: BoundingBoxJson,
     /// Weapon configurations. Defaults to `[]` via schema.
-    pub weapons: Vec<WeaponTemplateJson>,
+    pub weapons: Vec<WeaponReference>,
     /// AI behavioral parameters (aggro, attack, leash, patrol ranges).
     pub ai: AiConfigJson,
 }
 
-/// Marker component for a pending NPC ship mesh waiting for its glTF to load.
-#[derive(Component)]
-pub struct PendingNpcShipMesh {
-    /// Handle to the glTF asset being loaded.
-    gltf_handle: Handle<Gltf>,
-}
-
-impl delta_v_spawn::mesh_attachment::PendingMesh for PendingNpcShipMesh {
-    fn gltf_handle(&self) -> &Handle<Gltf> {
-        &self.gltf_handle
+/// Implement `ShipTemplateBase` for `AiControlledShipTemplate`
+impl ShipTemplateBase for AiControlledShipTemplate {
+    fn mass(&self) -> &PhysicalQuantityJson {
+        &self.mass
+    }
+    fn inertia_scale(&self) -> f32 {
+        self.inertia_scale
+    }
+    fn bounding_box(&self) -> &BoundingBoxJson {
+        &self.bounding_box
+    }
+    fn collision_shape(&self) -> &CollisionShapeJson {
+        &self.collision_shape
+    }
+    fn health(&self) -> &PhysicalQuantityJson {
+        &self.health
+    }
+    fn weapons(&self) -> &[WeaponReference] {
+        &self.weapons
+    }
+    fn entity_type(&self) -> &'static str {
+        "ai_controlled_ship"
     }
 }
 
@@ -123,21 +132,8 @@ pub fn spawn_npc_ship(
         // Deserialize template JSON into typed struct (ADR-0040 one-liner).
         let template = deserialize_template(event);
 
-        let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
-
-        // INVARIANT: collision_shape is validated by delta-v-json (ADR-0013)
-        let collision_shape_data = shape_from_json(&template.collision_shape, scale)
-            .expect("collision shape must be valid (ADR-0013)");
-
-        // Compute debug axes length from the bounding box in the template JSON, scaled.
-        let axis_length = compute_debug_axis_length(&template.bounding_box) * scale;
-
-        let mesh_path = event
-            .mesh_template_path
-            .replace("ship.json", "mesh.glb")
-            .replace("ai_controlled_ship.json", "mesh.glb");
-
-        let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
+        // Build the physical ship (common components: physics, collision, health, weapons).
+        let ship_entity = build_physical_ship(&mut commands, &asset_server, event, &template);
 
         // INVARIANT: ai_task is validated by schema (ADR-0013)
         let ai_task = match event.ai_task.as_deref() {
@@ -146,51 +142,21 @@ pub fn spawn_npc_ship(
             None => panic!("AI-controlled ship '{}' has no task assigned", event.id),
         };
 
-        let ship_entity = commands
-            .spawn((
-                Transform {
-                    translation: event.position,
-                    rotation: event.rotation,
-                    scale: event.scale,
-                },
-                GlobalTransform::default(),
-                Visibility::default(),
-                InheritedVisibility::default(),
-                PendingNpcShipMesh { gltf_handle },
-                DebugAxesEligible::new(event.id.clone(), axis_length),
-                RigidBody::new(template.mass.value, template.inertia_scale),
-                CollisionShape(collision_shape_data),
-                Health::new(template.health.value),
-                NpcShip {
-                    entity_id: event.id.clone(),
-                },
-                AiState::Patrol,
-                AiConfig {
-                    aggro_range: template.ai.aggro_range.value,
-                    attack_range: template.ai.attack_range.value,
-                    leash_range: template.ai.leash_range.value,
-                    flee_health_threshold: template.ai.flee_health_threshold as f32,
-                    patrol_radius: template.ai.patrol_radius.value,
-                },
-                ai_task,
-            ))
-            .id();
-
-        // Add Weapon components from template (M4).
-        // Per ADR-0014, all gameplay values come from JSON.
-        for (i, weapon_json) in template.weapons.iter().enumerate() {
-            commands.entity(ship_entity).insert(Weapon {
-                // INVARIANT: weapon slot fits in u32 (ADR-0013)
-                slot: u32::try_from(i).expect("weapon slot overflow"),
-                cooldown: 0.0,
-                projectile_speed: weapon_json.projectile_speed.value,
-                damage: weapon_json.damage.value,
-                fire_rate: weapon_json.fire_rate.value,
-                lifetime: weapon_json.lifetime.value,
-                projectile_radius: weapon_json.projectile_radius.value,
-                sound: weapon_json.sound.clone(),
-            });
-        }
+        // Add AI-specific components
+        commands.entity(ship_entity).insert((
+            NpcShip {
+                entity_id: event.id.clone(),
+            },
+            AiState::Patrol,
+            AiConfig {
+                aggro_range: template.ai.aggro_range.value,
+                attack_range: template.ai.attack_range.value,
+                leash_range: template.ai.leash_range.value,
+                flee_health_threshold: template.ai.flee_health_threshold as f32,
+                patrol_radius: template.ai.patrol_radius.value,
+            },
+            ai_task,
+        ));
 
         tracing::info!(
             "AI ship '{}' spawned at ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, task={:?})",
@@ -198,7 +164,7 @@ pub fn spawn_npc_ship(
             event.position.x,
             event.position.y,
             event.position.z,
-            mesh_path,
+            event.mesh_template_path,
             template.mass.value,
             ai_task,
         );

@@ -25,7 +25,7 @@ use tracing::info_span;
 
 use super::components::SelectedNavObject;
 use super::components::SelectedTarget;
-use super::components::Targetable;
+use delta_v_core::Targetable;
 use delta_v_core::events::{NavigationListChanged, TargetSelected};
 use delta_v_core::navigation::{
     EntityType, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,

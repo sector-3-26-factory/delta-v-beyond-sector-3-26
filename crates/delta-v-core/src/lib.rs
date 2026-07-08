@@ -72,7 +72,7 @@ pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{
     FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
 };
-pub use health::Health;
+pub use health::{Health, Targetable};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use navigation::{
     EntityType, NavEntry, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,
