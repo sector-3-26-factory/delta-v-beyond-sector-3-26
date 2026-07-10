@@ -26,31 +26,9 @@
     },
     "propulsion": {
         "main_thrusters": [
-            {
-                "id": "main",
-                "type": "thrust",
-                "max_forward_thrust": {
-                    "value": 1000.0,
-                    "unit": "N"
-                },
-                "max_backward_thrust": {
-                    "value": 500.0,
-                    "unit": "N"
-                }
-            }
+            "chemical-main"
         ],
-        "maneuvering_thruster": {
-            "type": "rcs",
-            "max_torque": {
-                "value": 100.0,
-                "unit": "N⋅m"
-            },
-            "max_strafe_thrust": {
-                "value": 500.0,
-                "unit": "N"
-            },
-            "rotation_ramp_ticks": 60
-        }
+        "maneuvering_thruster": "rcs-standard"
     },
     "health": {
         "value": 100.0,

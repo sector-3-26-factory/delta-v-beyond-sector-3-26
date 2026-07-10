@@ -1,0 +1,12 @@
+{
+    "type": "rcs",
+    "max_torque": {
+        "value": 50000,
+        "unit": "N\u22c5m"
+    },
+    "max_strafe_thrust": {
+        "value": 50000,
+        "unit": "N"
+    },
+    "rotation_ramp_ticks": 60
+}

@@ -1,0 +1,12 @@
+{
+    "type": "electromagnetic",
+    "max_torque": {
+        "value": 75000,
+        "unit": "N\u22c5m"
+    },
+    "max_strafe_thrust": {
+        "value": 60000,
+        "unit": "N"
+    },
+    "rotation_ramp_ticks": 15
+}

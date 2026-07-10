@@ -14,10 +14,7 @@
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
 use crate::cockpit::CockpitOverlayResource;
-use crate::ship_templates::{
-    MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
-    StaticShipTemplate,
-};
+use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
 use bevy::prelude::*;
 use delta_v_core::{ActiveCameraName, CameraName, PlayerShipEntity, RenderLayer, SpawnEntity};
 use delta_v_spawn::template_extraction::png_dimensions;
@@ -123,19 +120,10 @@ fn insert_player_resources(
     ship_entity: Entity,
     template_path: &str,
     template: &PlayerShipTemplate,
-    main: &MainThrusterTemplate,
-    maneuvering: &ManeuveringThrusterTemplate,
-    active_main_thruster_index: usize,
+    propulsion_config: ShipPropulsionConfig,
 ) {
     commands.insert_resource(PlayerShipEntity(ship_entity));
-    commands.insert_resource(ShipPropulsionConfig {
-        max_forward_thrust: main.max_forward_thrust.value,
-        max_backward_thrust: main.max_backward_thrust.value,
-        max_torque: maneuvering.max_torque.value,
-        max_strafe_thrust: maneuvering.max_strafe_thrust.value,
-        active_main_thruster_index,
-        rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
-    });
+    commands.insert_resource(propulsion_config);
     // Initialize ActiveCameraName resource to track the current camera.
     // The cockpit camera is the default active camera.
     commands.insert_resource(ActiveCameraName("cockpit".to_string()));
@@ -193,13 +181,19 @@ fn spawn_player_ship(
     // Deserialize template JSON into typed struct (ADR-0040 one-liner).
     let template = deserialize_template(event);
 
-    // Extract propulsion values from the active main thruster.
-    let active_main_thruster_index = 0_usize; // M2: single active thruster
-    let main = &template.propulsion.main_thrusters[active_main_thruster_index];
-    let maneuvering = &template.propulsion.maneuvering_thruster;
-
     // Build the physical ship (common components: physics, collision, health, weapons).
-    let ship_entity = build_physical_ship(commands, asset_server, event, &template);
+    let (ship_entity, propulsion_config) =
+        build_physical_ship(commands, asset_server, event, &template);
+
+    // Convert to ShipPropulsionConfig for resource insertion.
+    let ship_propulsion_config = ShipPropulsionConfig {
+        max_forward_thrust: propulsion_config.max_forward_thrust,
+        max_backward_thrust: propulsion_config.max_backward_thrust,
+        max_torque: propulsion_config.max_torque,
+        max_strafe_thrust: propulsion_config.max_strafe_thrust,
+        active_main_thruster_index: 0,
+        rotation_ramp_ticks: propulsion_config.rotation_ramp_ticks,
+    };
 
     // Spawn cameras for each available camera definition, scaled by the entity scale.
     let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
@@ -211,20 +205,16 @@ fn spawn_player_ship(
         ship_entity,
         &event.template_path,
         &template,
-        main,
-        maneuvering,
-        active_main_thruster_index,
+        ship_propulsion_config,
     );
 
     tracing::info!(
-        "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
+        "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",
         event.position.x,
         event.position.y,
         event.position.z,
         event.mesh_template_path,
         template.mass.value,
-        main.max_forward_thrust.value,
-        main.max_backward_thrust.value,
     );
 }
 
@@ -251,7 +241,8 @@ fn spawn_static_ship(
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)");
 
     // Build the physical ship (common components: physics, collision, health, weapons).
-    let _ship_entity = build_physical_ship(commands, asset_server, event, &template);
+    let (_ship_entity, _propulsion_config) =
+        build_physical_ship(commands, asset_server, event, &template);
 
     tracing::info!(
         "static ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",
@@ -286,6 +277,12 @@ impl ShipTemplateBase for PlayerShipTemplate {
     fn entity_type(&self) -> &'static str {
         "player_controlled_ship"
     }
+    fn main_thruster_names(&self) -> &[String] {
+        &self.propulsion.main_thruster_names
+    }
+    fn maneuvering_thruster_name(&self) -> &str {
+        &self.propulsion.maneuvering_thruster
+    }
 }
 
 /// Implement `ShipTemplateBase` for `StaticShipTemplate`
@@ -310,5 +307,11 @@ impl ShipTemplateBase for StaticShipTemplate {
     }
     fn entity_type(&self) -> &'static str {
         "ship"
+    }
+    fn main_thruster_names(&self) -> &[String] {
+        &self.propulsion.main_thruster_names
+    }
+    fn maneuvering_thruster_name(&self) -> &str {
+        &self.propulsion.maneuvering_thruster
     }
 }

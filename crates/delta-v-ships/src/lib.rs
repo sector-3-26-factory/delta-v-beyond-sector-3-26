@@ -52,10 +52,12 @@ pub mod ship_templates;
 pub mod spawn;
 pub mod systems;
 
+pub use delta_v_core::Propulsion;
+pub use delta_v_types::ShipPropulsionTemplate;
 pub use error::ShipError;
 pub use ship_templates::{
-    MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
-    ShipPropulsionTemplate, ShipTemplate, StaticShipTemplate, ThrustCommand, TorqueCommand,
+    PlayerShipTemplate, ShipPropulsionConfig, ShipTemplate, StaticShipTemplate, ThrustCommand,
+    TorqueCommand,
 };
 pub use spawn::spawn_ship;
 

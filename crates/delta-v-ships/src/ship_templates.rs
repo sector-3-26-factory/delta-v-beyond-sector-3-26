@@ -11,7 +11,9 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 use delta_v_core::camera::ShipCamerasTemplate;
-use delta_v_types::{BoundingBoxJson, PhysicalQuantityJson, WeaponReference};
+use delta_v_types::{
+    BoundingBoxJson, PhysicalQuantityJson, ShipPropulsionTemplate, WeaponReference,
+};
 
 /// Base deserialized ship template JSON.
 ///
@@ -152,45 +154,6 @@ pub enum GaugeShape {
         /// Radius (pixels).
         r: f32,
     },
-}
-
-/// Propulsion configuration from the ship template.
-#[derive(Debug, Deserialize)]
-pub struct ShipPropulsionTemplate {
-    /// Main thruster configurations. For M2, exactly one is active.
-    #[serde(rename = "main_thrusters")]
-    pub main_thrusters: Vec<MainThrusterTemplate>,
-    /// Maneuver thruster (RCS) configuration.
-    pub maneuvering_thruster: ManeuveringThrusterTemplate,
-}
-
-/// Main thruster configuration from the template.
-#[derive(Debug, Deserialize)]
-pub struct MainThrusterTemplate {
-    /// Unique identifier for this thruster within the ship.
-    pub id: String,
-    /// Thruster type (e.g. "chemical", "ion"). Metadata for M2.
-    #[serde(rename = "type")]
-    pub thruster_type: String,
-    /// Maximum forward thrust.
-    pub max_forward_thrust: PhysicalQuantityJson,
-    /// Maximum backward/reverse thrust.
-    pub max_backward_thrust: PhysicalQuantityJson,
-}
-
-/// Maneuvering thruster (RCS) configuration from the template.
-#[derive(Debug, Deserialize)]
-pub struct ManeuveringThrusterTemplate {
-    /// Maneuvering thruster type (e.g. "rcs", "vernier"). Metadata for M2.
-    #[serde(rename = "type")]
-    pub thruster_type: String,
-    /// Maximum torque per rotation axis.
-    pub max_torque: PhysicalQuantityJson,
-    /// Maximum strafe thrust per lateral/vertical axis.
-    pub max_strafe_thrust: PhysicalQuantityJson,
-    /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
-    /// is first pressed. 0 = instant full torque (no ramp).
-    pub rotation_ramp_ticks: u32,
 }
 
 /// Ship propulsion configuration read from the ship template JSON.

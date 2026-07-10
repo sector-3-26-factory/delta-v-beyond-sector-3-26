@@ -18,7 +18,8 @@ use bevy::prelude::*;
 use delta_v_core::SpawnEntity;
 use delta_v_spawn::{ShipTemplateBase, build_physical_ship};
 use delta_v_types::{
-    AiConfigJson, BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, WeaponReference,
+    AiConfigJson, BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson,
+    ShipPropulsionTemplate, WeaponReference,
 };
 use serde::Deserialize;
 
@@ -29,10 +30,10 @@ use crate::resources::SkirmishState;
 ///
 /// Contains all fields needed to spawn an AI-controlled NPC ship: physical
 /// properties (mass, inertia, health), collision shape, bounding box, weapons,
-/// and AI behavioral configuration. This struct is produced by deserializing
-/// the validated + default-filled `serde_json::Value` from the template file.
-/// Per ADR-0040, the schema is the only source of defaults — no
-/// `#[serde(default)]` or `impl Default`.
+/// propulsion, and AI behavioral configuration. This struct is produced by
+/// deserializing the validated + default-filled `serde_json::Value` from the
+/// template file. Per ADR-0040, the schema is the only source of defaults —
+/// no `#[serde(default)]` or `impl Default`.
 #[derive(Debug, Deserialize)]
 pub struct AiControlledShipTemplate {
     /// Ship mass in kilograms.
@@ -47,6 +48,8 @@ pub struct AiControlledShipTemplate {
     pub bounding_box: BoundingBoxJson,
     /// Weapon configurations. Defaults to `[]` via schema.
     pub weapons: Vec<WeaponReference>,
+    /// Propulsion system configuration.
+    pub propulsion: ShipPropulsionTemplate,
     /// AI behavioral parameters (aggro, attack, leash, patrol ranges).
     pub ai: AiConfigJson,
 }
@@ -73,6 +76,12 @@ impl ShipTemplateBase for AiControlledShipTemplate {
     }
     fn entity_type(&self) -> &'static str {
         "ai_controlled_ship"
+    }
+    fn main_thruster_names(&self) -> &[String] {
+        &self.propulsion.main_thruster_names
+    }
+    fn maneuvering_thruster_name(&self) -> &str {
+        &self.propulsion.maneuvering_thruster
     }
 }
 
@@ -133,7 +142,8 @@ pub fn spawn_npc_ship(
         let template = deserialize_template(event);
 
         // Build the physical ship (common components: physics, collision, health, weapons).
-        let ship_entity = build_physical_ship(&mut commands, &asset_server, event, &template);
+        let (ship_entity, _propulsion_config) =
+            build_physical_ship(&mut commands, &asset_server, event, &template);
 
         // INVARIANT: ai_task is validated by schema (ADR-0013)
         let ai_task = match event.ai_task.as_deref() {

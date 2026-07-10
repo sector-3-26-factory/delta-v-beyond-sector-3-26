@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/maneuvering-thruster-definition",
+    "title": "Maneuvering thruster definition",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a maneuvering thruster (RCS) configuration that can be referenced by ship templates. Physical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).\n\nThe thruster name is the directory name under assets/maneuvering-thrusters/ — no `id` field is needed.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "type",
+        "max_torque",
+        "max_strafe_thrust"
+    ],
+    "properties": {
+        "type": {
+            "description": "Maneuvering thruster type. Determines response characteristics in M3+.",
+            "type": "string",
+            "enum": [
+                "rcs",
+                "vernier",
+                "gimbaled",
+                "electromagnetic"
+            ]
+        },
+        "max_torque": {
+            "description": "Maximum torque in Newton-meters applied around each rotation axis (pitch=X, yaw=Y, roll=Z per ADR-0006).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/torque"
+        },
+        "max_strafe_thrust": {
+            "description": "Maximum strafe thrust in Newtons applied along each lateral/vertical axis (left/right=X, up/down=Y). Same value for all strafe directions.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
+        },
+        "rotation_ramp_ticks": {
+            "description": "Number of ticks for torque to ramp from 0% to 100% when a rotation key is first pressed. 0 = instant full torque (no ramp). Default 60.",
+            "type": "integer",
+            "minimum": 0,
+            "default": 60
+        }
+    }
+}

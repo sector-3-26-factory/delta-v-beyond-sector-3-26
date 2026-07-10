@@ -1,0 +1,11 @@
+{
+    "type": "chemical",
+    "max_forward_thrust": {
+        "value": 100000,
+        "unit": "N"
+    },
+    "max_backward_thrust": {
+        "value": 40000,
+        "unit": "N"
+    }
+}

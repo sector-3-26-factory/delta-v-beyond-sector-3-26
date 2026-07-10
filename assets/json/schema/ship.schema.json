@@ -48,7 +48,7 @@
             }
         },
         "propulsion": {
-            "description": "Propulsion system configuration. Defines main thrusters (forward/backward) and maneuvering thrusters (rotation + strafe). Required per ADR-0014 (gameplay values in JSON).",
+            "description": "Propulsion system configuration. References main thruster and maneuvering thruster definitions by name. Required per ADR-0014 (gameplay values in JSON).",
             "type": "object",
             "additionalProperties": false,
             "required": [
@@ -57,16 +57,16 @@
             ],
             "properties": {
                 "main_thrusters": {
-                    "description": "Array of main thruster configurations. For M2, exactly one thruster is active. In M3+, the player can switch between thrusters (e.g. cruise vs. combat mode).",
+                    "description": "Array of main thruster names (references to directories under assets/main-thrusters/). For M2, exactly one thruster is active. In M3+, the player can switch between thrusters (e.g. cruise vs. combat mode).",
                     "type": "array",
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/$defs/main_thruster"
+                        "type": "string"
                     }
                 },
                 "maneuvering_thruster": {
-                    "description": "Maneuver thruster (RCS) configuration for rotation and lateral/vertical strafe.",
-                    "$ref": "#/$defs/maneuvering_thruster"
+                    "description": "Name of the maneuvering thruster (reference to a directory under assets/maneuvering-thrusters/).",
+                    "type": "string"
                 }
             }
         },
@@ -133,78 +133,6 @@
         }
     },
     "$defs": {
-        "main_thruster": {
-            "description": "A main thruster configuration. Produces forward and backward linear force along the ship's longitudinal axis (-Z forward per ADR-0006).",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "id",
-                "type",
-                "max_forward_thrust",
-                "max_backward_thrust"
-            ],
-            "properties": {
-                "id": {
-                    "description": "Unique identifier for this thruster within the ship. Used to select the active thruster in M3+.",
-                    "type": "string"
-                },
-                "type": {
-                    "description": "Thruster type. Determines fuel consumption, heat, sound, and VFX in M3+. For M2, this is metadata only.",
-                    "type": "string",
-                    "enum": [
-                        "chemical",
-                        "ion",
-                        "fusion",
-                        "antimatter",
-                        "scram"
-                    ]
-                },
-                "max_forward_thrust": {
-                    "description": "Maximum forward thrust in Newtons (applied along -Z local axis).",
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
-                },
-                "max_backward_thrust": {
-                    "description": "Maximum backward/reverse thrust in Newtons (applied along +Z local axis). Typically lower than forward thrust.",
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
-                }
-            }
-        },
-        "maneuvering_thruster": {
-            "description": "Maneuver thruster (RCS) configuration. Produces torque for rotation (pitch, yaw, roll) and force for lateral/vertical strafe.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "type",
-                "max_torque",
-                "max_strafe_thrust"
-            ],
-            "properties": {
-                "type": {
-                    "description": "Maneuvering thruster type. Determines response characteristics in M3+. For M2, this is metadata only.",
-                    "type": "string",
-                    "enum": [
-                        "rcs",
-                        "vernier",
-                        "gimbaled",
-                        "electromagnetic"
-                    ]
-                },
-                "max_torque": {
-                    "description": "Maximum torque in Newton-meters applied around each rotation axis (pitch=X, yaw=Y, roll=Z per ADR-0006).",
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/torque"
-                },
-                "max_strafe_thrust": {
-                    "description": "Maximum strafe thrust in Newtons applied along each lateral/vertical axis (left/right=X, up/down=Y). Same value for all strafe directions.",
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
-                },
-                "rotation_ramp_ticks": {
-                    "description": "Number of ticks for torque to ramp from 0% to 100% when a rotation key is first pressed. 0 = instant full torque (no ramp). Default 60.",
-                    "type": "integer",
-                    "minimum": 0,
-                    "default": 60
-                }
-            }
-        },
         "vec3": {
             "description": "3-component vector (x, y, z) in metres.",
             "type": "object",

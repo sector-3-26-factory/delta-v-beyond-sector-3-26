@@ -3,7 +3,7 @@
 //! AI state machine and skirmish tracking systems.
 
 use bevy::prelude::*;
-use delta_v_core::{FireWeapon, Health, PlayerShipEntity};
+use delta_v_core::{FireWeapon, Health, PlayerShipEntity, Propulsion};
 use delta_v_physics::RigidBody;
 
 use crate::components::{AiConfig, AiState, AiTask, NpcShip};
@@ -43,6 +43,7 @@ pub fn ai_state_machine_system(
             &Transform,
             &mut RigidBody,
             &Health,
+            &Propulsion,
         ),
         With<NpcShip>,
     >,
@@ -54,7 +55,9 @@ pub fn ai_state_machine_system(
     };
     let player_pos = player_transform.translation;
 
-    for (entity, mut ai_state, ai_config, ai_task, transform, mut body, health) in &mut npc_query {
+    for (entity, mut ai_state, ai_config, ai_task, transform, mut body, health, propulsion) in
+        &mut npc_query
+    {
         let self_pos = transform.translation;
         let distance = (player_pos - self_pos).length();
         let health_fraction = health.current / health.max;
@@ -73,13 +76,15 @@ pub fn ai_state_machine_system(
                         *ai_state = AiState::Patrol;
                     } else {
                         let forward = transform.rotation * Vec3::NEG_Z;
-                        body.apply_force(forward * 50_000.0);
+                        body.apply_force(forward * propulsion.max_forward_thrust);
                         let to_player = (player_pos - self_pos).normalize();
                         let current_forward = transform.rotation * Vec3::NEG_Z;
                         let rotation_axis = current_forward.cross(to_player);
                         if rotation_axis.length_squared() > f32::EPSILON {
                             body.apply_torque(
-                                rotation_axis.normalize() * rotation_axis.length() * 50_000.0,
+                                rotation_axis.normalize()
+                                    * rotation_axis.length()
+                                    * propulsion.max_torque,
                             );
                         }
                     }
@@ -95,7 +100,9 @@ pub fn ai_state_machine_system(
                         let rotation_axis = current_forward.cross(to_player);
                         if rotation_axis.length_squared() > f32::EPSILON {
                             body.apply_torque(
-                                rotation_axis.normalize() * rotation_axis.length() * 50_000.0,
+                                rotation_axis.normalize()
+                                    * rotation_axis.length()
+                                    * propulsion.max_torque,
                             );
                         }
                         if current_forward.dot(to_player) > 0.9 {
@@ -113,7 +120,7 @@ pub fn ai_state_machine_system(
                         *ai_state = AiState::Patrol;
                     } else {
                         let forward = transform.rotation * Vec3::NEG_Z;
-                        body.apply_force(forward * 50_000.0);
+                        body.apply_force(forward * propulsion.max_forward_thrust);
                     }
                 }
             },

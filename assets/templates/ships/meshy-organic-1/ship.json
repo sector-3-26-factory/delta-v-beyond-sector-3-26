@@ -32,31 +32,9 @@
     },
     "propulsion": {
         "main_thrusters": [
-            {
-                "id": "main",
-                "type": "chemical",
-                "max_forward_thrust": {
-                    "value": 120000,
-                    "unit": "N"
-                },
-                "max_backward_thrust": {
-                    "value": 48000,
-                    "unit": "N"
-                }
-            }
+            "chemical-main"
         ],
-        "maneuvering_thruster": {
-            "type": "rcs",
-            "max_torque": {
-                "value": 45000,
-                "unit": "N\u22c5m"
-            },
-            "max_strafe_thrust": {
-                "value": 45000,
-                "unit": "N"
-            },
-            "rotation_ramp_ticks": 60
-        }
+        "maneuvering_thruster": "rcs-standard"
     },
     "weapons": [
         {
