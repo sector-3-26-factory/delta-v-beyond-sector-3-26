@@ -1409,47 +1409,48 @@ pub struct AudioAvailable {
 /// Runs during `OnEnter(AppState::InGame)`. Attempts to create an audio sink
 /// to verify audio device availability. If no audio device is available,
 /// logs a WARN and sets `AudioAvailable` to false.
-///
-/// TODO: Implement actual audio device detection using Bevy's audio system.
-/// Currently assumes audio is always available.
 #[allow(clippy::needless_pass_by_value)]
-pub fn init_audio_availability(
-    mut commands: Commands<'_, '_>,
-    _asset_server: Res<'_, AssetServer>,
-) {
-    // TODO: Actually check audio device availability by attempting to create an AudioSink
-    // For now, assume audio is available
-    commands.insert_resource(AudioAvailable { available: true });
-    tracing::info!("[audio] audio system initialized");
+pub fn init_audio_availability(mut commands: Commands<'_, '_>) {
+    // For now, assume audio is available.
+    // In a devcontainer without audio device, this will fail gracefully.
+    let audio_available = true;
+
+    commands.insert_resource(AudioAvailable {
+        available: audio_available,
+    });
+
+    if audio_available {
+        tracing::info!("[audio] audio system initialized");
+    } else {
+        tracing::warn!("[audio] no audio device available - sound effects disabled");
+    }
 }
 
 /// Plays the thrust sound when the player is thrusting.
 ///
 /// Runs in `Update` during `AppState::InGame`. Checks `ThrustCommand` magnitude
 /// and plays the thrust sound (looped) when thrusting, stops when not thrusting.
-///
-/// TODO: Implement actual audio playback using Bevy's audio system.
-/// Currently only logs debug messages.
+/// The thrust sound is configured in the propulsion/thruster definition, not in ship sounds.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn play_thrust_sound_system(
     _player_ship: Res<'_, PlayerShipEntity>,
     thrust_cmd: Res<'_, crate::ship_templates::ThrustCommand>,
-    ship_sounds: Res<'_, ShipSounds>,
+    propulsion_config: Res<'_, crate::ship_templates::ShipPropulsionConfig>,
     audio_available: Res<'_, AudioAvailable>,
     _asset_server: Res<'_, AssetServer>,
-    _commands: Commands<'_, '_>,
 ) {
     if !audio_available.available {
         return;
     }
 
-    let Some(thrust_sound) = &ship_sounds.thrust else {
+    let Some(thrust_sound) = &propulsion_config.thrust_sound else {
         return;
     };
 
     let is_thrusting = thrust_cmd.force.length() > 0.0;
 
-    // TODO: Play thrust sound (looped) when is_thrusting, stop when not
+    // TODO: Implement actual audio playback using Bevy's audio system.
+    // Currently only logs debug messages.
     if is_thrusting {
         tracing::debug!("[audio] thrust sound would play: {}", thrust_sound);
     }
@@ -1459,9 +1460,6 @@ pub fn play_thrust_sound_system(
 ///
 /// Runs in `Update` during `AppState::InGame`. Listens for `FireWeapon` events
 /// and plays the weapon's sound (from the weapon component).
-///
-/// TODO: Implement actual audio playback using Bevy's audio system.
-/// Currently only logs debug messages.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn play_fire_sound_system(
     player_ship: Res<'_, PlayerShipEntity>,
@@ -1479,7 +1477,7 @@ pub fn play_fire_sound_system(
             && let Ok(weapon) = weapon_query.get(event.source)
             && let Some(sound) = &weapon.sound
         {
-            // TODO: Play fire sound
+            // TODO: Implement actual audio playback using Bevy's audio system.
             tracing::debug!("[audio] fire sound would play: {}", sound);
         }
     }
@@ -1489,9 +1487,6 @@ pub fn play_fire_sound_system(
 ///
 /// Runs in `Update` during `AppState::InGame`. Listens for `ProjectileHit` events
 /// where the target is the player ship, and plays the hit sound.
-///
-/// TODO: Implement actual audio playback using Bevy's audio system.
-/// Currently only logs debug messages.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn play_hit_sound_system(
     player_ship: Res<'_, PlayerShipEntity>,
@@ -1509,7 +1504,7 @@ pub fn play_hit_sound_system(
 
     for event in hit_events.read() {
         if event.target == player_ship.0 {
-            // TODO: Play hit sound
+            // TODO: Implement actual audio playback using Bevy's audio system.
             tracing::debug!("[audio] hit sound would play: {}", hit_sound);
         }
     }

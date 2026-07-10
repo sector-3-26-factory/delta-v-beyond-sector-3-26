@@ -21,7 +21,7 @@ pub struct ShipPropulsionTemplate {
 /// Propulsion configuration returned by `build_physical_ship`.
 ///
 /// This is a plain struct that is converted to the resource/component in the domain crate.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PropulsionConfig {
     /// Maximum forward thrust in Newtons.
     pub max_forward_thrust: f32,
@@ -33,4 +33,7 @@ pub struct PropulsionConfig {
     pub max_strafe_thrust: f32,
     /// Number of ticks for rotation ramp.
     pub rotation_ramp_ticks: u32,
+    /// Thrust sound file path relative to assets/audio/ (e.g., "thrust.wav").
+    /// Optional; if not provided, no thrust sound is played.
+    pub thrust_sound: Option<String>,
 }

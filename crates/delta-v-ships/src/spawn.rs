@@ -193,6 +193,7 @@ fn spawn_player_ship(
         max_strafe_thrust: propulsion_config.max_strafe_thrust,
         active_main_thruster_index: 0,
         rotation_ramp_ticks: propulsion_config.rotation_ramp_ticks,
+        thrust_sound: propulsion_config.thrust_sound,
     };
 
     // Spawn cameras for each available camera definition, scaled by the entity scale.

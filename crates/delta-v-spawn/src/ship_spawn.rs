@@ -234,6 +234,7 @@ fn load_propulsion_config(template: &impl ShipTemplateBase) -> PropulsionConfig 
         max_torque: maneuvering_thruster_def.max_torque.value,
         max_strafe_thrust: maneuvering_thruster_def.max_strafe_thrust.value,
         rotation_ramp_ticks: maneuvering_thruster_def.rotation_ramp_ticks,
+        thrust_sound: main_thruster_def.sound,
     }
 }
 

@@ -45,6 +45,7 @@ fn build_input_app() -> App {
         max_strafe_thrust: 50_000.0,
         active_main_thruster_index: 0,
         rotation_ramp_ticks: 60,
+        thrust_sound: None,
     });
     app
 }
@@ -535,6 +536,7 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
         max_strafe_thrust: 50_000.0,
         active_main_thruster_index: 0,
         rotation_ramp_ticks,
+        thrust_sound: None,
     });
     app
 }

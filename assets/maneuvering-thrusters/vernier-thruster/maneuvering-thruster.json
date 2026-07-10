@@ -8,5 +8,6 @@
         "value": 25000,
         "unit": "N"
     },
-    "rotation_ramp_ticks": 30
+    "rotation_ramp_ticks": 30,
+    "sound": "thrust.wav"
 }

@@ -19,4 +19,7 @@ pub struct MainThrusterDefinitionJson {
     pub max_forward_thrust: PhysicalQuantityJson,
     /// Maximum backward/reverse thrust in Newtons.
     pub max_backward_thrust: PhysicalQuantityJson,
+    /// Sound file path relative to assets/audio/ (e.g., "thrust.wav").
+    /// Optional; if not provided, no thrust sound is played.
+    pub sound: Option<String>,
 }

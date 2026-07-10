@@ -34,8 +34,6 @@ pub struct ShipTemplate {
 /// Sound file paths for a ship.
 #[derive(Debug, Deserialize, Clone, Resource)]
 pub struct ShipSounds {
-    /// Engine thrust sound (looped while thrusting).
-    pub thrust: Option<String>,
     /// Hit/impact sound.
     pub hit: Option<String>,
 }
@@ -179,6 +177,9 @@ pub struct ShipPropulsionConfig {
     /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
     /// is first pressed. 0 = instant full torque (no ramp).
     pub rotation_ramp_ticks: u32,
+    /// Thrust sound file path relative to assets/audio/ (e.g., "thrust.wav").
+    /// Optional; if not provided, no thrust sound is played.
+    pub thrust_sound: Option<String>,
 }
 
 /// Accumulated thrust command for the current fixed tick.

@@ -140,7 +140,6 @@
         ]
     },
     "sounds": {
-        "thrust": "thrust.wav",
         "hit": "hit.wav"
     }
 }
