@@ -14,9 +14,7 @@
         "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
         // PulseAudio socket for audio playback in the container.
         // Requires PulseAudio running on the host with module-native-protocol-unix loaded.
-        "PULSE_SERVER": "unix:/run/user/1000/pulse/native",
-        // Use mold as the default linker for faster iteration.
-        "RUSTFLAGS": "-C link-arg=-fuse-ld=mold"
+        "PULSE_SERVER": "unix:/run/user/1000/pulse/native"
         // XDG_RUNTIME_DIR remains deliberately unset.
     },
     "mounts": [

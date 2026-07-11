@@ -46,6 +46,7 @@ impl Plugin for CockpitPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<systems::ArrowTextureCache>()
             .init_resource::<systems::CockpitCycleState>()
+            .init_resource::<systems::ActiveThrustSound>()
             .init_resource::<components::TargetingMode>()
             .init_resource::<components::SelectedTarget>()
             .init_resource::<components::SelectedNavObject>()

@@ -18,6 +18,7 @@
 
 //! Cockpit-related systems.
 
+use bevy::audio::prelude::{AudioPlayer, PlaybackSettings};
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -45,6 +46,15 @@ use delta_v_core::Targetable;
 
 use super::spawn::CockpitOverlayResource;
 use crate::ship_templates::ShipSounds;
+
+/// Resource to track the currently playing thrust sound.
+///
+/// Holds the entity with the audio components so we can despawn it when thrust ends.
+#[derive(Resource, Default)]
+pub struct ActiveThrustSound {
+    /// Entity with `AudioPlayer` and `AudioSink` components for the currently playing thrust sound.
+    pub entity: Option<Entity>,
+}
 
 /// Tracks which actions were already consumed to prevent repeated firing.
 // allow-default: Bevy requires Default on resources for init_resource. This
@@ -1437,7 +1447,9 @@ pub fn play_thrust_sound_system(
     thrust_cmd: Res<'_, crate::ship_templates::ThrustCommand>,
     propulsion_config: Res<'_, crate::ship_templates::ShipPropulsionConfig>,
     audio_available: Res<'_, AudioAvailable>,
-    _asset_server: Res<'_, AssetServer>,
+    asset_server: Res<'_, AssetServer>,
+    mut active_sound: ResMut<'_, ActiveThrustSound>,
+    mut commands: Commands<'_, '_>,
 ) {
     if !audio_available.available {
         return;
@@ -1449,10 +1461,23 @@ pub fn play_thrust_sound_system(
 
     let is_thrusting = thrust_cmd.force.length() > 0.0;
 
-    // TODO: Implement actual audio playback using Bevy's audio system.
-    // Currently only logs debug messages.
     if is_thrusting {
-        tracing::debug!("[audio] thrust sound would play: {}", thrust_sound);
+        // If no sound is playing, start one
+        if active_sound.entity.is_none() {
+            let sound_path = format!("audio/{thrust_sound}");
+            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            let entity = commands
+                .spawn((AudioPlayer::new(sound_handle), PlaybackSettings::LOOP))
+                .id();
+            active_sound.entity = Some(entity);
+            tracing::debug!("[audio] thrust sound started: {}", thrust_sound);
+        }
+    } else {
+        // Stop the thrust sound if it's playing
+        if let Some(entity) = active_sound.entity.take() {
+            commands.entity(entity).despawn();
+            tracing::debug!("[audio] thrust sound stopped");
+        }
     }
 }
 
@@ -1464,9 +1489,10 @@ pub fn play_thrust_sound_system(
 pub fn play_fire_sound_system(
     player_ship: Res<'_, PlayerShipEntity>,
     audio_available: Res<'_, AudioAvailable>,
-    _asset_server: Res<'_, AssetServer>,
+    asset_server: Res<'_, AssetServer>,
     mut fire_events: MessageReader<'_, '_, FireWeapon>,
     weapon_query: Query<'_, '_, &Weapon>,
+    mut commands: Commands<'_, '_>,
 ) {
     if !audio_available.available {
         return;
@@ -1477,8 +1503,10 @@ pub fn play_fire_sound_system(
             && let Ok(weapon) = weapon_query.get(event.source)
             && let Some(sound) = &weapon.sound
         {
-            // TODO: Implement actual audio playback using Bevy's audio system.
-            tracing::debug!("[audio] fire sound would play: {}", sound);
+            let sound_path = format!("audio/{sound}");
+            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            commands.spawn((AudioPlayer::new(sound_handle), PlaybackSettings::ONCE));
+            tracing::debug!("[audio] fire sound played: {}", sound);
         }
     }
 }
@@ -1493,6 +1521,8 @@ pub fn play_hit_sound_system(
     ship_sounds: Res<'_, ShipSounds>,
     audio_available: Res<'_, AudioAvailable>,
     mut hit_events: MessageReader<'_, '_, ProjectileHit>,
+    asset_server: Res<'_, AssetServer>,
+    mut commands: Commands<'_, '_>,
 ) {
     if !audio_available.available {
         return;
@@ -1504,8 +1534,10 @@ pub fn play_hit_sound_system(
 
     for event in hit_events.read() {
         if event.target == player_ship.0 {
-            // TODO: Implement actual audio playback using Bevy's audio system.
-            tracing::debug!("[audio] hit sound would play: {}", hit_sound);
+            let sound_path = format!("audio/{hit_sound}");
+            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            commands.spawn((AudioPlayer::new(sound_handle), PlaybackSettings::ONCE));
+            tracing::debug!("[audio] hit sound played: {}", hit_sound);
         }
     }
 }
