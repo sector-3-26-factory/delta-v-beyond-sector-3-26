@@ -10,11 +10,11 @@ use serde::Deserialize;
 /// The actual thruster definitions are loaded at spawn time.
 #[derive(Debug, Deserialize)]
 pub struct ShipPropulsionTemplate {
-    /// Array of main thruster names (references to directories under assets/main-thrusters/).
+    /// Array of main thruster names (references to directories under assets/components/propulsion/main-thrusters/).
     /// For M2, exactly one is active. In M3+, the player can switch between thrusters.
     #[serde(rename = "main_thrusters")]
     pub main_thruster_names: Vec<String>,
-    /// Name of the maneuvering thruster (reference to a directory under assets/maneuvering-thrusters/).
+    /// Name of the maneuvering thruster (reference to a directory under assets/components/propulsion/maneuvering-thrusters/).
     pub maneuvering_thruster: String,
 }
 

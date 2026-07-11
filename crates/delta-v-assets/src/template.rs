@@ -315,44 +315,47 @@ fn map_json_error(e: delta_v_json::error::JsonError, _context: &Path) -> AssetEr
 
 /// Loads a weapon definition by name.
 ///
-/// Weapon definitions are stored at `assets/weapons/<name>/weapon.json`.
+/// Weapon definitions are stored at `assets/components/weapons/<name>/weapon.json`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the weapon file does not exist.
 /// Returns [`AssetError::Validation`] if the weapon fails schema validation.
 pub fn load_weapon_definition(name: &str) -> Result<Value, AssetError> {
-    let template_path = get_workspace_root().join(format!("assets/weapons/{name}/weapon.json"));
+    let template_path =
+        get_workspace_root().join(format!("assets/components/weapons/{name}/weapon.json"));
     let schema_path = get_workspace_root().join("assets/json/schema/weapon.schema.json");
     load_template_from_paths(&template_path, &schema_path)
 }
 
 /// Loads a projectile definition by name.
 ///
-/// Projectile definitions are stored at `assets/projectiles/<name>/projectile.json`.
+/// Projectile definitions are stored at `assets/components/projectiles/<name>/projectile.json`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the projectile file does not exist.
 /// Returns [`AssetError::Validation`] if the projectile fails schema validation.
 pub fn load_projectile_definition(name: &str) -> Result<Value, AssetError> {
-    let template_path =
-        get_workspace_root().join(format!("assets/projectiles/{name}/projectile.json"));
+    let template_path = get_workspace_root().join(format!(
+        "assets/components/projectiles/{name}/projectile.json"
+    ));
     let schema_path = get_workspace_root().join("assets/json/schema/projectile.schema.json");
     load_template_from_paths(&template_path, &schema_path)
 }
 
 /// Loads a main thruster definition by name.
 ///
-/// Main thruster definitions are stored at `assets/main-thrusters/<name>/main-thruster.json`.
+/// Main thruster definitions are stored at `assets/components/propulsion/main-thrusters/<name>/main-thruster.json`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the thruster file does not exist.
 /// Returns [`AssetError::Validation`] if the thruster fails schema validation.
 pub fn load_main_thruster_definition(name: &str) -> Result<Value, AssetError> {
-    let template_path =
-        get_workspace_root().join(format!("assets/main-thrusters/{name}/main-thruster.json"));
+    let template_path = get_workspace_root().join(format!(
+        "assets/components/propulsion/main-thrusters/{name}/main-thruster.json"
+    ));
     let schema_path =
         get_workspace_root().join("assets/json/schema/main-thruster-definition.schema.json");
     load_template_from_paths(&template_path, &schema_path)
@@ -360,7 +363,7 @@ pub fn load_main_thruster_definition(name: &str) -> Result<Value, AssetError> {
 
 /// Loads a maneuvering thruster definition by name.
 ///
-/// Maneuvering thruster definitions are stored at `assets/maneuvering-thrusters/<name>/maneuvering-thruster.json`.
+/// Maneuvering thruster definitions are stored at `assets/components/propulsion/maneuvering-thrusters/<name>/maneuvering-thruster.json`.
 ///
 /// # Errors
 ///
@@ -368,7 +371,7 @@ pub fn load_main_thruster_definition(name: &str) -> Result<Value, AssetError> {
 /// Returns [`AssetError::Validation`] if the thruster fails schema validation.
 pub fn load_maneuvering_thruster_definition(name: &str) -> Result<Value, AssetError> {
     let template_path = get_workspace_root().join(format!(
-        "assets/maneuvering-thrusters/{name}/maneuvering-thruster.json"
+        "assets/components/propulsion/maneuvering-thrusters/{name}/maneuvering-thruster.json"
     ));
     let schema_path =
         get_workspace_root().join("assets/json/schema/maneuvering-thruster-definition.schema.json");

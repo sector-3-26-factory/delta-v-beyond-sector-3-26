@@ -42,9 +42,9 @@ pub trait ShipTemplateBase {
     fn weapons(&self) -> &[WeaponReference];
     /// Returns the entity type string (e.g., "`player_controlled_ship`", "`ship`", "`ai_controlled_ship`").
     fn entity_type(&self) -> &str;
-    /// Returns the array of main thruster names (references to directories under assets/main-thrusters/).
+    /// Returns the array of main thruster names (references to directories under assets/components/propulsion/main-thrusters/).
     fn main_thruster_names(&self) -> &[String];
-    /// Returns the name of the maneuvering thruster (reference to a directory under assets/maneuvering-thrusters/).
+    /// Returns the name of the maneuvering thruster (reference to a directory under assets/components/propulsion/maneuvering-thrusters/).
     fn maneuvering_thruster_name(&self) -> &str;
 }
 

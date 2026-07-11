@@ -10,9 +10,9 @@ use bevy::prelude::*;
 /// This component is added to ship entities at spawn time.
 #[derive(Component, Debug, Clone)]
 pub struct Propulsion {
-    /// Names of main thruster assets (references to directories under assets/main-thrusters/).
+    /// Names of main thruster assets (references to directories under assets/components/propulsion/main-thrusters/).
     pub main_thruster_names: Vec<String>,
-    /// Name of the maneuvering thruster (reference to a directory under assets/maneuvering-thrusters/).
+    /// Name of the maneuvering thruster (reference to a directory under assets/components/propulsion/maneuvering-thrusters/).
     pub maneuvering_thruster_name: String,
     /// Maximum forward thrust in Newtons (merged from active main thruster).
     pub max_forward_thrust: f32,

@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://delta-v-beyond-sector-3-26/schema/maneuvering-thruster-definition",
     "title": "Maneuvering thruster definition",
-    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a maneuvering thruster (RCS) configuration that can be referenced by ship templates. Physical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).\n\nThe thruster name is the directory name under assets/maneuvering-thrusters/ — no `id` field is needed.",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines a maneuvering thruster (RCS) configuration that can be referenced by ship templates. Physical quantities follow ADR-0008 (value+unit objects). Allowed units are defined in the central units registry (assets/json/schema/units.schema.json).\n\nThe thruster name is the directory name under assets/components/propulsion/maneuvering-thrusters/ — no `id` field is needed.",
     "type": "object",
     "additionalProperties": false,
     "required": [
