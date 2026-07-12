@@ -131,7 +131,7 @@ pub struct FireWeapon {
 /// Event emitted when a projectile hits another entity.
 ///
 /// Emitted by the weapons plugin when a projectile collision is detected.
-/// Contains the projectile, target, damage, and hit point for VFX/sound.
+/// Contains the projectile, target, damage, hit point, and hit sound for VFX/audio.
 #[derive(Message, Debug)]
 pub struct ProjectileHit {
     /// The projectile entity.
@@ -142,6 +142,9 @@ pub struct ProjectileHit {
     pub damage: f32,
     /// The hit point in world coordinates.
     pub hit_point: Vec3,
+    /// Sound file path relative to assets/audio/ (e.g., "hit.mp3").
+    /// Optional; if not provided, no sound is played on impact.
+    pub hit_sound: Option<String>,
 }
 
 /// Event emitted when the active ship camera changes.

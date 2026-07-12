@@ -114,7 +114,7 @@ fn spawn_cameras(
 /// Inserts player-specific resources after the ship entity is spawned.
 ///
 /// Stores the player ship entity ID, camera configuration, propulsion
-/// configuration, cockpit overlay resource, and ship sounds.
+/// configuration, and cockpit overlay resource.
 fn insert_player_resources(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
@@ -149,11 +149,6 @@ fn insert_player_resources(
         texture_width,
         texture_height,
     });
-    // Insert ShipSounds resource from template.
-    // Schema provides default {} for sounds, so template.sounds is always present.
-    // Audio systems handle None values by skipping playback.
-    let ship_sounds = template.sounds.clone();
-    commands.insert_resource(ship_sounds);
 }
 
 /// Spawns the player-controlled ship from a template event.

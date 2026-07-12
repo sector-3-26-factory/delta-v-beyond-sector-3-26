@@ -15,5 +15,6 @@
     "radius": {
         "value": 0.5,
         "unit": "m"
-    }
+    },
+    "hit_sound": "hit.mp3"
 }

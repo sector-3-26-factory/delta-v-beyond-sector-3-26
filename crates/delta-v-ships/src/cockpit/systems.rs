@@ -45,7 +45,6 @@ use super::velocity_indicator::format_speed;
 use delta_v_core::Targetable;
 
 use super::spawn::CockpitOverlayResource;
-use crate::ship_templates::ShipSounds;
 
 /// Resource to track the currently playing thrust sound.
 ///
@@ -1339,9 +1338,9 @@ pub fn camera_shake_system(
     // Generate random offset
     let mut rng = rand::rng();
     let offset = Vec3::new(
-        rng.random_range(-1.0..1.0) * current_intensity,
-        rng.random_range(-1.0..1.0) * current_intensity,
-        rng.random_range(-1.0..1.0) * current_intensity,
+        rng.random_range(-1.0..=1.0) * current_intensity,
+        rng.random_range(-1.0..=1.0) * current_intensity,
+        rng.random_range(-1.0..=1.0) * current_intensity,
     );
 
     // Add the offset to the camera's local position (relative to ship)
@@ -1563,11 +1562,10 @@ pub fn play_fire_sound_system(
 /// Plays the hit sound when the player ship is hit.
 ///
 /// Runs in `Update` during `AppState::InGame`. Listens for `ProjectileHit` events
-/// where the target is the player ship, and plays the hit sound.
+/// where the target is the player ship, and plays the hit sound from the projectile.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn play_hit_sound_system(
     player_ship: Res<'_, PlayerShipEntity>,
-    ship_sounds: Res<'_, ShipSounds>,
     audio_available: Res<'_, AudioAvailable>,
     mut hit_events: MessageReader<'_, '_, ProjectileHit>,
     asset_server: Res<'_, AssetServer>,
@@ -1578,20 +1576,19 @@ pub fn play_hit_sound_system(
         return;
     }
 
-    let Some(hit_sound) = &ship_sounds.hit else {
-        tracing::debug!("[audio] hit sound skipped: no hit_sound configured");
-        return;
-    };
-
     for event in hit_events.read() {
         if event.target == player_ship.0 {
-            let sound_path = format!("audio/{hit_sound}");
-            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
-            commands.spawn((
-                AudioPlayer::new(sound_handle),
-                PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.6)),
-            ));
-            tracing::debug!("[audio] hit sound played: {}", hit_sound);
+            if let Some(hit_sound) = &event.hit_sound {
+                let sound_path = format!("audio/{hit_sound}");
+                let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+                commands.spawn((
+                    AudioPlayer::new(sound_handle),
+                    PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.6)),
+                ));
+                tracing::debug!("[audio] hit sound played: {}", hit_sound);
+            } else {
+                tracing::debug!("[audio] hit sound skipped: no hit_sound in projectile");
+            }
         } else {
             tracing::debug!(
                 "[audio] hit event ignored: target={:?} player_ship={:?}",

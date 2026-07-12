@@ -29,4 +29,7 @@ pub struct Weapon {
     /// Sound file path relative to assets/audio/ (e.g., "fire.wav").
     /// Optional; if not provided, no sound is played on fire.
     pub sound: Option<String>,
+    /// Hit sound file path relative to assets/audio/ (e.g., "hit.mp3").
+    /// Optional; if not provided, no sound is played on impact.
+    pub hit_sound: Option<String>,
 }

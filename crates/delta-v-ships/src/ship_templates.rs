@@ -31,13 +31,6 @@ pub struct ShipTemplate {
     pub propulsion: ShipPropulsionTemplate,
 }
 
-/// Sound file paths for a ship.
-#[derive(Debug, Deserialize, Clone, Resource)]
-pub struct ShipSounds {
-    /// Hit/impact sound.
-    pub hit: Option<String>,
-}
-
 /// Deserialized player-controlled ship template JSON.
 ///
 /// Extends [`ShipTemplate`] with camera definitions.
@@ -67,10 +60,6 @@ pub struct PlayerShipTemplate {
     pub health: PhysicalQuantityJson,
     /// Cockpit overlay definition with stations and gauge slots.
     pub cockpit: CockpitDefinition,
-    /// Sound file paths relative to assets/audio/.
-    /// Defaults to empty (no sounds) via schema default.
-    /// Only player-controlled ships play sounds.
-    pub sounds: ShipSounds,
 }
 
 /// Deserialized non-player ship template JSON.

@@ -136,6 +136,7 @@ pub fn projectile_collision_system(
             target: target_entity,
             damage: projectile.damage,
             hit_point: collision.point,
+            hit_sound: projectile.hit_sound.clone(),
         });
 
         // Despawn the projectile on any hit

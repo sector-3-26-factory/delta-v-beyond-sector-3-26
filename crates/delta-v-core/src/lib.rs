@@ -47,7 +47,7 @@ pub mod navigation;
 pub mod propulsion;
 pub mod spawn;
 pub mod state;
-pub mod weapon;
+pub mod weapons;
 
 // Re-exports from subdirectories
 pub use boundary::{
@@ -81,7 +81,7 @@ pub use navigation::{
 pub use propulsion::Propulsion;
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;
-pub use weapon::Weapon;
+pub use weapons::Weapon;
 
 // Re-exports from delta-v-types for shared types (ADR-0046)
 pub use delta_v_types::{

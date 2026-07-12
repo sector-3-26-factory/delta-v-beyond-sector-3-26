@@ -193,6 +193,16 @@ fn add_weapon_components(
                 );
             }
         }
+        // Validate hit sound file exists (ADR-0013: no silent fallbacks).
+        if let Some(ref hit_sound) = projectile_def.hit_sound {
+            let path = format!("assets/audio/{hit_sound}");
+            if !std::path::Path::new(&path).exists() {
+                tracing::warn!(
+                    "[audio] hit sound file not found: {} (referenced in projectile template)",
+                    path
+                );
+            }
+        }
         commands.entity(ship_entity).insert(Weapon {
             slot: u32::try_from(i).expect("weapon slot index fits in u32"),
             cooldown: 0.0,
@@ -203,6 +213,7 @@ fn add_weapon_components(
             lifetime: projectile_def.lifetime.value,
             projectile_radius: projectile_def.radius.value,
             sound: weapon_def.sound.clone(),
+            hit_sound: projectile_def.hit_sound.clone(),
         });
     }
 }

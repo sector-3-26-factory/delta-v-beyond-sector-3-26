@@ -56,6 +56,7 @@ pub fn spawn_projectile(
                 source,
                 lifetime: weapon.lifetime,
                 damage: weapon.damage,
+                hit_sound: weapon.hit_sound.clone(),
             },
         ))
         .id()

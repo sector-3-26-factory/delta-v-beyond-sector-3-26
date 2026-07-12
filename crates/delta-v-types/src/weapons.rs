@@ -38,6 +38,9 @@ pub struct ProjectileDefinitionJson {
     pub lifetime: PhysicalQuantityJson,
     /// Collision shape radius in metres.
     pub radius: PhysicalQuantityJson,
+    /// Sound file path relative to assets/audio/ (e.g., "hit.mp3").
+    /// Optional; if not provided, no sound is played on impact.
+    pub hit_sound: Option<String>,
 }
 
 /// Weapon reference in ship/AI templates.
