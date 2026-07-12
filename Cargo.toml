@@ -27,7 +27,11 @@ license = "GPL-3.0-or-later"
 repository = "https://github.com/delta-v-beyond-sector-3-26/delta-v"
 
 [workspace.dependencies]
-bevy = { version = "0.18.1", default-features = true }
+bevy = { version = "0.18.1", default-features = true, features = [
+    "wav",
+    "mp3",
+    "flac",
+] }
 bevy_math = "0.18"
 bevy_mesh = "0.18"
 avian3d = "0.6.1"
@@ -40,6 +44,7 @@ jsonschema = { version = "0.46", default-features = false }
 referencing = "0.46"
 directories = "6.0"
 clap = { version = "4.5", features = ["derive"] }
+rand = "0.9"
 delta-v-json = { path = "crates/delta-v-json", version = "0.0.1" }
 delta-v-types = { path = "crates/delta-v-types", version = "0.0.1" }
 delta-v-physics = { path = "crates/delta-v-physics", version = "0.0.1" }

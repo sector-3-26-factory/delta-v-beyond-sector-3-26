@@ -1,0 +1,9 @@
+{
+    "type": "plasma",
+    "projectile_template": "plasma-arc",
+    "fire_rate": {
+        "value": 3.0,
+        "unit": "Hz"
+    },
+    "sound": "fire.mp3"
+}

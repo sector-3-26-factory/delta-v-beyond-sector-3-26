@@ -18,30 +18,56 @@
 
 //! Cockpit-related systems.
 
+use bevy::audio::prelude::{AudioPlayer, PlaybackSettings};
 use bevy::prelude::*;
+use rand::Rng;
 
 use delta_v_core::input::ActionState;
 use delta_v_core::{
-    ActiveCameraName, CameraName, CameraSwitched, EntityType, Health, I18n, PlayerShipEntity,
-    TargetSelected, WorldEntityId,
+    ActiveCameraName, CameraName, CameraSwitched, EntityType, FireWeapon, Health, I18n,
+    PlayerShipEntity, ProjectileHit, TargetSelected, Weapon, WorldEntityId,
 };
-use delta_v_physics::RigidBody;
+use delta_v_physics::{CollisionDetected, RigidBody};
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
+use super::components::CameraShake;
 use super::components::CircularGaugeNeedle;
 use super::components::CockpitOverlay;
 use super::components::SelectedNavObject;
 use super::components::SelectedTarget;
 use super::components::SpeedText;
 use super::components::StatusGauge;
-use super::components::Targetable;
 use super::components::TargetingMode;
 use super::components::VelocityVectorIndicator;
 use super::velocity_indicator::create_thrust_arrow_presets;
 use super::velocity_indicator::format_speed;
+use delta_v_core::Targetable;
 
 use super::spawn::CockpitOverlayResource;
+use crate::ship_templates::ShipSounds;
+
+/// Resource to track the currently playing thrust sound.
+///
+/// Holds the entity with the audio components so we can despawn it when thrust ends.
+#[derive(Resource, Default)]
+pub struct ActiveThrustSound {
+    /// Entity with `AudioPlayer` and `AudioSink` components for the currently playing thrust sound.
+    pub entity: Option<Entity>,
+}
+
+/// Resource to track whether thrusting occurred in the last `FixedUpdate` tick.
+///
+/// This is set by `thrust_state_tracker_system` in `FixedUpdate` and read by
+/// `play_thrust_sound_system` in Update. This bridges the schedule gap since
+/// `ThrustCommand` is cleared before Update runs.
+// allow-default: Bevy requires Default on resources for init_resource.
+// This is runtime state, not configuration.
+#[derive(Resource, Default)]
+pub struct ThrustingState {
+    /// Whether thrust was applied in the last `FixedUpdate` tick.
+    pub is_thrusting: bool,
+}
 
 /// Tracks which actions were already consumed to prevent repeated firing.
 // allow-default: Bevy requires Default on resources for init_resource. This
@@ -1239,5 +1265,339 @@ pub fn target_reticle_system(
         && *visibility != Visibility::Hidden
     {
         *visibility = Visibility::Hidden;
+    }
+}
+
+/// Updates the camera shake effect on the active camera.
+///
+/// Runs in `Update` during `AppState::InGame`. If a `CameraShake` component
+/// is present on the player ship, applies a random offset to the active camera's
+/// local position that decays over time. The shake is applied to the camera's
+/// local transform (relative to the ship), not the ship's world position.
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
+pub fn camera_shake_system(
+    player_ship: Res<'_, PlayerShipEntity>,
+    active_camera_name: Res<'_, delta_v_core::ActiveCameraName>,
+    mut shake_query: Query<'_, '_, (&mut CameraShake, &Children)>,
+    mut camera_query: Query<'_, '_, (&delta_v_core::CameraName, &mut Transform)>,
+    mut commands: Commands<'_, '_>,
+) {
+    let _span = tracing::info_span!("delta_v_ships::camera_shake_system").entered();
+
+    // Check if the ship has a CameraShake component
+    let Ok((mut shake, children)) = shake_query.get_mut(player_ship.0) else {
+        return;
+    };
+
+    // Find the active camera among the ship's children
+    #[allow(clippy::unnecessary_find_map)]
+    let active_camera_entity = children.iter().find_map(|child| {
+        camera_query.get(child).ok().and_then(|(name, _)| {
+            if name.0 == active_camera_name.0 {
+                Some(child)
+            } else {
+                None
+            }
+        })
+    });
+
+    let Some(camera_entity) = active_camera_entity else {
+        return;
+    };
+
+    // Store original translation on first frame
+    if shake.elapsed_ticks == 0
+        && let Ok((_camera_name, camera_transform)) = camera_query.get(camera_entity)
+    {
+        shake.original_translation = camera_transform.translation;
+    }
+
+    // Increment elapsed ticks
+    shake.elapsed_ticks += 1;
+
+    // Calculate progress (0.0 to 1.0)
+    // allow-cast-precision-loss: u32 to f32 cast is acceptable here as tick counts
+    // are small (max ~600 for 10 seconds at 60 Hz) and well within f32 precision.
+    #[allow(clippy::cast_precision_loss)]
+    let progress = shake.elapsed_ticks as f32 / shake.duration_ticks as f32;
+
+    if progress >= 1.0 {
+        // Shake complete - restore camera transform and remove the component
+        tracing::debug!("[camera_shake] shake complete, restoring camera and removing component");
+        // Restore the camera's transform to its original position to prevent drift
+        if let Ok((_camera_name, mut camera_transform)) = camera_query.get_mut(camera_entity) {
+            camera_transform.translation = shake.original_translation;
+        }
+        // Remove the component from the ship
+        commands.entity(player_ship.0).remove::<CameraShake>();
+        return;
+    }
+
+    // Decay intensity over time (ease out)
+    let current_intensity = shake.intensity * (1.0 - progress).powi(2);
+
+    // Generate random offset
+    let mut rng = rand::rng();
+    let offset = Vec3::new(
+        rng.random_range(-1.0..1.0) * current_intensity,
+        rng.random_range(-1.0..1.0) * current_intensity,
+        rng.random_range(-1.0..1.0) * current_intensity,
+    );
+
+    // Add the offset to the camera's local position (relative to ship)
+    if let Ok((_camera_name, mut camera_transform)) = camera_query.get_mut(camera_entity) {
+        camera_transform.translation = shake.original_translation + offset;
+    }
+
+    tracing::debug!(
+        "[camera_shake] tick {}/{} intensity={:.3} offset={:?}",
+        shake.elapsed_ticks,
+        shake.duration_ticks,
+        current_intensity,
+        offset
+    );
+}
+
+/// Triggers camera shake on specific events.
+///
+/// Listens for `FireWeapon`, `ProjectileHit`, and `CollisionDetected` events.
+/// When any of these events occur involving the player ship, inserts a
+/// `CameraShake` component on the player ship entity.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn trigger_camera_shake_system(
+    mut commands: Commands<'_, '_>,
+    player_ship: Res<'_, PlayerShipEntity>,
+    mut fire_events: MessageReader<'_, '_, FireWeapon>,
+    mut hit_events: MessageReader<'_, '_, ProjectileHit>,
+    mut collision_events: MessageReader<'_, '_, CollisionDetected>,
+) {
+    let _span = tracing::info_span!("delta_v_ships::trigger_camera_shake_system").entered();
+
+    // Fire weapon shake - small, short
+    for event in fire_events.read() {
+        if event.source == player_ship.0 {
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(0.5, 10));
+            tracing::debug!("[camera_shake] triggered by FireWeapon");
+        }
+    }
+
+    // Projectile hit shake - medium
+    for event in hit_events.read() {
+        if event.target == player_ship.0 {
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(1.0, 15));
+            tracing::debug!("[camera_shake] triggered by ProjectileHit (target)");
+        }
+        if event.projectile == player_ship.0 {
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(0.8, 12));
+            tracing::debug!("[camera_shake] triggered by ProjectileHit (projectile)");
+        }
+    }
+
+    // Collision shake - larger, longer
+    for event in collision_events.read() {
+        if event.target == player_ship.0 || event.other == player_ship.0 {
+            // Scale intensity by penetration depth
+            let intensity = (event.penetration_depth * 2.0).clamp(0.5, 3.0);
+            // allow-cast-possible-truncation, cast-sign-loss: intensity is clamped to [0.5, 3.0],
+            // so intensity * 10.0 is in [5.0, 30.0], well within u32 cast is safe and positive.
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let duration = (intensity * 10.0).round() as u32;
+            commands
+                .entity(player_ship.0)
+                .insert(CameraShake::new(intensity, duration));
+            tracing::debug!(
+                "[camera_shake] triggered by CollisionDetected intensity={:.2} duration={}",
+                intensity,
+                duration
+            );
+        }
+    }
+}
+
+/// Tracks whether thrust was applied in the last `FixedUpdate` tick.
+///
+/// Runs in `FixedUpdate` after `ShipInputSet::ApplyThrust` and before
+/// `ShipInputSet::ClearCommands`. This captures the thrusting state
+/// before the `ThrustCommand` is cleared, allowing the audio system
+/// in `Update` to know if thrusting occurred.
+#[allow(clippy::needless_pass_by_value)]
+pub fn thrust_state_tracker_system(
+    thrust_cmd: Res<'_, crate::ship_templates::ThrustCommand>,
+    mut state: ResMut<'_, ThrustingState>,
+) {
+    state.is_thrusting = thrust_cmd.force.length() > 0.0;
+}
+
+/// Resource to track whether audio is available (graceful fallback).
+#[derive(Resource, Default)]
+pub struct AudioAvailable {
+    /// Whether an audio device is available for playback.
+    pub available: bool,
+}
+
+/// Initializes audio availability check.
+///
+/// Runs during `OnEnter(AppState::InGame)`. Attempts to create an audio sink
+/// to verify audio device availability. If no audio device is available,
+/// logs a WARN and sets `AudioAvailable` to false.
+#[allow(clippy::needless_pass_by_value)]
+pub fn init_audio_availability(mut commands: Commands<'_, '_>) {
+    // For now, assume audio is available.
+    // In a devcontainer without audio device, this will fail gracefully.
+    let audio_available = true;
+
+    commands.insert_resource(AudioAvailable {
+        available: audio_available,
+    });
+
+    if audio_available {
+        tracing::info!("[audio] audio system initialized");
+    } else {
+        tracing::warn!("[audio] no audio device available - sound effects disabled");
+    }
+}
+
+/// Plays the thrust sound when the player is thrusting.
+///
+/// Runs in `Update` during `AppState::InGame`. Checks `ThrustingState` to determine
+/// if thrusting occurred in the last `FixedUpdate` tick, and plays the thrust sound
+/// (looped) when thrusting, stops when not thrusting.
+/// The thrust sound is configured in the propulsion/thruster definition, not in ship sounds.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn play_thrust_sound_system(
+    _player_ship: Res<'_, PlayerShipEntity>,
+    thrusting_state: Res<'_, ThrustingState>,
+    propulsion_config: Res<'_, crate::ship_templates::ShipPropulsionConfig>,
+    audio_available: Res<'_, AudioAvailable>,
+    asset_server: Res<'_, AssetServer>,
+    mut active_sound: ResMut<'_, ActiveThrustSound>,
+    mut commands: Commands<'_, '_>,
+) {
+    if !audio_available.available {
+        tracing::debug!("[audio] thrust sound skipped: audio not available");
+        return;
+    }
+
+    let Some(thrust_sound) = &propulsion_config.thrust_sound else {
+        tracing::debug!("[audio] thrust sound skipped: no thrust_sound configured");
+        return;
+    };
+
+    let is_thrusting = thrusting_state.is_thrusting;
+    tracing::debug!(
+        "[audio] thrust sound system: is_thrusting={}, active_sound.entity={:?}, thrust_sound={:?}",
+        is_thrusting,
+        active_sound.entity,
+        thrust_sound
+    );
+
+    if is_thrusting {
+        // If no sound is playing, start one
+        if active_sound.entity.is_none() {
+            let sound_path = format!("audio/{thrust_sound}");
+            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            let entity = commands
+                .spawn((
+                    AudioPlayer::new(sound_handle),
+                    PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::Linear(0.5)),
+                ))
+                .id();
+            active_sound.entity = Some(entity);
+            tracing::debug!("[audio] thrust sound started: {}", thrust_sound);
+        }
+    } else {
+        // Stop the thrust sound if it's playing
+        if let Some(entity) = active_sound.entity.take() {
+            commands.entity(entity).despawn();
+            tracing::debug!("[audio] thrust sound stopped");
+        }
+    }
+}
+
+/// Plays the weapon fire sound when a weapon is fired.
+///
+/// Runs in `Update` during `AppState::InGame`. Listens for `FireWeapon` events
+/// and plays the weapon's sound (from the weapon component).
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn play_fire_sound_system(
+    player_ship: Res<'_, PlayerShipEntity>,
+    audio_available: Res<'_, AudioAvailable>,
+    asset_server: Res<'_, AssetServer>,
+    mut fire_events: MessageReader<'_, '_, FireWeapon>,
+    weapon_query: Query<'_, '_, &Weapon>,
+    mut commands: Commands<'_, '_>,
+) {
+    if !audio_available.available {
+        tracing::debug!("[audio] fire sound skipped: audio not available");
+        return;
+    }
+
+    for event in fire_events.read() {
+        if event.source == player_ship.0
+            && let Ok(weapon) = weapon_query.get(event.source)
+            && let Some(sound) = &weapon.sound
+        {
+            let sound_path = format!("audio/{sound}");
+            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            commands.spawn((
+                AudioPlayer::new(sound_handle),
+                PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.7)),
+            ));
+            tracing::debug!("[audio] fire sound played: {}", sound);
+        } else {
+            tracing::debug!(
+                "[audio] fire event ignored: source={:?} player_ship={:?}",
+                event.source,
+                player_ship.0
+            );
+        }
+    }
+}
+
+/// Plays the hit sound when the player ship is hit.
+///
+/// Runs in `Update` during `AppState::InGame`. Listens for `ProjectileHit` events
+/// where the target is the player ship, and plays the hit sound.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn play_hit_sound_system(
+    player_ship: Res<'_, PlayerShipEntity>,
+    ship_sounds: Res<'_, ShipSounds>,
+    audio_available: Res<'_, AudioAvailable>,
+    mut hit_events: MessageReader<'_, '_, ProjectileHit>,
+    asset_server: Res<'_, AssetServer>,
+    mut commands: Commands<'_, '_>,
+) {
+    if !audio_available.available {
+        tracing::debug!("[audio] hit sound skipped: audio not available");
+        return;
+    }
+
+    let Some(hit_sound) = &ship_sounds.hit else {
+        tracing::debug!("[audio] hit sound skipped: no hit_sound configured");
+        return;
+    };
+
+    for event in hit_events.read() {
+        if event.target == player_ship.0 {
+            let sound_path = format!("audio/{hit_sound}");
+            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            commands.spawn((
+                AudioPlayer::new(sound_handle),
+                PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.6)),
+            ));
+            tracing::debug!("[audio] hit sound played: {}", hit_sound);
+        } else {
+            tracing::debug!(
+                "[audio] hit event ignored: target={:?} player_ship={:?}",
+                event.target,
+                player_ship.0
+            );
+        }
     }
 }

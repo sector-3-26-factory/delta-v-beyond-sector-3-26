@@ -16,6 +16,9 @@
 //! - `ai` — AI types: `AiConfigJson`, `AiTaskJson`
 //! - `logical_action` — Input actions: `LogicalAction`
 //! - `navigation` — Navigation types: `EntityType`, `EntityId`
+//! - `main_thruster` — Main thruster types: `MainThrusterDefinitionJson`
+//! - `maneuvering_thruster` — Maneuvering thruster types: `ManeuveringThrusterDefinitionJson`
+//! - `propulsion` — Propulsion types: `ShipPropulsionTemplate`
 
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
@@ -37,9 +40,12 @@ pub mod collision;
 pub mod i18n;
 pub mod ids;
 pub mod logical_action;
+pub mod main_thruster;
+pub mod maneuvering_thruster;
 pub mod navigation;
 pub mod physics;
 pub mod player_settings;
+pub mod propulsion;
 pub mod spatial;
 pub mod weapons;
 
@@ -50,11 +56,14 @@ pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, Col
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use ids::{EntityId, TemplatePath};
 pub use logical_action::LogicalAction;
+pub use main_thruster::MainThrusterDefinitionJson;
+pub use maneuvering_thruster::ManeuveringThrusterDefinitionJson;
 pub use navigation::{EntityType, WorldEntityId};
-pub use physics::PhysicalQuantityJson;
+pub use physics::{PhysicalQuantityJson, RigidBodyData};
 pub use player_settings::PlayerSettings;
+pub use propulsion::{PropulsionConfig, ShipPropulsionTemplate};
 pub use spatial::{BoundingBoxJson, QuatJson, Vec3Json};
-pub use weapons::WeaponTemplateJson;
+pub use weapons::{ProjectileDefinitionJson, WeaponReference, WeaponTemplateJson};
 
 #[cfg(test)]
 #[path = "spatial_tests.rs"]

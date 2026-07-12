@@ -1,0 +1,12 @@
+{
+    "type": "fusion",
+    "max_forward_thrust": {
+        "value": 200000,
+        "unit": "N"
+    },
+    "max_backward_thrust": {
+        "value": 80000,
+        "unit": "N"
+    },
+    "sound": "thrust.mp3"
+}

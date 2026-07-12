@@ -1,0 +1,9 @@
+{
+    "type": "railgun",
+    "projectile_template": "railgun-heavy",
+    "fire_rate": {
+        "value": 2.0,
+        "unit": "Hz"
+    },
+    "sound": "fire.mp3"
+}

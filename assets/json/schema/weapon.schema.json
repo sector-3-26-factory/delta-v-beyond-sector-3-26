@@ -7,11 +7,8 @@
     "additionalProperties": false,
     "required": [
         "type",
-        "projectile_speed",
-        "damage",
-        "fire_rate",
-        "lifetime",
-        "projectile_radius"
+        "projectile_template",
+        "fire_rate"
     ],
     "properties": {
         "type": {
@@ -24,25 +21,17 @@
                 "missile"
             ]
         },
-        "projectile_speed": {
-            "description": "Projectile speed in m/s.",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/velocity"
-        },
-        "damage": {
-            "description": "Damage per hit in hit points.",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/damage"
+        "projectile_template": {
+            "description": "Name of the projectile template to use (e.g., 'laser-standard').",
+            "type": "string"
         },
         "fire_rate": {
             "description": "Fire rate in rounds per second.",
             "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/frequency"
         },
-        "lifetime": {
-            "description": "Projectile lifetime in seconds.",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
-        },
-        "projectile_radius": {
-            "description": "Projectile collision shape radius in metres.",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+        "sound": {
+            "description": "Sound file path relative to assets/audio/ (e.g., \"fire.mp3\"). Optional; if not provided, no sound is played on fire.",
+            "type": "string"
         }
     }
 }

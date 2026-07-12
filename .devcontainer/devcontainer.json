@@ -12,13 +12,19 @@
     "containerEnv": {
         "DISPLAY": "${localEnv:DISPLAY}",
         "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
-        // Use mold as the default linker for faster iteration.
-        "RUSTFLAGS": "-C link-arg=-fuse-ld=mold"
-        // XDG_RUNTIME_DIR remains deliberately unset.
+        // PulseAudio socket for audio playback in the container.
+        // Mounts the host's PulseAudio socket to a fixed path in the container.
+        // The Dockerfile creates /etc/asound.conf to route ALSA to PulseAudio.
+        "PULSE_SERVER": "unix:/pulse-native"
     },
     "mounts": [
         // We only need the X11 sockets. No .Xauthority mount needed when using 'xhost +local:'
-        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+        // PulseAudio socket for audio playback.
+        // Mount the host's PulseAudio native socket to a fixed path in the container.
+        // The path /run/user/1000/pulse/native is the default location for PulseAudio's
+        // native Unix socket. If your user has a different UID, adjust this value.
+        "source=/run/user/1000/pulse/native,target=/pulse-native,type=bind,consistency=cached"
     ],
     "runArgs": [
         // GPU passthrough (DRI render node).
@@ -35,7 +41,10 @@
                 "rust-lang.rust-analyzer",
                 "tamasfe.even-better-toml",
                 "vadimcn.vscode-lldb",
-                "serayuzgur.crates",
+                "fill-labs.dependi",
+                "zoocodeorganization.zoo-code",
+                "mhutchie.git-graph",
+                "assettoollabs.mesh-viewer-vscode",
                 "usernamehw.errorlens"
             ],
             "settings": {
@@ -49,5 +58,6 @@
         }
     },
     "remoteUser": "vscode",
-    "postCreateCommand": "rustc --version && cargo --version && (vulkaninfo --summary || true)"
+    "postCreateCommand": "rustc --version && cargo --version && (vulkaninfo --summary || true)",
+    "postStartCommand": "echo 'Checking audio setup...' && (test -S /pulse-native && echo 'PulseAudio socket found at /pulse-native' || echo 'WARNING: PulseAudio socket not found. Check: 1) PulseAudio is running on host, 2) module-native-protocol-unix is loaded, 3) Socket path is correct. Find your socket with: ls -la /run/user/$(id -u)/pulse/native 2>/dev/null || ls -la ~/.config/pulse/native 2>/dev/null || echo \"No PulseAudio socket found on host\")')"
 }

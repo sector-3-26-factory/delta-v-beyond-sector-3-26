@@ -1,0 +1,9 @@
+{
+    "type": "missile",
+    "projectile_template": "missile-guided",
+    "fire_rate": {
+        "value": 1.0,
+        "unit": "Hz"
+    },
+    "sound": "fire.mp3"
+}

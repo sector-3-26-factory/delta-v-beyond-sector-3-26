@@ -1,6 +1,6 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Health and weapon components for combat.
+//! Health component for combat.
 
 use bevy::prelude::*;
 
@@ -39,24 +39,9 @@ impl Health {
     }
 }
 
-/// Component marking an entity as having a weapon.
+/// Marker component for entities that can be targeted in combat.
 ///
-/// Contains runtime weapon state (cooldown) and configuration values
-/// read from the weapon template JSON at spawn time (per ADR-0014).
+/// These entities appear in the targeting list and can be selected as the
+/// player's current target.
 #[derive(Component, Debug, Clone, Copy)]
-pub struct Weapon {
-    /// Index of this weapon slot.
-    pub slot: u32,
-    /// Cooldown remaining in seconds.
-    pub cooldown: f32,
-    /// Projectile speed in m/s.
-    pub projectile_speed: f32,
-    /// Damage per hit.
-    pub damage: f32,
-    /// Fire rate in rounds per second.
-    pub fire_rate: f32,
-    /// Projectile lifetime in seconds.
-    pub lifetime: f32,
-    /// Projectile collision radius in metres.
-    pub projectile_radius: f32,
-}
+pub struct Targetable;

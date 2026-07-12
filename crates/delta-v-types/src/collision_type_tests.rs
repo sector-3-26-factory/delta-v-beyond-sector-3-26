@@ -98,7 +98,11 @@ fn test_collision_shape_json_shape_type_method() {
 fn test_collision_layers_ship() {
     let ship = crate::collision::layers::SHIP;
     assert_eq!(ship.layers, crate::collision::layers::SHIP_LAYER);
-    assert_eq!(ship.mask, crate::collision::layers::ASTEROID_LAYER);
+    // Ship mask includes both SHIP_LAYER (for ship-to-ship) and ASTEROID_LAYER
+    assert_eq!(
+        ship.mask,
+        crate::collision::layers::SHIP_LAYER | crate::collision::layers::ASTEROID_LAYER
+    );
 }
 
 #[test]
@@ -109,15 +113,23 @@ fn test_collision_layers_asteroid() {
 }
 
 #[test]
-fn test_collision_layers_no_self_collision() {
-    // Ship layer should not collide with itself (mask is ASTEROID_LAYER only)
+fn test_collision_layers_ship_can_collide_with_ships() {
+    // Ship layer CAN collide with other ships (mask includes SHIP_LAYER)
     let ship = crate::collision::layers::SHIP;
-    assert_eq!(
+    assert_ne!(
         ship.layers & ship.mask,
         0,
-        "ship should not collide with itself"
+        "ship should be able to collide with other ships"
     );
+    // Specifically, the mask should include SHIP_LAYER
+    assert_eq!(
+        ship.mask & crate::collision::layers::SHIP_LAYER,
+        crate::collision::layers::SHIP_LAYER
+    );
+}
 
+#[test]
+fn test_collision_layers_asteroid_no_self_collision() {
     // Asteroid layer should not collide with itself
     let asteroid = crate::collision::layers::ASTEROID;
     assert_eq!(

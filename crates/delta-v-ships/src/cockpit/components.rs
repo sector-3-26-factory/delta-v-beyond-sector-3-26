@@ -91,20 +91,6 @@ pub struct CircularGaugeNeedle {
     pub center_y: f32,
 }
 
-/// Marker component for entities that can be targeted in combat.
-///
-/// These entities appear in the targeting list and can be selected as the
-/// player's current target.
-#[derive(Component)]
-pub struct Targetable;
-
-/// Marker component for entities that appear in the navigation list.
-///
-/// These entities can be selected for navigation purposes (ships, fleets,
-/// planets, stations, asteroids).
-#[derive(Component)]
-pub struct Navigable;
-
 // EntityType, WorldEntityId, SelectedTarget, SelectedNavObject, TargetingMode, TargetingModeType
 // are now defined in delta-v-core::navigation
 // Re-export them for convenience
@@ -123,6 +109,40 @@ pub struct BearingIndicator;
 /// Appears around the selected target when it's on-screen.
 #[derive(Component)]
 pub struct TargetReticle;
+
+/// Component for camera shake effect.
+///
+/// When active, applies a random offset to the camera's position that decays over time.
+/// Triggered by weapon fire, projectile hits, and collisions.
+#[derive(Component)]
+pub struct CameraShake {
+    /// Current shake intensity (world units).
+    pub intensity: f32,
+    /// Total duration in fixed timestep ticks (60 Hz).
+    pub duration_ticks: u32,
+    /// Number of ticks elapsed since shake started.
+    pub elapsed_ticks: u32,
+    /// The camera's original translation before the shake started.
+    /// Used to restore the camera position when the shake completes.
+    pub original_translation: Vec3,
+}
+
+impl CameraShake {
+    /// Creates a new camera shake with the given intensity and duration.
+    ///
+    /// # Arguments
+    /// * `intensity` - Maximum offset in world units.
+    /// * `duration_ticks` - Duration in fixed timestep ticks (60 Hz).
+    #[must_use]
+    pub const fn new(intensity: f32, duration_ticks: u32) -> Self {
+        Self {
+            intensity,
+            duration_ticks,
+            elapsed_ticks: 0,
+            original_translation: Vec3::ZERO,
+        }
+    }
+}
 
 // Re-export types from ship_templates for convenience
 pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};

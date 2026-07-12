@@ -14,34 +14,12 @@
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
 use crate::cockpit::CockpitOverlayResource;
-use crate::cockpit::components::{Navigable, Targetable};
-use crate::ship_templates::{
-    MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
-    StaticShipTemplate,
-};
-use bevy::gltf::Gltf;
+use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
 use bevy::prelude::*;
-use delta_v_core::{
-    ActiveCameraName, CameraName, DebugAxesEligible, EntityType, FlightAssist, Health,
-    PlayerShipEntity, RenderLayer, SpawnEntity, Weapon, WorldEntityId,
-};
-use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
-use delta_v_spawn::collision::shape_from_json;
+use delta_v_core::{ActiveCameraName, CameraName, PlayerShipEntity, RenderLayer, SpawnEntity};
 use delta_v_spawn::template_extraction::png_dimensions;
-use delta_v_types::collision::layers;
-
-/// Marker component for a pending ship entity waiting for its mesh to load.
-#[derive(Component)]
-pub struct PendingShipMesh {
-    /// Handle to the glTF asset being loaded.
-    gltf_handle: Handle<Gltf>,
-}
-
-impl delta_v_spawn::mesh_attachment::PendingMesh for PendingShipMesh {
-    fn gltf_handle(&self) -> &Handle<Gltf> {
-        &self.gltf_handle
-    }
-}
+use delta_v_spawn::{ShipTemplateBase, build_physical_ship};
+use delta_v_types::{BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, WeaponReference};
 
 /// Spawns ship entities in response to `SpawnEntity` events.
 ///
@@ -136,25 +114,16 @@ fn spawn_cameras(
 /// Inserts player-specific resources after the ship entity is spawned.
 ///
 /// Stores the player ship entity ID, camera configuration, propulsion
-/// configuration, and cockpit overlay resource.
+/// configuration, cockpit overlay resource, and ship sounds.
 fn insert_player_resources(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
     template_path: &str,
     template: &PlayerShipTemplate,
-    main: &MainThrusterTemplate,
-    maneuvering: &ManeuveringThrusterTemplate,
-    active_main_thruster_index: usize,
+    propulsion_config: ShipPropulsionConfig,
 ) {
     commands.insert_resource(PlayerShipEntity(ship_entity));
-    commands.insert_resource(ShipPropulsionConfig {
-        max_forward_thrust: main.max_forward_thrust.value,
-        max_backward_thrust: main.max_backward_thrust.value,
-        max_torque: maneuvering.max_torque.value,
-        max_strafe_thrust: maneuvering.max_strafe_thrust.value,
-        active_main_thruster_index,
-        rotation_ramp_ticks: maneuvering.rotation_ramp_ticks,
-    });
+    commands.insert_resource(propulsion_config);
     // Initialize ActiveCameraName resource to track the current camera.
     // The cockpit camera is the default active camera.
     commands.insert_resource(ActiveCameraName("cockpit".to_string()));
@@ -180,6 +149,11 @@ fn insert_player_resources(
         texture_width,
         texture_height,
     });
+    // Insert ShipSounds resource from template.
+    // Schema provides default {} for sounds, so template.sounds is always present.
+    // Audio systems handle None values by skipping playback.
+    let ship_sounds = template.sounds.clone();
+    commands.insert_resource(ship_sounds);
 }
 
 /// Spawns the player-controlled ship from a template event.
@@ -207,83 +181,23 @@ fn spawn_player_ship(
     // Deserialize template JSON into typed struct (ADR-0040 one-liner).
     let template = deserialize_template(event);
 
-    // Extract propulsion values from the active main thruster.
-    let active_main_thruster_index = 0_usize; // M2: single active thruster
-    let main = &template.propulsion.main_thrusters[active_main_thruster_index];
-    let maneuvering = &template.propulsion.maneuvering_thruster;
+    // Build the physical ship (common components: physics, collision, health, weapons).
+    let (ship_entity, propulsion_config) =
+        build_physical_ship(commands, asset_server, event, &template);
 
-    // Derive mesh path from the mesh template path (always mesh.glb in the template directory).
-    let mesh_path = event.mesh_template_path.replace("ship.json", "mesh.glb");
+    // Convert to ShipPropulsionConfig for resource insertion.
+    let ship_propulsion_config = ShipPropulsionConfig {
+        max_forward_thrust: propulsion_config.max_forward_thrust,
+        max_backward_thrust: propulsion_config.max_backward_thrust,
+        max_torque: propulsion_config.max_torque,
+        max_strafe_thrust: propulsion_config.max_strafe_thrust,
+        active_main_thruster_index: 0,
+        rotation_ramp_ticks: propulsion_config.rotation_ramp_ticks,
+        thrust_sound: propulsion_config.thrust_sound,
+    };
 
-    // Queue glTF mesh load.
-    let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
-
-    // Extract uniform scale from event (use max of x, y, z for uniform scaling).
-    let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
-
-    // Compute debug axes length from the bounding box in the template JSON, scaled.
-    // The bounding_box is already in the template JSON (computed by tooling).
-    let half_extent = Vec3::new(
-        (template.bounding_box.max.x - template.bounding_box.min.x) / 2.0,
-        (template.bounding_box.max.y - template.bounding_box.min.y) / 2.0,
-        (template.bounding_box.max.z - template.bounding_box.min.z) / 2.0,
-    );
-    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
-
-    tracing::debug!(
-        "spawn_player_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
-    );
-
-    // Build the ship entity spawn command.
-    // Use delta-v-spawn for collision shape conversion (ADR-0047).
-    let collision_shape_data = shape_from_json(&template.collision_shape, scale)
-        .expect("collision shape must be valid (ADR-0013)");
-
-    let ship_entity = commands
-        .spawn((
-            Transform {
-                translation: event.position,
-                rotation: event.rotation,
-                scale: event.scale,
-            },
-            GlobalTransform::default(),
-            Visibility::default(),
-            InheritedVisibility::default(),
-            PendingShipMesh { gltf_handle },
-            DebugAxesEligible::new(event.id.clone(), axis_length),
-            // Physics components: mass and inertia from template JSON (ADR-0014)
-            RigidBody::new(template.mass.value, template.inertia_scale),
-            FlightAssist,
-            CollisionShape(collision_shape_data),
-            CollisionLayersComponent::new(layers::SHIP),
-            // Health component for damage model (M4)
-            Health::new(template.health.value),
-            // Targetable and Navigable for targeting/navigation menu (M6 step 11a)
-            Targetable,
-            Navigable,
-        ))
-        .id();
-
-    // Entity type and ID for navigation list display (inserted separately to avoid tuple limit)
-    commands.entity(ship_entity).insert((
-        EntityType(event.entity_type.clone()),
-        WorldEntityId(event.id.clone()),
-    ));
-
-    // Add Weapon components from template (M4).
-    // Per ADR-0014, all gameplay values come from JSON.
-    for (i, weapon_json) in template.weapons.iter().enumerate() {
-        commands.entity(ship_entity).insert(Weapon {
-            slot: i as u32,
-            cooldown: 0.0,
-            projectile_speed: weapon_json.projectile_speed.value,
-            damage: weapon_json.damage.value,
-            fire_rate: weapon_json.fire_rate.value,
-            lifetime: weapon_json.lifetime.value,
-            projectile_radius: weapon_json.projectile_radius.value,
-        });
-    }
     // Spawn cameras for each available camera definition, scaled by the entity scale.
+    let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
     spawn_cameras(commands, ship_entity, &template, scale);
 
     // Store player ship ID, propulsion config, and cockpit overlay.
@@ -292,20 +206,16 @@ fn spawn_player_ship(
         ship_entity,
         &event.template_path,
         &template,
-        main,
-        maneuvering,
-        active_main_thruster_index,
+        ship_propulsion_config,
     );
 
     tracing::info!(
-        "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg, forward_thrust={}N, backward_thrust={}N)",
+        "player controlled ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",
         event.position.x,
         event.position.y,
         event.position.z,
-        mesh_path,
+        event.mesh_template_path,
         template.mass.value,
-        main.max_forward_thrust.value,
-        main.max_backward_thrust.value,
     );
 }
 
@@ -331,82 +241,78 @@ fn spawn_static_ship(
     let template: StaticShipTemplate = serde_json::from_value(event.template.clone())
         .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)");
 
-    // Derive mesh path from the mesh template path (always mesh.glb in the template directory).
-    let mesh_path = event.mesh_template_path.replace("ship.json", "mesh.glb");
-
-    // Queue glTF mesh load.
-    let gltf_handle = asset_server.load::<Gltf>(&mesh_path);
-
-    // Extract uniform scale from event (use max of x, y, z for uniform scaling).
-    let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
-
-    // Compute debug axes length from the bounding box in the template JSON, scaled.
-    let half_extent = Vec3::new(
-        (template.bounding_box.max.x - template.bounding_box.min.x) / 2.0,
-        (template.bounding_box.max.y - template.bounding_box.min.y) / 2.0,
-        (template.bounding_box.max.z - template.bounding_box.min.z) / 2.0,
-    );
-    let axis_length = half_extent.x.max(half_extent.y).max(half_extent.z) * 2.0 * scale;
-
-    tracing::debug!(
-        "spawn_static_ship: axis_length={axis_length:.1} from bounding_box in template (scale={scale})"
-    );
-
-    // Build the ship entity spawn command.
-    // Use delta-v-spawn for collision shape conversion (ADR-0047).
-    let collision_shape_data = shape_from_json(&template.collision_shape, scale)
-        .expect("collision shape must be valid (ADR-0013)");
-
-    let ship_entity = commands
-        .spawn((
-            Transform {
-                translation: event.position,
-                rotation: event.rotation,
-                scale: event.scale,
-            },
-            GlobalTransform::default(),
-            Visibility::default(),
-            InheritedVisibility::default(),
-            PendingShipMesh { gltf_handle },
-            DebugAxesEligible::new(event.id.clone(), axis_length),
-            // Physics components: mass and inertia from template JSON (ADR-0014)
-            RigidBody::new(template.mass.value, template.inertia_scale),
-            FlightAssist,
-            CollisionShape(collision_shape_data),
-            CollisionLayersComponent::new(layers::SHIP),
-            // Health component for damage model (M4)
-            Health::new(template.health.value),
-            // Targetable and Navigable for targeting/navigation menu (M6 step 11a)
-            Targetable,
-            Navigable,
-        ))
-        .id();
-
-    // Entity type and ID for navigation list display (inserted separately to avoid tuple limit)
-    commands.entity(ship_entity).insert((
-        EntityType(event.entity_type.clone()),
-        WorldEntityId(event.id.clone()),
-    ));
-
-    // Add Weapon components from template (M4).
-    for (i, weapon_json) in template.weapons.iter().enumerate() {
-        commands.entity(ship_entity).insert(Weapon {
-            slot: i as u32,
-            cooldown: 0.0,
-            projectile_speed: weapon_json.projectile_speed.value,
-            damage: weapon_json.damage.value,
-            fire_rate: weapon_json.fire_rate.value,
-            lifetime: weapon_json.lifetime.value,
-            projectile_radius: weapon_json.projectile_radius.value,
-        });
-    }
+    // Build the physical ship (common components: physics, collision, health, weapons).
+    let (_ship_entity, _propulsion_config) =
+        build_physical_ship(commands, asset_server, event, &template);
 
     tracing::info!(
         "static ship spawned at position ({:.1}, {:.1}, {:.1}) from {} (mass={}kg)",
         event.position.x,
         event.position.y,
         event.position.z,
-        mesh_path,
+        event.mesh_template_path,
         template.mass.value,
     );
+}
+
+/// Implement `ShipTemplateBase` for `PlayerShipTemplate`
+impl ShipTemplateBase for PlayerShipTemplate {
+    fn mass(&self) -> &PhysicalQuantityJson {
+        &self.mass
+    }
+    fn inertia_scale(&self) -> f32 {
+        self.inertia_scale
+    }
+    fn bounding_box(&self) -> &BoundingBoxJson {
+        &self.bounding_box
+    }
+    fn collision_shape(&self) -> &CollisionShapeJson {
+        &self.collision_shape
+    }
+    fn health(&self) -> &PhysicalQuantityJson {
+        &self.health
+    }
+    fn weapons(&self) -> &[WeaponReference] {
+        &self.weapons
+    }
+    fn entity_type(&self) -> &'static str {
+        "player_controlled_ship"
+    }
+    fn main_thruster_names(&self) -> &[String] {
+        &self.propulsion.main_thruster_names
+    }
+    fn maneuvering_thruster_name(&self) -> &str {
+        &self.propulsion.maneuvering_thruster
+    }
+}
+
+/// Implement `ShipTemplateBase` for `StaticShipTemplate`
+impl ShipTemplateBase for StaticShipTemplate {
+    fn mass(&self) -> &PhysicalQuantityJson {
+        &self.mass
+    }
+    fn inertia_scale(&self) -> f32 {
+        self.inertia_scale
+    }
+    fn bounding_box(&self) -> &BoundingBoxJson {
+        &self.bounding_box
+    }
+    fn collision_shape(&self) -> &CollisionShapeJson {
+        &self.collision_shape
+    }
+    fn health(&self) -> &PhysicalQuantityJson {
+        &self.health
+    }
+    fn weapons(&self) -> &[WeaponReference] {
+        &self.weapons
+    }
+    fn entity_type(&self) -> &'static str {
+        "ship"
+    }
+    fn main_thruster_names(&self) -> &[String] {
+        &self.propulsion.main_thruster_names
+    }
+    fn maneuvering_thruster_name(&self) -> &str {
+        &self.propulsion.maneuvering_thruster
+    }
 }

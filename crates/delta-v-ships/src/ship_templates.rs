@@ -11,7 +11,9 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 use delta_v_core::camera::ShipCamerasTemplate;
-use delta_v_types::{BoundingBoxJson, PhysicalQuantityJson};
+use delta_v_types::{
+    BoundingBoxJson, PhysicalQuantityJson, ShipPropulsionTemplate, WeaponReference,
+};
 
 /// Base deserialized ship template JSON.
 ///
@@ -27,6 +29,13 @@ pub struct ShipTemplate {
     pub inertia_scale: f32,
     /// Propulsion system configuration.
     pub propulsion: ShipPropulsionTemplate,
+}
+
+/// Sound file paths for a ship.
+#[derive(Debug, Deserialize, Clone, Resource)]
+pub struct ShipSounds {
+    /// Hit/impact sound.
+    pub hit: Option<String>,
 }
 
 /// Deserialized player-controlled ship template JSON.
@@ -52,12 +61,16 @@ pub struct PlayerShipTemplate {
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
     /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
+    pub weapons: Vec<WeaponReference>,
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,
     /// Cockpit overlay definition with stations and gauge slots.
     pub cockpit: CockpitDefinition,
+    /// Sound file paths relative to assets/audio/.
+    /// Defaults to empty (no sounds) via schema default.
+    /// Only player-controlled ships play sounds.
+    pub sounds: ShipSounds,
 }
 
 /// Deserialized non-player ship template JSON.
@@ -79,7 +92,7 @@ pub struct StaticShipTemplate {
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
     /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<delta_v_types::WeaponTemplateJson>,
+    pub weapons: Vec<WeaponReference>,
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,
@@ -141,45 +154,6 @@ pub enum GaugeShape {
     },
 }
 
-/// Propulsion configuration from the ship template.
-#[derive(Debug, Deserialize)]
-pub struct ShipPropulsionTemplate {
-    /// Main thruster configurations. For M2, exactly one is active.
-    #[serde(rename = "main_thrusters")]
-    pub main_thrusters: Vec<MainThrusterTemplate>,
-    /// Maneuver thruster (RCS) configuration.
-    pub maneuvering_thruster: ManeuveringThrusterTemplate,
-}
-
-/// Main thruster configuration from the template.
-#[derive(Debug, Deserialize)]
-pub struct MainThrusterTemplate {
-    /// Unique identifier for this thruster within the ship.
-    pub id: String,
-    /// Thruster type (e.g. "chemical", "ion"). Metadata for M2.
-    #[serde(rename = "type")]
-    pub thruster_type: String,
-    /// Maximum forward thrust.
-    pub max_forward_thrust: PhysicalQuantityJson,
-    /// Maximum backward/reverse thrust.
-    pub max_backward_thrust: PhysicalQuantityJson,
-}
-
-/// Maneuvering thruster (RCS) configuration from the template.
-#[derive(Debug, Deserialize)]
-pub struct ManeuveringThrusterTemplate {
-    /// Maneuvering thruster type (e.g. "rcs", "vernier"). Metadata for M2.
-    #[serde(rename = "type")]
-    pub thruster_type: String,
-    /// Maximum torque per rotation axis.
-    pub max_torque: PhysicalQuantityJson,
-    /// Maximum strafe thrust per lateral/vertical axis.
-    pub max_strafe_thrust: PhysicalQuantityJson,
-    /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
-    /// is first pressed. 0 = instant full torque (no ramp).
-    pub rotation_ramp_ticks: u32,
-}
-
 /// Ship propulsion configuration read from the ship template JSON.
 ///
 /// Contains the active thruster's force/torque values that the input → forces
@@ -203,6 +177,9 @@ pub struct ShipPropulsionConfig {
     /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
     /// is first pressed. 0 = instant full torque (no ramp).
     pub rotation_ramp_ticks: u32,
+    /// Thrust sound file path relative to assets/audio/ (e.g., "thrust.wav").
+    /// Optional; if not provided, no thrust sound is played.
+    pub thrust_sound: Option<String>,
 }
 
 /// Accumulated thrust command for the current fixed tick.

@@ -1,0 +1,9 @@
+{
+    "type": "laser",
+    "projectile_template": "laser-standard",
+    "fire_rate": {
+        "value": 5.0,
+        "unit": "Hz"
+    },
+    "sound": "fire.mp3"
+}

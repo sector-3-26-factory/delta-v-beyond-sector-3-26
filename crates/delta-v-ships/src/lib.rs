@@ -52,10 +52,12 @@ pub mod ship_templates;
 pub mod spawn;
 pub mod systems;
 
+pub use delta_v_core::Propulsion;
+pub use delta_v_types::ShipPropulsionTemplate;
 pub use error::ShipError;
 pub use ship_templates::{
-    MainThrusterTemplate, ManeuveringThrusterTemplate, PlayerShipTemplate, ShipPropulsionConfig,
-    ShipPropulsionTemplate, ShipTemplate, StaticShipTemplate, ThrustCommand, TorqueCommand,
+    PlayerShipTemplate, ShipPropulsionConfig, ShipTemplate, StaticShipTemplate, ThrustCommand,
+    TorqueCommand,
 };
 pub use spawn::spawn_ship;
 
@@ -138,7 +140,7 @@ impl Plugin for ShipsPlugin {
         // Uses the generic attach_meshes system from delta-v-spawn (ADR-0047).
         .add_systems(
             Update,
-            delta_v_spawn::mesh_attachment::attach_meshes::<spawn::PendingShipMesh>
+            delta_v_spawn::mesh_attachment::attach_meshes::<delta_v_spawn::PendingShipMesh>
                 .run_if(in_state(AppState::InGame)),
         )
         // Boundary checking during InGame.

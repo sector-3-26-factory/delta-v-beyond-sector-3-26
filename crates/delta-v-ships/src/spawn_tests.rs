@@ -56,19 +56,9 @@ fn make_player_ship_event() -> SpawnEntity {
             "half_extents": { "x": 1.0, "y": 1.0, "z": 1.0 }
         },
         "propulsion": {
-            "main_thrusters": [{
-                "id": "main",
-                "type": "chemical",
-                "max_forward_thrust": { "value": 100_000.0, "unit": "N" },
-                "max_backward_thrust": { "value": 40_000.0, "unit": "N" }
-            }],
-            "maneuvering_thruster": {
-                "type": "rcs",
-                "max_torque": { "value": 50_000.0, "unit": "N⋅m" },
-                "max_strafe_thrust": { "value": 50_000.0, "unit": "N" },
-                "rotation_ramp_ticks": 60
-            }
-        },
+                    "main_thrusters": ["chemical-main"],
+                    "maneuvering_thruster": "rcs-standard"
+                },
         "cameras": {
             "cockpit": {
                 "position": { "x": 0.0, "y": 0.5, "z": -0.2 },
@@ -115,7 +105,8 @@ fn make_player_ship_event() -> SpawnEntity {
         "health": { "value": 100.0, "unit": "hp" },
         "cockpit": {
                     "stations": []
-                }
+                },
+        "sounds": {}
     });
 
     SpawnEntity::new(
