@@ -1483,24 +1483,23 @@ pub fn play_thrust_sound_system(
         return;
     }
 
-    let Some(thrust_sound) = &propulsion_config.thrust_sound else {
+    let Some(thrust_sound_path) = &propulsion_config.thrust_sound else {
         tracing::debug!("[audio] thrust sound skipped: no thrust_sound configured");
         return;
     };
 
     let is_thrusting = thrusting_state.is_thrusting;
     tracing::debug!(
-        "[audio] thrust sound system: is_thrusting={}, active_sound.entity={:?}, thrust_sound={:?}",
+        "[audio] thrust sound system: is_thrusting={}, active_sound.entity={:?}, thrust_sound_path={:?}",
         is_thrusting,
         active_sound.entity,
-        thrust_sound
+        thrust_sound_path
     );
 
     if is_thrusting {
         // If no sound is playing, start one
         if active_sound.entity.is_none() {
-            let sound_path = format!("audio/{thrust_sound}");
-            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            let sound_handle: Handle<AudioSource> = asset_server.load(thrust_sound_path);
             let entity = commands
                 .spawn((
                     AudioPlayer::new(sound_handle),
@@ -1508,7 +1507,7 @@ pub fn play_thrust_sound_system(
                 ))
                 .id();
             active_sound.entity = Some(entity);
-            tracing::debug!("[audio] thrust sound started: {}", thrust_sound);
+            tracing::debug!("[audio] thrust sound started: {}", thrust_sound_path);
         }
     } else {
         // Stop the thrust sound if it's playing
@@ -1540,15 +1539,14 @@ pub fn play_fire_sound_system(
     for event in fire_events.read() {
         if event.source == player_ship.0
             && let Ok(weapon) = weapon_query.get(event.source)
-            && let Some(sound) = &weapon.sound
+            && let Some(fire_sound_path) = &weapon.fire_sound
         {
-            let sound_path = format!("audio/{sound}");
-            let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            let sound_handle: Handle<AudioSource> = asset_server.load(fire_sound_path);
             commands.spawn((
                 AudioPlayer::new(sound_handle),
                 PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.7)),
             ));
-            tracing::debug!("[audio] fire sound played: {}", sound);
+            tracing::debug!("[audio] fire sound played: {}", fire_sound_path);
         } else {
             tracing::debug!(
                 "[audio] fire event ignored: source={:?} player_ship={:?}",
@@ -1578,14 +1576,13 @@ pub fn play_hit_sound_system(
 
     for event in hit_events.read() {
         if event.target == player_ship.0 {
-            if let Some(hit_sound) = &event.hit_sound {
-                let sound_path = format!("audio/{hit_sound}");
-                let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
+            if let Some(hit_sound_path) = &event.hit_sound {
+                let sound_handle: Handle<AudioSource> = asset_server.load(hit_sound_path);
                 commands.spawn((
                     AudioPlayer::new(sound_handle),
                     PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.6)),
                 ));
-                tracing::debug!("[audio] hit sound played: {}", hit_sound);
+                tracing::debug!("[audio] hit sound played: {}", hit_sound_path);
             } else {
                 tracing::debug!("[audio] hit sound skipped: no hit_sound in projectile");
             }

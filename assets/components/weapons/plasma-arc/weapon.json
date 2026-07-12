@@ -4,6 +4,5 @@
     "fire_rate": {
         "value": 3.0,
         "unit": "Hz"
-    },
-    "sound": "fire.mp3"
+    }
 }

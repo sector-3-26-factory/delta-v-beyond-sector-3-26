@@ -33,7 +33,7 @@ pub struct PropulsionConfig {
     pub max_strafe_thrust: f32,
     /// Number of ticks for rotation ramp.
     pub rotation_ramp_ticks: u32,
-    /// Thrust sound file path relative to assets/audio/ (e.g., "thrust.wav").
-    /// Optional; if not provided, no thrust sound is played.
+    /// Pre-resolved thrust sound file path relative to assets/ (e.g., "audio/thrust.mp3" or "components/propulsion/main-thrusters/chemical-main/thrust.mp3").
+    /// None if no thrust sound.
     pub thrust_sound: Option<String>,
 }

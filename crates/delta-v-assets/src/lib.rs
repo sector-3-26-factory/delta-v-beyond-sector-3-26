@@ -48,7 +48,12 @@ use bevy::app::Plugin;
 
 pub mod error;
 pub mod paths;
+pub mod sound;
 pub mod template;
+
+#[cfg(test)]
+#[path = "sound_tests.rs"]
+mod sound_tests;
 
 #[cfg(test)]
 #[path = "template_tests.rs"]
@@ -57,6 +62,7 @@ mod template_tests;
 // Re-exports for convenience
 pub use error::AssetError;
 pub use paths::{get_workspace_root, resolve_template_path};
+pub use sound::resolve_sound_path;
 
 /// Plugin for asset loading and template management.
 pub struct AssetsPlugin;

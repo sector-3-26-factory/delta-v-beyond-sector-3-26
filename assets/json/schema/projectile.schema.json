@@ -33,10 +33,6 @@
         "radius": {
             "description": "Collision shape radius in metres.",
             "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
-        },
-        "hit_sound": {
-            "description": "Sound file path relative to assets/audio/ (e.g., \"hit.mp3\"). Optional; if not provided, no sound is played on impact.",
-            "type": "string"
         }
     }
 }

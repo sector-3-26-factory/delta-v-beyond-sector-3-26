@@ -21,6 +21,30 @@ Delta-V is designed to be modular. We are working on a Peer-to-Peer (P2P) ecosys
 - **What can be shared:** Custom Worlds, Spaceships, and other game objects.
 - **How it works:** This system is currently in development. Once live, you will be able to export your creations in-game and share them via the P2P network.
 
+#### Component Sound Files
+When creating custom components (weapons, projectiles, thrusters), you can add sound files that will be automatically detected by the game. No JSON configuration is needed — sounds are resolved by **naming convention**.
+
+**Sound file naming convention:**
+
+| Component Type | Sound Name | Example File Path |
+|----------------|------------|-------------------|
+| Projectile | `hit` | `assets/components/projectiles/{name}/hit.mp3` |
+| Weapon | `fire` | `assets/components/weapons/{name}/fire.mp3` |
+| Main Thruster | `thrust` | `assets/components/propulsion/main-thrusters/{name}/thrust.mp3` |
+| Maneuvering Thruster | `thrust` | `assets/components/propulsion/maneuvering-thrusters/{name}/thrust.mp3` |
+
+**Supported formats:** `.mp3`, `.wav`, `.ogg` (checked in priority order)
+
+**Fallback behavior:** If no component-specific sound exists, the game uses default sounds from `assets/audio/`:
+- `fire.mp3` - Default weapon fire sound
+- `hit.mp3` - Default projectile hit sound
+- `thrust.mp3` - Default thruster sound
+
+This allows you to:
+- Create components without adding sound files (defaults are used)
+- Add custom sounds to override the defaults
+- Use any of the three supported audio formats
+
 ---
 
 ## Licensing of Contributions

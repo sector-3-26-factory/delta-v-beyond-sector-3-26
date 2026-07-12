@@ -34,10 +34,6 @@
             "type": "integer",
             "minimum": 0,
             "default": 60
-        },
-        "sound": {
-            "description": "Sound file path relative to assets/audio/ (e.g., \"thrust.mp3\"). Optional; if not provided, no thrust sound is played.",
-            "type": "string"
         }
     }
 }

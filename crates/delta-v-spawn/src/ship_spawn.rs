@@ -10,6 +10,7 @@
 use crate::collision::shape_from_json;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use delta_v_assets::resolve_sound_path;
 use delta_v_assets::template::{
     load_main_thruster_definition, load_maneuvering_thruster_definition,
     load_projectile_definition, load_weapon_definition,
@@ -183,26 +184,16 @@ fn add_weapon_components(
         let projectile_def: ProjectileDefinitionJson = serde_json::from_value(projectile_def)
             .expect("projectile definition deserialization must succeed (ADR-0040)");
 
-        // Validate weapon sound file exists (ADR-0013: no silent fallbacks).
-        if let Some(ref sound) = weapon_def.sound {
-            let path = format!("assets/audio/{sound}");
-            if !std::path::Path::new(&path).exists() {
-                tracing::warn!(
-                    "[audio] weapon sound file not found: {} (referenced in template)",
-                    path
-                );
-            }
-        }
-        // Validate hit sound file exists (ADR-0013: no silent fallbacks).
-        if let Some(ref hit_sound) = projectile_def.hit_sound {
-            let path = format!("assets/audio/{hit_sound}");
-            if !std::path::Path::new(&path).exists() {
-                tracing::warn!(
-                    "[audio] hit sound file not found: {} (referenced in projectile template)",
-                    path
-                );
-            }
-        }
+        // Resolve sound paths at spawn time for performance
+        let weapon_dir = format!("assets/components/weapons/{}", weapon_ref.name);
+        let projectile_dir = format!(
+            "assets/components/projectiles/{}",
+            weapon_def.projectile_template
+        );
+
+        let fire_sound = resolve_sound_path(&weapon_dir, "fire");
+        let hit_sound = resolve_sound_path(&projectile_dir, "hit");
+
         commands.entity(ship_entity).insert(Weapon {
             slot: u32::try_from(i).expect("weapon slot index fits in u32"),
             cooldown: 0.0,
@@ -212,8 +203,8 @@ fn add_weapon_components(
             fire_rate: weapon_def.fire_rate.value,
             lifetime: projectile_def.lifetime.value,
             projectile_radius: projectile_def.radius.value,
-            sound: weapon_def.sound.clone(),
-            hit_sound: projectile_def.hit_sound.clone(),
+            fire_sound,
+            hit_sound,
         });
     }
 }
@@ -239,13 +230,17 @@ fn load_propulsion_config(template: &impl ShipTemplateBase) -> PropulsionConfig 
         serde_json::from_value(maneuvering_thruster_def)
             .expect("maneuvering thruster definition deserialization must succeed (ADR-0040)");
 
+    // Resolve thrust sound path at spawn time for performance
+    let thruster_dir = format!("assets/components/propulsion/main-thrusters/{main_thruster_name}");
+    let thrust_sound = resolve_sound_path(&thruster_dir, "thrust");
+
     PropulsionConfig {
         max_forward_thrust: main_thruster_def.max_forward_thrust.value,
         max_backward_thrust: main_thruster_def.max_backward_thrust.value,
         max_torque: maneuvering_thruster_def.max_torque.value,
         max_strafe_thrust: maneuvering_thruster_def.max_strafe_thrust.value,
         rotation_ramp_ticks: maneuvering_thruster_def.rotation_ramp_ticks,
-        thrust_sound: main_thruster_def.sound,
+        thrust_sound,
     }
 }
 
