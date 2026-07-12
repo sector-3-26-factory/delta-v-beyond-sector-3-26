@@ -56,16 +56,16 @@ pub struct ActiveThrustSound {
     pub entity: Option<Entity>,
 }
 
-/// Resource to track whether thrusting occurred in the last FixedUpdate tick.
+/// Resource to track whether thrusting occurred in the last `FixedUpdate` tick.
 ///
-/// This is set by `thrust_state_tracker_system` in FixedUpdate and read by
+/// This is set by `thrust_state_tracker_system` in `FixedUpdate` and read by
 /// `play_thrust_sound_system` in Update. This bridges the schedule gap since
 /// `ThrustCommand` is cleared before Update runs.
 // allow-default: Bevy requires Default on resources for init_resource.
 // This is runtime state, not configuration.
 #[derive(Resource, Default)]
 pub struct ThrustingState {
-    /// Whether thrust was applied in the last FixedUpdate tick.
+    /// Whether thrust was applied in the last `FixedUpdate` tick.
     pub is_thrusting: bool,
 }
 
@@ -1420,7 +1420,7 @@ pub fn trigger_camera_shake_system(
     }
 }
 
-/// Tracks whether thrust was applied in the last FixedUpdate tick.
+/// Tracks whether thrust was applied in the last `FixedUpdate` tick.
 ///
 /// Runs in `FixedUpdate` after `ShipInputSet::ApplyThrust` and before
 /// `ShipInputSet::ClearCommands`. This captures the thrusting state
@@ -1466,7 +1466,7 @@ pub fn init_audio_availability(mut commands: Commands<'_, '_>) {
 /// Plays the thrust sound when the player is thrusting.
 ///
 /// Runs in `Update` during `AppState::InGame`. Checks `ThrustingState` to determine
-/// if thrusting occurred in the last FixedUpdate tick, and plays the thrust sound
+/// if thrusting occurred in the last `FixedUpdate` tick, and plays the thrust sound
 /// (looped) when thrusting, stops when not thrusting.
 /// The thrust sound is configured in the propulsion/thruster definition, not in ship sounds.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
