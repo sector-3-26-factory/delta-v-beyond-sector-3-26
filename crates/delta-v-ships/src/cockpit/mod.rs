@@ -47,6 +47,7 @@ impl Plugin for CockpitPlugin {
         app.init_resource::<systems::ArrowTextureCache>()
             .init_resource::<systems::CockpitCycleState>()
             .init_resource::<systems::ActiveThrustSound>()
+            .init_resource::<systems::ThrustingState>()
             .init_resource::<components::TargetingMode>()
             .init_resource::<components::SelectedTarget>()
             .init_resource::<components::SelectedNavObject>()
@@ -102,6 +103,13 @@ impl Plugin for CockpitPlugin {
                     navigation_list::update_selection_system,
                     navigation_list::handle_target_selected_system,
                 )
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                FixedUpdate,
+                systems::thrust_state_tracker_system
+                    .after(crate::systems::ShipInputSet::ApplyThrust)
+                    .before(crate::systems::ShipInputSet::ClearCommands)
                     .run_if(in_state(AppState::InGame)),
             )
             .add_systems(

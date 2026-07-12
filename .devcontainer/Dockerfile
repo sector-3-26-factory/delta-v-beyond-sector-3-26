@@ -13,6 +13,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 #
 # Build-time (-dev packages provide headers + .so symlinks):
 #  - libasound2-dev        : ALSA, audio
+#  - libasound2-plugins    : ALSA-PulseAudio bridge modules (libasound_module_pcm_pulse.so)
+#  - libpulse-dev          : PulseAudio client library (for ALSA-PulseAudio bridge)
 #  - libudev-dev           : gamepad / input hotplug
 #  - libwayland-dev        : Wayland windowing
 #  - libxkbcommon-dev      : keyboard handling (Wayland + X11) core
@@ -29,6 +31,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 #  - libvulkan-dev         : Vulkan loader headers
 #
 # Runtime / drivers:
+#  - libpulse0             : PulseAudio client library (runtime)
 #  - mesa-vulkan-drivers   : Vulkan ICD for HW/software rendering
 #  - vulkan-tools          : `vulkaninfo` for debugging
 #
@@ -41,6 +44,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         clang \
         mold \
         libasound2-dev \
+        libasound2-plugins \
+        libpulse-dev \
+        libpulse0 \
         libudev-dev \
         libwayland-dev \
         libxkbcommon-dev \
@@ -60,7 +66,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Configure ALSA to use PulseAudio as the default audio output.
+# This allows Bevy's cpal/rodio to route audio through the PulseAudio socket
+# mounted from the host. Without this, ALSA cannot find any audio devices.
+RUN echo 'pcm.!default { type pulse }' > /etc/asound.conf && \
+    echo 'ctl.!default { type pulse }' >> /etc/asound.conf
+
 # Pre-install useful cargo subcommands for the workflow.
 # (Kept minimal; add more on demand to keep image size reasonable.)
 USER vscode
-RUN rustup component add rustfmt clippy
+RUN rustup component add rustfmt clippy && \
+    cargo install cargo-sweep && \
+    cargo install cargo-deny && \
+    cargo install tokei

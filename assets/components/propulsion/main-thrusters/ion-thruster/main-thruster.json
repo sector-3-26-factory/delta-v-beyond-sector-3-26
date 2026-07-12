@@ -8,5 +8,5 @@
         "value": 25000,
         "unit": "N"
     },
-    "sound": "thrust.wav"
+    "sound": "thrust.mp3"
 }

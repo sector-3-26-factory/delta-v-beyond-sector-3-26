@@ -9,5 +9,5 @@
         "unit": "N"
     },
     "rotation_ramp_ticks": 60,
-    "sound": "thrust.wav"
+    "sound": "thrust.mp3"
 }

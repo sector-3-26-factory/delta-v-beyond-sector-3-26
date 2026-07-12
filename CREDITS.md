@@ -110,3 +110,32 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/fonts/DejaVuSansMono.ttf`
 - **Modifications:** *None*
 - **Usage:** Default UI font for all text rendering (replaces Bevy's embedded Fira Mono which lacks Unicode arrow glyphs U+2190–U+2193)
+
+## Sounds
+
+### Thrust (default thrust sound)
+
+- **Creator:** [bretbernhoft](https://pixabay.com/de/users/bretbernhoft-30625489/)
+- **Source:** [Pixabay](https://pixabay.com/de/sound-effects/film-spezialeffekte-space-flight-10-422488/)
+- **License:** Pixabay-Inhaltslizenz
+- **License URL:** https://pixabay.com/de/service/license-summary/
+- **File:** `assets/audio/thrust.mp3`
+- **Modifications:** *None*
+
+### Fire (default weapon fire sound)
+
+- **Creator:** [DavidDumaisAudio](https://pixabay.com/de/users/daviddumaisaudio-41768500/)
+- **Source:** [Pixabay](https://pixabay.com/de/sound-effects/film-spezialeffekte-sci-fi-weapon-laser-shot-04-316416/)
+- **License:** Pixabay-Inhaltslizenz
+- **License URL:** https://pixabay.com/de/service/license-summary/
+- **File:** `assets/audio/fire.mp3`
+- **Modifications:** *None*
+
+### Hit (default impact sound)
+
+- **Creator:** [Black_Kumizhi](https://pixabay.com/de/users/black_kumizhi-40755270/)
+- **Source:** [Pixabay](https://pixabay.com/de/sound-effects/film-spezialeffekte-huge-cinematic-reverb-impact-506132/)
+- **License:** Pixabay-Inhaltslizenz
+- **License URL:** https://pixabay.com/de/service/license-summary/
+- **File:** `assets/audio/hit.mp3`
+- **Modifications:** *None*

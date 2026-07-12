@@ -140,6 +140,6 @@
         ]
     },
     "sounds": {
-        "hit": "hit.wav"
+        "hit": "hit.mp3"
     }
 }

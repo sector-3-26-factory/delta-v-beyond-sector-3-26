@@ -30,7 +30,7 @@
             "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/frequency"
         },
         "sound": {
-            "description": "Sound file path relative to assets/audio/ (e.g., \"fire.wav\"). Optional; if not provided, no sound is played on fire.",
+            "description": "Sound file path relative to assets/audio/ (e.g., \"fire.mp3\"). Optional; if not provided, no sound is played on fire.",
             "type": "string"
         }
     }

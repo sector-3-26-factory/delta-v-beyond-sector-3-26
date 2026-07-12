@@ -56,6 +56,19 @@ pub struct ActiveThrustSound {
     pub entity: Option<Entity>,
 }
 
+/// Resource to track whether thrusting occurred in the last FixedUpdate tick.
+///
+/// This is set by `thrust_state_tracker_system` in FixedUpdate and read by
+/// `play_thrust_sound_system` in Update. This bridges the schedule gap since
+/// `ThrustCommand` is cleared before Update runs.
+// allow-default: Bevy requires Default on resources for init_resource.
+// This is runtime state, not configuration.
+#[derive(Resource, Default)]
+pub struct ThrustingState {
+    /// Whether thrust was applied in the last FixedUpdate tick.
+    pub is_thrusting: bool,
+}
+
 /// Tracks which actions were already consumed to prevent repeated firing.
 // allow-default: Bevy requires Default on resources for init_resource. This
 // resource tracks key press state for edge detection; it starts false.
@@ -1407,6 +1420,20 @@ pub fn trigger_camera_shake_system(
     }
 }
 
+/// Tracks whether thrust was applied in the last FixedUpdate tick.
+///
+/// Runs in `FixedUpdate` after `ShipInputSet::ApplyThrust` and before
+/// `ShipInputSet::ClearCommands`. This captures the thrusting state
+/// before the `ThrustCommand` is cleared, allowing the audio system
+/// in `Update` to know if thrusting occurred.
+#[allow(clippy::needless_pass_by_value)]
+pub fn thrust_state_tracker_system(
+    thrust_cmd: Res<'_, crate::ship_templates::ThrustCommand>,
+    mut state: ResMut<'_, ThrustingState>,
+) {
+    state.is_thrusting = thrust_cmd.force.length() > 0.0;
+}
+
 /// Resource to track whether audio is available (graceful fallback).
 #[derive(Resource, Default)]
 pub struct AudioAvailable {
@@ -1438,13 +1465,14 @@ pub fn init_audio_availability(mut commands: Commands<'_, '_>) {
 
 /// Plays the thrust sound when the player is thrusting.
 ///
-/// Runs in `Update` during `AppState::InGame`. Checks `ThrustCommand` magnitude
-/// and plays the thrust sound (looped) when thrusting, stops when not thrusting.
+/// Runs in `Update` during `AppState::InGame`. Checks `ThrustingState` to determine
+/// if thrusting occurred in the last FixedUpdate tick, and plays the thrust sound
+/// (looped) when thrusting, stops when not thrusting.
 /// The thrust sound is configured in the propulsion/thruster definition, not in ship sounds.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn play_thrust_sound_system(
     _player_ship: Res<'_, PlayerShipEntity>,
-    thrust_cmd: Res<'_, crate::ship_templates::ThrustCommand>,
+    thrusting_state: Res<'_, ThrustingState>,
     propulsion_config: Res<'_, crate::ship_templates::ShipPropulsionConfig>,
     audio_available: Res<'_, AudioAvailable>,
     asset_server: Res<'_, AssetServer>,
@@ -1452,14 +1480,22 @@ pub fn play_thrust_sound_system(
     mut commands: Commands<'_, '_>,
 ) {
     if !audio_available.available {
+        tracing::debug!("[audio] thrust sound skipped: audio not available");
         return;
     }
 
     let Some(thrust_sound) = &propulsion_config.thrust_sound else {
+        tracing::debug!("[audio] thrust sound skipped: no thrust_sound configured");
         return;
     };
 
-    let is_thrusting = thrust_cmd.force.length() > 0.0;
+    let is_thrusting = thrusting_state.is_thrusting;
+    tracing::debug!(
+        "[audio] thrust sound system: is_thrusting={}, active_sound.entity={:?}, thrust_sound={:?}",
+        is_thrusting,
+        active_sound.entity,
+        thrust_sound
+    );
 
     if is_thrusting {
         // If no sound is playing, start one
@@ -1467,7 +1503,10 @@ pub fn play_thrust_sound_system(
             let sound_path = format!("audio/{thrust_sound}");
             let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
             let entity = commands
-                .spawn((AudioPlayer::new(sound_handle), PlaybackSettings::LOOP))
+                .spawn((
+                    AudioPlayer::new(sound_handle),
+                    PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::Linear(0.5)),
+                ))
                 .id();
             active_sound.entity = Some(entity);
             tracing::debug!("[audio] thrust sound started: {}", thrust_sound);
@@ -1495,6 +1534,7 @@ pub fn play_fire_sound_system(
     mut commands: Commands<'_, '_>,
 ) {
     if !audio_available.available {
+        tracing::debug!("[audio] fire sound skipped: audio not available");
         return;
     }
 
@@ -1505,8 +1545,17 @@ pub fn play_fire_sound_system(
         {
             let sound_path = format!("audio/{sound}");
             let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
-            commands.spawn((AudioPlayer::new(sound_handle), PlaybackSettings::ONCE));
+            commands.spawn((
+                AudioPlayer::new(sound_handle),
+                PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.7)),
+            ));
             tracing::debug!("[audio] fire sound played: {}", sound);
+        } else {
+            tracing::debug!(
+                "[audio] fire event ignored: source={:?} player_ship={:?}",
+                event.source,
+                player_ship.0
+            );
         }
     }
 }
@@ -1525,10 +1574,12 @@ pub fn play_hit_sound_system(
     mut commands: Commands<'_, '_>,
 ) {
     if !audio_available.available {
+        tracing::debug!("[audio] hit sound skipped: audio not available");
         return;
     }
 
     let Some(hit_sound) = &ship_sounds.hit else {
+        tracing::debug!("[audio] hit sound skipped: no hit_sound configured");
         return;
     };
 
@@ -1536,8 +1587,17 @@ pub fn play_hit_sound_system(
         if event.target == player_ship.0 {
             let sound_path = format!("audio/{hit_sound}");
             let sound_handle: Handle<AudioSource> = asset_server.load(sound_path);
-            commands.spawn((AudioPlayer::new(sound_handle), PlaybackSettings::ONCE));
+            commands.spawn((
+                AudioPlayer::new(sound_handle),
+                PlaybackSettings::ONCE.with_volume(bevy::audio::Volume::Linear(0.6)),
+            ));
             tracing::debug!("[audio] hit sound played: {}", hit_sound);
+        } else {
+            tracing::debug!(
+                "[audio] hit event ignored: target={:?} player_ship={:?}",
+                event.target,
+                player_ship.0
+            );
         }
     }
 }

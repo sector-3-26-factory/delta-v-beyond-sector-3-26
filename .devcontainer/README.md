@@ -89,7 +89,77 @@ vulkaninfo --summary | head -40
 The render node should be readable and `vulkaninfo` should list your real
 GPU, not just `llvmpipe`.
 
+## Audio output (PulseAudio)
+
+The dev container forwards audio to the host via PulseAudio. This requires:
+
+1. **PulseAudio running on the host** (standard on most Linux desktops).
+2. **The PulseAudio native socket** mounted into the container.
+
+### Finding your PulseAudio socket
+
+The PulseAudio native socket is typically at:
+
+```
+/run/user/<UID>/pulse/native
+```
+
+where `<UID>` is your user's numeric ID. The `devcontainer.json` assumes
+UID 1000 (the default on most single-user Linux installations).
+
+To find your actual UID:
+
+```bash
+id -u
+```
+
+To find your PulseAudio socket path:
+
+```bash
+ls -la /run/user/$(id -u)/pulse/native 2>/dev/null || \
+    ls -la ~/.config/pulse/native 2>/dev/null || \
+    echo "No PulseAudio socket found"
+```
+
+### Adjusting for a different UID
+
+If your user has a different UID (e.g., you are user 1001 or 1002), edit
+the mount in `.devcontainer/devcontainer.json`:
+
+```json
+{
+    "mounts": [
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+        "source=/run/user/1000/pulse/native,target=/pulse-native,type=bind,consistency=cached"
+    ]
+}
+```
+
+Change `1000` to your actual UID in the source path, then rebuild the
+container:
+
+1. **VS Code** → **Dev Containers: Rebuild Container**
+
+### Verifying audio works
+
+After starting the container, check that the PulseAudio socket is accessible:
+
+```bash
+ls -l /pulse-native
+# Should show: srw-rw-rw- ... /pulse-native
+```
+
+If the socket is not found, the `postStartCommand` in `devcontainer.json`
+will print a warning with troubleshooting hints.
+
 ## Troubleshooting
+
+**No audio / "Connection refused" errors**
+: The PulseAudio socket is not accessible. Check:
+  - Your UID matches the mount in `devcontainer.json` (see *Audio output* section)
+  - PulseAudio is running on the host: `pulseaudio --check && echo "running" || echo "not running"`
+  - The socket exists: `ls -la /run/user/$(id -u)/pulse/native`
+  - Inside the container: `ls -l /pulse-native` should show a socket file
 
 **`XOpenDisplayFailed` / "cannot open display"**
 : The most common cause is a mismatch between `DISPLAY` and the X11 socket
