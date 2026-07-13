@@ -80,14 +80,6 @@ impl OriginThreshold {
     }
 }
 
-/// Marker component for entities that should be translated when the origin recenters.
-///
-/// This component is automatically added to all entities with a `Transform`
-/// when the floating origin system is initialized. It allows the recentering
-/// system to efficiently find all entities that need position updates.
-#[derive(Component, Debug, Clone, Copy)]
-pub struct FloatingOriginEligible;
-
 /// Configuration for floating origin behavior.
 ///
 /// This resource holds runtime configuration for the floating origin system.

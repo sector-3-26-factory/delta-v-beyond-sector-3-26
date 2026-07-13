@@ -22,78 +22,100 @@
 //! tracking the player ship's distance from the current origin and
 //! recentering when the threshold is exceeded.
 
+use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
-use delta_v_core::{FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible};
+use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
 /// System that checks if the origin needs to be recentered.
 ///
 /// Per ADR-0007, this runs in `FixedUpdate` before physics integration.
 /// If the player ship exceeds the threshold distance from the current origin,
-/// the origin is recentered and all eligible entities are translated.
-#[allow(clippy::needless_pass_by_value)]
+/// the origin is recentered and all top-level entities with Transform are translated.
+/// Child entities (with `ChildOf` component) are excluded since they follow their parent.
+/// Only entities in the Gameplay render layer (layer 0) are translated.
+/// This excludes UI elements (`CockpitBackground`, `CockpitForeground`, `Menu`) and lights.
+/// Entities without a `RenderLayers` component are treated as Gameplay layer.
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
 pub fn check_and_recenter_origin_system(
     mut commands: Commands<'_, '_>,
-    query: Query<'_, '_, (Entity, &Transform, &mut FloatingOriginEligible)>,
-    origin: Res<'_, FloatingOrigin>,
+    player_entity: Res<'_, PlayerShipEntity>,
+    query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&ChildOf>,
+            Option<&RenderLayers>,
+            Option<&DirectionalLight>,
+            Option<&AmbientLight>,
+        ),
+    >,
     config: Res<'_, FloatingOriginConfig>,
 ) {
-    let distance_from_origin = origin.offset.length();
+    // Get the player ship's position
+    let Ok((_, player_transform, _, _, _, _)) = query.get(player_entity.0) else {
+        return; // Player ship not found
+    };
+    let player_pos = player_transform.translation;
+
+    // Check if the player ship's distance from the current origin exceeds threshold
+    // The player's distance from origin is the length of their position (since origin is at 0,0,0 in local space)
+    let distance_from_origin = player_pos.length();
 
     // Check if we need to recenter
     if distance_from_origin <= config.recenter_threshold_m {
         return; // No recentering needed
     }
 
-    // Collect entity data first (positions and translation needed)
-    let mut entity_data: Vec<(Entity, Vec3)> = Vec::new();
-    let mut first = true;
-    let mut player_pos = Vec3::ZERO;
+    // Collect entity data for all top-level entities with Transform.
+    // Child entities (with ChildOf) are excluded since they follow their parent's Transform.
+    // Light entities (DirectionalLight, AmbientLight) are excluded since they don't have
+    // meaningful world positions that need recentering.
+    // Only entities in the Gameplay render layer (layer 0) are translated.
+    // Entities without RenderLayers are treated as Gameplay layer (per apply_gameplay_render_layers).
+    // This excludes UI elements (`CockpitBackground`, `CockpitForeground`, `Menu`) and lights.
+    let entity_data: Vec<(Entity, Vec3)> = query
+        .iter()
+        .filter(
+            |(_, _, parent, render_layers, directional_light, ambient_light)| {
+                // Exclude child entities
+                if parent.is_some() {
+                    return false;
+                }
+                // Exclude light entities
+                if directional_light.is_some() || ambient_light.is_some() {
+                    return false;
+                }
+                // Include entities in Gameplay layer (layer 0)
+                // Entities without RenderLayers are treated as Gameplay layer
+                render_layers.is_none_or(|layers| layers.intersects(&RenderLayers::layer(0)))
+            },
+        )
+        .map(|(entity, transform, _, _, _, _)| (entity, transform.translation))
+        .collect();
 
-    for (entity, transform, _) in query.iter() {
-        if first {
-            player_pos = transform.translation;
-            first = false;
-        }
-        entity_data.push((entity, transform.translation));
-    }
-
-    if first {
-        return; // No entities
-    }
-
-    let translation = origin.offset - player_pos;
+    // The translation to apply: move all entities so the player is at the origin
+    // Old positions are relative to the old origin (0,0,0)
+    // New positions should be relative to the player's position
+    // So: new_pos = old_pos - player_pos
+    let translation = player_pos;
 
     info!(
         threshold = config.recenter_threshold_m,
-        current_offset = origin.offset.length(),
-        "Recentering origin"
+        player_distance = distance_from_origin,
+        entity_count = entity_data.len(),
+        "Recentering origin to player position"
     );
 
-    // Update the origin resource
-    commands.insert_resource(FloatingOrigin::new(player_pos));
+    // Update the origin resource to the player's position
+    // This makes the player the new origin (local position 0,0,0)
+    commands.insert_resource(FloatingOrigin::new(translation));
 
-    // Translate all entities using commands
+    // Translate all top-level entities using commands
     for (entity, old_pos) in entity_data {
         commands
             .entity(entity)
             .insert(Transform::from_translation(old_pos - translation));
-    }
-}
-
-/// System that marks newly spawned entities as eligible for floating origin translation.
-///
-/// This runs in `Update` during `InGame` state.
-#[allow(clippy::needless_pass_by_value)]
-pub fn mark_new_entities_system(
-    mut commands: Commands<'_, '_>,
-    query: Query<'_, '_, Entity, (Added<Transform>, Without<FloatingOriginEligible>)>,
-    existing: Query<'_, '_, Entity>,
-) {
-    for entity in &query {
-        // Check if the entity still exists in the world (it may have been despawned
-        // between the query and the command, e.g., destroyed by boundary system).
-        if existing.get(entity).is_ok() {
-            commands.entity(entity).insert(FloatingOriginEligible);
-        }
     }
 }

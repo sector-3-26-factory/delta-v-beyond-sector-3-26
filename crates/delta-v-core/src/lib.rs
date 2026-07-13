@@ -33,7 +33,6 @@
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 // Subdirectory modules (ADR-0048)
-pub mod boundary;
 pub mod camera;
 pub mod debug;
 pub mod diagnostics;
@@ -50,9 +49,6 @@ pub mod state;
 pub mod weapons;
 
 // Re-exports from subdirectories
-pub use boundary::{
-    BoundaryBehavior, SectorBoundary, SectorBoundaryResource, check_sector_boundary_system,
-};
 pub use camera::{
     ActiveCameraName, ActiveMainCamera, CameraDefinition, CameraName, CameraSwitch,
     CameraSwitchCycleState, PlayerShipEntity, RenderLayer, ShipCamerasTemplate,
@@ -70,9 +66,7 @@ pub use events::{
     TargetingModeChanged,
 };
 pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
-pub use floating_origin::{
-    FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible, OriginThreshold,
-};
+pub use floating_origin::{FloatingOrigin, FloatingOriginConfig, OriginThreshold};
 pub use health::{Health, Targetable};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use navigation::{
@@ -95,10 +89,6 @@ mod state_tests;
 #[cfg(test)]
 #[path = "diagnostics/tests.rs"]
 mod diagnostics_tests;
-
-#[cfg(test)]
-#[path = "boundary/tests.rs"]
-mod boundary_tests;
 
 use bevy::prelude::*;
 

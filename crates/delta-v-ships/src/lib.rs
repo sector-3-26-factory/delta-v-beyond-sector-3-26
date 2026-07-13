@@ -69,7 +69,7 @@ mod spawn_tests;
 mod systems_tests;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, SectorBoundaryResource, WorldSpawnSet, check_sector_boundary_system};
+use delta_v_core::{AppState, WorldSpawnSet};
 use delta_v_physics::PhysicsSet;
 use systems::{
     PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
@@ -104,7 +104,6 @@ impl Plugin for ShipsPlugin {
             .init_resource::<TorqueCommand>()
             .init_resource::<PreviousActions>()
             .init_resource::<RotationRampState>()
-            .init_resource::<SectorBoundaryResource>()
             .init_resource::<delta_v_core::ActiveCameraName>()
             .init_resource::<delta_v_core::CameraSwitchCycleState>()
             .add_message::<delta_v_core::CameraSwitched>();
@@ -142,11 +141,6 @@ impl Plugin for ShipsPlugin {
             Update,
             delta_v_spawn::mesh_attachment::attach_meshes::<delta_v_spawn::PendingShipMesh>
                 .run_if(in_state(AppState::InGame)),
-        )
-        // Boundary checking during InGame.
-        .add_systems(
-            Update,
-            check_sector_boundary_system.run_if(in_state(AppState::InGame)),
         );
 
         // Camera switching system (M7).

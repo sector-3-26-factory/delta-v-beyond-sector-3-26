@@ -25,11 +25,7 @@ delta-v-core/src/
   debug_axes_tests.rs - Tests
   debug_config.rs     - DebugConfig
   debug_config_tests.rs - Tests
-  diagnostics.rs      - DiagnosticsConfig, DiagnosticsPlugin
   diagnostics_tests.rs - Tests
-  boundary.rs         - Sector boundary types
-  boundary_systems.rs - Boundary checking system
-  boundary_tests.rs   - Tests
   flight_assist.rs    - FlightAssist component/config
   floating_origin.rs  - FloatingOrigin types
   floating_origin_tests.rs - Tests
@@ -80,14 +76,10 @@ delta-v-core/src/
   diagnostics/
     mod.rs                  - DiagnosticsConfig, DiagnosticsPlugin
     tests.rs                - Diagnostics tests
-  boundary/
-    mod.rs                  - BoundaryBehavior, SectorBoundary, SectorBoundaryResource
-    systems.rs              - check_sector_boundary_system
-    tests.rs                - Boundary tests
   flight_assist/
     mod.rs                  - FlightAssist, FlightAssistConfig, FlightAssistState
   floating_origin/
-    mod.rs                  - FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible
+    mod.rs                  - FloatingOrigin, FloatingOriginConfig
     tests.rs                - Floating origin tests
   spawn/
     mod.rs                  - WorldSpawnSet system sets
@@ -107,10 +99,9 @@ delta-v-core/src/
 5. **`debug/`** — All debug visualization. This is a self-contained subdirectory
    because debug is a cross-cutting concern that touches multiple systems.
 6. **`diagnostics/`** — Performance diagnostics (frame time monitoring).
-7. **`boundary/`** — Sector boundary checking.
-8. **`flight_assist/`** — Flight assist component and config.
-9. **`floating_origin/`** — Floating origin types and config.
-10. **`spawn/`** — System sets for spawn ordering (`WorldSpawnSet`).
+7. **`flight_assist/`** — Flight assist component and config.
+8. **`floating_origin/`** — Floating origin types and config.
+9. **`spawn/`** — System sets for spawn ordering (`WorldSpawnSet`).
 
 ### What leaves delta-v-core
 
