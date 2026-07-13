@@ -474,10 +474,6 @@ pub fn velocity_vector_system(
     let angle = (-vel_right).atan2(vel_forward);
     transform.rotation = Quat::from_rotation_z(angle);
 
-    // Scale based on speed.
-    let scale = (speed / 300.0).mul_add(1.5, 0.5);
-    transform.scale = Vec3::new(scale, scale, scale);
-
     // Update arrow texture based on thrust using preset textures.
     // Use ActionState to detect thrust keys directly (ThrustCommand is cleared before Update).
     let forward_pressed = action_state.pressed(&LogicalAction::ThrustForward);
@@ -546,13 +542,12 @@ pub fn velocity_vector_system(
     }
 
     tracing::debug!(
-        "[vvi] vel=({:.1},{:.1},{:.1}) speed={:.1} m/s angle={:.3} scale={:.2}",
+        "[vvi] vel=({:.1},{:.1},{:.1}) speed={:.1} m/s angle={:.3}",
         ship_body.velocity.x,
         ship_body.velocity.y,
         ship_body.velocity.z,
         speed,
         angle,
-        scale,
     );
 }
 
