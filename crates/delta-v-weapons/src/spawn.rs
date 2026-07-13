@@ -2,12 +2,27 @@
 
 //! Projectile spawning.
 
+use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::Weapon;
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 
 use crate::components::Projectile;
+use delta_v_spawn::mesh_attachment::PendingMesh;
 use delta_v_types::collision::layers;
+
+/// Marker component for a pending projectile entity waiting for its mesh to load.
+#[derive(Component)]
+pub struct PendingProjectileMesh {
+    /// Handle to the glTF asset being loaded.
+    pub gltf_handle: Handle<Gltf>,
+}
+
+impl PendingMesh for PendingProjectileMesh {
+    fn gltf_handle(&self) -> &Handle<Gltf> {
+        &self.gltf_handle
+    }
+}
 
 /// Spawns a projectile entity.
 ///
@@ -18,6 +33,7 @@ use delta_v_types::collision::layers;
 /// # Arguments
 ///
 /// * `commands` - Bevy commands buffer.
+/// * `asset_server` - Asset server for loading glTF meshes.
 /// * `source` - The entity firing the projectile.
 /// * `source_transform` - The source entity's transform.
 /// * `source_body` - The source entity's rigid body.
@@ -27,6 +43,7 @@ use delta_v_types::collision::layers;
 #[allow(clippy::cast_possible_truncation)]
 pub fn spawn_projectile(
     commands: &mut Commands<'_, '_>,
+    asset_server: &Res<'_, AssetServer>,
     source: Entity,
     source_transform: &Transform,
     source_body: &RigidBody,
@@ -38,6 +55,12 @@ pub fn spawn_projectile(
 
     let mut rigid_body = RigidBody::new(1.0, 1.0);
     rigid_body.velocity = initial_velocity;
+
+    // Build mesh path from projectile template name
+    let mesh_path = format!(
+        "components/projectiles/{}/mesh.glb",
+        weapon.projectile_template
+    );
 
     commands
         .spawn((
@@ -57,6 +80,9 @@ pub fn spawn_projectile(
                 lifetime: weapon.lifetime,
                 damage: weapon.damage,
                 hit_sound: weapon.hit_sound.clone(),
+            },
+            PendingProjectileMesh {
+                gltf_handle: asset_server.load::<Gltf>(mesh_path),
             },
         ))
         .id()

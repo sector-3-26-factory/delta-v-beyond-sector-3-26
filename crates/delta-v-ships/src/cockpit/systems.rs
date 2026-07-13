@@ -25,7 +25,7 @@ use rand::Rng;
 use delta_v_core::input::ActionState;
 use delta_v_core::{
     ActiveCameraName, CameraName, CameraSwitched, EntityType, FireWeapon, Health, I18n,
-    PlayerShipEntity, ProjectileHit, TargetSelected, Weapon, WorldEntityId,
+    PlayerShipEntity, ProjectileHit, RenderLayer, TargetSelected, Weapon, WorldEntityId,
 };
 use delta_v_physics::{CollisionDetected, RigidBody};
 use delta_v_types::LogicalAction;
@@ -34,6 +34,8 @@ use super::ActiveCockpitStation;
 use super::components::CameraShake;
 use super::components::CircularGaugeNeedle;
 use super::components::CockpitOverlay;
+use super::components::HitVfx;
+use super::components::MuzzleFlash;
 use super::components::SelectedNavObject;
 use super::components::SelectedTarget;
 use super::components::SpeedText;
@@ -1589,4 +1591,185 @@ pub fn play_hit_sound_system(
             );
         }
     }
+}
+
+/// Spawns a muzzle flash VFX when a weapon is fired.
+///
+/// Runs in `Update` during `AppState::InGame`. Listens for `FireWeapon` events
+/// and spawns a brief point light at the weapon's muzzle position (the source
+/// entity's forward offset). The light decays and despawns after a short duration.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn muzzle_flash_system(
+    mut fire_events: MessageReader<'_, '_, FireWeapon>,
+    ship_query: Query<'_, '_, &Transform>,
+    mut commands: Commands<'_, '_>,
+) {
+    for event in fire_events.read() {
+        let Ok(transform) = ship_query.get(event.source) else {
+            continue;
+        };
+
+        // Calculate muzzle position: forward offset from the ship
+        // The projectile spawns 1.0m forward, use same offset for muzzle flash
+        let forward = transform.rotation * Vec3::NEG_Z;
+        let muzzle_pos = transform.translation + forward * 1.0;
+
+        // Spawn a brief point light at the muzzle position
+        // Color: bright yellow-white for muzzle flash
+        commands.spawn((
+            PointLight {
+                color: Color::srgb(1.0, 0.9, 0.6),
+                intensity: 100.0,
+                range: 5.0,
+                ..default()
+            },
+            Transform::from_translation(muzzle_pos),
+            Visibility::Visible,
+            RenderLayer::Gameplay.render_layers(),
+            MuzzleFlash {
+                elapsed_ticks: 0,
+                duration_ticks: 5, // 5 ticks at 60 Hz = ~83ms
+            },
+        ));
+
+        tracing::debug!(
+            "[vfx] muzzle flash spawned at ({:.1}, {:.1}, {:.1})",
+            muzzle_pos.x,
+            muzzle_pos.y,
+            muzzle_pos.z
+        );
+    }
+}
+
+/// Updates muzzle flash VFX and despawns them after their duration.
+///
+/// Runs in `Update` during `AppState::InGame`. Decrements the elapsed tick count
+/// and removes the entity when the duration expires.
+#[allow(clippy::needless_pass_by_value)]
+pub fn update_muzzle_flash_system(
+    mut commands: Commands<'_, '_>,
+    mut query: Query<'_, '_, (Entity, &mut MuzzleFlash)>,
+) {
+    for (entity, mut flash) in &mut query {
+        flash.elapsed_ticks += 1;
+        if flash.elapsed_ticks >= flash.duration_ticks {
+            commands.entity(entity).despawn();
+            tracing::debug!("[vfx] muzzle flash despawned");
+        }
+    }
+}
+
+/// Spawns a hit VFX sprite when a projectile hits something.
+///
+/// Runs in `Update` during `AppState::InGame`. Listens for `ProjectileHit` events
+/// and spawns a brief sprite at the hit point. The sprite is rendered on the
+/// Gameplay layer and despawns after a short duration.
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
+pub fn hit_vfx_system(
+    mut hit_events: MessageReader<'_, '_, ProjectileHit>,
+    asset_server: Res<'_, AssetServer>,
+    mut commands: Commands<'_, '_>,
+) {
+    for event in hit_events.read() {
+        // Create a hit flash texture (white flash with fade)
+        let hit_image = create_hit_flash_image(32.0);
+        let image_handle = asset_server.add(hit_image);
+
+        // Spawn a sprite at the hit point
+        // Use Gameplay layer so it's visible in all cameras
+        commands.spawn((
+            Sprite {
+                image: image_handle,
+                ..default()
+            },
+            Transform::from_translation(event.hit_point).with_scale(Vec3::splat(0.5)),
+            Visibility::Visible,
+            RenderLayer::Gameplay.render_layers(),
+            HitVfx {
+                elapsed_ticks: 0,
+                duration_ticks: 10, // 10 ticks at 60 Hz = ~166ms
+            },
+        ));
+
+        tracing::debug!(
+            "[vfx] hit flash spawned at ({:.1}, {:.1}, {:.1})",
+            event.hit_point.x,
+            event.hit_point.y,
+            event.hit_point.z
+        );
+    }
+}
+
+/// Updates hit VFX sprites and despawns them after their duration.
+///
+/// Runs in `Update` during `AppState::InGame`. Decrements the elapsed tick count
+/// and removes the entity when the duration expires.
+#[allow(clippy::needless_pass_by_value)]
+pub fn update_hit_vfx_system(
+    mut commands: Commands<'_, '_>,
+    mut query: Query<'_, '_, (Entity, &mut HitVfx)>,
+) {
+    for (entity, mut vfx) in &mut query {
+        vfx.elapsed_ticks += 1;
+        if vfx.elapsed_ticks >= vfx.duration_ticks {
+            commands.entity(entity).despawn();
+            tracing::debug!("[vfx] hit flash despawned");
+        }
+    }
+}
+
+/// Creates a hit flash texture (white flash with fade).
+///
+/// A simple radial gradient that fades from white at center to transparent at edges.
+///
+/// # Arguments
+/// * `pixel_size` - Size of the image in pixels (square image will be created)
+#[allow(
+    clippy::indexing_slicing,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+fn create_hit_flash_image(pixel_size: f32) -> Image {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+
+    let size = pixel_size as usize;
+    let center = size as f32 / 2.0;
+    let max_radius = center;
+
+    let mut data = vec![0u8; size * size * 4];
+
+    for y in 0..size {
+        for x in 0..size {
+            let idx = (y * size + x) * 4;
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+            let dist = dx.hypot(dy);
+
+            // Radial gradient: white at center, transparent at edges
+            let alpha = if dist <= max_radius {
+                ((1.0 - dist / max_radius) * 255.0) as u8
+            } else {
+                0
+            };
+
+            data[idx] = 255; // R
+            data[idx + 1] = 255; // G
+            data[idx + 2] = 255; // B
+            data[idx + 3] = alpha; // A
+        }
+    }
+
+    Image::new(
+        Extent3d {
+            width: size as u32,
+            height: size as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    )
 }

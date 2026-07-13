@@ -1,10 +1,10 @@
 # ADR-0044: Prohibit visual data handling within Rust code
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0053
 - **Date**: 2026-06-06
 - **Deciders**: Project maintainers
 - **Supersedes**: (none)
-- **Superseded by**: (none)
+- **Superseded by**: ADR-0053
 
 ## Context
 

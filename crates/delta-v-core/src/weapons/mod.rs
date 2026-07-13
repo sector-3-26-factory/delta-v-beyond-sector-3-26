@@ -32,4 +32,7 @@ pub struct Weapon {
     /// Pre-resolved hit sound file path relative to assets/ (e.g., "audio/hit.mp3" or "components/projectiles/laser-standard/hit.mp3").
     /// None if no hit sound.
     pub hit_sound: Option<String>,
+    /// Name of the projectile template (e.g., "laser-standard").
+    /// Used to load the projectile mesh at spawn time.
+    pub projectile_template: String,
 }

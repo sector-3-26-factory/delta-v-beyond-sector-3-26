@@ -93,6 +93,10 @@ impl Plugin for CockpitPlugin {
                     systems::play_thrust_sound_system,
                     systems::play_fire_sound_system,
                     systems::play_hit_sound_system,
+                    systems::muzzle_flash_system,
+                    systems::update_muzzle_flash_system,
+                    systems::hit_vfx_system,
+                    systems::update_hit_vfx_system,
                 )
                     .run_if(in_state(AppState::InGame)),
             )

@@ -205,6 +205,7 @@ fn add_weapon_components(
             projectile_radius: projectile_def.radius.value,
             fire_sound,
             hit_sound,
+            projectile_template: weapon_def.projectile_template.clone(),
         });
     }
 }
