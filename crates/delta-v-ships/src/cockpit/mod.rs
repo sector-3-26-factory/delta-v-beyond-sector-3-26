@@ -39,6 +39,10 @@ pub mod velocity_indicator;
 pub use components::*;
 pub use spawn::CockpitOverlayResource;
 
+#[cfg(test)]
+#[path = "spawn_tests.rs"]
+mod spawn_tests;
+
 /// Plugin for cockpit overlay systems.
 pub struct CockpitPlugin;
 
