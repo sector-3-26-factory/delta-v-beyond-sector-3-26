@@ -98,7 +98,7 @@ const EXPECTED_ENTITY_TYPES: &[&str] = &["ship", "asteroid", "station"];
 fn load_json_file(path: &str) -> Value {
     let full_path = get_workspace_root().join(path);
     let content = std::fs::read_to_string(&full_path)
-        .unwrap_or_else(|_| panic!("failed to read i18n file: {full_path:?}"));
+        .unwrap_or_else(|_| panic!("failed to read i18n file: {}", full_path.display()));
     serde_json::from_str(&content).expect("failed to parse i18n JSON")
 }
 
