@@ -7,6 +7,5 @@
     "max_backward_thrust": {
         "value": 40000,
         "unit": "N"
-    },
-    "sound": "thrust.mp3"
+    }
 }

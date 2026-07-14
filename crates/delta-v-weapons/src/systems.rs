@@ -2,6 +2,7 @@
 
 //! Weapon and projectile systems.
 
+use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::input::ActionState;
 use delta_v_core::{FireWeapon, Health, PlayerShipEntity, ProjectileHit, Weapon};
@@ -11,6 +12,7 @@ use delta_v_types::LogicalAction;
 use crate::components::Projectile;
 use crate::resources::WeaponState;
 use crate::spawn::spawn_projectile;
+use delta_v_spawn::mesh_attachment::PendingMesh;
 
 /// System set for weapon systems running in `FixedUpdate`.
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -59,6 +61,7 @@ pub fn fire_input_system(
 #[allow(clippy::needless_pass_by_value)]
 pub fn process_fire_commands(
     mut commands: Commands<'_, '_>,
+    asset_server: Res<'_, AssetServer>,
     mut events: MessageReader<'_, '_, FireWeapon>,
     ship_query: Query<'_, '_, (&Transform, &RigidBody)>,
     weapon_query: Query<'_, '_, &Weapon>,
@@ -78,7 +81,14 @@ pub fn process_fire_commands(
                 event.source,
                 weapon.damage
             );
-            spawn_projectile(&mut commands, event.source, transform, body, weapon);
+            spawn_projectile(
+                &mut commands,
+                &asset_server,
+                event.source,
+                transform,
+                body,
+                weapon,
+            );
         } else {
             tracing::warn!("Ship {:?} has no Weapon component!", event.source);
         }
@@ -136,6 +146,7 @@ pub fn projectile_collision_system(
             target: target_entity,
             damage: projectile.damage,
             hit_point: collision.point,
+            hit_sound: projectile.hit_sound.clone(),
         });
 
         // Despawn the projectile on any hit
@@ -158,6 +169,37 @@ pub fn update_projectiles(
         projectile.lifetime -= dt;
         if projectile.lifetime <= 0.0 {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Attaches loaded projectile meshes to entities.
+///
+/// Runs in `Update` after asset loading. When a projectile's glTF asset
+/// finishes loading, this system extracts all scenes from the glTF and
+/// attaches them as children of the projectile entity, then removes the
+/// pending mesh marker.
+///
+/// Per ADR-0044, all visual data comes from external files loaded via the
+/// asset pipeline.
+#[allow(clippy::needless_pass_by_value)]
+pub fn attach_projectile_meshes(
+    mut commands: Commands<'_, '_>,
+    gltf_assets: Res<'_, Assets<Gltf>>,
+    query: Query<'_, '_, (Entity, &crate::spawn::PendingProjectileMesh)>,
+) {
+    for (entity, pending) in &query {
+        if let Some(gltf) = gltf_assets.get(pending.gltf_handle()) {
+            if gltf.scenes.is_empty() {
+                continue;
+            }
+            for scene_handle in &gltf.scenes {
+                let child = commands.spawn(SceneRoot(scene_handle.clone())).id();
+                commands.entity(entity).add_child(child);
+            }
+            commands
+                .entity(entity)
+                .remove::<crate::spawn::PendingProjectileMesh>();
         }
     }
 }

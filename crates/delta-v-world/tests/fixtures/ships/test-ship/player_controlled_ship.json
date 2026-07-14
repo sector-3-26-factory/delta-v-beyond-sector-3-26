@@ -114,7 +114,6 @@
             }
         ]
     },
-    "sounds": {},
     "collision_shape": {
         "type": "box",
         "half_extents": {

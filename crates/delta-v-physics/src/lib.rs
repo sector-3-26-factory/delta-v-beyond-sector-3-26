@@ -53,7 +53,7 @@ pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
 use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health};
-use floating_origin_systems::{check_and_recenter_origin_system, mark_new_entities_system};
+use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
     integrate_position_system, integrate_velocity_system,
@@ -119,13 +119,6 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             FixedUpdate,
             check_and_recenter_origin_system.run_if(in_state(AppState::InGame)),
-        );
-
-        // Mark new entities as eligible for floating origin translation.
-        // Runs in Update during SpawningEntities state, after all domain spawning.
-        app.add_systems(
-            Update,
-            mark_new_entities_system.run_if(in_state(AppState::SpawningEntities)),
         );
 
         // Collision detection using avian3d.

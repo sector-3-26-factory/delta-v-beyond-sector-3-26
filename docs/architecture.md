@@ -58,6 +58,8 @@ The workspace contains 13 crates:
 
 **Domain (may depend on technical crates; dependency graph is acyclic):**
 - `crates/delta-v-ships/` -- Ship types and ship-specific systems.
+  - `cockpit/` module: cockpit overlay system, velocity vector indicator, status gauges, targeting, camera shake, VFX.
+- `crates/delta-v-ui/` -- UI rendering infrastructure, overlay windows, keybindings menu, navigation menu, notifications.
 - `crates/delta-v-propulsion/` -- Thrusters, hyperdrive.
 - `crates/delta-v-weapons/` -- Projectiles, damage, weapon systems.
 - `crates/delta-v-stations/` -- Space stations, docking.

@@ -58,6 +58,7 @@ use delta_v_physics::PhysicsSet;
 /// - Spawns projectiles that inherit the source entity's velocity.
 /// - Applies damage to entities on projectile collision.
 /// - Despawns projectiles after their lifetime expires.
+/// - Attaches loaded projectile meshes to entities.
 pub struct WeaponsPlugin;
 
 impl Plugin for WeaponsPlugin {
@@ -84,6 +85,10 @@ impl Plugin for WeaponsPlugin {
                     systems::projectile_collision_system.in_set(WeaponsSet::ProjectileCollision),
                     systems::update_projectiles.in_set(WeaponsSet::UpdateProjectiles),
                 ),
+            )
+            .add_systems(
+                Update,
+                (systems::attach_projectile_meshes.in_set(WeaponsSet::UpdateProjectiles),),
             );
     }
 }

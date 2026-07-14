@@ -99,6 +99,15 @@ For license text, see the LICENSE file at the repository root.
 - **Modifications:** Technical optimizations to get the mesh.glb loaded.
   Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, scaled, rotated to match -Z is front and applied all transforms
 
+### Laser electric
+
+- **Creator:** [photon (that one larry) (@Professor_E12)](https://sketchfab.com/Professor_E12)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/laser-electric-60c132ce26014f068052fde25c585262)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/components/projectiles/laser-standard/mesh.glb`
+- **Modifications:** *None*
+
 ## Fonts
 
 ### DejaVu Sans Mono

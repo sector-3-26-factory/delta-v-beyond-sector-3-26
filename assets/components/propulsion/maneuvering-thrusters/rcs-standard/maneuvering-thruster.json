@@ -8,6 +8,5 @@
         "value": 50000,
         "unit": "N"
     },
-    "rotation_ramp_ticks": 60,
-    "sound": "thrust.mp3"
+    "rotation_ramp_ticks": 60
 }

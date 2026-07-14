@@ -26,7 +26,13 @@ pub struct Weapon {
     pub lifetime: f32,
     /// Projectile collision radius in metres.
     pub projectile_radius: f32,
-    /// Sound file path relative to assets/audio/ (e.g., "fire.wav").
-    /// Optional; if not provided, no sound is played on fire.
-    pub sound: Option<String>,
+    /// Pre-resolved fire sound file path relative to assets/ (e.g., "audio/fire.mp3" or "components/weapons/laser-standard/fire.mp3").
+    /// None if no fire sound.
+    pub fire_sound: Option<String>,
+    /// Pre-resolved hit sound file path relative to assets/ (e.g., "audio/hit.mp3" or "components/projectiles/laser-standard/hit.mp3").
+    /// None if no hit sound.
+    pub hit_sound: Option<String>,
+    /// Name of the projectile template (e.g., "laser-standard").
+    /// Used to load the projectile mesh at spawn time.
+    pub projectile_template: String,
 }

@@ -31,13 +31,6 @@ pub struct ShipTemplate {
     pub propulsion: ShipPropulsionTemplate,
 }
 
-/// Sound file paths for a ship.
-#[derive(Debug, Deserialize, Clone, Resource)]
-pub struct ShipSounds {
-    /// Hit/impact sound.
-    pub hit: Option<String>,
-}
-
 /// Deserialized player-controlled ship template JSON.
 ///
 /// Extends [`ShipTemplate`] with camera definitions.
@@ -67,10 +60,6 @@ pub struct PlayerShipTemplate {
     pub health: PhysicalQuantityJson,
     /// Cockpit overlay definition with stations and gauge slots.
     pub cockpit: CockpitDefinition,
-    /// Sound file paths relative to assets/audio/.
-    /// Defaults to empty (no sounds) via schema default.
-    /// Only player-controlled ships play sounds.
-    pub sounds: ShipSounds,
 }
 
 /// Deserialized non-player ship template JSON.
@@ -177,8 +166,8 @@ pub struct ShipPropulsionConfig {
     /// Number of ticks for torque to ramp from 0% to 100% when a rotation key
     /// is first pressed. 0 = instant full torque (no ramp).
     pub rotation_ramp_ticks: u32,
-    /// Thrust sound file path relative to assets/audio/ (e.g., "thrust.wav").
-    /// Optional; if not provided, no thrust sound is played.
+    /// Pre-resolved thrust sound file path relative to assets/ (e.g., "audio/thrust.mp3" or "components/propulsion/main-thrusters/chemical-main/thrust.mp3").
+    /// None if no thrust sound.
     pub thrust_sound: Option<String>,
 }
 

@@ -296,7 +296,7 @@ fn test_gravity_at_cutoff_boundary() {
 
 #[test]
 fn test_floating_origin_no_recenter_below_threshold() {
-    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, FloatingOriginEligible};
+    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
     let mut app = App::new();
     app.add_plugins(TimePlugin);
@@ -311,48 +311,93 @@ fn test_floating_origin_no_recenter_below_threshold() {
         crate::floating_origin_systems::check_and_recenter_origin_system,
     );
 
-    let entity_id = app
+    // Spawn player ship at position below threshold
+    let player_id = app
         .world_mut()
-        .spawn((
-            Transform::from_translation(Vec3::new(1_000.0, 0.0, 0.0)),
-            FloatingOriginEligible,
-        ))
+        .spawn(Transform::from_translation(Vec3::new(1_000.0, 0.0, 0.0)))
+        .id();
+    app.insert_resource(PlayerShipEntity(player_id));
+
+    // Spawn another entity to verify it doesn't get recentered
+    let other_id = app
+        .world_mut()
+        .spawn(Transform::from_translation(Vec3::new(500.0, 0.0, 0.0)))
         .id();
 
-    let original_pos = app.world().get::<Transform>(entity_id).unwrap().translation;
+    let original_player_pos = app.world().get::<Transform>(player_id).unwrap().translation;
+    let original_other_pos = app.world().get::<Transform>(other_id).unwrap().translation;
 
     run_fixed_update(&mut app);
 
-    let transform = app.world().get::<Transform>(entity_id).unwrap();
+    let player_transform = app.world().get::<Transform>(player_id).unwrap();
+    let other_transform = app.world().get::<Transform>(other_id).unwrap();
+
+    // Player should still be at the same position (no recentering below threshold)
     assert_eq!(
-        transform.translation, original_pos,
-        "entity below threshold should not be recentered"
+        player_transform.translation, original_player_pos,
+        "player below threshold should not be recentered"
+    );
+    // Other entity should also not be recentered
+    assert_eq!(
+        other_transform.translation, original_other_pos,
+        "other entity should not be recentered when player is below threshold"
     );
 }
 
 #[test]
-fn test_mark_new_entities_system() {
-    use delta_v_core::FloatingOriginEligible;
+fn test_floating_origin_recenter_above_threshold() {
+    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
     let mut app = App::new();
     app.add_plugins(TimePlugin);
+    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
+    app.insert_resource(FloatingOriginConfig {
+        recenter_threshold_m: 5_000.0,
+    });
 
     app.add_systems(
-        Update,
-        crate::floating_origin_systems::mark_new_entities_system,
+        FixedUpdate,
+        crate::floating_origin_systems::check_and_recenter_origin_system,
     );
 
-    let entity_id = app
+    // Spawn player ship at position above threshold (6km away)
+    let player_id = app
         .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(100.0, 0.0, 0.0)))
+        .spawn(Transform::from_translation(Vec3::new(6_000.0, 0.0, 0.0)))
+        .id();
+    app.insert_resource(PlayerShipEntity(player_id));
+
+    // Spawn another entity at 1.6km from player (in front)
+    let other_id = app
+        .world_mut()
+        .spawn(Transform::from_translation(Vec3::new(7_600.0, 0.0, 0.0))) // 6000 + 1600
         .id();
 
-    app.update();
+    run_fixed_update(&mut app);
 
-    let eligible = app.world().get::<FloatingOriginEligible>(entity_id);
-    assert!(
-        eligible.is_some(),
-        "new entity with Transform should be marked as FloatingOriginEligible"
+    // Check that the origin was recentered to the player's position
+    let origin = app.world().get_resource::<FloatingOrigin>().unwrap();
+    assert_eq!(
+        origin.offset,
+        Vec3::new(6_000.0, 0.0, 0.0),
+        "origin should be recentered to player position"
+    );
+
+    // Check that the player is now at the origin (local position 0,0,0)
+    let player_transform = app.world().get::<Transform>(player_id).unwrap();
+    assert_eq!(
+        player_transform.translation,
+        Vec3::ZERO,
+        "player should be at origin after recentering"
+    );
+
+    // Check that the other entity is now at 1600 (relative to player)
+    let other_transform = app.world().get::<Transform>(other_id).unwrap();
+    assert_eq!(
+        other_transform.translation,
+        Vec3::new(1_600.0, 0.0, 0.0),
+        "other entity should be at relative position after recentering"
     );
 }
 

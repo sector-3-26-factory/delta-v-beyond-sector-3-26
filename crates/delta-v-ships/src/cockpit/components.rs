@@ -146,3 +146,27 @@ impl CameraShake {
 
 // Re-export types from ship_templates for convenience
 pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};
+
+/// Component for muzzle flash VFX.
+///
+/// Tracks the lifetime of a muzzle flash point light.
+/// The light is spawned when a weapon fires and despawns after a short duration.
+#[derive(Component)]
+pub struct MuzzleFlash {
+    /// Number of ticks elapsed since the flash started.
+    pub elapsed_ticks: u32,
+    /// Total duration in ticks (60 Hz).
+    pub duration_ticks: u32,
+}
+
+/// Component for hit VFX sprite.
+///
+/// Tracks the lifetime of a hit flash sprite.
+/// The sprite is spawned when a projectile hits and despawns after a short duration.
+#[derive(Component)]
+pub struct HitVfx {
+    /// Number of ticks elapsed since the VFX started.
+    pub elapsed_ticks: u32,
+    /// Total duration in ticks (60 Hz).
+    pub duration_ticks: u32,
+}

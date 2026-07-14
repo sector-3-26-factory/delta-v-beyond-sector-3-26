@@ -2671,6 +2671,7 @@ dependencies = [
  "bevy",
  "delta-v-core",
  "delta-v-physics",
+ "delta-v-spawn",
  "delta-v-types",
  "tracing",
 ]

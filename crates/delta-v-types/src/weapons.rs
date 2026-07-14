@@ -19,9 +19,6 @@ pub struct WeaponTemplateJson {
     pub projectile_template: String,
     /// Fire rate in rounds per second.
     pub fire_rate: PhysicalQuantityJson,
-    /// Sound file path relative to assets/audio/ (e.g., "fire.wav").
-    /// Optional; if not provided, no sound is played on fire.
-    pub sound: Option<String>,
 }
 
 /// Projectile template deserialized from projectile definition JSON.

@@ -29,10 +29,6 @@
         "max_backward_thrust": {
             "description": "Maximum backward/reverse thrust in Newtons (applied along +Z local axis). Typically lower than forward thrust.",
             "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/force"
-        },
-        "sound": {
-            "description": "Sound file path relative to assets/audio/ (e.g., \"thrust.mp3\"). Optional; if not provided, no thrust sound is played.",
-            "type": "string"
         }
     }
 }
