@@ -226,3 +226,83 @@ pub fn targeting_mode_notification_system(
         &asset_server,
     );
 }
+
+/// Listens for `WeaponSelected` messages and spawns notification windows.
+///
+/// Displays the selected weapon name.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::literal_string_with_formatting_args,
+    clippy::too_many_arguments
+)]
+pub fn weapon_selected_notification_system(
+    mut events: MessageReader<'_, '_, delta_v_core::WeaponSelected>,
+    i18n: Res<'_, delta_v_core::I18n>,
+    config: Res<'_, super::resources::NotificationConfig>,
+    mut stack: ResMut<'_, NotificationStack>,
+    theme: Res<'_, crate::window::theme::UiTheme>,
+    asset_server: Res<'_, AssetServer>,
+    mut commands: Commands<'_, '_>,
+) {
+    for event in events.read() {
+        let message = i18n
+            .ui
+            .notification
+            .weapon_selected
+            .replace("{name}", &event.weapon_name);
+
+        tracing::debug!(
+            "[notification] spawning weapon selected notification: {}",
+            event.weapon_name
+        );
+
+        super::spawn::spawn_notification(
+            &mut commands,
+            &config,
+            &mut stack,
+            message,
+            &theme,
+            &asset_server,
+        );
+    }
+}
+
+/// Listens for `PropulsionSelected` messages and spawns notification windows.
+///
+/// Displays the selected propulsion name.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::literal_string_with_formatting_args,
+    clippy::too_many_arguments
+)]
+pub fn propulsion_selected_notification_system(
+    mut events: MessageReader<'_, '_, delta_v_core::PropulsionSelected>,
+    i18n: Res<'_, delta_v_core::I18n>,
+    config: Res<'_, super::resources::NotificationConfig>,
+    mut stack: ResMut<'_, NotificationStack>,
+    theme: Res<'_, crate::window::theme::UiTheme>,
+    asset_server: Res<'_, AssetServer>,
+    mut commands: Commands<'_, '_>,
+) {
+    for event in events.read() {
+        let message = i18n
+            .ui
+            .notification
+            .propulsion_selected
+            .replace("{name}", &event.thruster_name);
+
+        tracing::debug!(
+            "[notification] spawning propulsion selected notification: {}",
+            event.thruster_name
+        );
+
+        super::spawn::spawn_notification(
+            &mut commands,
+            &config,
+            &mut stack,
+            message,
+            &theme,
+            &asset_server,
+        );
+    }
+}

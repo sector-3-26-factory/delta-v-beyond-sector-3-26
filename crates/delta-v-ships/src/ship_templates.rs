@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use delta_v_core::camera::ShipCamerasTemplate;
 use delta_v_types::{
-    BoundingBoxJson, PhysicalQuantityJson, ShipPropulsionTemplate, WeaponReference,
+    BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, ShipPropulsionTemplate,
 };
 
 /// Base deserialized ship template JSON.
@@ -29,6 +29,21 @@ pub struct ShipTemplate {
     pub inertia_scale: f32,
     /// Propulsion system configuration.
     pub propulsion: ShipPropulsionTemplate,
+    /// Axis-aligned bounding box in ship-local coordinates (metres).
+    /// Used for debug axes and spatial calculations.
+    pub bounding_box: BoundingBoxJson,
+    /// Collision shape for the ship.
+    /// Used for collision detection with asteroids.
+    pub collision_shape: CollisionShapeJson,
+    /// Weapon names. Optional; ships may have no weapons (default [] from schema).
+    pub weapons: Vec<String>,
+    /// Ship health in hit points (default 100.0 from schema).
+    /// Used for damage model (M4).
+    pub health: PhysicalQuantityJson,
+    /// Maximum number of weapons this ship can carry (default 2 from schema).
+    pub max_weapons_count: usize,
+    /// Maximum number of main thrusters that can be selected (default 2 from schema).
+    pub max_propulsions_count: usize,
 }
 
 /// Deserialized player-controlled ship template JSON.
@@ -53,13 +68,17 @@ pub struct PlayerShipTemplate {
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
-    /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<WeaponReference>,
+    /// Weapon names. Optional; ships may have no weapons (default [] from schema).
+    pub weapons: Vec<String>,
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,
     /// Cockpit overlay definition with stations and gauge slots.
     pub cockpit: CockpitDefinition,
+    /// Maximum number of weapons this ship can carry (default 2 from schema).
+    pub max_weapons_count: usize,
+    /// Maximum number of main thrusters that can be selected (default 2 from schema).
+    pub max_propulsions_count: usize,
 }
 
 /// Deserialized non-player ship template JSON.
@@ -80,11 +99,15 @@ pub struct StaticShipTemplate {
     /// Collision shape for the ship.
     /// Used for collision detection with asteroids.
     pub collision_shape: delta_v_types::CollisionShapeJson,
-    /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<WeaponReference>,
+    /// Weapon names. Optional; ships may have no weapons (default [] from schema).
+    pub weapons: Vec<String>,
     /// Ship health in hit points (default 100.0 from schema).
     /// Used for damage model (M4).
     pub health: PhysicalQuantityJson,
+    /// Maximum number of weapons this ship can carry (default 2 from schema).
+    pub max_weapons_count: usize,
+    /// Maximum number of main thrusters that can be selected (default 2 from schema).
+    pub max_propulsions_count: usize,
 }
 
 /// Cockpit overlay definition with stations and gauge slots.

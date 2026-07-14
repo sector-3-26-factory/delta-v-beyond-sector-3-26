@@ -46,12 +46,14 @@ A temporary file for capturing observations, TODOs, and follow-up items while fo
 - **Context**: While working on current task
 - **Observation**: Weapons switching is missing
 - **Follow-up**: Implement weapons switching functionality
+- **Status**: ✅ COMPLETED - Implemented weapons switching via `weapons` field in ship templates and `WeaponSelected` event system. The `ShipTemplateBase` trait now provides `weapons()` method returning `&[String]`, and the weapons selection system in `crates/delta-v-weapons/src/systems.rs` handles weapon switching.
 
 ### 2026-07-14 Propulsion switching
 
 - **Context**: While working on current task
 - **Observation**: Propulsion switching is missing
 - **Follow-up**: Implement propulsion switching functionality
+- **Status**: ✅ COMPLETED - Implemented propulsion switching via `max_propulsions_count` field in ship templates and `PropulsionSelected` event system. The `ShipTemplateBase` trait now provides `max_propulsions_count()` method, and the propulsion selection system in `crates/delta-v-ships/src/systems.rs` handles thruster switching.
 
 ### 2026-07-14 Projectile mesh uniformity
 

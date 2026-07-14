@@ -10,7 +10,9 @@
         "mass",
         "propulsion",
         "bounding_box",
-        "collision_shape"
+        "collision_shape",
+        "max_weapons_count",
+        "max_propulsions_count"
     ],
     "properties": {
         "entity_type": {
@@ -106,22 +108,24 @@
             }
         },
         "weapons": {
-            "description": "Array of weapon references. Each entry references a weapon definition by name.",
+            "description": "Array of weapon names. Each entry references a weapon definition by name.",
             "type": "array",
             "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                    "name"
-                ],
-                "properties": {
-                    "name": {
-                        "description": "Name of the weapon definition (e.g., 'laser-standard').",
-                        "type": "string"
-                    }
-                }
+                "type": "string"
             },
             "default": []
+        },
+        "max_weapons_count": {
+            "description": "Maximum number of weapons this ship can carry. Used to limit weapon selection keys. Required field - no default.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+        },
+        "max_propulsions_count": {
+            "description": "Maximum number of main thrusters this ship can switch between. Used to limit propulsion selection keys. Minimum is 1 (a ship must have at least one thruster to fly). Required field - no default.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
         },
         "health": {
             "description": "Ship health in hit points. Required per ADR-0014 (gameplay values in JSON).",

@@ -21,6 +21,9 @@
 use bevy::prelude::*;
 
 /// Propulsion plugin for managing thrust and hyperdrive.
+///
+/// Note: Propulsion selection is handled by `delta_v_ships::propulsion_selection_system`
+/// to avoid domain-to-domain crate dependencies (ADR-0051).
 pub struct PropulsionPlugin;
 
 impl Plugin for PropulsionPlugin {

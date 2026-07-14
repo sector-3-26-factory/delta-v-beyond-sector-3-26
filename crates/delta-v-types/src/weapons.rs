@@ -36,13 +36,3 @@ pub struct ProjectileDefinitionJson {
     /// Collision shape radius in metres.
     pub radius: PhysicalQuantityJson,
 }
-
-/// Weapon reference in ship/AI templates.
-///
-/// References a weapon definition by name. The actual weapon configuration
-/// is loaded from `assets/components/weapons/<name>/weapon.json` at spawn time.
-#[derive(Debug, Deserialize, Clone)]
-pub struct WeaponReference {
-    /// Name of the weapon definition (e.g., "laser-standard").
-    pub name: String,
-}

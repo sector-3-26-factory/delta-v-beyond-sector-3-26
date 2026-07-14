@@ -32,12 +32,14 @@
 use std::path::Path;
 
 use crate::cockpit::CockpitOverlayResource;
-use crate::ship_templates::{PlayerShipTemplate, ShipPropulsionConfig, StaticShipTemplate};
+use crate::ship_templates::{
+    PlayerShipTemplate, ShipPropulsionConfig, ShipTemplate, StaticShipTemplate,
+};
 use bevy::prelude::*;
 use delta_v_core::{ActiveCameraName, CameraName, PlayerShipEntity, RenderLayer, SpawnEntity};
 use delta_v_spawn::template_extraction::png_dimensions;
 use delta_v_spawn::{ShipTemplateBase, build_physical_ship};
-use delta_v_types::{BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, WeaponReference};
+use delta_v_types::{BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson};
 
 /// Spawns ship entities in response to `SpawnEntity` events.
 ///
@@ -270,6 +272,43 @@ fn spawn_static_ship(
     );
 }
 
+/// Implement `ShipTemplateBase` for `ShipTemplate`
+impl ShipTemplateBase for ShipTemplate {
+    fn mass(&self) -> &PhysicalQuantityJson {
+        &self.mass
+    }
+    fn inertia_scale(&self) -> f32 {
+        self.inertia_scale
+    }
+    fn bounding_box(&self) -> &BoundingBoxJson {
+        &self.bounding_box
+    }
+    fn collision_shape(&self) -> &CollisionShapeJson {
+        &self.collision_shape
+    }
+    fn health(&self) -> &PhysicalQuantityJson {
+        &self.health
+    }
+    fn weapons(&self) -> &[String] {
+        &self.weapons
+    }
+    fn entity_type(&self) -> &'static str {
+        "ship"
+    }
+    fn main_thruster_names(&self) -> &[String] {
+        &self.propulsion.main_thruster_names
+    }
+    fn maneuvering_thruster_name(&self) -> &str {
+        &self.propulsion.maneuvering_thruster
+    }
+    fn max_weapons_count(&self) -> usize {
+        self.max_weapons_count
+    }
+    fn max_propulsions_count(&self) -> usize {
+        self.max_propulsions_count
+    }
+}
+
 /// Implement `ShipTemplateBase` for `PlayerShipTemplate`
 impl ShipTemplateBase for PlayerShipTemplate {
     fn mass(&self) -> &PhysicalQuantityJson {
@@ -287,7 +326,7 @@ impl ShipTemplateBase for PlayerShipTemplate {
     fn health(&self) -> &PhysicalQuantityJson {
         &self.health
     }
-    fn weapons(&self) -> &[WeaponReference] {
+    fn weapons(&self) -> &[String] {
         &self.weapons
     }
     fn entity_type(&self) -> &'static str {
@@ -298,6 +337,12 @@ impl ShipTemplateBase for PlayerShipTemplate {
     }
     fn maneuvering_thruster_name(&self) -> &str {
         &self.propulsion.maneuvering_thruster
+    }
+    fn max_weapons_count(&self) -> usize {
+        self.max_weapons_count
+    }
+    fn max_propulsions_count(&self) -> usize {
+        self.max_propulsions_count
     }
 }
 
@@ -318,7 +363,7 @@ impl ShipTemplateBase for StaticShipTemplate {
     fn health(&self) -> &PhysicalQuantityJson {
         &self.health
     }
-    fn weapons(&self) -> &[WeaponReference] {
+    fn weapons(&self) -> &[String] {
         &self.weapons
     }
     fn entity_type(&self) -> &'static str {
@@ -329,5 +374,11 @@ impl ShipTemplateBase for StaticShipTemplate {
     }
     fn maneuvering_thruster_name(&self) -> &str {
         &self.propulsion.maneuvering_thruster
+    }
+    fn max_weapons_count(&self) -> usize {
+        self.max_weapons_count
+    }
+    fn max_propulsions_count(&self) -> usize {
+        self.max_propulsions_count
     }
 }

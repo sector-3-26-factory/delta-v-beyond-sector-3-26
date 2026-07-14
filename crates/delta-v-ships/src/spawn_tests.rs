@@ -102,6 +102,8 @@ fn make_player_ship_event() -> SpawnEntity {
             }
         },
         "weapons": [],
+        "max_weapons_count": 2,
+        "max_propulsions_count": 2,
         "health": { "value": 100.0, "unit": "hp" },
         "cockpit": {
                     "stations": []

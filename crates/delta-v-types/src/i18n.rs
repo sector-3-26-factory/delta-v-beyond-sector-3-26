@@ -152,4 +152,8 @@ pub struct NotificationTranslations {
     pub no_targets: String,
     /// No nav objects available notification.
     pub no_nav_objects: String,
+    /// Weapon selected notification template. Use `{name}` as placeholder.
+    pub weapon_selected: String,
+    /// Propulsion selected notification template. Use `{name}` as placeholder.
+    pub propulsion_selected: String,
 }

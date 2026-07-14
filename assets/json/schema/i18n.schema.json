@@ -192,7 +192,9 @@
                         "target_selected",
                         "nav_object_selected",
                         "no_targets",
-                        "no_nav_objects"
+                        "no_nav_objects",
+                        "weapon_selected",
+                        "propulsion_selected"
                     ],
                     "properties": {
                         "camera": {
@@ -243,6 +245,14 @@
                         },
                         "no_nav_objects": {
                             "description": "No navigation objects available notification.",
+                            "type": "string"
+                        },
+                        "weapon_selected": {
+                            "description": "Weapon selected notification template. Use `{name}` as placeholder.",
+                            "type": "string"
+                        },
+                        "propulsion_selected": {
+                            "description": "Propulsion selected notification template. Use `{name}` as placeholder.",
                             "type": "string"
                         }
                     }

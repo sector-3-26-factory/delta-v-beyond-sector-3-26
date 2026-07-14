@@ -5,13 +5,14 @@
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::input::ActionState;
-use delta_v_core::{FireWeapon, Health, PlayerShipEntity, ProjectileHit, Weapon};
+use delta_v_core::{FireWeapon, Health, PlayerShipEntity, ProjectileHit, SelectedWeapon, Weapon};
 use delta_v_physics::{CollisionDetected, RigidBody};
 use delta_v_types::LogicalAction;
 
 use crate::components::Projectile;
 use crate::resources::WeaponState;
 use crate::spawn::spawn_projectile;
+use delta_v_core::WeaponSelected;
 use delta_v_spawn::mesh_attachment::PendingMesh;
 
 /// System set for weapon systems running in `FixedUpdate`.
@@ -25,30 +26,135 @@ pub enum WeaponsSet {
     UpdateProjectiles,
 }
 
+/// Detects weapon selection input and updates the [`SelectedWeapon`] resource.
+///
+/// Runs in `FixedUpdate` after the input translation systems.
+/// Handles `SelectWeapon1` through `SelectWeapon10` actions.
+/// Uses edge detection to select on press, not on hold.
+/// Emits [`WeaponSelected`] event for notification display.
+/// Only allows selecting weapons that exist on the ship.
+#[allow(clippy::needless_pass_by_value, clippy::missing_panics_doc)]
+pub fn weapon_selection_system(
+    action_state: Res<'_, ActionState<LogicalAction>>,
+    mut selected_weapon: ResMut<'_, SelectedWeapon>,
+    mut events: MessageWriter<'_, WeaponSelected>,
+    ship_entity: Res<'_, PlayerShipEntity>,
+    children_query: Query<'_, '_, &Children>,
+    weapon_query: Query<'_, '_, &Weapon>,
+) {
+    // Check each weapon selection action and update the selected index
+    // on press (edge detection)
+    let new_index = if action_state.just_pressed(&LogicalAction::SelectWeapon1) {
+        0
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon2) {
+        1
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon3) {
+        2
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon4) {
+        3
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon5) {
+        4
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon6) {
+        5
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon7) {
+        6
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon8) {
+        7
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon9) {
+        8
+    } else if action_state.just_pressed(&LogicalAction::SelectWeapon10) {
+        9
+    } else {
+        return; // No weapon selection action pressed
+    };
+
+    if selected_weapon.index == new_index {
+        return;
+    }
+
+    // Only allow selecting weapons that exist (use max_weapons_count from resource)
+    if new_index >= selected_weapon.max_weapons_count {
+        return;
+    }
+
+    // Get the weapon at the new index to verify it exists
+    let weapon_entity = children_query.get(ship_entity.0).ok().and_then(|children| {
+        children
+            .iter()
+            .filter(|child| weapon_query.get(*child).is_ok())
+            .nth(new_index)
+    });
+
+    // If no weapon exists at this slot, don't allow selection
+    let Some(weapon_entity) = weapon_entity else {
+        return;
+    };
+
+    // INVARIANT: weapon_entity was found by the filter above, so it must have a Weapon component
+    #[allow(clippy::unwrap_used)]
+    let weapon = weapon_query.get(weapon_entity).unwrap();
+    let weapon_name = weapon.weapon_name.clone();
+
+    selected_weapon.index = new_index;
+    tracing::info!("Weapon selected: {} (slot {})", weapon_name, new_index + 1);
+    events.write(WeaponSelected {
+        slot: new_index,
+        weapon_name,
+    });
+}
+
 /// Detects fire input and emits [`FireWeapon`] events.
 ///
 /// Runs in `FixedUpdate` after the input translation systems.
 /// Uses edge detection to fire on press, not on hold.
+/// Fires from the currently selected weapon (child entity).
 #[allow(clippy::needless_pass_by_value)]
 pub fn fire_input_system(
     action_state: Res<'_, ActionState<LogicalAction>>,
     mut weapon_state: ResMut<'_, WeaponState>,
     mut events: MessageWriter<'_, FireWeapon>,
     ship_entity: Res<'_, PlayerShipEntity>,
+    selected_weapon: Res<'_, SelectedWeapon>,
+    children_query: Query<'_, '_, &Children>,
+    weapon_query: Query<'_, '_, &Weapon>,
 ) {
     let fire_held = action_state.pressed(&LogicalAction::FirePrimary);
     let was_held = weapon_state.fire_held_prev;
 
     // Edge detection: fire on press, not hold
     if fire_held && !was_held {
-        tracing::debug!(
-            "FirePrimary pressed, sending FireWeapon event for ship {:?}",
-            ship_entity.0
-        );
-        events.write(FireWeapon {
-            source: ship_entity.0,
-            weapon_index: 0,
-        });
+        // Get the selected weapon from the ship's children
+        let weapon_entity = children_query
+            .get(ship_entity.0)
+            .ok()
+            .and_then(|children| {
+                children
+                    .iter()
+                    .filter(|child| weapon_query.get(*child).is_ok())
+                    .nth(selected_weapon.index)
+            })
+            .unwrap_or(ship_entity.0);
+
+        if let Ok(weapon) = weapon_query.get(weapon_entity) {
+            tracing::debug!(
+                "FirePrimary pressed, sending FireWeapon event for ship {:?}, weapon slot {}",
+                ship_entity.0,
+                weapon.slot
+            );
+            events.write(FireWeapon {
+                source: ship_entity.0,
+                weapon_index: weapon.slot,
+            });
+        } else {
+            tracing::debug!(
+                "FirePrimary pressed, sending FireWeapon event for ship {:?} (no weapon children)",
+                ship_entity.0
+            );
+            events.write(FireWeapon {
+                source: ship_entity.0,
+                weapon_index: 0,
+            });
+        }
     }
 
     weapon_state.fire_held_prev = fire_held;
@@ -64,6 +170,7 @@ pub fn process_fire_commands(
     asset_server: Res<'_, AssetServer>,
     mut events: MessageReader<'_, '_, FireWeapon>,
     ship_query: Query<'_, '_, (&Transform, &RigidBody)>,
+    children_query: Query<'_, '_, &Children>,
     weapon_query: Query<'_, '_, &Weapon>,
 ) {
     for event in events.read() {
@@ -75,7 +182,20 @@ pub fn process_fire_commands(
             continue;
         };
 
-        if let Ok(weapon) = weapon_query.get(event.source) {
+        // Find the weapon with the matching slot index
+        let weapon = children_query.get(event.source).ok().and_then(|children| {
+            children
+                .iter()
+                .find(|child| {
+                    weapon_query
+                        .get(*child)
+                        .map(|w| w.slot == event.weapon_index)
+                        .unwrap_or(false)
+                })
+                .and_then(|child| weapon_query.get(child).ok())
+        });
+
+        if let Some(weapon) = weapon {
             tracing::debug!(
                 "Spawning projectile from ship {:?}, damage={}",
                 event.source,
@@ -90,7 +210,11 @@ pub fn process_fire_commands(
                 weapon,
             );
         } else {
-            tracing::warn!("Ship {:?} has no Weapon component!", event.source);
+            tracing::warn!(
+                "Ship {:?} has no Weapon component with slot {}!",
+                event.source,
+                event.weapon_index
+            );
         }
     }
 }

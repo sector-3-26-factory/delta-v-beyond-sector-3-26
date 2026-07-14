@@ -186,3 +186,27 @@ pub struct TargetSelected {
     /// The targeting mode when the target was selected.
     pub mode: super::navigation::TargetingModeType,
 }
+
+/// Event emitted when the player selects a weapon.
+///
+/// Emitted by `weapon_selection_system` when the player presses a weapon
+/// selection key. The notification system listens for this to show a notification.
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
+pub struct WeaponSelected {
+    /// The weapon slot index (0-9).
+    pub slot: usize,
+    /// The weapon name (e.g., "laser-standard").
+    pub weapon_name: String,
+}
+
+/// Event emitted when the player selects a propulsion (main thruster).
+///
+/// Emitted by `propulsion_selection_system` when the player presses a propulsion
+/// selection key. The notification system listens for this to show a notification.
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
+pub struct PropulsionSelected {
+    /// The thruster slot index (0-9).
+    pub slot: usize,
+    /// The thruster name (e.g., "chemical-main").
+    pub thruster_name: String,
+}

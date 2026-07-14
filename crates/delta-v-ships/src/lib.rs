@@ -73,8 +73,8 @@ use delta_v_core::{AppState, WorldSpawnSet};
 use delta_v_physics::PhysicsSet;
 use systems::{
     PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
-    flight_assist_damping_system, flight_assist_toggle_system, input_reader_system, thrust_system,
-    torque_system,
+    flight_assist_damping_system, flight_assist_toggle_system, input_reader_system,
+    propulsion_selection_system, thrust_system, torque_system,
 };
 
 /// Wrapper system that calls `delta_v_spawn::lighting::setup_scene_lighting`.
@@ -159,6 +159,7 @@ impl Plugin for ShipsPlugin {
             FixedUpdate,
             (
                 ShipInputSet::AccumulateCommands,
+                ShipInputSet::SelectPropulsion,
                 ShipInputSet::ToggleFlightAssist,
                 ShipInputSet::ApplyThrust,
                 ShipInputSet::ApplyTorque,
@@ -173,6 +174,7 @@ impl Plugin for ShipsPlugin {
             FixedUpdate,
             (
                 input_reader_system.in_set(ShipInputSet::AccumulateCommands),
+                propulsion_selection_system.in_set(ShipInputSet::SelectPropulsion),
                 flight_assist_toggle_system.in_set(ShipInputSet::ToggleFlightAssist),
                 thrust_system.in_set(ShipInputSet::ApplyThrust),
                 torque_system.in_set(ShipInputSet::ApplyTorque),

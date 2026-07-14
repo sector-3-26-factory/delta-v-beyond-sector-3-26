@@ -18,8 +18,7 @@ use bevy::prelude::*;
 use delta_v_core::SpawnEntity;
 use delta_v_spawn::{ShipTemplateBase, build_physical_ship};
 use delta_v_types::{
-    AiConfigJson, BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson,
-    ShipPropulsionTemplate, WeaponReference,
+    AiConfigJson, BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson, ShipPropulsionTemplate,
 };
 use serde::Deserialize;
 
@@ -46,12 +45,16 @@ pub struct AiControlledShipTemplate {
     pub collision_shape: CollisionShapeJson,
     /// Axis-aligned bounding box in ship-local coordinates (metres).
     pub bounding_box: BoundingBoxJson,
-    /// Weapon configurations. Defaults to `[]` via schema.
-    pub weapons: Vec<WeaponReference>,
+    /// Weapon names. Defaults to `[]` via schema.
+    pub weapons: Vec<String>,
     /// Propulsion system configuration.
     pub propulsion: ShipPropulsionTemplate,
     /// AI behavioral parameters (aggro, attack, leash, patrol ranges).
     pub ai: AiConfigJson,
+    /// Maximum number of weapons this ship can carry (default 2 from schema).
+    pub max_weapons_count: usize,
+    /// Maximum number of main thrusters that can be selected (default 2 from schema).
+    pub max_propulsions_count: usize,
 }
 
 /// Implement `ShipTemplateBase` for `AiControlledShipTemplate`
@@ -71,7 +74,7 @@ impl ShipTemplateBase for AiControlledShipTemplate {
     fn health(&self) -> &PhysicalQuantityJson {
         &self.health
     }
-    fn weapons(&self) -> &[WeaponReference] {
+    fn weapons(&self) -> &[String] {
         &self.weapons
     }
     fn entity_type(&self) -> &'static str {
@@ -82,6 +85,12 @@ impl ShipTemplateBase for AiControlledShipTemplate {
     }
     fn maneuvering_thruster_name(&self) -> &str {
         &self.propulsion.maneuvering_thruster
+    }
+    fn max_weapons_count(&self) -> usize {
+        self.max_weapons_count
+    }
+    fn max_propulsions_count(&self) -> usize {
+        self.max_propulsions_count
     }
 }
 

@@ -16,14 +16,14 @@ use delta_v_assets::template::{
     load_projectile_definition, load_weapon_definition,
 };
 use delta_v_core::{
-    DebugAxesEligible, EntityType, FlightAssist, Health, Propulsion, SpawnEntity, Targetable,
-    Weapon, WorldEntityId,
+    DebugAxesEligible, EntityType, FlightAssist, Health, Propulsion, SelectedWeapon, SpawnEntity,
+    Targetable, Weapon, WorldEntityId,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
 use delta_v_types::{
     BoundingBoxJson, CollisionShapeJson, MainThrusterDefinitionJson,
     ManeuveringThrusterDefinitionJson, PhysicalQuantityJson, ProjectileDefinitionJson,
-    PropulsionConfig, WeaponReference, WeaponTemplateJson,
+    PropulsionConfig, WeaponTemplateJson,
 };
 
 /// Trait for accessing common ship template fields.
@@ -39,14 +39,18 @@ pub trait ShipTemplateBase {
     fn collision_shape(&self) -> &CollisionShapeJson;
     /// Returns the ship's health in hit points.
     fn health(&self) -> &PhysicalQuantityJson;
-    /// Returns the weapon configurations.
-    fn weapons(&self) -> &[WeaponReference];
+    /// Returns the weapon names.
+    fn weapons(&self) -> &[String];
     /// Returns the entity type string (e.g., "`player_controlled_ship`", "`ship`", "`ai_controlled_ship`").
     fn entity_type(&self) -> &str;
     /// Returns the array of main thruster names (references to directories under assets/components/propulsion/main-thrusters/).
     fn main_thruster_names(&self) -> &[String];
     /// Returns the name of the maneuvering thruster (reference to a directory under assets/components/propulsion/maneuvering-thrusters/).
     fn maneuvering_thruster_name(&self) -> &str;
+    /// Returns the maximum number of weapons this ship can carry.
+    fn max_weapons_count(&self) -> usize;
+    /// Returns the maximum number of main thrusters that can be selected.
+    fn max_propulsions_count(&self) -> usize;
 }
 
 /// Builds the base physical ship entity with common components.
@@ -103,6 +107,12 @@ pub fn build_physical_ship(
     // Per ADR-0014, all gameplay values come from JSON.
     // Weapons reference weapon definitions by name, which in turn reference projectile definitions.
     add_weapon_components(commands, ship_entity, template);
+
+    // Initialize SelectedWeapon resource with max_weapons_count
+    commands.insert_resource(SelectedWeapon {
+        index: 0,
+        max_weapons_count: template.max_weapons_count(),
+    });
 
     // Load propulsion configuration from thruster definitions.
     // Use the first main thruster in the array (M2: single active thruster).
@@ -164,17 +174,20 @@ fn spawn_ship_entity(
         .id()
 }
 
-/// Adds Weapon components to the ship entity from the template.
+/// Adds Weapon components to the ship entity as children from the template.
+///
+/// Each weapon is spawned as a child entity with a Weapon component.
+/// This allows multiple weapons to be stored and selected.
 #[allow(clippy::expect_used)] // INVARIANT: validated by delta-v-json upstream (ADR-0013, ADR-0040)
 fn add_weapon_components(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
     template: &impl ShipTemplateBase,
 ) {
-    for (i, weapon_ref) in template.weapons().iter().enumerate() {
+    for (i, weapon_name) in template.weapons().iter().enumerate() {
         // Load weapon definition
-        let weapon_def = load_weapon_definition(&weapon_ref.name)
-            .expect("weapon definition must exist (ADR-0013)");
+        let weapon_def =
+            load_weapon_definition(weapon_name).expect("weapon definition must exist (ADR-0013)");
         let weapon_def: WeaponTemplateJson = serde_json::from_value(weapon_def)
             .expect("weapon definition deserialization must succeed (ADR-0040)");
 
@@ -185,7 +198,7 @@ fn add_weapon_components(
             .expect("projectile definition deserialization must succeed (ADR-0040)");
 
         // Resolve sound paths at spawn time for performance
-        let weapon_dir = format!("assets/components/weapons/{}", weapon_ref.name);
+        let weapon_dir = format!("assets/components/weapons/{weapon_name}");
         let projectile_dir = format!(
             "assets/components/projectiles/{}",
             weapon_def.projectile_template
@@ -194,18 +207,21 @@ fn add_weapon_components(
         let fire_sound = resolve_sound_path(&weapon_dir, "fire");
         let hit_sound = resolve_sound_path(&projectile_dir, "hit");
 
-        commands.entity(ship_entity).insert(Weapon {
-            slot: u32::try_from(i).expect("weapon slot index fits in u32"),
-            cooldown: 0.0,
-            weapon_name: weapon_ref.name.clone(),
-            projectile_speed: projectile_def.speed.value,
-            damage: projectile_def.damage.value,
-            fire_rate: weapon_def.fire_rate.value,
-            lifetime: projectile_def.lifetime.value,
-            projectile_radius: projectile_def.radius.value,
-            fire_sound,
-            hit_sound,
-            projectile_template: weapon_def.projectile_template.clone(),
+        // Spawn weapon as a child entity
+        commands.entity(ship_entity).with_children(|parent| {
+            parent.spawn(Weapon {
+                slot: u32::try_from(i).expect("weapon slot index fits in u32"),
+                cooldown: 0.0,
+                weapon_name: weapon_name.clone(),
+                projectile_speed: projectile_def.speed.value,
+                damage: projectile_def.damage.value,
+                fire_rate: weapon_def.fire_rate.value,
+                lifetime: projectile_def.lifetime.value,
+                projectile_radius: projectile_def.radius.value,
+                fire_sound,
+                hit_sound,
+                projectile_template: weapon_def.projectile_template.clone(),
+            });
         });
     }
 }
@@ -255,6 +271,7 @@ fn add_propulsion_component(
     let main_thruster_names = template.main_thruster_names().to_vec();
     let maneuvering_thruster_name = template.maneuvering_thruster_name().to_string();
     let active_main_thruster_index = 0_usize;
+    let max_propulsions_count = template.max_propulsions_count();
 
     commands.entity(ship_entity).insert(Propulsion {
         main_thruster_names,
@@ -265,6 +282,7 @@ fn add_propulsion_component(
         max_strafe_thrust: propulsion_config.max_strafe_thrust,
         rotation_ramp_ticks: propulsion_config.rotation_ramp_ticks,
         active_main_thruster_index,
+        max_propulsions_count,
     });
 }
 

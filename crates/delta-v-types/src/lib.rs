@@ -63,7 +63,7 @@ pub use physics::{PhysicalQuantityJson, RigidBodyData};
 pub use player_settings::PlayerSettings;
 pub use propulsion::{PropulsionConfig, ShipPropulsionTemplate};
 pub use spatial::{BoundingBoxJson, QuatJson, Vec3Json};
-pub use weapons::{ProjectileDefinitionJson, WeaponReference, WeaponTemplateJson};
+pub use weapons::{ProjectileDefinitionJson, WeaponTemplateJson};
 
 #[cfg(test)]
 #[path = "spatial_tests.rs"]

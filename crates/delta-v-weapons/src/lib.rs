@@ -47,7 +47,7 @@ pub use resources::WeaponState;
 pub use systems::WeaponsSet;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, FireWeapon, ProjectileHit};
+use delta_v_core::{AppState, FireWeapon, ProjectileHit, SelectedWeapon};
 use delta_v_physics::PhysicsSet;
 
 /// Weapons plugin for managing projectiles and damage.
@@ -59,11 +59,13 @@ use delta_v_physics::PhysicsSet;
 /// - Applies damage to entities on projectile collision.
 /// - Despawns projectiles after their lifetime expires.
 /// - Attaches loaded projectile meshes to entities.
+/// - Handles weapon selection input.
 pub struct WeaponsPlugin;
 
 impl Plugin for WeaponsPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<WeaponState>()
+        app.init_resource::<SelectedWeapon>()
+            .init_resource::<WeaponState>()
             .add_message::<FireWeapon>()
             .add_message::<ProjectileHit>()
             .configure_sets(
@@ -80,6 +82,7 @@ impl Plugin for WeaponsPlugin {
             .add_systems(
                 FixedUpdate,
                 (
+                    systems::weapon_selection_system.in_set(WeaponsSet::ProcessFireCommands),
                     systems::fire_input_system.in_set(WeaponsSet::ProcessFireCommands),
                     systems::process_fire_commands.in_set(WeaponsSet::ProcessFireCommands),
                     systems::projectile_collision_system.in_set(WeaponsSet::ProjectileCollision),

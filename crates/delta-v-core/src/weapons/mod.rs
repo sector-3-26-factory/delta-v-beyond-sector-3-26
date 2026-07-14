@@ -36,3 +36,16 @@ pub struct Weapon {
     /// Used to load the projectile mesh at spawn time.
     pub projectile_template: String,
 }
+
+/// Resource tracking the currently selected weapon slot index.
+///
+/// Per ADR-0014, this is runtime state, not configuration.
+// allow-default: Bevy requires Default on resources for init_resource.
+// This is runtime state, not configuration.
+#[derive(Resource, Default, Debug)]
+pub struct SelectedWeapon {
+    /// Index of the currently selected weapon slot.
+    pub index: usize,
+    /// Maximum number of weapons this ship can carry.
+    pub max_weapons_count: usize,
+}
