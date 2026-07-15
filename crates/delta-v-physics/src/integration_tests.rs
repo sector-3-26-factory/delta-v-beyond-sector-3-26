@@ -291,7 +291,7 @@ fn test_gravity_at_cutoff_boundary() {
 }
 
 // ---------------------------------------------------------------------------
-// P1: Floating origin recentering tests
+// P3: Floating origin recentering tests
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -401,8 +401,117 @@ fn test_floating_origin_recenter_above_threshold() {
     );
 }
 
+#[test]
+fn test_floating_origin_accumulates_offset_with_nonzero_initial_offset() {
+    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
+
+    let mut app = App::new();
+    app.add_plugins(TimePlugin);
+    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    // Start with a non-zero offset to test accumulation
+    app.insert_resource(FloatingOrigin::new(Vec3::new(10_000.0, 0.0, 0.0)));
+    app.insert_resource(FloatingOriginConfig {
+        recenter_threshold_m: 5_000.0,
+    });
+
+    app.add_systems(
+        FixedUpdate,
+        crate::floating_origin_systems::check_and_recenter_origin_system,
+    );
+
+    // Spawn player ship at local position (-6000, 0, 0) which has distance 6000 from origin
+    // This will trigger recentering since 6000 > 5000 threshold
+    // Absolute position = (-6000, 0, 0) + (10000, 0, 0) = (4000, 0, 0)
+    let player_id = app
+        .world_mut()
+        .spawn(Transform::from_translation(Vec3::new(-6_000.0, 0.0, 0.0)))
+        .id();
+    app.insert_resource(PlayerShipEntity(player_id));
+
+    // Spawn another entity at 1.6km from player (in +X direction in local space)
+    // Other entity at local position (-6000 + 1600, 0, 0) = (-4400, 0, 0)
+    // Absolute position = (-4400, 0, 0) + (10000, 0, 0) = (5600, 0, 0)
+    let other_id = app
+        .world_mut()
+        .spawn(Transform::from_translation(Vec3::new(-4_400.0, 0.0, 0.0)))
+        .id();
+
+    run_fixed_update(&mut app);
+
+    // After recentering:
+    // Player was at local position (-6000, 0, 0) relative to origin at (10000, 0, 0)
+    // New offset should be (10000, 0, 0) + (-6000, 0, 0) = (4000, 0, 0)
+    let origin = app.world().get_resource::<FloatingOrigin>().unwrap();
+    assert_eq!(
+        origin.offset,
+        Vec3::new(4_000.0, 0.0, 0.0),
+        "origin should be accumulated to player's local position"
+    );
+
+    // Player should be at origin (0, 0, 0)
+    let player_transform = app.world().get::<Transform>(player_id).unwrap();
+    assert_eq!(
+        player_transform.translation,
+        Vec3::ZERO,
+        "player should be at origin after recentering"
+    );
+
+    // Other entity should be at 1600 (relative to player)
+    let other_transform = app.world().get::<Transform>(other_id).unwrap();
+    assert_eq!(
+        other_transform.translation,
+        Vec3::new(1_600.0, 0.0, 0.0),
+        "other entity should be at relative position after recentering"
+    );
+}
+
+#[test]
+fn test_floating_origin_preserves_rotation_on_recenter() {
+    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
+
+    let mut app = App::new();
+    app.add_plugins(TimePlugin);
+    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
+    app.insert_resource(FloatingOriginConfig {
+        recenter_threshold_m: 5_000.0,
+    });
+
+    app.add_systems(
+        FixedUpdate,
+        crate::floating_origin_systems::check_and_recenter_origin_system,
+    );
+
+    // Spawn player ship at position above threshold (6km away)
+    let player_id = app
+        .world_mut()
+        .spawn(Transform::from_translation(Vec3::new(6_000.0, 0.0, 0.0)))
+        .id();
+    app.insert_resource(PlayerShipEntity(player_id));
+
+    // Spawn another entity with a specific rotation
+    let rotation = Quat::from_axis_angle(Vec3::Z, std::f32::consts::FRAC_PI_4); // 45 degrees
+    let other_id = app
+        .world_mut()
+        .spawn(Transform {
+            translation: Vec3::new(7_600.0, 0.0, 0.0),
+            rotation,
+            ..default()
+        })
+        .id();
+
+    run_fixed_update(&mut app);
+
+    // Check that the other entity's rotation is preserved
+    let other_transform = app.world().get::<Transform>(other_id).unwrap();
+    assert_eq!(
+        other_transform.rotation, rotation,
+        "other entity's rotation should be preserved after recentering"
+    );
+}
+
 // ---------------------------------------------------------------------------
-// P2: RigidBody panic tests
+// P4: RigidBody panic tests
 // ---------------------------------------------------------------------------
 
 #[test]

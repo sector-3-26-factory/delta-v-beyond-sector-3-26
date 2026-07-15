@@ -52,6 +52,7 @@ pub fn check_and_recenter_origin_system(
         ),
     >,
     config: Res<'_, FloatingOriginConfig>,
+    current_origin: Res<'_, FloatingOrigin>,
 ) {
     // Get the player ship's position
     let Ok((_, player_transform, _, _, _, _)) = query.get(player_entity.0) else {
@@ -75,7 +76,8 @@ pub fn check_and_recenter_origin_system(
     // Only entities in the Gameplay render layer (layer 0) are translated.
     // Entities without RenderLayers are treated as Gameplay layer (per apply_gameplay_render_layers).
     // This excludes UI elements (`CockpitBackground`, `CockpitForeground`, `Menu`) and lights.
-    let entity_data: Vec<(Entity, Vec3)> = query
+    // We also collect rotation to preserve it during recentering.
+    let entity_data: Vec<(Entity, Vec3, Quat)> = query
         .iter()
         .filter(
             |(_, _, parent, render_layers, directional_light, ambient_light)| {
@@ -92,7 +94,7 @@ pub fn check_and_recenter_origin_system(
                 render_layers.is_none_or(|layers| layers.intersects(&RenderLayers::layer(0)))
             },
         )
-        .map(|(entity, transform, _, _, _, _)| (entity, transform.translation))
+        .map(|(entity, transform, _, _, _, _)| (entity, transform.translation, transform.rotation))
         .collect();
 
     // The translation to apply: move all entities so the player is at the origin
@@ -108,14 +110,23 @@ pub fn check_and_recenter_origin_system(
         "Recentering origin to player position"
     );
 
-    // Update the origin resource to the player's position
-    // This makes the player the new origin (local position 0,0,0)
-    commands.insert_resource(FloatingOrigin::new(translation));
+    // Calculate the new cumulative offset from the absolute world origin.
+    // The player's local position is relative to the current origin.
+    // Adding it to the current offset gives us the new absolute offset.
+    let new_offset = current_origin.offset + translation;
 
-    // Translate all top-level entities using commands
-    for (entity, old_pos) in entity_data {
-        commands
-            .entity(entity)
-            .insert(Transform::from_translation(old_pos - translation));
+    // Update the origin resource to the cumulative offset.
+    // This makes the player the new origin (local position 0,0,0).
+    commands.insert_resource(FloatingOrigin::new(new_offset));
+
+    // Translate all top-level entities using commands.
+    // Each entity's new position = old position - player's local position.
+    // Rotation is preserved to avoid resetting entity orientations.
+    for (entity, old_pos, rotation) in entity_data {
+        commands.entity(entity).insert(Transform {
+            translation: old_pos - translation,
+            rotation,
+            ..default()
+        });
     }
 }
