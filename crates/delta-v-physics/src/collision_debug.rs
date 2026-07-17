@@ -20,6 +20,10 @@ pub struct CollisionShapeDebug {
 pub struct CollisionShapeDebugMesh;
 
 /// Spawns wireframe debug meshes for entities with collision shapes.
+///
+/// The `CollisionShape` component stores already-scaled dimensions. To avoid
+/// double-scaling when spawning as a child, we query the parent's scale
+/// and divide the debug mesh dimensions accordingly.
 #[allow(clippy::needless_pass_by_value, clippy::type_complexity, deprecated)]
 pub fn spawn_collision_shape_debug(
     mut commands: Commands<'_, '_>,
@@ -29,7 +33,7 @@ pub fn spawn_collision_shape_debug(
     query: Query<
         '_,
         '_,
-        (Entity, &'static crate::CollisionShape),
+        (Entity, &'static crate::CollisionShape, &'static Transform),
         (Without<CollisionShapeDebug>, With<crate::CollisionShape>),
     >,
 ) {
@@ -37,15 +41,29 @@ pub fn spawn_collision_shape_debug(
         return;
     }
 
-    for (entity, shape) in query.iter() {
+    for (entity, shape, transform) in query.iter() {
+        // Get the scale factor to avoid double-scaling (debug mesh is a child)
+        let scale_factor = transform
+            .scale
+            .x
+            .max(transform.scale.y)
+            .max(transform.scale.z);
+        // INVARIANT: scale_factor is always positive (Transform::default() has scale 1.0)
+        let inv_scale = 1.0 / scale_factor;
+
         let (mesh, offset) = match &shape.shape_type {
-            CollisionShapeType::Box { half_extents } => {
-                (create_wireframe_box_mesh(*half_extents), shape.offset)
-            }
-            CollisionShapeType::Sphere { radius } => {
-                (create_wireframe_sphere_mesh(*radius), shape.offset)
-            }
-            CollisionShapeType::ConvexHull => (create_wireframe_box_mesh(Vec3::ONE), shape.offset),
+            CollisionShapeType::Box { half_extents } => (
+                create_wireframe_box_mesh(half_extents * inv_scale),
+                shape.offset * inv_scale,
+            ),
+            CollisionShapeType::Sphere { radius } => (
+                create_wireframe_sphere_mesh(radius * inv_scale),
+                shape.offset * inv_scale,
+            ),
+            CollisionShapeType::ConvexHull => (
+                create_wireframe_box_mesh(Vec3::ONE),
+                shape.offset * inv_scale,
+            ),
         };
 
         let material = materials.add(StandardMaterial {

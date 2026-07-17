@@ -62,6 +62,61 @@ impl CollisionShape {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Distance to surface calculation
+// ---------------------------------------------------------------------------
+
+/// Calculates the distance from a point to the surface of a collision shape.
+///
+/// This is used for navigation/targeting distance display, showing the distance
+/// to the object's surface rather than center-to-center distance.
+///
+/// # Arguments
+///
+/// * `point` - The position of the player or observer.
+/// * `entity_pos` - The world position of the entity with the collision shape.
+/// * `shape` - The collision shape component.
+///
+/// # Returns
+///
+/// The distance from `point` to the surface of `shape`. Returns 0.0 if the point
+/// is inside or on the surface of the shape.
+///
+/// # Shape Support
+///
+/// - **Sphere**: `max(0.0, center_distance - radius)`
+/// - **Box**: Distance to closest point on the box surface
+/// - **`ConvexHull`**: Returns center distance (placeholder, will be updated when convex hulls are implemented)
+#[must_use]
+pub fn distance_to_surface(point: Vec3, entity_pos: Vec3, shape: &CollisionShape) -> f32 {
+    let center_distance = (point - entity_pos).length();
+
+    match &shape.shape_type {
+        CollisionShapeType::Sphere { radius } => {
+            // For spheres, subtract the radius from center distance
+            (center_distance - radius).max(0.0)
+        }
+        CollisionShapeType::Box { half_extents } => {
+            // For boxes, find the closest point on the box surface
+            // The box is centered at entity_pos with the given half_extents
+            // We need to account for the shape's offset
+            let box_center = entity_pos + shape.offset;
+
+            // Get the closest point on the box to the player
+            // This is the point on the box that is closest to the player position
+            let closest = point.clamp(box_center - *half_extents, box_center + *half_extents);
+
+            // Distance from player to closest point on box
+            (point - closest).length()
+        }
+        CollisionShapeType::ConvexHull => {
+            // Placeholder for future convex hull support
+            // When implemented, this will find the closest point on the hull
+            center_distance
+        }
+    }
+}
+
 /// Event emitted when a collision is detected.
 #[derive(Message, Debug)]
 pub struct CollisionDetected {

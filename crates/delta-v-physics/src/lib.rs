@@ -46,7 +46,7 @@ pub mod systems;
 pub use celestial::{Navigable, OrbitalParentId, PendingCelestialMesh, Planet, Sun};
 pub use collision::{
     CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeType, DynamicBody,
-    StaticBody,
+    StaticBody, distance_to_surface,
 };
 pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
 pub use delta_v_types::CollisionLayers;

@@ -27,7 +27,7 @@ use delta_v_core::{
     ActiveCameraName, CameraName, CameraSwitched, EntityType, FireWeapon, Health, I18n,
     PlayerShipEntity, ProjectileHit, RenderLayer, TargetSelected, Weapon, WorldEntityId,
 };
-use delta_v_physics::{CollisionDetected, RigidBody};
+use delta_v_physics::{CollisionDetected, CollisionShape, RigidBody, distance_to_surface};
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
@@ -856,6 +856,7 @@ pub fn cycle_target_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
         With<Targetable>,
     >,
@@ -868,7 +869,9 @@ pub fn cycle_target_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
+        With<delta_v_physics::Navigable>,
     >,
     mut events: MessageWriter<'_, TargetSelected>,
 ) {
@@ -882,7 +885,7 @@ pub fn cycle_target_system(
     // Get player position
     let Some(player_pos) = targetable_query
         .iter()
-        .find_map(|(entity, transform, _, _, _)| {
+        .find_map(|(entity, transform, _, _, _, _)| {
             if entity == player_ship.0 {
                 Some(transform.translation)
             } else {
@@ -898,11 +901,11 @@ pub fn cycle_target_system(
         super::components::TargetingModeType::Combat => {
             let mut targets: Vec<(Entity, f32, String, String)> = targetable_query
                 .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
                     if entity == player_ship.0 {
                         return None;
                     }
-                    let distance = (transform.translation - player_pos).length();
+                    let distance = distance_to_surface(player_pos, transform.translation, shape);
                     let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                     Some((entity, distance, name_str, entity_type.0.clone()))
                 })
@@ -917,11 +920,11 @@ pub fn cycle_target_system(
         super::components::TargetingModeType::Nav => {
             let mut targets: Vec<(Entity, f32, String, String)> = navigable_query
                 .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
                     if entity == player_ship.0 {
                         return None;
                     }
-                    let distance = (transform.translation - player_pos).length();
+                    let distance = distance_to_surface(player_pos, transform.translation, shape);
                     let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                     Some((entity, distance, name_str, entity_type.0.clone()))
                 })

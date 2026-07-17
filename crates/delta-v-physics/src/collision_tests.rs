@@ -989,6 +989,135 @@ fn test_convex_hull_fallback_uses_sphere_approximation() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// Distance to surface calculation
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_distance_to_surface_sphere_outside() {
+    // Point at (10, 0, 0), sphere at origin with radius 3
+    // Distance to surface = 10 - 3 = 7
+    let point = Vec3::new(10.0, 0.0, 0.0);
+    let entity_pos = Vec3::ZERO;
+    let shape = sphere_shape(3.0);
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    assert!(
+        (distance - 7.0).abs() < 0.01,
+        "distance to sphere surface should be 7, got {distance}"
+    );
+}
+
+#[test]
+fn test_distance_to_surface_sphere_inside() {
+    // Point at (1, 0, 0), sphere at origin with radius 3
+    // Point is inside sphere, distance to surface = 0
+    let point = Vec3::new(1.0, 0.0, 0.0);
+    let entity_pos = Vec3::ZERO;
+    let shape = sphere_shape(3.0);
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    assert!(
+        (distance - 0.0).abs() < 0.01,
+        "distance to sphere surface when inside should be 0, got {distance}"
+    );
+}
+
+#[test]
+fn test_distance_to_surface_sphere_on_surface() {
+    // Point at (3, 0, 0), sphere at origin with radius 3
+    // Point is on surface, distance to surface = 0
+    let point = Vec3::new(3.0, 0.0, 0.0);
+    let entity_pos = Vec3::ZERO;
+    let shape = sphere_shape(3.0);
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    assert!(
+        (distance - 0.0).abs() < 0.01,
+        "distance to sphere surface when on surface should be 0, got {distance}"
+    );
+}
+
+#[test]
+fn test_distance_to_surface_box_outside() {
+    // Point at (5, 0, 0), box at origin with half_extents (2, 2, 2)
+    // Closest point on box is (2, 0, 0), distance = 3
+    let point = Vec3::new(5.0, 0.0, 0.0);
+    let entity_pos = Vec3::ZERO;
+    let shape = box_shape(Vec3::new(2.0, 2.0, 2.0));
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    assert!(
+        (distance - 3.0).abs() < 0.01,
+        "distance to box surface should be 3, got {distance}"
+    );
+}
+
+#[test]
+fn test_distance_to_surface_box_inside() {
+    // Point at (1, 1, 1), box at origin with half_extents (2, 2, 2)
+    // Point is inside box, distance to surface = 0
+    let point = Vec3::new(1.0, 1.0, 1.0);
+    let entity_pos = Vec3::ZERO;
+    let shape = box_shape(Vec3::new(2.0, 2.0, 2.0));
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    assert!(
+        (distance - 0.0).abs() < 0.01,
+        "distance to box surface when inside should be 0, got {distance}"
+    );
+}
+
+#[test]
+fn test_distance_to_surface_box_corner() {
+    // Point at (5, 5, 5), box at origin with half_extents (2, 2, 2)
+    // Closest point on box is (2, 2, 2), distance = sqrt(3^2 + 3^2 + 3^2) = sqrt(27) ≈ 5.196
+    let point = Vec3::new(5.0, 5.0, 5.0);
+    let entity_pos = Vec3::ZERO;
+    let shape = box_shape(Vec3::new(2.0, 2.0, 2.0));
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    let expected = 3.0 * 3.0_f32.sqrt();
+    assert!(
+        (distance - expected).abs() < 0.01,
+        "distance to box corner should be ~{expected}, got {distance}"
+    );
+}
+
+#[test]
+fn test_distance_to_surface_box_with_offset() {
+    // Point at (10, 0, 0), box at (5, 0, 0) with half_extents (2, 2, 2) and offset (0, 0, 0)
+    // Box center is at (5, 0, 0), closest point is (7, 0, 0), distance = 3
+    let point = Vec3::new(10.0, 0.0, 0.0);
+    let entity_pos = Vec3::new(5.0, 0.0, 0.0);
+    let shape = box_shape(Vec3::new(2.0, 2.0, 2.0));
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    assert!(
+        (distance - 3.0).abs() < 0.01,
+        "distance to box surface with offset should be 3, got {distance}"
+    );
+}
+
+#[test]
+fn test_distance_to_surface_convex_hull_placeholder() {
+    // Convex hull returns center distance as placeholder
+    // Point at (10, 0, 0), entity at origin
+    // Distance = 10 (center distance)
+    let point = Vec3::new(10.0, 0.0, 0.0);
+    let entity_pos = Vec3::ZERO;
+    let shape = CollisionShape(CollisionShapeData {
+        shape_type: CollisionShapeType::ConvexHull,
+        offset: Vec3::ZERO,
+    });
+
+    let distance = crate::distance_to_surface(point, entity_pos, &shape);
+    assert!(
+        (distance - 10.0).abs() < 0.01,
+        "distance to convex hull should be center distance (10), got {distance}"
+    );
+}
+
 /// System set for collision response, runs after collision detection.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 struct CollisionResponseSet;

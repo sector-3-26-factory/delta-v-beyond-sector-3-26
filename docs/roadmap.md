@@ -86,7 +86,7 @@ Each milestone ends on a runnable, demoable build.
 - Cockpit overlay system with PNG overlays and station switching.
 - Velocity vector indicator (visible in all cameras, projects onto active camera's view plane).
 - Status gauges (health, weapon heat) with slot-based positioning.
-- Player-controlled targeting & navigation list with bearing indicator. No auto-targeting — player explicitly selects targets/nav objects.
+- Player-controlled targeting & navigation list with bearing indicator. No auto-targeting — player explicitly selects targets/nav objects. Distance to target shows distance to surface (not center) for accurate navigation to large objects like suns.
 - Sound effects (code complete, audio output requires PulseAudio socket forwarding in devcontainer), camera shake, basic VFX.
 - i18n for keybindings menu and notifications.
 - UI crate (`delta-v-ui`) for overlay windows and menus.
