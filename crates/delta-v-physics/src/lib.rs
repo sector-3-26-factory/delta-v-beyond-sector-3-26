@@ -35,6 +35,7 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod celestial;
 pub mod collision;
 pub mod collision_debug;
 pub mod constants;
@@ -42,6 +43,7 @@ pub mod floating_origin_systems;
 pub mod rigid_body;
 pub mod systems;
 
+pub use celestial::{Navigable, OrbitalParentId, PendingCelestialMesh, Planet, Sun};
 pub use collision::{
     CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeType, DynamicBody,
     StaticBody,
@@ -52,12 +54,15 @@ pub use rigid_body::{MassSource, RigidBody};
 pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health};
+use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health, WorldSpawnSet};
 use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
-    integrate_position_system, integrate_velocity_system,
+    integrate_position_system, integrate_velocity_system, orbital_motion_system,
+    sun_rotation_system,
 };
+
+use crate::celestial::{attach_celestial_meshes, resolve_orbital_parents, spawn_planet, spawn_sun};
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
 ///
@@ -139,6 +144,24 @@ impl Plugin for PhysicsPlugin {
                 .run_if(in_state(AppState::InGame)),
         );
 
+        // Orbital motion system for planets.
+        // Runs in FixedUpdate to update planet positions along their orbital paths.
+        app.add_systems(
+            FixedUpdate,
+            orbital_motion_system
+                .in_set(PhysicsSet::IntegratePosition)
+                .run_if(in_state(AppState::InGame)),
+        );
+
+        // Sun rotation system.
+        // Runs in FixedUpdate to rotate suns around their Y axis.
+        app.add_systems(
+            FixedUpdate,
+            sun_rotation_system
+                .in_set(PhysicsSet::IntegratePosition)
+                .run_if(in_state(AppState::InGame)),
+        );
+
         // Collision shape debug visualization
         app.add_systems(
             Update,
@@ -147,6 +170,37 @@ impl Plugin for PhysicsPlugin {
                 collision_debug::update_collision_shape_debug_color
                     .run_if(in_state(AppState::InGame)),
             ),
+        );
+
+        // Celestial body spawning systems.
+        // Per ADR-0038, these run in SpawningEntities state in dependency order.
+        app.add_systems(
+            Update,
+            spawn_sun
+                .in_set(WorldSpawnSet::SpawnSuns)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+        app.add_systems(
+            Update,
+            spawn_planet
+                .in_set(WorldSpawnSet::SpawnPlanets)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+
+        // Resolve orbital parent IDs after all entities are spawned.
+        // This must run after SpawnSuns and SpawnPlanets.
+        app.add_systems(
+            Update,
+            resolve_orbital_parents
+                .after(WorldSpawnSet::SpawnPlanets)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+
+        // Attach celestial body meshes once glTF assets are loaded.
+        // Uses the generic attach_meshes system from delta-v-spawn (ADR-0047).
+        app.add_systems(
+            Update,
+            attach_celestial_meshes.run_if(in_state(AppState::InGame)),
         );
     }
 }

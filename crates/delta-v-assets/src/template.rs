@@ -269,6 +269,48 @@ pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetErr
     Ok(("ship".to_string(), template_path, template, mesh_path))
 }
 
+/// Loads a sun template.
+///
+/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+pub fn load_sun(name: &str) -> Result<(String, String, Value, String), AssetError> {
+    // INVARIANT: The name may or may not have the "suns/" prefix.
+    // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
+    // The `unwrap_or` is intentional: callers may pass either "suns/my-sun" or "my-sun".
+    // Both are valid and result in the same template being loaded.
+    let template_name = name.strip_prefix("suns/").unwrap_or(name);
+    let template_path = format!("templates/suns/{template_name}/sun.json");
+    let mesh_path = template_path.replace("sun.json", "mesh.glb");
+    let template = load_template("suns", name, "sun.json", "sun.schema.json")?;
+
+    Ok(("sun".to_string(), template_path, template, mesh_path))
+}
+
+/// Loads a planet template.
+///
+/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+pub fn load_planet(name: &str) -> Result<(String, String, Value, String), AssetError> {
+    // INVARIANT: The name may or may not have the "planets/" prefix.
+    // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
+    // The `unwrap_or` is intentional: callers may pass either "planets/my-planet" or "my-planet".
+    // Both are valid and result in the same template being loaded.
+    let template_name = name.strip_prefix("planets/").unwrap_or(name);
+    let template_path = format!("templates/planets/{template_name}/planet.json");
+    let mesh_path = template_path.replace("planet.json", "mesh.glb");
+    let template = load_template("planets", name, "planet.json", "planet.schema.json")?;
+
+    Ok(("planet".to_string(), template_path, template, mesh_path))
+}
+
 /// Loads and validates a template from explicit paths.
 ///
 /// Used by tests and future tooling.

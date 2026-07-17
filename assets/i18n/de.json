@@ -13,7 +13,9 @@
     "entity_types": {
         "ship": "Raumschiff",
         "asteroid": "Asteroid",
-        "station": "Raumstation"
+        "station": "Raumstation",
+        "sun": "Stern",
+        "planet": "Planet"
     },
     "ui": {
         "menu": {

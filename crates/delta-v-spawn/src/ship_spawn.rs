@@ -8,6 +8,7 @@
 //! See ADR-0047 (centralized spawning) and ADR-0051 (dependency hierarchy).
 
 use crate::collision::shape_from_json;
+use crate::template_extraction::resolve_mass;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_assets::resolve_sound_path;
@@ -143,6 +144,13 @@ fn spawn_ship_entity(
     template: &impl ShipTemplateBase,
     axis_length: f32,
 ) -> Entity {
+    // Extract uniform scale from event (use max of x, y, z for uniform scaling).
+    let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
+
+    // Resolve mass: use override if present, otherwise use template mass.
+    // Mass is NOT scaled - it is used as-is or overridden.
+    let mass = resolve_mass(template.mass().value, event.mass);
+
     commands
         .spawn((
             Transform {
@@ -158,10 +166,10 @@ fn spawn_ship_entity(
             },
             DebugAxesEligible::new(event.id.clone(), axis_length),
             // Physics components: mass and inertia from template JSON (ADR-0014)
-            RigidBody::new(template.mass().value, template.inertia_scale()),
+            RigidBody::new(mass, template.inertia_scale()),
             FlightAssist,
             CollisionShape(
-                shape_from_json(template.collision_shape(), 1.0)
+                shape_from_json(template.collision_shape(), scale)
                     .map_err(|e| tracing::error!("collision shape invalid: {}", e))
                     .expect("collision shape must be valid (ADR-0013)"),
             ),

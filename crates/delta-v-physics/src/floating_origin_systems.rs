@@ -76,8 +76,8 @@ pub fn check_and_recenter_origin_system(
     // Only entities in the Gameplay render layer (layer 0) are translated.
     // Entities without RenderLayers are treated as Gameplay layer (per apply_gameplay_render_layers).
     // This excludes UI elements (`CockpitBackground`, `CockpitForeground`, `Menu`) and lights.
-    // We also collect rotation to preserve it during recentering.
-    let entity_data: Vec<(Entity, Vec3, Quat)> = query
+    // We also collect rotation and scale to preserve them during recentering.
+    let entity_data: Vec<(Entity, Vec3, Quat, Vec3)> = query
         .iter()
         .filter(
             |(_, _, parent, render_layers, directional_light, ambient_light)| {
@@ -94,7 +94,14 @@ pub fn check_and_recenter_origin_system(
                 render_layers.is_none_or(|layers| layers.intersects(&RenderLayers::layer(0)))
             },
         )
-        .map(|(entity, transform, _, _, _, _)| (entity, transform.translation, transform.rotation))
+        .map(|(entity, transform, _, _, _, _)| {
+            (
+                entity,
+                transform.translation,
+                transform.rotation,
+                transform.scale,
+            )
+        })
         .collect();
 
     // The translation to apply: move all entities so the player is at the origin
@@ -121,12 +128,12 @@ pub fn check_and_recenter_origin_system(
 
     // Translate all top-level entities using commands.
     // Each entity's new position = old position - player's local position.
-    // Rotation is preserved to avoid resetting entity orientations.
-    for (entity, old_pos, rotation) in entity_data {
+    // Rotation and scale are preserved to avoid resetting entity orientations and sizes.
+    for (entity, old_pos, rotation, scale) in entity_data {
         commands.entity(entity).insert(Transform {
             translation: old_pos - translation,
             rotation,
-            ..default()
+            scale,
         });
     }
 }

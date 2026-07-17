@@ -14,6 +14,7 @@ use delta_v_physics::{CollisionLayersComponent, CollisionShape, DynamicBody, Rig
 use delta_v_spawn::collision::shape_from_json;
 use delta_v_spawn::template_extraction::{
     compute_debug_axis_length, extract_bounding_box, extract_collision_shape, extract_mass,
+    resolve_mass, scale_bounding_box,
 };
 use delta_v_types::collision::layers;
 
@@ -58,17 +59,23 @@ pub fn spawn_asteroid(
         let template = &event.template;
 
         // Extract mass (required) using delta-v-spawn utilities (ADR-0047)
-        let mass = extract_mass(template);
+        let template_mass = extract_mass(template);
+        // Resolve mass: use override if present, otherwise use template mass
+        let mass = resolve_mass(template_mass, event.mass);
 
         // Extract collision shape (required) using delta-v-spawn utilities (ADR-0047)
         // INVARIANT: collision_shape is required by schema and validated by delta-v-json (ADR-0013)
         let collision_shape_json = extract_collision_shape(template);
-        let collision_shape_data = shape_from_json(&collision_shape_json, 1.0)
+        // Use the maximum scale component for uniform scaling
+        let scale_factor = event.scale.x.max(event.scale.y).max(event.scale.z);
+        let collision_shape_data = shape_from_json(&collision_shape_json, scale_factor)
             .expect("collision shape must be valid (ADR-0013)");
 
         // Extract bounding box (required) for debug axes computation using delta-v-spawn utilities
         let bbox = extract_bounding_box(template);
-        let axis_length = compute_debug_axis_length(&bbox);
+        // Scale the bounding box for debug axis computation
+        let scaled_bbox = scale_bounding_box(&bbox, scale_factor);
+        let axis_length = compute_debug_axis_length(&scaled_bbox);
 
         // Extract scale from event
         let scale = event.scale;

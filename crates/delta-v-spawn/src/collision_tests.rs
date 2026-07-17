@@ -170,5 +170,115 @@ fn test_shape_from_json_unknown_type() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// shape_from_json: scaling
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_shape_from_json_sphere_with_scale() {
+    let json = CollisionShapeJson {
+        shape_type: "sphere".to_string(),
+        radius: Some(delta_v_types::PhysicalQuantityJson {
+            value: 10.0,
+            unit: "m".to_string(),
+        }),
+        half_extents: None,
+        offset: None,
+    };
+
+    // Scale by 100x
+    let result = shape_from_json(&json, 100.0);
+    assert!(result.is_ok());
+    let data = result.unwrap();
+    match data.shape_type {
+        CollisionShapeType::Sphere { radius } => {
+            assert!(
+                (radius - 1000.0).abs() < 0.01,
+                "radius should be scaled to 1000.0, got {radius}"
+            );
+        }
+        other => panic!("expected Sphere, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_shape_from_json_sphere_with_scale_less_than_one() {
+    let json = CollisionShapeJson {
+        shape_type: "sphere".to_string(),
+        radius: Some(delta_v_types::PhysicalQuantityJson {
+            value: 100.0,
+            unit: "m".to_string(),
+        }),
+        half_extents: None,
+        offset: None,
+    };
+
+    // Scale by 0.1x
+    let result = shape_from_json(&json, 0.1);
+    assert!(result.is_ok());
+    let data = result.unwrap();
+    match data.shape_type {
+        CollisionShapeType::Sphere { radius } => {
+            assert!(
+                (radius - 10.0).abs() < 0.01,
+                "radius should be scaled to 10.0, got {radius}"
+            );
+        }
+        other => panic!("expected Sphere, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_shape_from_json_box_with_scale() {
+    let json = CollisionShapeJson {
+        shape_type: "box".to_string(),
+        radius: None,
+        half_extents: Some(delta_v_types::Vec3Json {
+            x: 10.0,
+            y: 20.0,
+            z: 30.0,
+        }),
+        offset: None,
+    };
+
+    // Scale by 10x
+    let result = shape_from_json(&json, 10.0);
+    assert!(result.is_ok());
+    let data = result.unwrap();
+    match data.shape_type {
+        CollisionShapeType::Box { half_extents } => {
+            assert_eq!(half_extents, Vec3::new(100.0, 200.0, 300.0));
+        }
+        other => panic!("expected Box, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_shape_from_json_offset_scaled() {
+    let json = CollisionShapeJson {
+        shape_type: "sphere".to_string(),
+        radius: Some(delta_v_types::PhysicalQuantityJson {
+            value: 5.0,
+            unit: "m".to_string(),
+        }),
+        half_extents: None,
+        offset: Some(delta_v_types::Vec3Json {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        }),
+    };
+
+    // Scale by 10x
+    let result = shape_from_json(&json, 10.0);
+    assert!(result.is_ok());
+    let data = result.unwrap();
+    assert_eq!(
+        data.offset,
+        Vec3::new(10.0, 20.0, 30.0),
+        "offset should be scaled"
+    );
+}
+
 // Re-export for test use
 use bevy::prelude::Vec3;

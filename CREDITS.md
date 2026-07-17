@@ -108,6 +108,15 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/components/projectiles/laser-standard/mesh.glb`
 - **Modifications:** *None*
 
+### "Sun"
+
+- **Creator:** [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/suns/sol/mesh.glb`
+- **Modifications:** *None*
+
 ## Fonts
 
 ### DejaVu Sans Mono

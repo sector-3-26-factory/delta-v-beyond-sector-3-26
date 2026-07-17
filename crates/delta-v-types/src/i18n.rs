@@ -78,6 +78,10 @@ pub struct EntityTypeTranslations {
     pub asteroid: String,
     /// Station entity type translation.
     pub station: String,
+    /// Sun entity type translation.
+    pub sun: String,
+    /// Planet entity type translation.
+    pub planet: String,
 }
 
 /// UI translations.

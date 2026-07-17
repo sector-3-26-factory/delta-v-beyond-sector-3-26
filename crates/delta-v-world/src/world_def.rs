@@ -11,7 +11,7 @@
 use serde::Deserialize;
 use serde_json::Value;
 
-use delta_v_types::{AiTaskJson, QuatJson, Vec3Json};
+use delta_v_types::{AiTaskJson, PhysicalQuantityJson, QuatJson, Vec3Json};
 
 /// Top-level world definition loaded from `*.world.json`.
 ///
@@ -65,6 +65,11 @@ pub struct EntitySpawn {
     /// the co-located `ship.json`. The task determines the AI mission
     /// (e.g., "patrol"). Absent means static ship (serde defaults Option to None).
     pub ai_task: Option<AiTaskJson>,
+    /// Optional mass override. If present, this value overrides the template's mass.
+    /// Mass is NOT scaled with the scale factor - it is used as-is or overridden.
+    /// Per ADR-0008, uses value+unit format. Units: kg, t, `M_earth`, `M_sun`.
+    /// Converted to kilograms at load time.
+    pub mass: Option<PhysicalQuantityJson>,
     /// The loaded template JSON (populated by loader).
     /// Not present in JSON; filled by `delta-v-world` loader.
     #[serde(skip)]

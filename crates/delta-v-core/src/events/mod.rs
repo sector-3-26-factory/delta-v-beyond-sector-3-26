@@ -56,6 +56,12 @@ pub struct SpawnEntity {
     /// If `Some`, the entity is AI-driven and the task determines its mission.
     /// If `None`, the entity is static or player-controlled.
     pub ai_task: Option<String>,
+
+    /// Optional mass override from the world definition.
+    /// If `Some`, this value overrides the template's mass.
+    /// If `None`, the template's mass is used.
+    /// Mass is NOT scaled with the scale factor.
+    pub mass: Option<f32>,
 }
 
 impl SpawnEntity {
@@ -88,6 +94,7 @@ impl SpawnEntity {
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
             ai_task: None,
+            mass: None,
         }
     }
 
@@ -112,6 +119,14 @@ impl SpawnEntity {
     #[allow(clippy::missing_const_for_fn)]
     pub fn with_ai_task(mut self, ai_task: String) -> Self {
         self.ai_task = Some(ai_task);
+        self
+    }
+
+    /// Sets the mass override for this spawn event.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn with_mass(mut self, mass: f32) -> Self {
+        self.mass = Some(mass);
         self
     }
 }

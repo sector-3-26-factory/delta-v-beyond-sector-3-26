@@ -13,6 +13,7 @@
 //! - `collision` — Collision types: `CollisionShapeJson`, `CollisionShapeData`, `CollisionShapeType`, `CollisionLayers`
 //! - `ids` — Identifier types: `EntityId`, `TemplatePath`
 //! - `weapons` — Weapon types: `WeaponTemplateJson`
+//! - `celestial` — Celestial body types: `SunTemplateJson`, `PlanetTemplateJson`
 //! - `ai` — AI types: `AiConfigJson`, `AiTaskJson`
 //! - `logical_action` — Input actions: `LogicalAction`
 //! - `navigation` — Navigation types: `EntityType`, `EntityId`
@@ -36,6 +37,7 @@
 #![deny(clippy::dbg_macro)]
 
 pub mod ai;
+pub mod celestial;
 pub mod collision;
 pub mod i18n;
 pub mod ids;
@@ -51,6 +53,7 @@ pub mod weapons;
 
 // Re-exports for convenience
 pub use ai::{AiConfigJson, AiTaskJson};
+pub use celestial::{PlanetTemplateJson, SunTemplateJson};
 pub use collision::layers::PROJECTILE;
 pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};

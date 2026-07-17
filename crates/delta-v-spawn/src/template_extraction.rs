@@ -108,6 +108,34 @@ pub fn compute_debug_axis_length(bbox: &BoundingBoxJson) -> f32 {
     max_dim * 1.2
 }
 
+/// Scales a `BoundingBoxJson` by the given scale factor.
+///
+/// Both min and max corners are multiplied by the scale.
+#[must_use]
+pub fn scale_bounding_box(bbox: &BoundingBoxJson, scale: f32) -> BoundingBoxJson {
+    BoundingBoxJson {
+        min: Vec3Json {
+            x: bbox.min.x * scale,
+            y: bbox.min.y * scale,
+            z: bbox.min.z * scale,
+        },
+        max: Vec3Json {
+            x: bbox.max.x * scale,
+            y: bbox.max.y * scale,
+            z: bbox.max.z * scale,
+        },
+    }
+}
+
+/// Resolves the final mass value, using override if present.
+///
+/// Mass is NOT scaled - it is used as-is from the template, or overridden if
+/// `mass_override` is specified.
+#[must_use]
+pub fn resolve_mass(template_mass: f32, mass_override: Option<f32>) -> f32 {
+    mass_override.unwrap_or(template_mass)
+}
+
 /// Reads the dimensions of a PNG file from its IHDR chunk.
 ///
 /// # Errors

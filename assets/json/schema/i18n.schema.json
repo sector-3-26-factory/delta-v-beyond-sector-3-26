@@ -70,13 +70,15 @@
             }
         },
         "entity_types": {
-            "description": "Entity type translations (e.g., ship, asteroid, station).",
+            "description": "Entity type translations (e.g., ship, asteroid, station, sun, planet).",
             "type": "object",
             "additionalProperties": false,
             "required": [
                 "ship",
                 "asteroid",
-                "station"
+                "station",
+                "sun",
+                "planet"
             ],
             "properties": {
                 "ship": {
@@ -89,6 +91,14 @@
                 },
                 "station": {
                     "description": "Station entity type translation.",
+                    "type": "string"
+                },
+                "sun": {
+                    "description": "Sun entity type translation.",
+                    "type": "string"
+                },
+                "planet": {
+                    "description": "Planet entity type translation.",
                     "type": "string"
                 }
             }

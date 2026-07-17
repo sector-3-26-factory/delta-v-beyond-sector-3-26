@@ -9,7 +9,8 @@ use serde_json::Value;
 use delta_v_types::{BoundingBoxJson, Vec3Json};
 
 use crate::template_extraction::{
-    compute_debug_axis_length, extract_bounding_box, extract_mass, extract_vec3,
+    compute_debug_axis_length, extract_bounding_box, extract_mass, extract_vec3, resolve_mass,
+    scale_bounding_box,
 };
 
 // ---------------------------------------------------------------------------
@@ -205,4 +206,79 @@ fn test_compute_debug_axis_length_unit() {
         (length - 1.2).abs() < 0.01,
         "axis length should be 1.2, got {length}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// scale_bounding_box
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_scale_bounding_box() {
+    let bbox = BoundingBoxJson {
+        min: Vec3Json {
+            x: -10.0,
+            y: -10.0,
+            z: -10.0,
+        },
+        max: Vec3Json {
+            x: 10.0,
+            y: 10.0,
+            z: 10.0,
+        },
+    };
+
+    let scaled = scale_bounding_box(&bbox, 100.0);
+    assert_eq!(scaled.min.x, -1000.0);
+    assert_eq!(scaled.min.y, -1000.0);
+    assert_eq!(scaled.min.z, -1000.0);
+    assert_eq!(scaled.max.x, 1000.0);
+    assert_eq!(scaled.max.y, 1000.0);
+    assert_eq!(scaled.max.z, 1000.0);
+}
+
+#[test]
+fn test_scale_bounding_box_fractional() {
+    let bbox = BoundingBoxJson {
+        min: Vec3Json {
+            x: -100.0,
+            y: -100.0,
+            z: -100.0,
+        },
+        max: Vec3Json {
+            x: 100.0,
+            y: 100.0,
+            z: 100.0,
+        },
+    };
+
+    let scaled = scale_bounding_box(&bbox, 0.1);
+    assert_eq!(scaled.min.x, -10.0);
+    assert_eq!(scaled.min.y, -10.0);
+    assert_eq!(scaled.min.z, -10.0);
+    assert_eq!(scaled.max.x, 10.0);
+    assert_eq!(scaled.max.y, 10.0);
+    assert_eq!(scaled.max.z, 10.0);
+}
+
+// ---------------------------------------------------------------------------
+// resolve_mass
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_resolve_mass_with_override() {
+    let result = resolve_mass(1000.0, Some(5000.0));
+    assert_eq!(result, 5000.0, "should use override value");
+}
+
+#[test]
+fn test_resolve_mass_without_override() {
+    let result = resolve_mass(1000.0, None);
+    assert_eq!(result, 1000.0, "should use template mass when no override");
+}
+
+#[test]
+fn test_resolve_mass_zero_override() {
+    // Note: zero override is technically valid (though may be invalid for physics)
+    let result = resolve_mass(1000.0, Some(0.0));
+    assert_eq!(result, 0.0, "should use override value even if zero");
 }

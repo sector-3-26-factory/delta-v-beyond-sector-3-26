@@ -2589,6 +2589,7 @@ dependencies = [
  "bevy_mesh",
  "delta-v-core",
  "delta-v-types",
+ "serde_json",
  "tempfile",
  "tracing",
 ]

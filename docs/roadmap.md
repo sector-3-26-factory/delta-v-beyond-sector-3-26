@@ -90,6 +90,7 @@ Each milestone ends on a runnable, demoable build.
 - Sound effects (code complete, audio output requires PulseAudio socket forwarding in devcontainer), camera shake, basic VFX.
 - i18n for keybindings menu and notifications.
 - UI crate (`delta-v-ui`) for overlay windows and menus.
+- Automatic entity scaling: templates define dimensions in local (mesh) coordinates, world.json specifies scale factor to grow entities proportionally. Collision shapes and bounding boxes scale with the mesh. Mass is NOT scaled but can be overridden in world.json.
 
 ### M7 -- Multiplayer prototype
 - Concrete networking decisions

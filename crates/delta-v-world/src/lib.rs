@@ -60,7 +60,8 @@ pub use world_def::WorldDef;
 
 use bevy::prelude::*;
 use delta_v_assets::template::{
-    load_ai_controlled_ship, load_asteroid, load_player_controlled_ship, load_ship,
+    load_ai_controlled_ship, load_asteroid, load_planet, load_player_controlled_ship, load_ship,
+    load_sun,
 };
 use delta_v_core::{AppState, WorldSpawnSet};
 use spawn::spawn_asteroid;
@@ -168,6 +169,8 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
     // For player_controlled ships: load player_controlled_ship.json and merge with ship.json.
     // For AI-controlled ships: load ai_controlled_ship.json and merge with ship.json.
     // For asteroids: load asteroid.json directly.
+    // For suns: load sun.json directly.
+    // For planets: load planet.json directly.
     // For other ships: load ship.json directly.
     // INVARIANT: template loading must succeed (ADR-0013).
     let (entity_type, template_path, merged_template, mesh_template_path) =
@@ -182,6 +185,12 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
         } else if template_short.starts_with("asteroids/") {
             // INVARIANT: asteroid template is required by schema (ADR-0013)
             load_asteroid(template_short).expect("asteroid template must load successfully")
+        } else if template_short.starts_with("suns/") {
+            // INVARIANT: sun template is required by schema (ADR-0013)
+            load_sun(template_short).expect("sun template must load successfully")
+        } else if template_short.starts_with("planets/") {
+            // INVARIANT: planet template is required by schema (ADR-0013)
+            load_planet(template_short).expect("planet template must load successfully")
         } else {
             // INVARIANT: ship template is required by schema (ADR-0013)
             load_ship(template_short).expect("ship template must load successfully")
@@ -221,6 +230,12 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
             delta_v_types::AiTaskJson::Patrol => "patrol",
         };
         spawn_event = spawn_event.with_ai_task(task_str.to_string());
+    }
+
+    // Pass through the mass override if present.
+    // Mass is NOT scaled - it is used as-is or overridden.
+    if let Some(ref mass) = entity_spawn.mass {
+        spawn_event = spawn_event.with_mass(mass.value);
     }
 
     spawn_event

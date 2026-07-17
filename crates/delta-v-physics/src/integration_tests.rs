@@ -510,6 +510,51 @@ fn test_floating_origin_preserves_rotation_on_recenter() {
     );
 }
 
+#[test]
+fn test_floating_origin_preserves_scale_on_recenter() {
+    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
+
+    let mut app = App::new();
+    app.add_plugins(TimePlugin);
+    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
+    app.insert_resource(FloatingOriginConfig {
+        recenter_threshold_m: 5_000.0,
+    });
+
+    app.add_systems(
+        FixedUpdate,
+        crate::floating_origin_systems::check_and_recenter_origin_system,
+    );
+
+    // Spawn player ship at position above threshold (6km away)
+    let player_id = app
+        .world_mut()
+        .spawn(Transform::from_translation(Vec3::new(6_000.0, 0.0, 0.0)))
+        .id();
+    app.insert_resource(PlayerShipEntity(player_id));
+
+    // Spawn another entity with a non-default scale (e.g., 400.0 for a scaled-down sun)
+    let scale = Vec3::new(400.0, 400.0, 400.0);
+    let other_id = app
+        .world_mut()
+        .spawn(Transform {
+            translation: Vec3::new(7_600.0, 0.0, 0.0),
+            scale,
+            ..default()
+        })
+        .id();
+
+    run_fixed_update(&mut app);
+
+    // Check that the other entity's scale is preserved after recentering
+    let other_transform = app.world().get::<Transform>(other_id).unwrap();
+    assert_eq!(
+        other_transform.scale, scale,
+        "other entity's scale should be preserved after recentering"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // P4: RigidBody panic tests
 // ---------------------------------------------------------------------------
