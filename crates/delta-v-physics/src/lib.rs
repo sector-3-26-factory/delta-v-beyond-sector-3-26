@@ -62,7 +62,9 @@ use systems::{
     sun_rotation_system,
 };
 
-use crate::celestial::{attach_celestial_meshes, resolve_orbital_parents, spawn_planet, spawn_sun};
+use crate::celestial::{
+    attach_celestial_meshes, make_sun_emissive, resolve_orbital_parents, spawn_planet, spawn_sun,
+};
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
 ///
@@ -201,6 +203,16 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             Update,
             attach_celestial_meshes.run_if(in_state(AppState::InGame)),
+        );
+
+        // Make sun meshes emissive after they are loaded.
+        // Per ADR-0053, this is a VFX exemption for realistic sun rendering.
+        // Must run after attach_celestial_meshes so the meshes exist.
+        app.add_systems(
+            Update,
+            make_sun_emissive
+                .run_if(in_state(AppState::InGame))
+                .after(attach_celestial_meshes),
         );
     }
 }

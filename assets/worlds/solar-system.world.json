@@ -13,6 +13,16 @@
             }
         },
         {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "ship 1",
+            "player_controlled": false,
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 6.9599997951e10
+            }
+        },
+        {
             "template": "suns/sol",
             "id": "sun",
             "position": {

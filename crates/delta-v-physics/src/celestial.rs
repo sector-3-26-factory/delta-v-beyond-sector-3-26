@@ -22,9 +22,12 @@
 //! Per ADR-0009, celestial bodies are always gravity sources.
 
 use bevy::gltf::Gltf;
+use bevy::light::{NotShadowCaster, PointLight};
 use bevy::prelude::*;
-use delta_v_core::{DebugAxesEligible, EntityType, SpawnEntity, Targetable, WorldEntityId};
-use delta_v_types::{BoundingBoxJson, CollisionShapeJson, Vec3Json};
+use delta_v_core::{
+    DebugAxesEligible, EntityType, RenderLayer, SpawnEntity, Targetable, WorldEntityId,
+};
+use delta_v_types::{BoundingBoxJson, CollisionShapeJson, LightColorJson, Vec3Json};
 use serde_json::Value;
 
 use crate::{CollisionShape, MassSource, RigidBody};
@@ -220,6 +223,75 @@ fn resolve_mass(template_mass: f32, mass_override: Option<f32>) -> f32 {
     mass_override.unwrap_or(template_mass)
 }
 
+/// Extracts a light intensity value from a validated template JSON value.
+///
+/// # Panics
+///
+/// Panics if `light_intensity` is missing or not a valid number.
+/// This is safe because the schema provides a default and validates the field.
+#[allow(clippy::expect_used, clippy::cast_possible_truncation)]
+#[must_use]
+fn extract_light_intensity(template: &Value) -> f32 {
+    // INVARIANT: light_intensity has a default in schema and is validated by delta-v-json
+    template
+        .get("light_intensity")
+        .and_then(Value::as_f64)
+        .map(|v| v as f32)
+        .expect("light_intensity should be present (default from schema)")
+}
+
+/// Extracts a light color from a validated template JSON value.
+///
+/// # Panics
+///
+/// Panics if `light_color` is missing or missing required fields.
+/// This is safe because the schema provides a default and validates the field.
+#[allow(clippy::expect_used, clippy::cast_possible_truncation)]
+#[must_use]
+fn extract_light_color(template: &Value) -> LightColorJson {
+    // INVARIANT: light_color has a default in schema and is validated by delta-v-json
+    let color = template
+        .get("light_color")
+        .and_then(Value::as_object)
+        .expect("light_color should be present (default from schema)");
+    LightColorJson {
+        r: color
+            .get("r")
+            .and_then(Value::as_f64)
+            .map(|v| v as f32)
+            .expect("light_color.r should be present (default from schema)"),
+        g: color
+            .get("g")
+            .and_then(Value::as_f64)
+            .map(|v| v as f32)
+            .expect("light_color.g should be present (default from schema)"),
+        b: color
+            .get("b")
+            .and_then(Value::as_f64)
+            .map(|v| v as f32)
+            .expect("light_color.b should be present (default from schema)"),
+    }
+}
+
+/// Extracts a light range value from a validated template JSON value.
+///
+/// # Panics
+///
+/// Panics if `light_range` is missing or missing the value field.
+/// This is safe because the schema provides a default and validates the field.
+#[allow(clippy::expect_used, clippy::cast_possible_truncation)]
+#[must_use]
+fn extract_light_range(template: &Value) -> f32 {
+    // INVARIANT: light_range has a default in schema and is validated by delta-v-json
+    template
+        .get("light_range")
+        .and_then(Value::as_object)
+        .and_then(|r| r.get("value"))
+        .and_then(Value::as_f64)
+        .map(|v| v as f32)
+        .expect("light_range should be present (default from schema)")
+}
+
 // ---------------------------------------------------------------------------
 // Spawn systems
 // ---------------------------------------------------------------------------
@@ -269,34 +341,63 @@ pub fn spawn_sun(
             .and_then(Value::as_f64)
             .map(|v| v as f32);
 
+        // Extract light properties (all optional, with defaults)
+        let light_intensity = extract_light_intensity(template);
+        let light_color = extract_light_color(template);
+        let light_range = extract_light_range(template);
+
         let entity_id = spawn.id.clone();
 
         // Queue glTF mesh load
         let gltf_handle = asset_server.load::<Gltf>(&spawn.mesh_template_path);
 
-        let mut entity_commands = commands.spawn((
-            Name::new(format!("Sun: {entity_id}")),
-            Transform::from_translation(spawn.position)
-                .with_rotation(spawn.rotation)
-                .with_scale(spawn.scale),
-            RigidBody::new(mass, 1.0),
-            MassSource,
-            Sun { rotation_period },
-            Navigable,
-            Targetable,
-            EntityType("sun".to_string()),
-            WorldEntityId(entity_id.clone()),
-            PendingCelestialMesh { gltf_handle },
-            DebugAxesEligible::new(entity_id.clone(), axis_length),
-        ));
+        // Spawn the sun entity
+        // Per ADR-0053, NotShadowCaster is a VFX exemption - prevents the sun mesh
+        // from blocking its own light.
+        let sun_entity = commands
+            .spawn((
+                Name::new(format!("Sun: {entity_id}")),
+                Transform::from_translation(spawn.position)
+                    .with_rotation(spawn.rotation)
+                    .with_scale(spawn.scale),
+                RigidBody::new(mass, 1.0),
+                MassSource,
+                Sun { rotation_period },
+                Navigable,
+                Targetable,
+                EntityType("sun".to_string()),
+                WorldEntityId(entity_id.clone()),
+                PendingCelestialMesh { gltf_handle },
+                DebugAxesEligible::new(entity_id.clone(), axis_length),
+                NotShadowCaster,
+            ))
+            .id();
 
         // Add collision shape with scaling
         if let Some(radius) = collision_shape.radius {
             let scaled_radius = radius.value * scale_factor;
-            entity_commands.insert(CollisionShape::sphere(scaled_radius, Vec3::ZERO));
+            commands
+                .entity(sun_entity)
+                .insert(CollisionShape::sphere(scaled_radius, Vec3::ZERO));
         }
 
-        tracing::info!("spawned sun: {entity_id} (mass={mass:.3e} kg)");
+        // Spawn a child entity with PointLight
+        // The light follows the sun's transform automatically via ChildOf
+        commands.spawn((
+            Name::new(format!("Sun Light: {entity_id}")),
+            PointLight {
+                color: Color::srgb(light_color.r, light_color.g, light_color.b),
+                intensity: light_intensity,
+                range: light_range,
+                ..default()
+            },
+            RenderLayer::Gameplay.render_layers(),
+            ChildOf(sun_entity),
+        ));
+
+        tracing::info!(
+            "spawned sun: {entity_id} (mass={mass:.3e} kg, light={light_intensity} lux, range={light_range:.3e} m)"
+        );
     }
 }
 
@@ -472,6 +573,48 @@ pub fn attach_celestial_meshes(
                 commands.entity(entity).add_child(child);
             }
             commands.entity(entity).remove::<PendingCelestialMesh>();
+        }
+    }
+}
+
+/// Makes sun meshes emissive after they are loaded.
+///
+/// Per ADR-0053, this is a VFX exemption - the sun's mesh should glow
+/// to appear as a light source. This system runs after `attach_celestial_meshes`
+/// to modify the material of the sun's mesh to be emissive.
+///
+/// The glTF scene structure is: Sun -> SceneRoot -> Mesh (with material).
+/// We need to recursively check all descendants to find meshes with materials.
+#[allow(clippy::needless_pass_by_value)]
+pub fn make_sun_emissive(
+    suns: Query<'_, '_, (Entity, &Children, &Sun)>,
+    mut materials: ResMut<'_, Assets<StandardMaterial>>,
+    mesh_query: Query<'_, '_, &MeshMaterial3d<StandardMaterial>>,
+    children_query: Query<'_, '_, &Children>,
+) {
+    for (sun_entity, children, _sun) in &suns {
+        // Recursively check all descendants for meshes with materials
+        let mut stack: Vec<Entity> = Vec::new();
+        for child in children.iter() {
+            stack.push(child);
+        }
+        while let Some(entity) = stack.pop() {
+            if let Ok(mat_handle) = mesh_query.get(entity) {
+                if let Some(material) = materials.get_mut(&mat_handle.0) {
+                    // Make the material emissive with a bright yellow-white color
+                    // matching the light color (warm white: 1.0, 0.95, 0.8)
+                    material.emissive = LinearRgba::new(1.0, 0.95, 0.8, 1.0);
+                    tracing::debug!(
+                        "Made sun descendant {entity:?} emissive (sun: {sun_entity:?})"
+                    );
+                }
+            }
+            // Add children to stack for depth-first traversal
+            if let Ok(entity_children) = children_query.get(entity) {
+                for child in entity_children.iter() {
+                    stack.push(child);
+                }
+            }
         }
     }
 }

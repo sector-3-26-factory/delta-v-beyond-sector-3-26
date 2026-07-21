@@ -77,14 +77,6 @@ use systems::{
     propulsion_selection_system, thrust_system, torque_system,
 };
 
-/// Wrapper system that calls `delta_v_spawn::lighting::setup_scene_lighting`.
-///
-/// This is a thin adapter because `setup_scene_lighting` takes `&mut Commands`
-/// which is not a valid Bevy system signature on its own.
-fn setup_scene_lighting(mut commands: Commands<'_, '_>) {
-    delta_v_spawn::lighting::setup_scene_lighting(&mut commands);
-}
-
 /// Ships plugin for managing player and NPC vessels.
 ///
 /// Listens for [`delta_v_core::SpawnEntity`] events during
@@ -92,7 +84,7 @@ fn setup_scene_lighting(mut commands: Commands<'_, '_>) {
 /// their `entity_type` field.
 ///
 /// The plugin also sets up the input → forces pipeline in `FixedUpdate`
-/// during `InGame`, and sets up scene lighting on world load.
+/// during `InGame`.
 pub struct ShipsPlugin;
 
 impl Plugin for ShipsPlugin {
@@ -122,7 +114,6 @@ impl Plugin for ShipsPlugin {
                 .chain()
                 .run_if(in_state(AppState::SpawningEntities)),
         )
-        .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting)
         .add_systems(
             Update,
             spawn_ship

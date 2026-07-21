@@ -27,5 +27,15 @@
     "rotation_period": {
         "value": 600.0,
         "unit": "h"
+    },
+    "light_intensity": 3.5e28,
+    "light_color": {
+        "r": 1.0,
+        "g": 0.95,
+        "b": 0.8
+    },
+    "light_range": {
+        "value": 6e12,
+        "unit": "m"
     }
 }

@@ -81,6 +81,9 @@ impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<SpawnEntity>()
             .add_systems(OnEnter(AppState::LoadingWorld), load_world_system)
+            // Setup scene lighting as fallback for worlds without suns.
+            // Runs after world is loaded but before entities are spawned.
+            .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting)
             // Asteroid spawning runs in Update during SpawningEntities
             .add_systems(
                 Update,
@@ -95,6 +98,30 @@ impl Plugin for WorldPlugin {
                 delta_v_spawn::mesh_attachment::attach_meshes::<spawn::PendingAsteroidMesh>
                     .run_if(in_state(AppState::InGame)),
             );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Systems
+// ---------------------------------------------------------------------------
+
+/// Sets up scene lighting as a fallback for worlds without suns.
+///
+/// Per ADR-0007, this runs in `Update` during `AppState::SpawningEntities`.
+/// If the world has at least one sun entity, no fallback lighting is added
+/// since the sun will provide its own `PointLight`.
+#[allow(clippy::needless_pass_by_value)]
+fn setup_scene_lighting(
+    mut commands: Commands<'_, '_>,
+    world_def: Option<Res<'_, WorldDefResource>>,
+) {
+    // Check if the world has any suns - if so, skip fallback lighting
+    let has_sun = world_def
+        .as_ref()
+        .is_some_and(|w| w.0.entities.iter().any(|e| e.template.starts_with("suns/")));
+
+    if !has_sun {
+        delta_v_spawn::lighting::setup_scene_lighting(&mut commands);
     }
 }
 

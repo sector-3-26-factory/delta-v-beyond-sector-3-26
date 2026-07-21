@@ -77,6 +77,54 @@
         "rotation_period": {
             "description": "Rotation period in hours. The sun rotates slowly (approx. 600 hours at equator).",
             "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+        },
+        "light_intensity": {
+            "description": "Light intensity in lux. Default: 10000.0 (typical solar illuminance at 1 AU).",
+            "type": "number",
+            "default": 10000.0
+        },
+        "light_color": {
+            "description": "Light color as RGB values (0.0-1.0). Default: {r: 1.0, g: 0.95, b: 0.8} (slightly warm white).",
+            "type": "object",
+            "additionalProperties": false,
+            "default": {
+                "r": 1.0,
+                "g": 0.95,
+                "b": 0.8
+            },
+            "required": [
+                "r",
+                "g",
+                "b"
+            ],
+            "properties": {
+                "r": {
+                    "description": "Red component (0.0-1.0).",
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                },
+                "g": {
+                    "description": "Green component (0.0-1.0).",
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                },
+                "b": {
+                    "description": "Blue component (0.0-1.0).",
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                }
+            }
+        },
+        "light_range": {
+            "description": "Light range in metres. Default: 6e12 (reaches Pluto's aphelion at ~5.9e12 m).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length",
+            "default": {
+                "value": 6e12,
+                "unit": "m"
+            }
         }
     },
     "$defs": {

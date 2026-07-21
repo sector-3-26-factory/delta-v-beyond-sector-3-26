@@ -53,7 +53,7 @@ pub mod weapons;
 
 // Re-exports for convenience
 pub use ai::{AiConfigJson, AiTaskJson};
-pub use celestial::{PlanetTemplateJson, SunTemplateJson};
+pub use celestial::{LightColorJson, PlanetTemplateJson, SunTemplateJson};
 pub use collision::layers::PROJECTILE;
 pub use collision::{CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};

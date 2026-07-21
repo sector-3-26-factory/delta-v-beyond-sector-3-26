@@ -26,6 +26,20 @@ use serde::Deserialize;
 
 use crate::physics::PhysicalQuantityJson;
 
+/// RGB color for light sources.
+///
+/// Each component is in the range 0.0-1.0.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct LightColorJson {
+    /// Red component (0.0-1.0).
+    pub r: f32,
+    /// Green component (0.0-1.0).
+    pub g: f32,
+    /// Blue component (0.0-1.0).
+    pub b: f32,
+}
+
 /// JSON schema type for sun templates.
 ///
 /// Deserialized from `assets/templates/suns/*/sun.json`.
@@ -47,6 +61,15 @@ pub struct SunTemplateJson {
     pub is_gravity_source: bool,
     /// Rotation period in hours.
     pub rotation_period: Option<PhysicalQuantityJson>,
+    /// Light intensity in lux.
+    /// Default: 10000.0 (from schema).
+    pub light_intensity: f32,
+    /// Light color as RGB values.
+    /// Default: {r: 1.0, g: 0.95, b: 0.8} (from schema).
+    pub light_color: LightColorJson,
+    /// Light range in metres.
+    /// Default: 6e12 (from schema).
+    pub light_range: PhysicalQuantityJson,
 }
 
 /// JSON schema type for planet templates.
