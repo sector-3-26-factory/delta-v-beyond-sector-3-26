@@ -636,7 +636,7 @@ pub fn status_gauge_system(
         entity: Entity,
         station_id: String,
         slot_id: String,
-        shape: crate::ship_templates::GaugeShape,
+        shape: crate::GaugeShape,
         gauge_type: String,
         children: Vec<Entity>,
         node: Node,
@@ -664,7 +664,7 @@ pub fn status_gauge_system(
     // Process each gauge
     for update in &gauge_updates {
         // Handle circular gauges - update the needle rotation and position.
-        if let crate::ship_templates::GaugeShape::Circle { .. } = update.shape {
+        if let crate::GaugeShape::Circle { .. } = update.shape {
             // For circular gauges, update the needle rotation based on health.
             // The scale arc is 240° (from 240° to 120°, wrapping).
             // Counter-clockwise movement:

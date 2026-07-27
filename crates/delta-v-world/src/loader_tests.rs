@@ -53,9 +53,10 @@ mod tests {
             "world must have at least one entity"
         );
         // The first entity should reference a valid ship template.
+        // Check template_short since template is loaded later by build_spawn_event.
         let player_entity = &world.entities[0];
         assert!(
-            player_entity.template.starts_with("ships/"),
+            player_entity.template_short.starts_with("ships/"),
             "entity template should reference a ship"
         );
     }
@@ -105,7 +106,8 @@ mod tests {
         assert_eq!(world.format_version, 1);
         assert_eq!(world.name, "Test World");
         assert_eq!(world.entities.len(), 1);
-        assert_eq!(world.entities[0].template, "ships/test-ship");
+        // The template field is loaded later by build_spawn_event, so check template_short
+        assert_eq!(world.entities[0].template_short, "ships/debug-ship-cube");
         assert!(world.entities[0].player_controlled);
     }
 }

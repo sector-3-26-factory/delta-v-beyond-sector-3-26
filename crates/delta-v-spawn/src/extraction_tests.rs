@@ -4,13 +4,11 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]
 
-use serde_json::Value;
-
-use delta_v_types::{BoundingBoxJson, Vec3Json};
-
 use crate::template_extraction::{
-    compute_debug_axis_length, extract_bounding_box, extract_mass, extract_vec3, resolve_mass,
-    scale_bounding_box,
+    compute_debug_axis_length, extract_bounding_box, extract_mass, resolve_mass, scale_bounding_box,
+};
+use delta_v_types::{
+    AsteroidTemplate, BoundingBox, CollisionShapeData, CollisionShapeType, EntityTemplate,
 };
 
 // ---------------------------------------------------------------------------
@@ -19,8 +17,18 @@ use crate::template_extraction::{
 
 #[test]
 fn test_extract_mass_basic() {
-    let template = serde_json::json!({
-        "mass": { "value": 10_000.0, "unit": "kg" }
+    let template = EntityTemplate::Asteroid(AsteroidTemplate {
+        entity_type: "asteroid".to_string(),
+        mass: 10_000.0,
+        bounding_box: BoundingBox {
+            min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
+            max: bevy::prelude::Vec3::new(1.0, 1.0, 1.0),
+        },
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+            offset: bevy::prelude::Vec3::ZERO,
+        },
+        is_gravity_source: false,
     });
     let mass = extract_mass(&template);
     assert!(
@@ -31,64 +39,21 @@ fn test_extract_mass_basic() {
 
 #[test]
 fn test_extract_mass_small_value() {
-    let template = serde_json::json!({
-        "mass": { "value": 0.5, "unit": "kg" }
+    let template = EntityTemplate::Asteroid(AsteroidTemplate {
+        entity_type: "asteroid".to_string(),
+        mass: 0.5,
+        bounding_box: BoundingBox {
+            min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
+            max: bevy::prelude::Vec3::new(1.0, 1.0, 1.0),
+        },
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+            offset: bevy::prelude::Vec3::ZERO,
+        },
+        is_gravity_source: false,
     });
     let mass = extract_mass(&template);
     assert!((mass - 0.5).abs() < 0.01, "mass should be 0.5, got {mass}");
-}
-
-#[test]
-#[should_panic(expected = "mass.value should be present and valid per schema")]
-fn test_extract_mass_missing_field() {
-    let template = serde_json::json!({ "name": "test" });
-    let _ = extract_mass(&template);
-}
-
-#[test]
-#[should_panic(expected = "mass.value should be present and valid per schema")]
-fn test_extract_mass_missing_value() {
-    let template = serde_json::json!({ "mass": { "unit": "kg" } });
-    let _ = extract_mass(&template);
-}
-
-// ---------------------------------------------------------------------------
-// extract_vec3
-// ---------------------------------------------------------------------------
-
-#[test]
-fn test_extract_vec3_basic() {
-    let mut json = serde_json::Map::new();
-    json.insert("x".to_string(), Value::from(1.0));
-    json.insert("y".to_string(), Value::from(2.0));
-    json.insert("z".to_string(), Value::from(3.0));
-
-    let v = extract_vec3(&json);
-    assert_eq!(v.x, 1.0);
-    assert_eq!(v.y, 2.0);
-    assert_eq!(v.z, 3.0);
-}
-
-#[test]
-fn test_extract_vec3_negative() {
-    let mut json = serde_json::Map::new();
-    json.insert("x".to_string(), Value::from(-1.5));
-    json.insert("y".to_string(), Value::from(0.0));
-    json.insert("z".to_string(), Value::from(4.2));
-
-    let v = extract_vec3(&json);
-    assert_eq!(v.x, -1.5);
-    assert_eq!(v.y, 0.0);
-    assert_eq!(v.z, 4.2);
-}
-
-#[test]
-#[should_panic(expected = "x should be present and valid")]
-fn test_extract_vec3_missing_x() {
-    let mut json = serde_json::Map::new();
-    json.insert("y".to_string(), Value::from(2.0));
-    json.insert("z".to_string(), Value::from(3.0));
-    let _ = extract_vec3(&json);
 }
 
 // ---------------------------------------------------------------------------
@@ -97,11 +62,18 @@ fn test_extract_vec3_missing_x() {
 
 #[test]
 fn test_extract_bounding_box_basic() {
-    let template = serde_json::json!({
-        "bounding_box": {
-            "min": { "x": -1.0, "y": -2.0, "z": -3.0 },
-            "max": { "x": 1.0, "y": 2.0, "z": 3.0 }
-        }
+    let template = EntityTemplate::Asteroid(AsteroidTemplate {
+        entity_type: "asteroid".to_string(),
+        mass: 1000.0,
+        bounding_box: BoundingBox {
+            min: bevy::prelude::Vec3::new(-1.0, -2.0, -3.0),
+            max: bevy::prelude::Vec3::new(1.0, 2.0, 3.0),
+        },
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+            offset: bevy::prelude::Vec3::ZERO,
+        },
+        is_gravity_source: false,
     });
 
     let bbox = extract_bounding_box(&template);
@@ -115,11 +87,18 @@ fn test_extract_bounding_box_basic() {
 
 #[test]
 fn test_extract_bounding_box_asymmetric() {
-    let template = serde_json::json!({
-        "bounding_box": {
-            "min": { "x": 0.0, "y": 0.0, "z": 0.0 },
-            "max": { "x": 10.0, "y": 5.0, "z": 2.0 }
-        }
+    let template = EntityTemplate::Asteroid(AsteroidTemplate {
+        entity_type: "asteroid".to_string(),
+        mass: 1000.0,
+        bounding_box: BoundingBox {
+            min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
+            max: bevy::prelude::Vec3::new(10.0, 5.0, 2.0),
+        },
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+            offset: bevy::prelude::Vec3::ZERO,
+        },
+        is_gravity_source: false,
     });
 
     let bbox = extract_bounding_box(&template);
@@ -131,30 +110,15 @@ fn test_extract_bounding_box_asymmetric() {
     assert!((bbox.max.z - 2.0).abs() < 0.01);
 }
 
-#[test]
-#[should_panic(expected = "bounding_box should be present per schema")]
-fn test_extract_bounding_box_missing() {
-    let template = serde_json::json!({ "name": "test" });
-    let _ = extract_bounding_box(&template);
-}
-
 // ---------------------------------------------------------------------------
 // compute_debug_axis_length
 // ---------------------------------------------------------------------------
 
 #[test]
 fn test_compute_debug_axis_length_cube() {
-    let bbox = BoundingBoxJson {
-        min: Vec3Json {
-            x: -1.0,
-            y: -1.0,
-            z: -1.0,
-        },
-        max: Vec3Json {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-        },
+    let bbox = BoundingBox {
+        min: bevy::prelude::Vec3::new(-1.0, -1.0, -1.0),
+        max: bevy::prelude::Vec3::new(1.0, 1.0, 1.0),
     };
     // Size = (2, 2, 2), max_dim = 2, axis_length = 2 * 1.2 = 2.4
     let length = compute_debug_axis_length(&bbox);
@@ -166,17 +130,9 @@ fn test_compute_debug_axis_length_cube() {
 
 #[test]
 fn test_compute_debug_axis_length_rectangular() {
-    let bbox = BoundingBoxJson {
-        min: Vec3Json {
-            x: -5.0,
-            y: -1.0,
-            z: -2.0,
-        },
-        max: Vec3Json {
-            x: 5.0,
-            y: 1.0,
-            z: 2.0,
-        },
+    let bbox = BoundingBox {
+        min: bevy::prelude::Vec3::new(-5.0, -1.0, -2.0),
+        max: bevy::prelude::Vec3::new(5.0, 1.0, 2.0),
     };
     // Size = (10, 2, 4), max_dim = 10, axis_length = 10 * 1.2 = 12
     let length = compute_debug_axis_length(&bbox);
@@ -188,17 +144,9 @@ fn test_compute_debug_axis_length_rectangular() {
 
 #[test]
 fn test_compute_debug_axis_length_unit() {
-    let bbox = BoundingBoxJson {
-        min: Vec3Json {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-        max: Vec3Json {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-        },
+    let bbox = BoundingBox {
+        min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
+        max: bevy::prelude::Vec3::new(1.0, 1.0, 1.0),
     };
     // Size = (1, 1, 1), max_dim = 1, axis_length = 1.2
     let length = compute_debug_axis_length(&bbox);
@@ -214,17 +162,9 @@ fn test_compute_debug_axis_length_unit() {
 
 #[test]
 fn test_scale_bounding_box() {
-    let bbox = BoundingBoxJson {
-        min: Vec3Json {
-            x: -10.0,
-            y: -10.0,
-            z: -10.0,
-        },
-        max: Vec3Json {
-            x: 10.0,
-            y: 10.0,
-            z: 10.0,
-        },
+    let bbox = BoundingBox {
+        min: bevy::prelude::Vec3::new(-10.0, -10.0, -10.0),
+        max: bevy::prelude::Vec3::new(10.0, 10.0, 10.0),
     };
 
     let scaled = scale_bounding_box(&bbox, 100.0);
@@ -238,17 +178,9 @@ fn test_scale_bounding_box() {
 
 #[test]
 fn test_scale_bounding_box_fractional() {
-    let bbox = BoundingBoxJson {
-        min: Vec3Json {
-            x: -100.0,
-            y: -100.0,
-            z: -100.0,
-        },
-        max: Vec3Json {
-            x: 100.0,
-            y: 100.0,
-            z: 100.0,
-        },
+    let bbox = BoundingBox {
+        min: bevy::prelude::Vec3::new(-100.0, -100.0, -100.0),
+        max: bevy::prelude::Vec3::new(100.0, 100.0, 100.0),
     };
 
     let scaled = scale_bounding_box(&bbox, 0.1);

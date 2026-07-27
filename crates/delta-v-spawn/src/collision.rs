@@ -1,54 +1,39 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Collision shape conversion from JSON to physics components.
+//! Collision shape conversion from runtime types to physics components.
 
 use bevy::prelude::Vec3;
-use delta_v_types::{CollisionShapeData, CollisionShapeJson};
+use delta_v_types::CollisionShapeData;
 
-/// Converts a `CollisionShapeJson` into a `CollisionShapeData`, applying scale.
+/// Applies scale to a `CollisionShapeData`.
 ///
-/// This is the SINGLE function that handles sphere/box conversion for ALL entity types.
-/// See ADR-0046 for the `Json` suffix naming convention.
+/// This is the SINGLE function that handles sphere/box scaling for ALL entity types.
 ///
 /// # Arguments
 ///
-/// * `json` - The collision shape JSON from the template.
+/// * `shape` - The collision shape data from the template.
 /// * `scale` - The scale factor to apply to the shape dimensions.
 ///
-/// # Errors
+/// # Panics
 ///
-/// Returns an error string if the shape type is unknown or required fields are missing.
-pub fn shape_from_json(
-    json: &CollisionShapeJson,
-    scale: f32,
-) -> Result<CollisionShapeData, String> {
-    match json.shape_type.as_str() {
-        "sphere" => {
-            // INVARIANT: radius is required for sphere shapes (ADR-0013 - no silent fallbacks)
-            let radius = json
-                .radius
-                .as_ref()
-                .map(|r| r.value * scale)
-                .ok_or_else(|| {
-                    "collision_shape.radius is required for sphere shapes".to_string()
-                })?;
-            // offset has a schema default, so it's safe to use unwrap_or
-            let offset = json.offset.map_or(Vec3::ZERO, |o| Vec3::from(o) * scale);
-            Ok(CollisionShapeData::sphere(radius, offset))
+/// Panics if the shape type is unknown (should never happen with valid templates).
+#[must_use]
+pub fn scale_collision_shape(shape: &CollisionShapeData, scale: f32) -> CollisionShapeData {
+    match shape.shape_type {
+        delta_v_types::CollisionShapeType::Sphere { radius } => {
+            let scaled_radius = radius * scale;
+            let offset = shape.offset * scale;
+            CollisionShapeData::sphere(scaled_radius, offset)
         }
-        "box" => {
-            // INVARIANT: half_extents is required for box shapes (ADR-0013 - no silent fallbacks)
-            let half_extents = json
-                .half_extents
-                .as_ref()
-                .map(|h| Vec3::from(*h) * scale)
-                .ok_or_else(|| {
-                    "collision_shape.half_extents is required for box shapes".to_string()
-                })?;
-            // offset has a schema default, so it's safe to use unwrap_or
-            let offset = json.offset.map_or(Vec3::ZERO, |o| Vec3::from(o) * scale);
-            Ok(CollisionShapeData::box_shape(half_extents, offset))
+        delta_v_types::CollisionShapeType::Box { half_extents } => {
+            let scaled_half_extents = half_extents * scale;
+            let offset = shape.offset * scale;
+            CollisionShapeData::box_shape(scaled_half_extents, offset)
         }
-        _ => Err(format!("Unknown collision shape type: {}", json.shape_type)),
+        delta_v_types::CollisionShapeType::ConvexHull => {
+            // ConvexHull not yet implemented - return a default sphere shape
+            // This should be replaced with proper ConvexHull support when implemented
+            CollisionShapeData::sphere(0.0, Vec3::ZERO)
+        }
     }
 }

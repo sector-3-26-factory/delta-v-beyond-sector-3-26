@@ -35,6 +35,20 @@
                 "y": 6.96e8,
                 "z": 6.96e8
             }
+        },
+        {
+            "template": "planets/mercury",
+            "id": "mercury",
+            "position": {
+                "x": 5.79e10,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 4.8794e5,
+                "y": 4.8794e5,
+                "z": 4.8794e5
+            }
         }
     ]
 }

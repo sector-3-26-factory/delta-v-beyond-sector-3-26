@@ -28,7 +28,7 @@ use delta_v_core::{
     PropulsionSelected,
 };
 use delta_v_physics::RigidBody;
-use delta_v_types::{LogicalAction, MainThrusterDefinitionJson};
+use delta_v_types::LogicalAction;
 
 use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 
@@ -277,14 +277,10 @@ pub fn propulsion_selection_system(
     let Ok(thruster_def) = load_main_thruster_definition(&thruster_name) else {
         return;
     };
-    let Ok(thruster_def) = serde_json::from_value::<MainThrusterDefinitionJson>(thruster_def)
-    else {
-        return;
-    };
 
     propulsion.active_main_thruster_index = new_index;
-    config.max_forward_thrust = thruster_def.max_forward_thrust.value;
-    config.max_backward_thrust = thruster_def.max_backward_thrust.value;
+    config.max_forward_thrust = thruster_def.max_forward_thrust;
+    config.max_backward_thrust = thruster_def.max_backward_thrust;
     config.active_main_thruster_index = new_index;
     tracing::info!(
         "Propulsion selected: thruster '{}' (index {})",

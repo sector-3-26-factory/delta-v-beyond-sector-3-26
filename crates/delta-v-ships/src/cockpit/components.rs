@@ -144,8 +144,8 @@ impl CameraShake {
     }
 }
 
-// Re-export types from ship_templates for convenience
-pub use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};
+// Re-export types from delta_v_types for cockpit overlay
+pub use delta_v_types::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};
 
 /// Component for muzzle flash VFX.
 ///

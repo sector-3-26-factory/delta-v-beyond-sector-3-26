@@ -9,9 +9,8 @@
 //! See ADR-0019 (Asset pipeline) and ADR-0020 (Save and load format).
 
 use serde::Deserialize;
-use serde_json::Value;
 
-use delta_v_types::{AiTaskJson, PhysicalQuantityJson, QuatJson, Vec3Json};
+use delta_v_types::{AiTaskJson, EntityTemplate, PhysicalQuantityJson, QuatJson, Vec3Json};
 
 /// Top-level world definition loaded from `*.world.json`.
 ///
@@ -42,7 +41,8 @@ pub struct WorldDef {
 #[derive(Debug, Deserialize)]
 pub struct EntitySpawn {
     /// Short path to the template (e.g., `ships/debug-ship-cube`). Resolved internally to `templates/<path>/<entity_type>.json`.
-    pub template: String,
+    #[serde(alias = "template")]
+    pub template_short: String,
     /// Unique identifier for this entity instance.
     /// Used to reference the entity throughout the game (UI panels, save/load, networking, etc.).
     /// Required; missing `id` is a hard error (ADR-0013).
@@ -70,8 +70,8 @@ pub struct EntitySpawn {
     /// Per ADR-0008, uses value+unit format. Units: kg, t, `M_earth`, `M_sun`.
     /// Converted to kilograms at load time.
     pub mass: Option<PhysicalQuantityJson>,
-    /// The loaded template JSON (populated by loader).
+    /// The loaded template (populated by loader).
     /// Not present in JSON; filled by `delta-v-world` loader.
     #[serde(skip)]
-    pub template_data: Option<Value>,
+    pub template: Option<EntityTemplate>,
 }

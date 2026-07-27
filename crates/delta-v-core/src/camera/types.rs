@@ -5,7 +5,7 @@ use serde::Deserialize;
 use delta_v_types::Vec3Json;
 
 /// A single camera definition with position, target (look-at point), and availability.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CameraDefinition {
     /// Camera position relative to ship center (metres).
     pub position: Vec3Json,
@@ -20,7 +20,7 @@ pub struct CameraDefinition {
 /// Camera definitions from the ship template.
 ///
 /// All 8 cameras are required in the schema. Each has a position, target, and availability flag.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ShipCamerasTemplate {
     /// Cockpit camera (inside the cockpit, typically front-upper-center).
     pub cockpit: CameraDefinition,

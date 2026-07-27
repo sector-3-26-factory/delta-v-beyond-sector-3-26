@@ -19,69 +19,23 @@
 //! Ship entity spawning from templates.
 //!
 //! Per ADR-0038 (entity template system), ships are spawned from templates
-//! loaded and validated by delta-v-json. Templates define
-//! cameras, physical properties (mass, inertia), and propulsion configuration.
-//! All meshes come from glTF files (ADR-0019).
+//! loaded and validated by delta-v-assets. Templates are now [`EntityTemplate`]
+//! enum variants with runtime types.
 //!
 //! Per ADR-0014, all gameplay values (mass, thrust, torque) come from JSON
-//! — never from Rust constants. The template `Value` is deserialized into
-//! [`PlayerShipTemplate`] via `serde_json::from_value` (a one-liner per ADR-0040).
+//! — never from Rust constants.
 //!
 //! See also ADR-0005 (plugin architecture) and ADR-0006 (coordinate system).
 
 use std::path::Path;
 
 use crate::cockpit::CockpitOverlayResource;
-use crate::ship_templates::{
-    PlayerShipTemplate, ShipPropulsionConfig, ShipTemplate, StaticShipTemplate,
-};
+use crate::ship_templates::ShipPropulsionConfig;
 use bevy::prelude::*;
 use delta_v_core::{ActiveCameraName, CameraName, PlayerShipEntity, RenderLayer, SpawnEntity};
+use delta_v_spawn::build_physical_ship;
 use delta_v_spawn::template_extraction::png_dimensions;
-use delta_v_spawn::{ShipTemplateBase, build_physical_ship};
-use delta_v_types::{BoundingBoxJson, CollisionShapeJson, PhysicalQuantityJson};
-
-/// Spawns ship entities in response to `SpawnEntity` events.
-///
-/// Listens for events with `entity_type` matching known ship types:
-/// - `"player_controlled_ship"`: Player-controlled ship
-/// - `"ship"`: Non-player ship (static/NPC)
-/// - `"npc_ship"`: NPC-controlled ship (future)
-///
-/// The event's `template` field contains validated template JSON from delta-v-json.
-// INVARIANT: MessageReader::read returns events by value; pass by value is idiomatic.
-#[allow(clippy::needless_pass_by_value)]
-pub fn spawn_ship(
-    mut commands: Commands<'_, '_>,
-    asset_server: Res<'_, AssetServer>,
-    mut events: MessageReader<'_, '_, SpawnEntity>,
-) {
-    for event in events.read() {
-        match event.entity_type.as_str() {
-            "player_controlled_ship" => spawn_player_ship(&mut commands, &asset_server, event),
-            "ship" => spawn_static_ship(&mut commands, &asset_server, event),
-            "npc_ship" => {
-                // NPC ships: future implementation
-                tracing::warn!("NPC ship spawning not yet implemented");
-            }
-            // Other entity types (e.g. "asteroid") are handled by other plugins.
-            // Silently skip — a single plugin cannot know whether another plugin
-            // will handle the event.
-            _ => {}
-        }
-    }
-}
-
-/// Deserializes the template JSON into a [`PlayerShipTemplate`] struct.
-///
-/// Per ADR-0040, the template `Value` has already been validated and
-/// filled with schema defaults by `delta-v-json`, so deserialization
-/// into the struct is a one-liner.
-#[allow(clippy::expect_used)] // INVARIANT: template validated by delta-v-json; cannot fail
-fn deserialize_template(event: &SpawnEntity) -> PlayerShipTemplate {
-    serde_json::from_value(event.template.clone())
-        .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)")
-}
+use delta_v_types::{EntityTemplate, PlayerShipTemplate};
 
 /// Spawns camera entities for each available camera definition.
 ///
@@ -195,8 +149,13 @@ fn spawn_player_ship(
     asset_server: &Res<'_, AssetServer>,
     event: &SpawnEntity,
 ) {
-    // Deserialize template JSON into typed struct (ADR-0040 one-liner).
-    let template = deserialize_template(event);
+    // Extract player ship template from EntityTemplate enum.
+    // The template was already loaded and converted by delta-v-assets (ADR-0040).
+    // INVARIANT: This function is only called when event.template is EntityTemplate::PlayerShip.
+    let EntityTemplate::PlayerShip(template) = &event.template else {
+        unreachable!("spawn_player_ship only called for PlayerShip template");
+    };
+    let template = template.clone();
 
     // Build the physical ship (common components: physics, collision, health, weapons).
     let (ship_entity, propulsion_config) =
@@ -231,8 +190,8 @@ fn spawn_player_ship(
         event.position.x,
         event.position.y,
         event.position.z,
-        event.mesh_template_path,
-        template.mass.value,
+        event.template_path,
+        template.mass,
     );
 }
 
@@ -254,9 +213,13 @@ fn spawn_static_ship(
     asset_server: &Res<'_, AssetServer>,
     event: &SpawnEntity,
 ) {
-    // Deserialize template JSON into typed struct (ADR-0040 one-liner).
-    let template: StaticShipTemplate = serde_json::from_value(event.template.clone())
-        .expect("template deserialization must succeed (validated by delta-v-json, ADR-0040)");
+    // Extract static ship template from EntityTemplate enum.
+    // The template was already loaded and converted by delta-v-assets (ADR-0040).
+    // INVARIANT: This function is only called when event.template is EntityTemplate::StaticShip.
+    let template = match &event.template {
+        EntityTemplate::StaticShip(t) => t.clone(),
+        _ => unreachable!("spawn_static_ship only called for StaticShip template"),
+    };
 
     // Build the physical ship (common components: physics, collision, health, weapons).
     let (_ship_entity, _propulsion_config) =
@@ -267,118 +230,34 @@ fn spawn_static_ship(
         event.position.x,
         event.position.y,
         event.position.z,
-        event.mesh_template_path,
-        template.mass.value,
+        event.template_path,
+        template.mass,
     );
 }
 
-/// Implement `ShipTemplateBase` for `ShipTemplate`
-impl ShipTemplateBase for ShipTemplate {
-    fn mass(&self) -> &PhysicalQuantityJson {
-        &self.mass
-    }
-    fn inertia_scale(&self) -> f32 {
-        self.inertia_scale
-    }
-    fn bounding_box(&self) -> &BoundingBoxJson {
-        &self.bounding_box
-    }
-    fn collision_shape(&self) -> &CollisionShapeJson {
-        &self.collision_shape
-    }
-    fn health(&self) -> &PhysicalQuantityJson {
-        &self.health
-    }
-    fn weapons(&self) -> &[String] {
-        &self.weapons
-    }
-    fn entity_type(&self) -> &'static str {
-        "ship"
-    }
-    fn main_thruster_names(&self) -> &[String] {
-        &self.propulsion.main_thruster_names
-    }
-    fn maneuvering_thruster_name(&self) -> &str {
-        &self.propulsion.maneuvering_thruster
-    }
-    fn max_weapons_count(&self) -> usize {
-        self.max_weapons_count
-    }
-    fn max_propulsions_count(&self) -> usize {
-        self.max_propulsions_count
-    }
-}
-
-/// Implement `ShipTemplateBase` for `PlayerShipTemplate`
-impl ShipTemplateBase for PlayerShipTemplate {
-    fn mass(&self) -> &PhysicalQuantityJson {
-        &self.mass
-    }
-    fn inertia_scale(&self) -> f32 {
-        self.inertia_scale
-    }
-    fn bounding_box(&self) -> &BoundingBoxJson {
-        &self.bounding_box
-    }
-    fn collision_shape(&self) -> &CollisionShapeJson {
-        &self.collision_shape
-    }
-    fn health(&self) -> &PhysicalQuantityJson {
-        &self.health
-    }
-    fn weapons(&self) -> &[String] {
-        &self.weapons
-    }
-    fn entity_type(&self) -> &'static str {
-        "player_controlled_ship"
-    }
-    fn main_thruster_names(&self) -> &[String] {
-        &self.propulsion.main_thruster_names
-    }
-    fn maneuvering_thruster_name(&self) -> &str {
-        &self.propulsion.maneuvering_thruster
-    }
-    fn max_weapons_count(&self) -> usize {
-        self.max_weapons_count
-    }
-    fn max_propulsions_count(&self) -> usize {
-        self.max_propulsions_count
-    }
-}
-
-/// Implement `ShipTemplateBase` for `StaticShipTemplate`
-impl ShipTemplateBase for StaticShipTemplate {
-    fn mass(&self) -> &PhysicalQuantityJson {
-        &self.mass
-    }
-    fn inertia_scale(&self) -> f32 {
-        self.inertia_scale
-    }
-    fn bounding_box(&self) -> &BoundingBoxJson {
-        &self.bounding_box
-    }
-    fn collision_shape(&self) -> &CollisionShapeJson {
-        &self.collision_shape
-    }
-    fn health(&self) -> &PhysicalQuantityJson {
-        &self.health
-    }
-    fn weapons(&self) -> &[String] {
-        &self.weapons
-    }
-    fn entity_type(&self) -> &'static str {
-        "ship"
-    }
-    fn main_thruster_names(&self) -> &[String] {
-        &self.propulsion.main_thruster_names
-    }
-    fn maneuvering_thruster_name(&self) -> &str {
-        &self.propulsion.maneuvering_thruster
-    }
-    fn max_weapons_count(&self) -> usize {
-        self.max_weapons_count
-    }
-    fn max_propulsions_count(&self) -> usize {
-        self.max_propulsions_count
+/// Spawns ship entities in response to `SpawnEntity` events.
+///
+/// Listens for events with `template` being `EntityTemplate::PlayerShip` or
+/// `EntityTemplate::StaticShip`:
+/// - `EntityTemplate::PlayerShip`: Player-controlled ship
+/// - `EntityTemplate::StaticShip`: Non-player ship (static/NPC)
+///
+/// The event's `template` field contains validated template from delta-v-assets.
+// INVARIANT: MessageReader::read returns events by value; pass by value is idiomatic.
+#[allow(clippy::needless_pass_by_value)]
+pub fn spawn_ship(
+    mut commands: Commands<'_, '_>,
+    asset_server: Res<'_, AssetServer>,
+    mut events: MessageReader<'_, '_, SpawnEntity>,
+) {
+    for event in events.read() {
+        match &event.template {
+            EntityTemplate::PlayerShip(_) => spawn_player_ship(&mut commands, &asset_server, event),
+            EntityTemplate::StaticShip(_) => spawn_static_ship(&mut commands, &asset_server, event),
+            // Other entity types (e.g. asteroids, suns, planets) are handled by other plugins.
+            // Silently skip — a single plugin cannot know whether another plugin
+            // will handle the event.
+            _ => {}
+        }
     }
 }

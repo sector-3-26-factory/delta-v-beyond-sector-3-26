@@ -41,9 +41,11 @@ pub mod collision_debug;
 pub mod constants;
 pub mod floating_origin_systems;
 pub mod rigid_body;
+pub mod spawn;
 pub mod systems;
 
 pub use celestial::{Navigable, OrbitalParentId, PendingCelestialMesh, Planet, Sun};
+pub use celestial::{attach_celestial_meshes, make_sun_emissive, resolve_orbital_parents};
 pub use collision::{
     CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeType, DynamicBody,
     StaticBody, distance_to_surface,
@@ -51,6 +53,7 @@ pub use collision::{
 pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
 pub use delta_v_types::CollisionLayers;
 pub use rigid_body::{MassSource, RigidBody};
+pub use spawn::{spawn_asteroid, spawn_planet, spawn_sun};
 pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
@@ -60,10 +63,6 @@ use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
     integrate_position_system, integrate_velocity_system, orbital_motion_system,
     sun_rotation_system,
-};
-
-use crate::celestial::{
-    attach_celestial_meshes, make_sun_emissive, resolve_orbital_parents, spawn_planet, spawn_sun,
 };
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
@@ -186,6 +185,12 @@ impl Plugin for PhysicsPlugin {
             Update,
             spawn_planet
                 .in_set(WorldSpawnSet::SpawnPlanets)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+        app.add_systems(
+            Update,
+            spawn_asteroid
+                .in_set(WorldSpawnSet::SpawnAsteroids)
                 .run_if(in_state(AppState::SpawningEntities)),
         );
 

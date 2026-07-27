@@ -45,7 +45,6 @@
 pub mod error;
 pub mod loader;
 pub mod resources;
-pub mod spawn;
 pub mod world_def;
 
 #[cfg(test)]
@@ -63,8 +62,7 @@ use delta_v_assets::template::{
     load_ai_controlled_ship, load_asteroid, load_planet, load_player_controlled_ship, load_ship,
     load_sun,
 };
-use delta_v_core::{AppState, WorldSpawnSet};
-use spawn::spawn_asteroid;
+use delta_v_core::AppState;
 
 use crate::loader::load_world;
 use world_def::EntitySpawn;
@@ -83,21 +81,7 @@ impl Plugin for WorldPlugin {
             .add_systems(OnEnter(AppState::LoadingWorld), load_world_system)
             // Setup scene lighting as fallback for worlds without suns.
             // Runs after world is loaded but before entities are spawned.
-            .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting)
-            // Asteroid spawning runs in Update during SpawningEntities
-            .add_systems(
-                Update,
-                spawn_asteroid
-                    .in_set(WorldSpawnSet::SpawnAsteroids)
-                    .run_if(in_state(AppState::SpawningEntities)),
-            )
-            // Attach asteroid meshes in InGame once glTF assets are loaded.
-            // Uses the generic attach_meshes system from delta-v-spawn (ADR-0047).
-            .add_systems(
-                Update,
-                delta_v_spawn::mesh_attachment::attach_meshes::<spawn::PendingAsteroidMesh>
-                    .run_if(in_state(AppState::InGame)),
-            );
+            .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting);
     }
 }
 
@@ -116,9 +100,11 @@ fn setup_scene_lighting(
     world_def: Option<Res<'_, WorldDefResource>>,
 ) {
     // Check if the world has any suns - if so, skip fallback lighting
-    let has_sun = world_def
-        .as_ref()
-        .is_some_and(|w| w.0.entities.iter().any(|e| e.template.starts_with("suns/")));
+    let has_sun = world_def.as_ref().is_some_and(|w| {
+        w.0.entities
+            .iter()
+            .any(|e| matches!(&e.template, Some(delta_v_types::EntityTemplate::Sun(_))))
+    });
 
     if !has_sun {
         delta_v_spawn::lighting::setup_scene_lighting(&mut commands);
@@ -155,7 +141,7 @@ fn load_world_system(
     // INVARIANT: a missing or invalid world file is a hard startup
     // error (ADR-0013). The panic is intentional; no recovery is possible.
     #[allow(clippy::panic)]
-    let world = load_world(world_path.as_ref()).unwrap_or_else(|e| {
+    let mut world = load_world(world_path.as_ref()).unwrap_or_else(|e| {
         panic!("fatal: failed to load world: {e}");
     });
     tracing::info!("world loaded: {}", world.name);
@@ -170,11 +156,10 @@ fn load_world_system(
         player_controlled_count == 1,
         "fatal: exactly one entity must have player_controlled: true, found {player_controlled_count}"
     );
-
-    // Emit SpawnEntity events for each entity in the world.
+    // Load templates for each entity and emit SpawnEntity events.
     // Per ADR-0038, domain plugins listen for these events and spawn
     // entities based on `entity_type`, in dependency order via WorldSpawnSet.
-    for entity_spawn in &world.entities {
+    for entity_spawn in &mut world.entities {
         let spawn_event = build_spawn_event(entity_spawn);
         events.write(spawn_event);
     }
@@ -188,11 +173,11 @@ fn load_world_system(
 /// # Panics
 ///
 /// Panics if template loading fails. This is intentional per ADR-0013 (no silent fallbacks).
-#[allow(clippy::expect_used)]
-fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
-    let template_short = &entity_spawn.template;
+#[allow(clippy::expect_used, clippy::panic)]
+fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
+    let template_short = &entity_spawn.template_short;
 
-    // Determine entity_type and load template.
+    // Load template based on entity type.
     // For player_controlled ships: load player_controlled_ship.json and merge with ship.json.
     // For AI-controlled ships: load ai_controlled_ship.json and merge with ship.json.
     // For asteroids: load asteroid.json directly.
@@ -200,28 +185,30 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
     // For planets: load planet.json directly.
     // For other ships: load ship.json directly.
     // INVARIANT: template loading must succeed (ADR-0013).
-    let (entity_type, template_path, merged_template, mesh_template_path) =
-        if entity_spawn.player_controlled {
-            // INVARIANT: player_controlled_ship template is required by schema (ADR-0013)
-            load_player_controlled_ship(template_short)
-                .expect("player_controlled_ship template must load successfully")
-        } else if entity_spawn.ai_task.is_some() {
-            // INVARIANT: ai_controlled_ship template is required by schema (ADR-0013)
-            load_ai_controlled_ship(template_short)
-                .expect("ai_controlled_ship template must load successfully")
-        } else if template_short.starts_with("asteroids/") {
-            // INVARIANT: asteroid template is required by schema (ADR-0013)
-            load_asteroid(template_short).expect("asteroid template must load successfully")
-        } else if template_short.starts_with("suns/") {
-            // INVARIANT: sun template is required by schema (ADR-0013)
-            load_sun(template_short).expect("sun template must load successfully")
-        } else if template_short.starts_with("planets/") {
-            // INVARIANT: planet template is required by schema (ADR-0013)
-            load_planet(template_short).expect("planet template must load successfully")
-        } else {
-            // INVARIANT: ship template is required by schema (ADR-0013)
-            load_ship(template_short).expect("ship template must load successfully")
-        };
+    let (template_path, merged_template) = if entity_spawn.player_controlled {
+        // INVARIANT: player_controlled_ship template is required by schema (ADR-0013)
+        load_player_controlled_ship(template_short)
+            .expect("player_controlled_ship template must load successfully")
+    } else if entity_spawn.ai_task.is_some() {
+        // INVARIANT: ai_controlled_ship template is required by schema (ADR-0013)
+        load_ai_controlled_ship(template_short)
+            .expect("ai_controlled_ship template must load successfully")
+    } else if template_short.starts_with("asteroids/") {
+        // INVARIANT: asteroid template is required by schema (ADR-0013)
+        load_asteroid(template_short).expect("asteroid template must load successfully")
+    } else if template_short.starts_with("suns/") {
+        // INVARIANT: sun template is required by schema (ADR-0013)
+        load_sun(template_short).expect("sun template must load successfully")
+    } else if template_short.starts_with("planets/") {
+        // INVARIANT: planet template is required by schema (ADR-0013)
+        load_planet(template_short).expect("planet template must load successfully")
+    } else {
+        // INVARIANT: ship template is required by schema (ADR-0013)
+        load_ship(template_short).expect("ship template must load successfully")
+    };
+
+    // Store the loaded template in the entity spawn
+    entity_spawn.template = Some(merged_template.clone());
 
     let pos = Vec3::new(
         entity_spawn.position.x,
@@ -240,16 +227,10 @@ fn build_spawn_event(entity_spawn: &EntitySpawn) -> SpawnEntity {
         entity_spawn.scale.z,
     );
 
-    let mut spawn_event = SpawnEntity::new(
-        entity_spawn.id.clone(),
-        entity_type,
-        merged_template,
-        template_path,
-        mesh_template_path,
-        pos,
-    )
-    .with_rotation(rot)
-    .with_scale(scale);
+    let mut spawn_event =
+        SpawnEntity::new(entity_spawn.id.clone(), merged_template, template_path, pos)
+            .with_rotation(rot)
+            .with_scale(scale);
 
     // Pass through the AI task if present.
     if let Some(ref ai_task) = entity_spawn.ai_task {

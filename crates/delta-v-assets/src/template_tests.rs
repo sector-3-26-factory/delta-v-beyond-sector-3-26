@@ -263,3 +263,18 @@ fn test_resolve_template_path_from_struct_trailing_slash() {
         "path should start with templates/, got: {path}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Planet template validation tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_load_planet_mercury() {
+    // Validate that the mercury planet template is valid against the schema
+    let result = crate::template::load_planet("mercury");
+    assert!(
+        result.is_ok(),
+        "mercury planet template should be valid: {:?}",
+        result.unwrap_err()
+    );
+}

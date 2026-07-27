@@ -17,6 +17,11 @@ use bevy::asset::AssetPlugin;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::{PlayerShipEntity, SpawnEntity};
+use delta_v_types::{
+    AsteroidTemplate, BoundingBox, CameraDefinition, CockpitDefinition, CollisionShapeData,
+    CollisionShapeType, EntityTemplate, PlayerShipTemplate, ShipCamerasTemplate,
+    ShipPropulsionTemplate, StaticShipTemplate,
+};
 
 use crate::ship_templates::ShipPropulsionConfig;
 use crate::spawn::spawn_ship;
@@ -40,83 +45,79 @@ fn create_test_app() -> App {
 
 /// Builds a minimal `SpawnEntity` event for a player-controlled ship.
 ///
-/// Uses a template JSON that matches the merged `player_controlled_ship`
+/// Uses a template `EntityTemplate` that matches the merged `player_controlled_ship`
 /// structure (ship properties + cameras + `bounding_box` + `health`).
 fn make_player_ship_event() -> SpawnEntity {
-    let template = serde_json::json!({
-        "entity_type": "player_controlled_ship",
-        "mass": { "value": 10_000.0, "unit": "kg" },
-        "inertia_scale": 1.0,
-        "bounding_box": {
-            "min": { "x": -1.0, "y": -1.0, "z": -1.0 },
-            "max": { "x": 1.0, "y": 1.0, "z": 1.0 }
+    let template = EntityTemplate::PlayerShip(PlayerShipTemplate {
+        mass: 10_000.0,
+        inertia_scale: 1.0,
+        bounding_box: BoundingBox {
+            min: Vec3::new(-1.0, -1.0, -1.0),
+            max: Vec3::new(1.0, 1.0, 1.0),
         },
-        "collision_shape": {
-            "type": "box",
-            "half_extents": { "x": 1.0, "y": 1.0, "z": 1.0 }
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Box {
+                half_extents: Vec3::new(1.0, 1.0, 1.0),
+            },
+            offset: Vec3::ZERO,
         },
-        "propulsion": {
-                    "main_thrusters": ["chemical-main"],
-                    "maneuvering_thruster": "rcs-standard"
-                },
-        "cameras": {
-            "cockpit": {
-                "position": { "x": 0.0, "y": 0.5, "z": -0.2 },
-                "target": { "x": 0.0, "y": 0.5, "z": -10.0 },
-                "available": true
-            },
-            "drone": {
-                "position": { "x": 0.0, "y": 2.0, "z": 5.0 },
-                "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
-                "available": true
-            },
-            "rear": {
-                "position": { "x": 0.0, "y": 1.0, "z": 4.0 },
-                "target": { "x": 0.0, "y": 1.0, "z": -10.0 },
-                "available": true
-            },
-            "front": {
-                "position": { "x": 0.0, "y": 0.5, "z": -2.0 },
-                "target": { "x": 0.0, "y": 0.5, "z": -10.0 },
-                "available": true
-            },
-            "left": {
-                "position": { "x": -3.0, "y": 1.0, "z": 0.0 },
-                "target": { "x": 10.0, "y": 1.0, "z": 0.0 },
-                "available": true
-            },
-            "right": {
-                "position": { "x": 3.0, "y": 1.0, "z": 0.0 },
-                "target": { "x": -10.0, "y": 1.0, "z": 0.0 },
-                "available": true
-            },
-            "top": {
-                "position": { "x": 0.0, "y": 2.0, "z": 0.0 },
-                "target": { "x": 0.0, "y": -10.0, "z": 0.0 },
-                "available": true
-            },
-            "bottom": {
-                "position": { "x": 0.0, "y": -2.0, "z": 0.0 },
-                "target": { "x": 0.0, "y": 10.0, "z": 0.0 },
-                "available": true
-            }
+        propulsion: ShipPropulsionTemplate {
+            main_thruster_names: vec!["chemical-main".to_string()],
+            maneuvering_thruster: "rcs-standard".to_string(),
         },
-        "weapons": [],
-        "max_weapons_count": 2,
-        "max_propulsions_count": 2,
-        "health": { "value": 100.0, "unit": "hp" },
-        "cockpit": {
-                    "stations": []
-                },
-        "sounds": {}
+        cameras: ShipCamerasTemplate {
+            cockpit: CameraDefinition {
+                position: Vec3::new(0.0, 0.5, -0.2),
+                target: Vec3::new(0.0, 0.5, -10.0),
+                available: true,
+            },
+            drone: CameraDefinition {
+                position: Vec3::new(0.0, 2.0, 5.0),
+                target: Vec3::new(0.0, 0.0, 0.0),
+                available: true,
+            },
+            rear: CameraDefinition {
+                position: Vec3::new(0.0, 1.0, 4.0),
+                target: Vec3::new(0.0, 1.0, -10.0),
+                available: true,
+            },
+            front: CameraDefinition {
+                position: Vec3::new(0.0, 0.5, -2.0),
+                target: Vec3::new(0.0, 0.5, -10.0),
+                available: true,
+            },
+            left: CameraDefinition {
+                position: Vec3::new(-3.0, 1.0, 0.0),
+                target: Vec3::new(10.0, 1.0, 0.0),
+                available: true,
+            },
+            right: CameraDefinition {
+                position: Vec3::new(3.0, 1.0, 0.0),
+                target: Vec3::new(-10.0, 1.0, 0.0),
+                available: true,
+            },
+            top: CameraDefinition {
+                position: Vec3::new(0.0, 2.0, 0.0),
+                target: Vec3::new(0.0, -10.0, 0.0),
+                available: true,
+            },
+            bottom: CameraDefinition {
+                position: Vec3::new(0.0, -2.0, 0.0),
+                target: Vec3::new(0.0, 10.0, 0.0),
+                available: true,
+            },
+        },
+        weapons: vec![],
+        max_weapons_count: 2,
+        max_propulsions_count: 2,
+        health: 100.0,
+        cockpit: CockpitDefinition { stations: vec![] },
     });
 
     SpawnEntity::new(
         "test_player_ship".to_string(),
-        "player_controlled_ship".to_string(),
         template,
         "templates/ships/space-fighter-comrade1280/player_controlled_ship.json".to_string(),
-        "templates/ships/space-fighter-comrade1280/template.json".to_string(),
         Vec3::new(1.0, 2.0, 3.0),
     )
 }
@@ -127,11 +128,23 @@ fn make_player_ship_event() -> SpawnEntity {
 fn test_unknown_entity_type_does_not_spawn() {
     let mut app = create_test_app();
 
+    let template = EntityTemplate::Asteroid(AsteroidTemplate {
+        entity_type: "unknown_type".to_string(),
+        mass: 1000.0,
+        bounding_box: BoundingBox {
+            min: Vec3::new(0.0, 0.0, 0.0),
+            max: Vec3::new(1.0, 1.0, 1.0),
+        },
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+            offset: Vec3::ZERO,
+        },
+        is_gravity_source: false,
+    });
+
     let event = SpawnEntity::new(
         "unknown_entity".to_string(),
-        "unknown_type".to_string(),
-        serde_json::json!({"entity_type": "unknown_type"}),
-        "templates/unknown/template.json".to_string(),
+        template,
         "templates/unknown/template.json".to_string(),
         Vec3::ZERO,
     );
@@ -156,11 +169,32 @@ fn test_unknown_entity_type_does_not_spawn() {
 fn test_npc_ship_does_not_panic() {
     let mut app = create_test_app();
 
+    let template = EntityTemplate::StaticShip(StaticShipTemplate {
+        mass: 10_000.0,
+        inertia_scale: 1.0,
+        bounding_box: BoundingBox {
+            min: Vec3::new(-1.0, -1.0, -1.0),
+            max: Vec3::new(1.0, 1.0, 1.0),
+        },
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Box {
+                half_extents: Vec3::new(1.0, 1.0, 1.0),
+            },
+            offset: Vec3::ZERO,
+        },
+        propulsion: ShipPropulsionTemplate {
+            main_thruster_names: vec!["chemical-main".to_string()],
+            maneuvering_thruster: "rcs-standard".to_string(),
+        },
+        weapons: vec![],
+        max_weapons_count: 2,
+        max_propulsions_count: 2,
+        health: 100.0,
+    });
+
     let event = SpawnEntity::new(
         "npc_ship".to_string(),
-        "npc_ship".to_string(),
-        serde_json::json!({"entity_type": "npc_ship"}),
-        "templates/ships/npc/template.json".to_string(),
+        template,
         "templates/ships/npc/template.json".to_string(),
         Vec3::ZERO,
     );
@@ -174,11 +208,23 @@ fn test_npc_ship_does_not_panic() {
 /// expected fields and that the builder methods work correctly.
 #[test]
 fn test_spawn_event_builder() {
+    let template = EntityTemplate::Asteroid(AsteroidTemplate {
+        entity_type: "test".to_string(),
+        mass: 1000.0,
+        bounding_box: BoundingBox {
+            min: Vec3::new(0.0, 0.0, 0.0),
+            max: Vec3::new(1.0, 1.0, 1.0),
+        },
+        collision_shape: CollisionShapeData {
+            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+            offset: Vec3::ZERO,
+        },
+        is_gravity_source: false,
+    });
+
     let event = SpawnEntity::new(
         "test_ship".to_string(),
-        "player_controlled_ship".to_string(),
-        serde_json::json!({}),
-        "templates/test/template.json".to_string(),
+        template,
         "templates/test/template.json".to_string(),
         Vec3::new(10.0, 20.0, 30.0),
     )
@@ -186,7 +232,6 @@ fn test_spawn_event_builder() {
     .with_scale(Vec3::new(2.0, 2.0, 2.0));
 
     assert_eq!(event.id, "test_ship");
-    assert_eq!(event.entity_type, "player_controlled_ship");
     assert_eq!(event.position, Vec3::new(10.0, 20.0, 30.0));
     assert_eq!(event.rotation, Quat::from_xyzw(0.0, 1.0, 0.0, 0.0));
     assert_eq!(event.scale, Vec3::new(2.0, 2.0, 2.0));

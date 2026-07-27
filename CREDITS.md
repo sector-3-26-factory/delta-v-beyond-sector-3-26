@@ -117,6 +117,15 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/templates/suns/sol/mesh.glb`
 - **Modifications:** *None*
 
+### "Mercury (planet)"
+
+- **Creator:** [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/mercury-planet-ccb6c6a9ac3742109cc67c0f16032b49)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/mercury/mesh.glb`
+- **Modifications:** *None*
+
 ## Fonts
 
 ### DejaVu Sans Mono

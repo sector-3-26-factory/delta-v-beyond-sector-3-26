@@ -20,7 +20,7 @@ use std::cmp::Ordering;
 use bevy::math::Vec3;
 use serde_json::json;
 
-use crate::ship_templates::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};
+use crate::{CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot};
 
 /// Tests that a valid cockpit with a single station deserializes correctly.
 #[test]

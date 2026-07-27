@@ -27,6 +27,7 @@
 use std::path::Path;
 
 use delta_v_json::load;
+use delta_v_types::EntityTemplate;
 use serde_json::Value;
 
 use crate::error::AssetError;
@@ -124,15 +125,23 @@ pub fn load_template(
 /// in the same directory. This function loads the `player_controlled_ship.json` and merges
 /// it with the co-located `ship.json`.
 ///
-/// Returns a tuple of (`entity_type`, `template_path`, `merged_template`, `mesh_template_path`).
+/// Returns a tuple of (`template_path`, `merged_template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+/// The mesh path is derived from `template_path` via `SpawnEntity::mesh_path()`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
 pub fn load_player_controlled_ship(
     ship_name: &str,
-) -> Result<(String, String, Value, String), AssetError> {
+) -> Result<(String, EntityTemplate), AssetError> {
     let player_template = load_template(
         "ships",
         ship_name,
@@ -142,8 +151,6 @@ pub fn load_player_controlled_ship(
     let base_ship = load_template("ships", ship_name, "ship.json", "ship.schema.json")?;
 
     let template_path = format!("templates/{ship_name}/player_controlled_ship.json");
-    let ship_template_path = format!("templates/{ship_name}/ship.json");
-    let mesh_template_path = ship_template_path.replace("ship.json", "mesh.glb");
 
     let mut merged = base_ship;
     if let (Some(merged_obj), Some(player_obj)) =
@@ -164,12 +171,12 @@ pub fn load_player_controlled_ship(
     let full_template_path = get_workspace_root().join(&template_path);
     validate_sound_files(&merged, &full_template_path)?;
 
-    Ok((
-        "player_controlled_ship".to_string(),
-        template_path,
-        merged,
-        mesh_template_path,
-    ))
+    // Convert to runtime type
+    let template: delta_v_types::PlayerShipTemplateJson =
+        serde_json::from_value(merged.clone()).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::PlayerShip(template.into());
+
+    Ok((template_path, runtime_template))
 }
 
 /// Loads an AI-controlled ship template, merging base ship with AI-specific data.
@@ -178,15 +185,21 @@ pub fn load_player_controlled_ship(
 /// directory. This function loads the `ai_controlled_ship.json` and merges it with
 /// the co-located `ship.json`.
 ///
-/// Returns a tuple of (`entity_type`, `template_path`, `merged_template`, `mesh_template_path`).
+/// Returns a tuple of (`template_path`, `merged_template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+/// The mesh path is derived from `template_path` via `SpawnEntity::mesh_path()`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
-pub fn load_ai_controlled_ship(
-    ship_name: &str,
-) -> Result<(String, String, Value, String), AssetError> {
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_ai_controlled_ship(ship_name: &str) -> Result<(String, EntityTemplate), AssetError> {
     let ai_template = load_template(
         "ships",
         ship_name,
@@ -196,8 +209,6 @@ pub fn load_ai_controlled_ship(
     let base_ship = load_template("ships", ship_name, "ship.json", "ship.schema.json")?;
 
     let template_path = format!("templates/{ship_name}/ai_controlled_ship.json");
-    let ship_template_path = format!("templates/{ship_name}/ship.json");
-    let mesh_template_path = ship_template_path.replace("ship.json", "mesh.glb");
 
     let mut merged = base_ship;
     if let (Some(merged_obj), Some(ai_obj)) = (merged.as_object_mut(), ai_template.as_object()) {
@@ -216,99 +227,148 @@ pub fn load_ai_controlled_ship(
     let full_template_path = get_workspace_root().join(&template_path);
     validate_sound_files(&merged, &full_template_path)?;
 
-    Ok((
-        "ai_controlled_ship".to_string(),
-        template_path,
-        merged,
-        mesh_template_path,
-    ))
+    // Convert to runtime type
+    let template: delta_v_types::AiShipTemplateJson =
+        serde_json::from_value(merged.clone()).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::AiShip(template.into());
+
+    Ok((template_path, runtime_template))
 }
 
 /// Loads an asteroid template.
 ///
-/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+/// Returns a tuple of (`template_path`, `template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+/// The mesh path is derived from `template_path` via `SpawnEntity::mesh_path()`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
-pub fn load_asteroid(name: &str) -> Result<(String, String, Value, String), AssetError> {
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_asteroid(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // INVARIANT: The name may or may not have the "asteroids/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "asteroids/my-asteroid" or "my-asteroid".
     // Both are valid and result in the same template being loaded.
     let template_name = name.strip_prefix("asteroids/").unwrap_or(name);
     let template_path = format!("templates/asteroids/{template_name}/asteroid.json");
-    let mesh_path = template_path.replace("asteroid.json", "mesh.glb");
     let template = load_template("asteroids", name, "asteroid.json", "asteroid.schema.json")?;
-    Ok(("asteroid".to_string(), template_path, template, mesh_path))
+
+    // Convert to runtime type
+    let template_json: delta_v_types::AsteroidTemplateJson =
+        serde_json::from_value(template).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::Asteroid(template_json.into());
+
+    Ok((template_path, runtime_template))
 }
 
 /// Loads a ship template.
 ///
-/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+/// Returns a tuple of (`template_path`, `template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+/// The mesh path is derived from `template_path` via `SpawnEntity::mesh_path()`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
-pub fn load_ship(name: &str) -> Result<(String, String, Value, String), AssetError> {
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_ship(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // INVARIANT: The name may or may not have the "ships/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "ships/my-ship" or "my-ship".
     // Both are valid and result in the same template being loaded.
     let template_name = name.strip_prefix("ships/").unwrap_or(name);
     let template_path = format!("templates/ships/{template_name}/ship.json");
-    let mesh_path = template_path.replace("ship.json", "mesh.glb");
     let template = load_template("ships", name, "ship.json", "ship.schema.json")?;
 
     // Validate referenced sound files exist (ADR-0013: no silent fallbacks).
     let full_template_path = get_workspace_root().join(&template_path);
     validate_sound_files(&template, &full_template_path)?;
 
-    Ok(("ship".to_string(), template_path, template, mesh_path))
+    // Convert to runtime type
+    let template_json: delta_v_types::StaticShipTemplateJson =
+        serde_json::from_value(template).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::StaticShip(template_json.into());
+
+    Ok((template_path, runtime_template))
 }
 
 /// Loads a sun template.
 ///
-/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+/// Returns a tuple of (`template_path`, `template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+/// The mesh path is derived from `template_path` via `SpawnEntity::mesh_path()`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
-pub fn load_sun(name: &str) -> Result<(String, String, Value, String), AssetError> {
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_sun(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // INVARIANT: The name may or may not have the "suns/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "suns/my-sun" or "my-sun".
     // Both are valid and result in the same template being loaded.
     let template_name = name.strip_prefix("suns/").unwrap_or(name);
     let template_path = format!("templates/suns/{template_name}/sun.json");
-    let mesh_path = template_path.replace("sun.json", "mesh.glb");
     let template = load_template("suns", name, "sun.json", "sun.schema.json")?;
 
-    Ok(("sun".to_string(), template_path, template, mesh_path))
+    // Convert to runtime type
+    let template_json: delta_v_types::SunTemplateJson =
+        serde_json::from_value(template).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::Sun(template_json.into());
+
+    Ok((template_path, runtime_template))
 }
 
 /// Loads a planet template.
 ///
-/// Returns a tuple of (`entity_type`, `template_path`, `template`, `mesh_template_path`).
+/// Returns a tuple of (`template_path`, `template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+/// The mesh path is derived from `template_path` via `SpawnEntity::mesh_path()`.
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
 /// Returns [`AssetError::Validation`] if the template fails schema validation.
-pub fn load_planet(name: &str) -> Result<(String, String, Value, String), AssetError> {
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_planet(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // INVARIANT: The name may or may not have the "planets/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "planets/my-planet" or "my-planet".
     // Both are valid and result in the same template being loaded.
     let template_name = name.strip_prefix("planets/").unwrap_or(name);
     let template_path = format!("templates/planets/{template_name}/planet.json");
-    let mesh_path = template_path.replace("planet.json", "mesh.glb");
     let template = load_template("planets", name, "planet.json", "planet.schema.json")?;
 
-    Ok(("planet".to_string(), template_path, template, mesh_path))
+    // Convert to runtime type
+    let template_json: delta_v_types::PlanetTemplateJson =
+        serde_json::from_value(template).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::Planet(template_json.into());
+
+    Ok((template_path, runtime_template))
 }
 
 /// Loads and validates a template from explicit paths.
@@ -355,67 +415,118 @@ fn map_json_error(e: delta_v_json::error::JsonError, _context: &Path) -> AssetEr
     }
 }
 
-/// Loads a weapon definition by name.
+/// Loads a weapon definition and converts it to a runtime type with SI units.
 ///
-/// Weapon definitions are stored at `assets/components/weapons/<name>/weapon.json`.
+/// This function loads the weapon definition JSON, validates it against the schema,
+/// and converts all physical quantities to SI base units (Hertz for fire rate).
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the weapon file does not exist.
 /// Returns [`AssetError::Validation`] if the weapon fails schema validation.
-pub fn load_weapon_definition(name: &str) -> Result<Value, AssetError> {
+/// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used)]
+pub fn load_weapon_definition(name: &str) -> Result<delta_v_types::WeaponTemplate, AssetError> {
     let template_path =
         get_workspace_root().join(format!("assets/components/weapons/{name}/weapon.json"));
     let schema_path = get_workspace_root().join("assets/json/schema/weapon.schema.json");
-    load_template_from_paths(&template_path, &schema_path)
+    let value = load_template_from_paths(&template_path, &schema_path)?;
+    let weapon: delta_v_types::WeaponTemplateJson =
+        serde_json::from_value(value).expect("validated JSON should deserialize");
+    Ok(weapon.into())
 }
 
-/// Loads a projectile definition by name.
+/// Loads a projectile definition and converts it to a runtime type with SI units.
 ///
-/// Projectile definitions are stored at `assets/components/projectiles/<name>/projectile.json`.
+/// This function loads the projectile definition JSON, validates it against the schema,
+/// and converts all physical quantities to SI base units (m/s for speed, hit points for damage,
+/// seconds for lifetime, metres for radius).
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the projectile file does not exist.
 /// Returns [`AssetError::Validation`] if the projectile fails schema validation.
-pub fn load_projectile_definition(name: &str) -> Result<Value, AssetError> {
+/// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used)]
+pub fn load_projectile_definition(
+    name: &str,
+) -> Result<delta_v_types::ProjectileDefinition, AssetError> {
     let template_path = get_workspace_root().join(format!(
         "assets/components/projectiles/{name}/projectile.json"
     ));
     let schema_path = get_workspace_root().join("assets/json/schema/projectile.schema.json");
-    load_template_from_paths(&template_path, &schema_path)
+    let value = load_template_from_paths(&template_path, &schema_path)?;
+    let projectile: delta_v_types::ProjectileDefinitionJson =
+        serde_json::from_value(value).expect("validated JSON should deserialize");
+    Ok(projectile.into())
 }
 
-/// Loads a main thruster definition by name.
+/// Loads a main thruster definition and converts it to a runtime type with SI units.
 ///
-/// Main thruster definitions are stored at `assets/components/propulsion/main-thrusters/<name>/main-thruster.json`.
+/// This function loads the thruster definition JSON, validates it against the schema,
+/// and converts all physical quantities to SI base units (Newtons).
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the thruster file does not exist.
 /// Returns [`AssetError::Validation`] if the thruster fails schema validation.
-pub fn load_main_thruster_definition(name: &str) -> Result<Value, AssetError> {
+/// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used)]
+pub fn load_main_thruster_definition(
+    name: &str,
+) -> Result<delta_v_types::MainThrusterDefinition, AssetError> {
     let template_path = get_workspace_root().join(format!(
         "assets/components/propulsion/main-thrusters/{name}/main-thruster.json"
     ));
     let schema_path =
         get_workspace_root().join("assets/json/schema/main-thruster-definition.schema.json");
-    load_template_from_paths(&template_path, &schema_path)
+    let value = load_template_from_paths(&template_path, &schema_path)?;
+    let definition: delta_v_types::MainThrusterDefinitionJson =
+        serde_json::from_value(value).expect("validated JSON should deserialize");
+    Ok(definition.into())
 }
 
-/// Loads a maneuvering thruster definition by name.
+/// Loads a maneuvering thruster definition and converts it to a runtime type with SI units.
 ///
-/// Maneuvering thruster definitions are stored at `assets/components/propulsion/maneuvering-thrusters/<name>/maneuvering-thruster.json`.
+/// This function loads the thruster definition JSON, validates it against the schema,
+/// and converts all physical quantities to SI base units (Newtons, Newton-meters).
 ///
 /// # Errors
 ///
 /// Returns [`AssetError::TemplateNotFound`] if the thruster file does not exist.
 /// Returns [`AssetError::Validation`] if the thruster fails schema validation.
-pub fn load_maneuvering_thruster_definition(name: &str) -> Result<Value, AssetError> {
+/// Returns [`AssetError::InvalidUnit`] if a physical quantity has an invalid unit.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used)]
+pub fn load_maneuvering_thruster_definition(
+    name: &str,
+) -> Result<delta_v_types::ManeuveringThrusterDefinition, AssetError> {
     let template_path = get_workspace_root().join(format!(
         "assets/components/propulsion/maneuvering-thrusters/{name}/maneuvering-thruster.json"
     ));
     let schema_path =
         get_workspace_root().join("assets/json/schema/maneuvering-thruster-definition.schema.json");
-    load_template_from_paths(&template_path, &schema_path)
+    let value = load_template_from_paths(&template_path, &schema_path)?;
+    let definition: delta_v_types::ManeuveringThrusterDefinitionJson =
+        serde_json::from_value(value).expect("validated JSON should deserialize");
+    Ok(definition.into())
 }

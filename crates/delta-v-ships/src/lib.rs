@@ -53,12 +53,12 @@ pub mod spawn;
 pub mod systems;
 
 pub use delta_v_core::Propulsion;
-pub use delta_v_types::ShipPropulsionTemplate;
-pub use error::ShipError;
-pub use ship_templates::{
-    PlayerShipTemplate, ShipPropulsionConfig, ShipTemplate, StaticShipTemplate, ThrustCommand,
-    TorqueCommand,
+pub use delta_v_types::{
+    CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot, PlayerShipTemplate,
+    ShipPropulsionTemplate, ShipTemplate, StaticShipTemplate,
 };
+pub use error::ShipError;
+pub use ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 pub use spawn::spawn_ship;
 
 #[cfg(test)]

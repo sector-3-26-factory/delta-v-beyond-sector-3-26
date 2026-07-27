@@ -169,3 +169,27 @@ impl CollisionShapeJson {
         self.shape_type == "box"
     }
 }
+
+#[allow(clippy::expect_used)]
+impl From<CollisionShapeJson> for CollisionShapeData {
+    // INVARIANT: radius and half_extents are required by schema and validated by delta-v-json (ADR-0013)
+    fn from(json: CollisionShapeJson) -> Self {
+        let shape_type = if json.is_sphere() {
+            let radius = json
+                .radius
+                .expect("sphere shape must have radius")
+                .to_meters();
+            CollisionShapeType::Sphere { radius }
+        } else if json.is_box() {
+            let half_extents =
+                Vec3::from(json.half_extents.expect("box shape must have half_extents"));
+            CollisionShapeType::Box { half_extents }
+        } else {
+            CollisionShapeType::ConvexHull
+        };
+
+        let offset = json.offset.map_or(Vec3::ZERO, Vec3::from);
+
+        Self { shape_type, offset }
+    }
+}
