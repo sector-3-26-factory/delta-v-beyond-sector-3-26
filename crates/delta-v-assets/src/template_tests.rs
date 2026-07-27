@@ -278,3 +278,96 @@ fn test_load_planet_mercury() {
         result.unwrap_err()
     );
 }
+
+// ---------------------------------------------------------------------------
+// World definition loading tests
+// ---------------------------------------------------------------------------
+
+/// Returns the path to the test fixtures directory.
+fn fixtures_path() -> std::path::PathBuf {
+    crate::paths::get_workspace_root().join("crates/delta-v-world/tests/fixtures")
+}
+
+/// The shipped default world file must load without errors.
+#[test]
+fn test_loads_default_world_ok() {
+    let root = crate::paths::get_workspace_root();
+    let world = crate::template::load_test_world_from_paths(
+        &root.join("assets/worlds/default.world.json"),
+        &root.join("assets/json/schema/world.schema.json"),
+    )
+    .expect("default world should load without error");
+    assert_eq!(world.format_version, 1);
+    assert!(!world.name.is_empty(), "world name must not be empty");
+}
+
+/// The default world must have at least one entity (per ADR-0038).
+#[test]
+fn test_entities_present() {
+    let root = crate::paths::get_workspace_root();
+    let world = crate::template::load_test_world_from_paths(
+        &root.join("assets/worlds/default.world.json"),
+        &root.join("assets/json/schema/world.schema.json"),
+    )
+    .expect("load");
+    assert!(
+        !world.entities.is_empty(),
+        "world must have at least one entity"
+    );
+    // The first entity should reference a valid ship template.
+    // Check template_short since template is loaded later by build_spawn_event.
+    let player_entity = &world.entities[0];
+    assert!(
+        player_entity.template_short.starts_with("ships/"),
+        "entity template should reference a ship"
+    );
+}
+
+/// Pointing the loader at a nonexistent path must produce [`AssetError::Io`].
+#[test]
+fn test_missing_file_errors() {
+    let root = crate::paths::get_workspace_root();
+    let result = crate::template::load_test_world_from_paths(
+        std::path::Path::new("/nonexistent/world.json"),
+        &root.join("assets/json/schema/world.schema.json"),
+    );
+    assert!(
+        matches!(result, Err(crate::error::AssetError::Io { .. })),
+        "expected AssetError::Io, got: {result:?}"
+    );
+}
+
+/// A JSON object that violates `additionalProperties: false` must
+/// produce [`AssetError::Validation`].
+#[test]
+fn test_schema_violation_errors() {
+    let root = crate::paths::get_workspace_root();
+    let schema_path = root.join("assets/json/schema/world.schema.json");
+
+    let bad_json = r#"{"unknown_key": true}"#;
+    let mut tmp = tempfile::NamedTempFile::new().expect("tempfile");
+    std::io::Write::write_all(&mut tmp, bad_json.as_bytes()).expect("write");
+
+    let result = crate::template::load_test_world_from_paths(tmp.path(), &schema_path);
+    assert!(
+        matches!(result, Err(crate::error::AssetError::Validation(_))),
+        "expected AssetError::Validation, got: {result:?}"
+    );
+}
+
+/// Test world loading with isolated test fixtures.
+#[test]
+fn test_loads_test_world_ok() {
+    let fixtures = fixtures_path();
+    let world = crate::template::load_test_world_from_paths(
+        &fixtures.join("test.world.json"),
+        &fixtures.join("world.schema.json"),
+    )
+    .expect("test world should load without error");
+    assert_eq!(world.format_version, 1);
+    assert_eq!(world.name, "Test World");
+    assert_eq!(world.entities.len(), 1);
+    // The template field is loaded later by build_spawn_event, so check template_short
+    assert_eq!(world.entities[0].template_short, "ships/debug-ship-cube");
+    assert!(world.entities[0].player_controlled);
+}

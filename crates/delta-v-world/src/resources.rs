@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use bevy::prelude::*;
 
-use crate::world_def::WorldDef;
+use delta_v_types::WorldDef;
 
 /// Path to the world definition file.
 ///

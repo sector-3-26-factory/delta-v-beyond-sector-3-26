@@ -530,3 +530,64 @@ pub fn load_maneuvering_thruster_definition(
         serde_json::from_value(value).expect("validated JSON should deserialize");
     Ok(definition.into())
 }
+
+/// Loads and validates a world definition from the given path.
+///
+/// Reads the world JSON, validates it against `assets/json/schema/world.schema.json`,
+/// fills in schema defaults, and deserialises into [`WorldDef`].
+///
+/// # Errors
+///
+/// Returns [`AssetError`] if the file cannot be read, parsed, or validated.
+pub fn load_world(json_path: &Path) -> Result<delta_v_types::WorldDef, AssetError> {
+    let schema_path = get_workspace_root().join("assets/json/schema/world.schema.json");
+    load_world_from_paths(json_path, &schema_path)
+}
+
+/// Loads and validates the default world definition.
+///
+/// Reads `assets/worlds/default.world.json`, validates it against
+/// `assets/json/schema/world.schema.json`, fills in schema defaults, and
+/// deserialises into [`WorldDef`].
+///
+/// # Errors
+///
+/// Returns [`AssetError`] if the file cannot be read, parsed, or validated.
+pub fn load_default_world() -> Result<delta_v_types::WorldDef, AssetError> {
+    let json_path = get_workspace_root().join("assets/worlds/default.world.json");
+    load_world(&json_path)
+}
+
+/// Loads and validates a world definition from explicit paths.
+///
+/// Used internally by the public API and by tests.
+fn load_world_from_paths(
+    json_path: &Path,
+    schema_path: &Path,
+) -> Result<delta_v_types::WorldDef, AssetError> {
+    let value = load(json_path.to_path_buf(), schema_path.to_path_buf())
+        .load()
+        .map_err(|e| map_json_error(e, json_path))?;
+    let world_json: delta_v_types::WorldDefJson =
+        serde_json::from_value(value).map_err(|e| AssetError::JsonParse {
+            path: json_path.to_owned(),
+            source: e,
+        })?;
+    Ok(world_json.into())
+}
+
+/// Loads and validates a world definition from explicit paths.
+///
+/// Used by tests and future tooling that needs to load arbitrary world
+/// files with a custom schema path.
+///
+/// # Errors
+///
+/// Returns [`AssetError`] if the file cannot be read, parsed, or validated.
+#[cfg(test)]
+pub fn load_test_world_from_paths(
+    json_path: &Path,
+    schema_path: &Path,
+) -> Result<delta_v_types::WorldDef, AssetError> {
+    load_world_from_paths(json_path, schema_path)
+}

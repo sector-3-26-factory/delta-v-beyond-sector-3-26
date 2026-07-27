@@ -42,30 +42,19 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
-pub mod error;
-pub mod loader;
 pub mod resources;
-pub mod world_def;
-
-#[cfg(test)]
-#[path = "loader_tests.rs"]
-mod loader_tests;
 
 pub use delta_v_core::SpawnEntity;
-pub use error::WorldError;
+pub use delta_v_types::{EntitySpawn, WorldDef};
 pub use resources::WorldDefResource;
 pub use resources::WorldPath;
-pub use world_def::WorldDef;
 
 use bevy::prelude::*;
 use delta_v_assets::template::{
     load_ai_controlled_ship, load_asteroid, load_planet, load_player_controlled_ship, load_ship,
-    load_sun,
+    load_sun, load_world,
 };
 use delta_v_core::AppState;
-
-use crate::loader::load_world;
-use world_def::EntitySpawn;
 
 /// World plugin: loads and validates the world definition.
 ///
@@ -235,15 +224,15 @@ fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
     // Pass through the AI task if present.
     if let Some(ref ai_task) = entity_spawn.ai_task {
         let task_str = match ai_task {
-            delta_v_types::AiTaskJson::Patrol => "patrol",
+            delta_v_types::AiTask::Patrol => "patrol",
         };
         spawn_event = spawn_event.with_ai_task(task_str.to_string());
     }
 
     // Pass through the mass override if present.
     // Mass is NOT scaled - it is used as-is or overridden.
-    if let Some(ref mass) = entity_spawn.mass {
-        spawn_event = spawn_event.with_mass(mass.value);
+    if let Some(mass) = entity_spawn.mass {
+        spawn_event = spawn_event.with_mass(mass);
     }
 
     spawn_event

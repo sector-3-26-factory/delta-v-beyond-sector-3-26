@@ -193,3 +193,41 @@ impl From<CollisionShapeJson> for CollisionShapeData {
         Self { shape_type, offset }
     }
 }
+
+/// Scales a `CollisionShapeData` by the given scale factor.
+///
+/// This is the SINGLE function that handles sphere/box scaling for ALL entity types.
+///
+/// # Arguments
+///
+/// * `shape` - The collision shape data from the template.
+/// * `scale` - The scale factor to apply to the shape dimensions.
+///
+/// # Panics
+///
+/// Panics if the shape type is `ConvexHull` (not yet implemented per ADR-0052).
+/// `ConvexHull` shapes cannot be scaled; use Sphere or Box instead.
+#[allow(clippy::panic)] // INVARIANT: ConvexHull scaling not implemented (ADR-0052)
+#[must_use]
+pub fn scale_collision_shape(shape: &CollisionShapeData, scale: f32) -> CollisionShapeData {
+    match shape.shape_type {
+        CollisionShapeType::Sphere { radius } => {
+            let scaled_radius = radius * scale;
+            let offset = shape.offset * scale;
+            CollisionShapeData::sphere(scaled_radius, offset)
+        }
+        CollisionShapeType::Box { half_extents } => {
+            let scaled_half_extents = half_extents * scale;
+            let offset = shape.offset * scale;
+            CollisionShapeData::box_shape(scaled_half_extents, offset)
+        }
+        CollisionShapeType::ConvexHull => {
+            // INVARIANT: ConvexHull scaling is not yet implemented (ADR-0052).
+            // This is a hard error - we do not silently substitute a fallback.
+            panic!(
+                "ConvexHull collision shape scaling is not yet implemented (ADR-0052). \
+                 ConvexHull shapes cannot be scaled; use Sphere or Box instead."
+            )
+        }
+    }
+}

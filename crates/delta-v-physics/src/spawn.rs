@@ -30,64 +30,15 @@ use bevy::prelude::*;
 use delta_v_core::{
     DebugAxesEligible, EntityType, RenderLayer, SpawnEntity, Targetable, WorldEntityId,
 };
-use delta_v_types::{BoundingBox, CollisionShapeData, CollisionShapeType};
+use delta_v_types::{
+    CollisionShapeType, compute_debug_axis_length, resolve_mass, scale_bounding_box,
+    scale_collision_shape,
+};
 
 use crate::{
     CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalParentId,
     PendingCelestialMesh, Planet, RigidBody, Sun,
 };
-
-/// Scales a `CollisionShapeData` by the given scale factor.
-///
-/// Returns a new `CollisionShapeData` with scaled dimensions.
-#[must_use]
-fn scale_collision_shape(shape: &CollisionShapeData, scale: f32) -> CollisionShapeData {
-    match shape.shape_type {
-        CollisionShapeType::Sphere { radius } => {
-            CollisionShapeData::sphere(radius * scale, shape.offset * scale)
-        }
-        CollisionShapeType::Box { half_extents } => CollisionShapeData::box_shape(
-            Vec3::new(
-                half_extents.x * scale,
-                half_extents.y * scale,
-                half_extents.z * scale,
-            ),
-            shape.offset * scale,
-        ),
-        CollisionShapeType::ConvexHull => {
-            // ConvexHull is not yet implemented for scaling
-            // Per ADR-0052, this is a known limitation
-            *shape
-        }
-    }
-}
-
-/// Computes debug axis length from a `BoundingBox` (120% of longest side).
-#[must_use]
-fn compute_debug_axis_length(bbox: &BoundingBox) -> f32 {
-    let size = bbox.size();
-    let max_dim = size.x.max(size.y).max(size.z);
-    max_dim * 1.2
-}
-
-/// Scales a `BoundingBox` by the given scale factor.
-///
-/// Both min and max corners are multiplied by the scale.
-#[must_use]
-fn scale_bounding_box(bbox: &BoundingBox, scale: f32) -> BoundingBox {
-    BoundingBox {
-        min: bbox.min * scale,
-        max: bbox.max * scale,
-    }
-}
-
-/// Resolves the final mass value, using override if present.
-///
-/// Mass is NOT scaled - it is used as-is or overridden.
-#[must_use]
-fn resolve_mass(template_mass: f32, mass_override: Option<f32>) -> f32 {
-    mass_override.unwrap_or(template_mass)
-}
 
 // ---------------------------------------------------------------------------
 // Spawn systems

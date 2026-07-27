@@ -329,3 +329,12 @@ impl RigidBodyData {
         self.angular_velocity += Vec3::new(alpha_x, alpha_y, alpha_z) * delta_time;
     }
 }
+
+/// Resolves the final mass value, using override if present.
+///
+/// Mass is NOT scaled - it is used as-is from the template, or overridden if
+/// `mass_override` is specified.
+#[must_use]
+pub fn resolve_mass(template_mass: f32, mass_override: Option<f32>) -> f32 {
+    mass_override.unwrap_or(template_mass)
+}

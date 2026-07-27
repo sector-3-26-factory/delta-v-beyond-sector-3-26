@@ -69,3 +69,21 @@ impl From<AiConfigJson> for AiConfig {
         }
     }
 }
+
+/// Runtime AI task assigned to a specific entity instance.
+///
+/// This is the converted version of [`AiTaskJson`] for use at runtime.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AiTask {
+    /// Wander near spawn point, engage hostiles that come within `aggro_range`.
+    Patrol,
+}
+
+impl From<AiTaskJson> for AiTask {
+    fn from(json: AiTaskJson) -> Self {
+        match json {
+            AiTaskJson::Patrol => Self::Patrol,
+        }
+    }
+}

@@ -112,3 +112,22 @@ impl BoundingBox {
         self.size() * 0.5
     }
 }
+
+/// Scales a `BoundingBox` by the given scale factor.
+///
+/// Both min and max corners are multiplied by the scale.
+#[must_use]
+pub fn scale_bounding_box(bbox: &BoundingBox, scale: f32) -> BoundingBox {
+    BoundingBox {
+        min: bbox.min * scale,
+        max: bbox.max * scale,
+    }
+}
+
+/// Computes debug axis length from a `BoundingBox` (120% of longest side).
+#[must_use]
+pub fn compute_debug_axis_length(bbox: &BoundingBox) -> f32 {
+    let size = bbox.size();
+    let max_dim = size.x.max(size.y).max(size.z);
+    max_dim * 1.2
+}
