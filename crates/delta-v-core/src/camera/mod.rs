@@ -11,10 +11,8 @@ use crate::events::CameraSwitched;
 use crate::input::ActionState;
 use delta_v_types::LogicalAction;
 
-/// Camera template types for deserializing camera positions from ship template JSON.
-pub mod types;
-
-pub use types::{CameraDefinition, ShipCamerasTemplate};
+// Re-export camera types from delta-v-types (ADR-0046)
+pub use delta_v_types::{CameraDefinition, ShipCamerasTemplate};
 
 /// Named render layer indices for the camera/layer system.
 ///

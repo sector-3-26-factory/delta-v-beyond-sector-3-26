@@ -52,6 +52,14 @@ pub mod ship_templates;
 pub mod spawn;
 pub mod systems;
 
+#[cfg(test)]
+#[path = "spawn_tests.rs"]
+mod spawn_tests;
+
+#[cfg(test)]
+#[path = "systems_tests.rs"]
+mod systems_tests;
+
 pub use delta_v_core::Propulsion;
 pub use delta_v_types::{
     CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot, PlayerShipTemplate,
@@ -60,13 +68,6 @@ pub use delta_v_types::{
 pub use error::ShipError;
 pub use ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 pub use spawn::spawn_ship;
-
-#[cfg(test)]
-#[path = "spawn_tests.rs"]
-mod spawn_tests;
-#[cfg(test)]
-#[path = "systems_tests.rs"]
-mod systems_tests;
 
 use bevy::prelude::*;
 use delta_v_core::{AppState, WorldSpawnSet};

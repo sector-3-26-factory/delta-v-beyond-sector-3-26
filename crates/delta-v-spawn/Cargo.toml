@@ -10,7 +10,6 @@ keywords = ["gamedev", "spacesim", "spawning"]
 categories = ["game-development"]
 
 [dependencies]
-serde_json = { workspace = true }
 bevy = { workspace = true }
 delta-v-types = { workspace = true }
 delta-v-json = { workspace = true }

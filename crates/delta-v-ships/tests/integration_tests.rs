@@ -1,10 +1,9 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Integration tests for cockpit overlay systems.
+//! Integration tests for ships plugin.
 //!
 //! See ADR-0021 (Testing strategy).
 
-// Test code is allowed to use expect/unwrap/indexing per ADR-0023.
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
@@ -15,13 +14,12 @@
 use bevy::app::App;
 use bevy::asset::AssetPlugin;
 use bevy::prelude::*;
+use bevy::state::app::StatesPlugin;
 
 use delta_v_core::AppState;
+use delta_v_ships::cockpit::components::ActiveCockpitStation;
 
 /// Integration test: verify `SelectedTarget` resource can be set and read.
-///
-/// This test verifies the basic resource update behavior without requiring
-/// the full plugin setup.
 #[test]
 fn test_selected_target_resource_update() {
     let mut app = App::new();
@@ -30,7 +28,7 @@ fn test_selected_target_resource_update() {
         file_path: "assets".to_string(),
         ..default()
     });
-    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(StatesPlugin);
     app.init_state::<AppState>();
 
     // Add required resources
@@ -70,8 +68,6 @@ fn test_selected_target_resource_update() {
 }
 
 /// Integration test: verify `ActiveCockpitStation` resource is set correctly.
-///
-/// This test verifies the resource initialization behavior.
 #[test]
 fn test_active_cockpit_station_resource() {
     let mut app = App::new();
@@ -80,18 +76,16 @@ fn test_active_cockpit_station_resource() {
         file_path: "assets".to_string(),
         ..default()
     });
-    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.add_plugins(StatesPlugin);
     app.init_state::<AppState>();
 
     // Insert the ActiveCockpitStation resource
-    app.insert_resource(delta_v_ships::cockpit::components::ActiveCockpitStation {
+    app.insert_resource(ActiveCockpitStation {
         station_id: "default".to_string(),
     });
 
     // Verify the resource exists
-    let active_station = app
-        .world()
-        .get_resource::<delta_v_ships::cockpit::components::ActiveCockpitStation>();
+    let active_station = app.world().get_resource::<ActiveCockpitStation>();
     assert!(
         active_station.is_some(),
         "ActiveCockpitStation resource should be set"
@@ -101,4 +95,32 @@ fn test_active_cockpit_station_resource() {
         "default",
         "station_id should match"
     );
+}
+
+/// Integration test: verify `ShipsPlugin` can be added to an app without errors.
+#[test]
+fn test_ships_plugin_builds() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(AssetPlugin {
+        file_path: "assets".to_string(),
+        ..default()
+    });
+    app.add_plugins(StatesPlugin);
+    app.init_state::<AppState>();
+
+    // Add the ships plugin - this should not panic
+    app.add_plugins(delta_v_ships::ShipsPlugin);
+
+    // Verify the plugin registered its public resources
+    assert!(
+        app.world()
+            .contains_resource::<delta_v_ships::ThrustCommand>()
+    );
+    assert!(
+        app.world()
+            .contains_resource::<delta_v_ships::TorqueCommand>()
+    );
+    // Note: PreviousActions and RotationRampState are internal (not pub)
+    // so we don't test for them here
 }

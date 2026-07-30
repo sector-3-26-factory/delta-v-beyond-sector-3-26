@@ -40,6 +40,7 @@
 pub mod ai;
 pub mod celestial;
 pub mod collision;
+pub mod config_types;
 pub mod entity_template;
 pub mod i18n;
 pub mod ids;
@@ -65,6 +66,7 @@ pub use collision::{
     CollisionLayers, CollisionShapeData, CollisionShapeJson, CollisionShapeType,
     scale_collision_shape,
 };
+pub use config_types::{DebugConfigJson, DiagnosticsConfigJson, FlightAssistConfigJson};
 pub use entity_template::EntityTemplate;
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use ids::{EntityId, TemplatePath};

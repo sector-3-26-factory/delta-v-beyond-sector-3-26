@@ -86,10 +86,6 @@ pub use delta_v_types::{
 #[path = "state/tests.rs"]
 mod state_tests;
 
-#[cfg(test)]
-#[path = "diagnostics/tests.rs"]
-mod diagnostics_tests;
-
 use bevy::prelude::*;
 
 /// The core plugin that initialises fundamental ECS infrastructure.
