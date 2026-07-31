@@ -291,11 +291,6 @@ pub fn propulsion_selected_notification_system(
             .propulsion_selected
             .replace("{name}", &event.thruster_name);
 
-        tracing::debug!(
-            "[notification] spawning propulsion selected notification: {}",
-            event.thruster_name
-        );
-
         super::spawn::spawn_notification(
             &mut commands,
             &config,

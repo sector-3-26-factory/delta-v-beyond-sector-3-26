@@ -27,7 +27,8 @@
     },
     "propulsion": {
         "main_thrusters": [
-            "chemical-main"
+            "chemical-main",
+            "antimatter-torch"
         ],
         "maneuvering_thruster": "rcs-standard"
     },

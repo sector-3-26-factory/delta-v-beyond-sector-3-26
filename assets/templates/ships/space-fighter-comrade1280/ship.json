@@ -33,7 +33,8 @@
     "propulsion": {
         "main_thrusters": [
             "chemical-main",
-            "fusion-drive"
+            "fusion-drive",
+            "antimatter-torch"
         ],
         "maneuvering_thruster": "rcs-standard"
     },
@@ -42,5 +43,5 @@
         "plasma-arc"
     ],
     "max_weapons_count": 2,
-    "max_propulsions_count": 2
+    "max_propulsions_count": 3
 }

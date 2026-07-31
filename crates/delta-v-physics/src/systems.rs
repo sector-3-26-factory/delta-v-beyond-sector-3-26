@@ -194,12 +194,12 @@ pub fn orbital_motion_system(
     time: Res<'_, Time<Fixed>>,
     planets: Query<'_, '_, (Entity, &Planet)>,
     // Use ParamSet to separate immutable and mutable access to Transform.
-    // The Sun is always at the origin, so the parents query will fail for Sun parents.
+    // Include Sun in the parent query so we get its actual position after floating origin recentering.
     mut transform_set: ParamSet<
         '_,
         '_,
         (
-            Query<'_, '_, &Transform, Without<Sun>>,
+            Query<'_, '_, &Transform>,
             Query<'_, '_, &mut Transform, Without<Sun>>,
         ),
     >,
@@ -232,8 +232,8 @@ pub fn orbital_motion_system(
         for (entity, parent_id, distance, period, inclination, initial_angle, _eccentricity) in
             &planet_data
         {
-            // Get parent position. The Sun is always at the origin, so for Sun parents
-            // the query will fail and we use Vec3::ZERO. For other parents, query their position.
+            // Get parent position. The Sun is now included in the query, so we get its
+            // actual position after floating origin recentering. For other parents, query their position.
             let parent_pos = parents
                 .get(*parent_id)
                 .map_or(Vec3::ZERO, |parent_transform| parent_transform.translation);

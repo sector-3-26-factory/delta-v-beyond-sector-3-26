@@ -7,7 +7,7 @@
         "unit_ms": "m/s",
         "unit_kmh": "km/h",
         "unit_kms": "km/s",
-        "unit_pch": "pc/h",
+        "unit_mms": "Mm/s",
         "unit_c": "c"
     },
     "entity_types": {

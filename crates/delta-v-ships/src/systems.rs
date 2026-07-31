@@ -220,6 +220,7 @@ pub fn input_reader_system(
 #[allow(clippy::needless_pass_by_value)]
 pub fn propulsion_selection_system(
     action_state: Res<'_, ActionState<LogicalAction>>,
+    player_ship: Res<'_, PlayerShipEntity>,
     mut propulsion_query: Query<'_, '_, &mut Propulsion>,
     mut config: ResMut<'_, ShipPropulsionConfig>,
     mut events: MessageWriter<'_, PropulsionSelected>,
@@ -251,7 +252,7 @@ pub fn propulsion_selection_system(
     };
 
     // Update the Propulsion component on the player ship
-    let Ok(mut propulsion) = propulsion_query.single_mut() else {
+    let Ok(mut propulsion) = propulsion_query.get_mut(player_ship.0) else {
         return;
     };
     if propulsion.active_main_thruster_index == new_index {

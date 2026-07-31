@@ -60,8 +60,8 @@ pub struct SpeedTranslations {
     pub unit_kmh: String,
     /// Unit abbreviation for kilometers per second.
     pub unit_kms: String,
-    /// Unit abbreviation for parsecs per hour.
-    pub unit_pch: String,
+    /// Unit abbreviation for megameters per second.
+    pub unit_mms: String,
     /// Unit abbreviation for fraction of light speed.
     pub unit_c: String,
 }

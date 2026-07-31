@@ -25,6 +25,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use delta_v_core::WorldEntityId;
 
 /// Component for sun entities.
 ///
@@ -160,12 +161,12 @@ pub fn make_sun_emissive(
 pub fn resolve_orbital_parents(
     mut commands: Commands<'_, '_>,
     mut planets: Query<'_, '_, (Entity, &OrbitalParentId, &mut Planet)>,
-    all_entities: Query<'_, '_, (Entity, &Name)>,
+    all_entities: Query<'_, '_, (Entity, &WorldEntityId)>,
 ) {
     for (entity, parent_id, mut planet) in &mut planets {
-        // Find the parent entity by name
-        for (potential_parent, name) in &all_entities {
-            if name.as_str() == parent_id.0 {
+        // Find the parent entity by WorldEntityId (matches the world definition ID)
+        for (potential_parent, world_id) in &all_entities {
+            if world_id.0 == parent_id.0 {
                 planet.orbital_parent = potential_parent;
                 commands.entity(entity).remove::<OrbitalParentId>();
                 tracing::debug!(

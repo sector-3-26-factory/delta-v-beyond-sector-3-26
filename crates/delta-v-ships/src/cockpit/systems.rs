@@ -531,7 +531,7 @@ pub fn velocity_vector_system(
         &i18n.speed.unit_ms,
         &i18n.speed.unit_kmh,
         &i18n.speed.unit_kms,
-        &i18n.speed.unit_pch,
+        &i18n.speed.unit_mms,
         &i18n.speed.unit_c,
     );
 

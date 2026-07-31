@@ -43,7 +43,7 @@
                 "unit_ms",
                 "unit_kmh",
                 "unit_kms",
-                "unit_pch",
+                "unit_mms",
                 "unit_c"
             ],
             "properties": {
@@ -59,8 +59,8 @@
                     "description": "Unit abbreviation for kilometers per second.",
                     "type": "string"
                 },
-                "unit_pch": {
-                    "description": "Unit abbreviation for parsecs per hour.",
+                "unit_mms": {
+                    "description": "Unit abbreviation for megameters per second.",
                     "type": "string"
                 },
                 "unit_c": {
