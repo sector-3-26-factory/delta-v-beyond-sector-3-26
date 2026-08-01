@@ -37,9 +37,19 @@ pub fn build_input_map(keybindings: &KeybindingsResource) -> InputMap<LogicalAct
             [] => {}
             [single] => {
                 input_map = input_map.with(*action, *single);
+                tracing::debug!(
+                    "[build_input_map] action '{}' bound to single key: {:?}",
+                    name,
+                    single
+                );
             }
             keys => {
                 input_map = input_map.with(*action, ButtonlikeChord::new(keys.to_vec()));
+                tracing::debug!(
+                    "[build_input_map] action '{}' bound to chord: {:?}",
+                    name,
+                    keys
+                );
             }
         }
 

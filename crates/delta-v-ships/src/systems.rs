@@ -104,7 +104,12 @@ pub fn input_reader_system(
 ) {
     let ramp_ticks_max = propulsion.rotation_ramp_ticks;
 
-    for action in action_state.get_pressed() {
+    let pressed_actions = action_state.get_pressed();
+    if !pressed_actions.is_empty() {
+        tracing::debug!("[input_reader] pressed actions: {:?}", pressed_actions);
+    }
+
+    for action in pressed_actions {
         match action {
             // Thrust: apply force in local frame
             // Forward = -Z, Backward = +Z (ADR-0006)

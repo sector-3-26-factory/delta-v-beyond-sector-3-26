@@ -207,6 +207,8 @@ pub fn spawn_planet(
                 orbital_eccentricity: planet_template.orbital_eccentricity,
                 orbital_inclination: planet_template.orbital_inclination,
                 initial_orbital_angle: planet_template.initial_orbital_angle,
+                rotation_period: planet_template.rotation_period,
+                axial_tilt: planet_template.axial_tilt,
             },
             OrbitalParentId(planet_template.orbital_parent.clone()),
             Navigable,

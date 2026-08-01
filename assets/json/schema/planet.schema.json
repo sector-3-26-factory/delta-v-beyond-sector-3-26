@@ -109,6 +109,18 @@
                 "value": 0.0,
                 "unit": "degrees"
             }
+        },
+        "rotation_period": {
+            "description": "Rotation period in hours. The planet rotates around its tilted axis. None means no rotation.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+        },
+        "axial_tilt": {
+            "description": "Axial tilt (obliquity) in degrees. Angle between rotation axis and orbital axis. Default: 0 (no tilt).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
+            "default": {
+                "value": 0.0,
+                "unit": "degrees"
+            }
         }
     },
     "$defs": {

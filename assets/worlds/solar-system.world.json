@@ -7,9 +7,9 @@
             "id": "player_ship",
             "player_controlled": true,
             "position": {
-                "x": 0.0,
+                "x": 1.071e11,
                 "y": 0.0,
-                "z": 6.9600e10
+                "z": 0.0
             }
         },
         {
@@ -48,6 +48,20 @@
                 "x": 4.8794e5,
                 "y": 4.8794e5,
                 "z": 4.8794e5
+            }
+        },
+        {
+            "template": "planets/venus",
+            "id": "venus",
+            "position": {
+                "x": 1.081e11,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 6.0518e6,
+                "y": 6.0518e6,
+                "z": 6.0518e6
             }
         }
     ]

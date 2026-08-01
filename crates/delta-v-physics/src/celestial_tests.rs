@@ -22,6 +22,8 @@ fn planet_has_zero_inclination() {
         orbital_eccentricity: 0.0,
         orbital_inclination: 0.0,
         initial_orbital_angle: 0.0,
+        rotation_period: None,
+        axial_tilt: 0.0,
     };
     assert!(
         (planet.orbital_inclination - 0.0).abs() < f32::EPSILON,
@@ -39,6 +41,8 @@ fn planet_has_circular_orbit() {
         orbital_eccentricity: 0.0,
         orbital_inclination: 0.0,
         initial_orbital_angle: 0.0,
+        rotation_period: None,
+        axial_tilt: 0.0,
     };
     assert!(
         (planet.orbital_eccentricity - 0.0).abs() < f32::EPSILON,

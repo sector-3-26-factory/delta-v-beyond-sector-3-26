@@ -59,6 +59,10 @@ pub struct Planet {
     pub orbital_inclination: f32,
     /// Initial orbital angle in radians.
     pub initial_orbital_angle: f32,
+    /// Rotation period in seconds. None means no rotation.
+    pub rotation_period: Option<f32>,
+    /// Axial tilt (obliquity) in radians. Angle between rotation axis and orbital axis.
+    pub axial_tilt: f32,
 }
 
 /// Marker component for entities that can be targeted or selected in navigation.

@@ -426,6 +426,7 @@ pub fn velocity_vector_system(
 ) {
     let _span = tracing::info_span!("delta_v_ships::velocity_vector_system").entered();
     let Ok(ship_body) = ship_query.get(player_ship.0) else {
+        tracing::debug!("[vvi] player ship not found or no RigidBody");
         return;
     };
 
@@ -439,8 +440,16 @@ pub fn velocity_vector_system(
         }
     };
 
+    tracing::debug!(
+        "[vvi] speed={:.3} threshold={:.3} current_visibility={:?}",
+        speed,
+        MIN_SPEED_THRESHOLD,
+        *visibility
+    );
+
     if speed < MIN_SPEED_THRESHOLD {
         if *visibility != Visibility::Hidden {
+            tracing::debug!("[vvi] hiding indicator and text (speed below threshold)");
             *visibility = Visibility::Hidden;
         }
         if let Ok((_, mut text_visibility)) = text_query.single_mut() {
@@ -452,6 +461,7 @@ pub fn velocity_vector_system(
     }
 
     if *visibility != Visibility::Visible {
+        tracing::debug!("[vvi] showing indicator (speed above threshold)");
         *visibility = Visibility::Visible;
     }
 
@@ -535,12 +545,17 @@ pub fn velocity_vector_system(
         &i18n.speed.unit_c,
     );
 
+    tracing::debug!("[vvi] speed_text='{}' updating text entity", speed_text);
+
     // Update the speed text entity.
     if let Ok((mut text, mut text_visibility)) = text_query.single_mut() {
         if *text_visibility != Visibility::Visible {
+            tracing::debug!("[vvi] setting text visibility to Visible");
             *text_visibility = Visibility::Visible;
         }
         text.0 = speed_text;
+    } else {
+        tracing::warn!("[vvi] failed to get speed text entity - query error");
     }
 
     tracing::debug!(

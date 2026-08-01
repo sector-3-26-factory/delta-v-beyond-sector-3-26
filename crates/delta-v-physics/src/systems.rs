@@ -299,3 +299,55 @@ pub fn sun_rotation_system(
         );
     }
 }
+
+/// Rotates planets around their tilted axis, accounting for orbital inclination.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The rotation period is in seconds (stored in the Planet component).
+/// The axial tilt is in radians (angle between rotation axis and orbital axis).
+/// The orbital inclination is in radians (angle between orbital plane and ecliptic).
+///
+/// The planet's rotation axis is computed as:
+/// 1. Start with orbital axis (Y, perpendicular to ecliptic)
+/// 2. Tilt by `orbital_inclination` around X axis (orbital plane inclination)
+/// 3. Tilt by `axial_tilt` around the line of nodes (X axis, intersection of orbital plane with ecliptic)
+///    This assumes longitude of ascending node = 0 for simplicity.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(clippy::needless_pass_by_value, clippy::explicit_iter_loop)]
+pub fn planet_rotation_system(
+    mut planets: Query<'_, '_, (Entity, &Planet, &mut Transform)>,
+    time: Res<'_, Time<Fixed>>,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    for (entity, planet, mut transform) in &mut planets {
+        let Some(rotation_period_seconds) = planet.rotation_period else {
+            continue;
+        };
+
+        // Compute rotation angle: (elapsed / period) * TAU
+        let angle = (elapsed / rotation_period_seconds) * std::f32::consts::TAU;
+
+        // Orbital axis: start with Y (ecliptic normal), tilt by orbital_inclination around X
+        let orbital_axis = Quat::from_axis_angle(Vec3::X, planet.orbital_inclination) * Vec3::Y;
+
+        // Planet's rotation axis: tilt orbital axis by axial_tilt around the line of nodes.
+        // The line of nodes is the intersection of the orbital plane with the ecliptic plane.
+        // Since we incline the orbital plane around the X axis, the X axis lies in both planes
+        // and is the line of nodes (assuming longitude of ascending node = 0).
+        // This gives a physically consistent tilt direction independent of orbital inclination.
+        let tilt_axis = Vec3::X;
+        let rotation_axis = Quat::from_axis_angle(tilt_axis, planet.axial_tilt) * orbital_axis;
+
+        // Set rotation around tilted axis
+        transform.rotation = Quat::from_axis_angle(rotation_axis, angle);
+
+        tracing::trace!(
+            "Planet {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_seconds:.1} s, axial_tilt={:.4} rad, orbital_inclination={:.4} rad",
+            planet.axial_tilt,
+            planet.orbital_inclination
+        );
+    }
+}

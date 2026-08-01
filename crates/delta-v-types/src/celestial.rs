@@ -108,6 +108,12 @@ pub struct PlanetTemplateJson {
     /// Initial orbital angle in degrees.
     /// Default: 0.0 (from schema).
     pub initial_orbital_angle: PhysicalQuantityJson,
+    /// Rotation period in hours.
+    /// Default: None (from schema).
+    pub rotation_period: Option<PhysicalQuantityJson>,
+    /// Axial tilt (obliquity) in degrees.
+    /// Default: 0.0 (from schema).
+    pub axial_tilt: PhysicalQuantityJson,
 }
 
 /// JSON schema type for asteroid templates.
@@ -203,6 +209,10 @@ pub struct PlanetTemplate {
     pub orbital_inclination: f32,
     /// Initial orbital angle in radians (SI base unit).
     pub initial_orbital_angle: f32,
+    /// Rotation period in seconds (SI base unit). None means no rotation.
+    pub rotation_period: Option<f32>,
+    /// Axial tilt (obliquity) in radians (SI base unit).
+    pub axial_tilt: f32,
 }
 
 impl From<PlanetTemplateJson> for PlanetTemplate {
@@ -219,6 +229,8 @@ impl From<PlanetTemplateJson> for PlanetTemplate {
             orbital_eccentricity: json.orbital_eccentricity,
             orbital_inclination: json.orbital_inclination.to_radians(),
             initial_orbital_angle: json.initial_orbital_angle.to_radians(),
+            rotation_period: json.rotation_period.map(|p| p.to_seconds()),
+            axial_tilt: json.axial_tilt.to_radians(),
         }
     }
 }

@@ -62,7 +62,7 @@ use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
     integrate_position_system, integrate_velocity_system, orbital_motion_system,
-    sun_rotation_system,
+    planet_rotation_system, sun_rotation_system,
 };
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
@@ -81,6 +81,7 @@ use systems::{
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
+    #[allow(clippy::too_many_lines)]
     fn build(&self, app: &mut App) {
         info!("PhysicsPlugin initialized");
 
@@ -159,6 +160,15 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             FixedUpdate,
             sun_rotation_system
+                .in_set(PhysicsSet::IntegratePosition)
+                .run_if(in_state(AppState::InGame)),
+        );
+
+        // Planet rotation system.
+        // Runs in FixedUpdate to rotate planets around their tilted axis.
+        app.add_systems(
+            FixedUpdate,
+            planet_rotation_system
                 .in_set(PhysicsSet::IntegratePosition)
                 .run_if(in_state(AppState::InGame)),
         );

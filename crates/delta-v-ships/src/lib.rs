@@ -136,8 +136,10 @@ impl Plugin for ShipsPlugin {
         );
 
         // Camera switching system (M7).
+        // Must run in PreUpdate (after leafwing-input-manager's update_action_state)
+        // because tick_action_state runs in FixedPostUpdate which clears just_pressed before Update runs.
         app.add_systems(
-            Update,
+            PreUpdate,
             delta_v_core::camera_switch_system.run_if(in_state(AppState::InGame)),
         );
 

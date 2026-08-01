@@ -10,7 +10,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
@@ -23,7 +23,20 @@ use bevy::prelude::*;
 /// Resource tracking whether the navigation menu is open.
 ///
 /// This resource is toggled by the `ToggleNavigationMenu` action.
-// allow-default: Bevy requires Default on resources for init_resource.
-// This starts as false (menu closed).
+/// This starts as false (menu closed).
+// allow-default: Bevy ECS Resource trait requires Default for resource initialization.
 #[derive(Resource, Default)]
 pub struct NavigationMenuOpen(pub bool);
+
+/// Resource tracking the previous state of the `ToggleNavigationMenu` action for edge detection.
+///
+/// Used by `navigation_menu_toggle_system` to detect key press transitions
+/// (on press, not on hold). This provides more reliable edge detection than
+/// relying solely on `ActionState::just_pressed`, which can be unreliable
+/// when many keys are held simultaneously.
+// allow-default: Bevy ECS Resource trait requires Default for resource initialization.
+#[derive(Resource, Default)]
+pub struct NavigationMenuToggleState {
+    /// Whether `ToggleNavigationMenu` was pressed last frame.
+    pub prev_pressed: bool,
+}

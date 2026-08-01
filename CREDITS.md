@@ -126,6 +126,15 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/templates/planets/mercury/mesh.glb`
 - **Modifications:** *None*
 
+### "Venus (planet)"
+
+- **Creator:** [uperesito](https://sketchfab.com/uperesito)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/venus-v11-99be254b68da48d092c3b8917020c67a)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/venus/mesh.glb`
+- **Modifications:** Baked root node rotation transform into vertex positions and normals; flattened node hierarchy to single mesh node for proper glTF loading.
+
 ## Fonts
 
 ### DejaVu Sans Mono

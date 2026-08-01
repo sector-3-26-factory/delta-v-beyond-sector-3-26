@@ -88,8 +88,6 @@ impl Plugin for CockpitPlugin {
                     systems::velocity_vector_system,
                     systems::status_gauge_system,
                     systems::update_needle_visibility,
-                    systems::targeting_mode_toggle_system,
-                    systems::cycle_target_system,
                     systems::bearing_indicator_system,
                     systems::target_reticle_system,
                     systems::camera_shake_system,
@@ -101,6 +99,15 @@ impl Plugin for CockpitPlugin {
                     systems::update_muzzle_flash_system,
                     systems::hit_vfx_system,
                     systems::update_hit_vfx_system,
+                )
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                PreUpdate,
+                (
+                    systems::targeting_mode_toggle_system,
+                    systems::cycle_target_system,
+                    systems::cockpit_station_cycle_system,
                 )
                     .run_if(in_state(AppState::InGame)),
             )
