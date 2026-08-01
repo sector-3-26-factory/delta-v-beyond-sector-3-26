@@ -106,7 +106,7 @@ pub fn create_arrow_image() -> Image {
 const THRESHOLD_MS: f32 = 8.333; // 30 km/h
 const THRESHOLD_KMH: f32 = 1388.889; // 5000 km/h
 const THRESHOLD_KMS: f32 = 300_000.0; // 300 km/s
-const THRESHOLD_PCH: f32 = 9.715e8; // 300 pc/h
+const THRESHOLD_C: f32 = 299_792_458.0; // c = 299,792,458 m/s
 
 /// Formats a speed value (`m/s`) as a human-readable string with locale-aware separators.
 ///
@@ -114,8 +114,9 @@ const THRESHOLD_PCH: f32 = 9.715e8; // 300 pc/h
 /// - < 30 km/h: `m/s`
 /// - 30 km/h - 5000 km/h: `km/h`
 /// - 5000 km/h - 300 km/s: `km/s`
-/// - 300 km/s - 300 pc/h: `pc/h`
-/// - > 300 pc/h: `c` (fraction of light speed)
+/// - 300 km/s - 1 Mm/s: `Mm/s` (shows as 0.3 - 1.0 Mm/s)
+/// - 1 Mm/s - c: `Mm/s` (shows as 1 - 300 Mm/s)
+/// - > c: `c` (fraction of light speed)
 #[must_use]
 #[allow(clippy::too_many_arguments, clippy::uninlined_format_args)]
 pub fn format_speed(
@@ -125,7 +126,7 @@ pub fn format_speed(
     unit_ms: &str,
     unit_kmh: &str,
     unit_kms: &str,
-    unit_pch: &str,
+    unit_mms: &str,
     unit_c: &str,
 ) -> String {
     let value = speed_ms.abs();
@@ -136,10 +137,10 @@ pub fn format_speed(
         (value * 3.6, unit_kmh)
     } else if value < THRESHOLD_KMS {
         (value / 1000.0, unit_kms)
-    } else if value < THRESHOLD_PCH {
-        (value / 2.998e8 * 3600.0 / 3.086e16, unit_pch)
+    } else if value < THRESHOLD_C {
+        (value / 1_000_000.0, unit_mms)
     } else {
-        (value / 2.998e8, unit_c)
+        (value / THRESHOLD_C, unit_c)
     };
 
     // Format number with locale-aware separators.

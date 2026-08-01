@@ -9,29 +9,37 @@ use bevy::{
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
     prelude::*,
 };
-use serde::Deserialize;
+
+use delta_v_types::DiagnosticsConfigJson;
 
 /// Configuration for the frame-time watchdog.
 ///
 /// Loaded from `assets/config/diagnostics.json` during plugin build.
 /// All defaults are in the JSON schema (ADR-0039).
-#[derive(Resource, Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Resource, Debug, Clone)]
 pub struct DiagnosticsConfig {
     /// Frame time threshold in milliseconds (converted to seconds internally).
     /// Must be provided by diagnostics.json.
-    #[serde(rename = "frame_time_warn_threshold_ms")]
-    frame_time_warn_threshold_secs: f64,
+    frame_time_warn_threshold_ms: f64,
     /// Number of consecutive frames over threshold before a WARN is emitted.
     /// Must be provided by diagnostics.json.
     pub consecutive_frames_threshold: u32,
+}
+
+impl From<DiagnosticsConfigJson> for DiagnosticsConfig {
+    fn from(json: DiagnosticsConfigJson) -> Self {
+        Self {
+            frame_time_warn_threshold_ms: json.frame_time_warn_threshold_ms,
+            consecutive_frames_threshold: json.consecutive_frames_threshold,
+        }
+    }
 }
 
 impl DiagnosticsConfig {
     /// Getter for frame time threshold in seconds.
     /// JSON stores it in milliseconds; this converts to seconds.
     pub fn frame_time_warn_threshold_secs(&self) -> f64 {
-        self.frame_time_warn_threshold_secs / 1000.0
+        self.frame_time_warn_threshold_ms / 1000.0
     }
 }
 

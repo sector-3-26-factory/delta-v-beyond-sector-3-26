@@ -1,0 +1,52 @@
+{
+    "entity_type": "planet",
+    "mass": {
+        "value": 0.055,
+        "unit": "M_earth"
+    },
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 5.0,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": -5.0,
+            "y": -5.0,
+            "z": -5.0
+        },
+        "max": {
+            "x": 5.0,
+            "y": 5.0,
+            "z": 5.0
+        }
+    },
+    "is_gravity_source": true,
+    "orbital_parent": "sun",
+    "orbital_distance": {
+        "value": 0.387,
+        "unit": "AU"
+    },
+    "orbital_period": {
+        "value": 88,
+        "unit": "d"
+    },
+    "orbital_inclination": {
+        "value": 7.0,
+        "unit": "deg"
+    },
+    "initial_orbital_angle": {
+        "value": 0.0,
+        "unit": "deg"
+    },
+    "rotation_period": {
+        "value": 1407.5,
+        "unit": "h"
+    },
+    "axial_tilt": {
+        "value": 0.034,
+        "unit": "deg"
+    }
+}

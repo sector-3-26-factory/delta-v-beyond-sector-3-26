@@ -37,8 +37,12 @@ pub struct KeybindingsMenuPlugin;
 
 impl Plugin for KeybindingsMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<KeybindingsMenuOpen>().add_systems(
-            Update,
+        app.init_resource::<KeybindingsMenuOpen>();
+
+        // The toggle system must run in PreUpdate (after leafwing-input-manager's update_action_state)
+        // because tick_action_state runs in FixedPostUpdate which clears just_pressed before Update runs.
+        app.add_systems(
+            PreUpdate,
             systems::keybindings_menu_toggle_system.run_if(in_state(AppState::InGame)),
         );
     }

@@ -35,7 +35,9 @@ use serde_json::Value;
 
 use crate::{error::ConfigError, keybindings::Keybindings};
 use delta_v_core::{DebugConfig, DiagnosticsConfig, FlightAssistConfig};
-use delta_v_types::PlayerSettings;
+use delta_v_types::{
+    DebugConfigJson, DiagnosticsConfigJson, FlightAssistConfigJson, PlayerSettings,
+};
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -44,13 +46,14 @@ use delta_v_types::PlayerSettings;
 /// Loads and validates diagnostics configuration.
 ///
 /// Uses [`load_with_user_override`] with a no-op user path function.
-/// Diagnostics config does not support user overrides; see [`load_keybindings`]
-/// and [`load_debug`] for configs with XDG user override support.
+/// Diagnostics config does not support user overrides; see [`load_debug`]
+/// and [`load_keybindings`] for configs with XDG user override support.
 ///
 /// # Errors
 /// Returns [`ConfigError`] if the file cannot be read, parsed, or validated.
 pub fn load_diagnostics() -> Result<DiagnosticsConfig, ConfigError> {
-    load_with_user_override("diagnostics", || None)
+    let json: DiagnosticsConfigJson = load_with_user_override("diagnostics", || None)?;
+    Ok(json.into())
 }
 
 /// Loads, validates and merges debug configuration.
@@ -62,7 +65,8 @@ pub fn load_diagnostics() -> Result<DiagnosticsConfig, ConfigError> {
 /// Returns [`ConfigError`] if any step fails. All errors include the
 /// file path and a precise description (ADR-0016).
 pub fn load_debug() -> Result<DebugConfig, ConfigError> {
-    load_with_user_override("debug", user_debug_path)
+    let json: DebugConfigJson = load_with_user_override("debug", user_debug_path)?;
+    Ok(json.into())
 }
 
 /// Loads, validates and merges keybindings configuration.
@@ -86,7 +90,9 @@ pub fn load_keybindings() -> Result<Keybindings, ConfigError> {
 /// Returns [`ConfigError`] if any step fails. All errors include the
 /// file path and a precise description (ADR-0016).
 pub fn load_flight_assist() -> Result<FlightAssistConfig, ConfigError> {
-    load_with_user_override("flight-assist", user_flight_assist_path)
+    let json: FlightAssistConfigJson =
+        load_with_user_override("flight-assist", user_flight_assist_path)?;
+    Ok(json.into())
 }
 
 /// Loads, validates and merges player settings configuration.

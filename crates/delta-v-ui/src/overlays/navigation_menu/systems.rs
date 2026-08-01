@@ -29,21 +29,24 @@ use super::components::{
     NavMenuDistanceText, NavMenuRowBackground, NavMenuRowEntity, NavigationMenuRoot,
 };
 use super::distance_format::format_distance;
-use super::resources::NavigationMenuOpen;
+use super::resources::{NavigationMenuOpen, NavigationMenuToggleState};
 use super::spawn::spawn_navigation_menu;
 use crate::window::UiTheme;
 
 /// Toggles the navigation menu open/closed when the player presses the key.
 ///
-/// Runs in `Update` during `AppState::InGame`.
+/// Runs in `PreUpdate` during `AppState::InGame`.
 /// Checks for `ToggleNavigationMenu` action via `InputMap`.
 /// When opening: spawns the menu UI.
 /// When closing: despawns the menu entity.
+/// Uses custom edge detection via `NavigationMenuToggleState` for more reliable
+/// detection when many keys are held simultaneously.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn navigation_menu_toggle_system(
     mut commands: Commands<'_, '_>,
     action_state: Res<'_, ActionState<LogicalAction>>,
     mut menu_open: ResMut<'_, NavigationMenuOpen>,
+    mut toggle_state: ResMut<'_, NavigationMenuToggleState>,
     query: Query<'_, '_, Entity, With<NavigationMenuRoot>>,
     asset_server: Res<'_, AssetServer>,
     theme: Res<'_, UiTheme>,
@@ -55,9 +58,23 @@ pub fn navigation_menu_toggle_system(
 ) {
     let _span = info_span!("delta_v_ui::navigation_menu_toggle_system").entered();
     // Check if ToggleNavigationMenu action is pressed
-    let toggle_pressed = action_state.just_pressed(&LogicalAction::ToggleNavigationMenu);
+    let toggle_pressed = action_state.pressed(&LogicalAction::ToggleNavigationMenu);
 
-    if !toggle_pressed {
+    // Custom edge detection: only trigger on the frame the key transitions from not-pressed to pressed
+    let toggle_just_pressed = toggle_pressed && !toggle_state.prev_pressed;
+
+    tracing::debug!(
+        "[navigation_menu_toggle] pressed={} prev_pressed={} just_pressed={} menu_open={}",
+        toggle_pressed,
+        toggle_state.prev_pressed,
+        toggle_just_pressed,
+        menu_open.0
+    );
+
+    // Update previous state for next frame
+    toggle_state.prev_pressed = toggle_pressed;
+
+    if !toggle_just_pressed {
         return;
     }
 
@@ -65,9 +82,17 @@ pub fn navigation_menu_toggle_system(
         // Close the menu: despawn the root entity
         if let Ok(entity) = query.single() {
             commands.entity(entity).despawn();
+            tracing::debug!(
+                "[navigation_menu_toggle] despawned menu entity {:?}",
+                entity
+            );
+        } else {
+            tracing::warn!(
+                "[navigation_menu_toggle] menu_open=true but no NavigationMenuRoot entity found!"
+            );
         }
         menu_open.0 = false;
-        tracing::debug!("navigation menu: closed");
+        tracing::debug!("[navigation_menu_toggle] navigation menu: closed");
     } else {
         // Open the menu: spawn the menu UI
         let title = &i18n.ui.menu.navigation.title;
@@ -85,7 +110,7 @@ pub fn navigation_menu_toggle_system(
             targeting_mode.mode,
         );
         menu_open.0 = true;
-        tracing::debug!("navigation menu: opened");
+        tracing::debug!("[navigation_menu_toggle] navigation menu: opened");
     }
 }
 

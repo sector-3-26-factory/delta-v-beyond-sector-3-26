@@ -26,4 +26,6 @@ pub struct Propulsion {
     pub rotation_ramp_ticks: u32,
     /// Index of the currently active main thruster (for M3+ thruster switching).
     pub active_main_thruster_index: usize,
+    /// Maximum number of main thrusters that can be selected (limits propulsion selection keys).
+    pub max_propulsions_count: usize,
 }

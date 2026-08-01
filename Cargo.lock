@@ -2503,8 +2503,6 @@ dependencies = [
  "delta-v-physics",
  "delta-v-spawn",
  "delta-v-types",
- "serde",
- "serde_json",
  "thiserror 2.0.18",
  "tracing",
 ]
@@ -2546,8 +2544,6 @@ dependencies = [
  "bevy_mesh",
  "delta-v-types",
  "leafwing-input-manager",
- "serde",
- "serde_json",
  "tracing",
 ]
 
@@ -2587,6 +2583,7 @@ dependencies = [
  "bevy",
  "bevy_math",
  "bevy_mesh",
+ "delta-v-assets",
  "delta-v-core",
  "delta-v-types",
  "tempfile",
@@ -2612,8 +2609,6 @@ dependencies = [
  "delta-v-spawn",
  "delta-v-types",
  "rand",
- "serde",
- "serde_json",
  "tempfile",
  "thiserror 2.0.18",
  "tracing",
@@ -2629,7 +2624,6 @@ dependencies = [
  "delta-v-json",
  "delta-v-physics",
  "delta-v-types",
- "serde_json",
  "tempfile",
  "tracing",
 ]
@@ -2687,8 +2681,6 @@ dependencies = [
  "delta-v-physics",
  "delta-v-spawn",
  "delta-v-types",
- "serde",
- "serde_json",
  "tempfile",
  "thiserror 2.0.18",
  "tracing",
@@ -3675,6 +3667,8 @@ dependencies = [
  "moxcms",
  "num-traits",
  "png",
+ "zune-core",
+ "zune-jpeg",
 ]
 
 [[package]]
@@ -7504,3 +7498,18 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[package]]
+name = "zune-core"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb8a0807f7c01457d0379ba880ba6322660448ddebc890ce29bb64da71fb40f9"
+
+[[package]]
+name = "zune-jpeg"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
+dependencies = [
+ "zune-core",
+]

@@ -63,6 +63,46 @@ pub enum LogicalAction {
     CycleTargetPrev,
     /// Toggle between Combat and Nav targeting modes.
     ToggleTargetingMode,
+    /// Select weapon slot 1.
+    SelectWeapon1,
+    /// Select weapon slot 2.
+    SelectWeapon2,
+    /// Select weapon slot 3.
+    SelectWeapon3,
+    /// Select weapon slot 4.
+    SelectWeapon4,
+    /// Select weapon slot 5.
+    SelectWeapon5,
+    /// Select weapon slot 6.
+    SelectWeapon6,
+    /// Select weapon slot 7.
+    SelectWeapon7,
+    /// Select weapon slot 8.
+    SelectWeapon8,
+    /// Select weapon slot 9.
+    SelectWeapon9,
+    /// Select weapon slot 10 (key 0).
+    SelectWeapon10,
+    /// Select propulsion slot 1.
+    SelectPropulsion1,
+    /// Select propulsion slot 2.
+    SelectPropulsion2,
+    /// Select propulsion slot 3.
+    SelectPropulsion3,
+    /// Select propulsion slot 4.
+    SelectPropulsion4,
+    /// Select propulsion slot 5.
+    SelectPropulsion5,
+    /// Select propulsion slot 6.
+    SelectPropulsion6,
+    /// Select propulsion slot 7.
+    SelectPropulsion7,
+    /// Select propulsion slot 8.
+    SelectPropulsion8,
+    /// Select propulsion slot 9.
+    SelectPropulsion9,
+    /// Select propulsion slot 10 (key 0).
+    SelectPropulsion10,
 }
 
 impl LogicalAction {
@@ -95,6 +135,26 @@ impl LogicalAction {
             Self::CycleTargetNext => "cycle_target_next",
             Self::CycleTargetPrev => "cycle_target_prev",
             Self::ToggleTargetingMode => "toggle_targeting_mode",
+            Self::SelectWeapon1 => "select_weapon_1",
+            Self::SelectWeapon2 => "select_weapon_2",
+            Self::SelectWeapon3 => "select_weapon_3",
+            Self::SelectWeapon4 => "select_weapon_4",
+            Self::SelectWeapon5 => "select_weapon_5",
+            Self::SelectWeapon6 => "select_weapon_6",
+            Self::SelectWeapon7 => "select_weapon_7",
+            Self::SelectWeapon8 => "select_weapon_8",
+            Self::SelectWeapon9 => "select_weapon_9",
+            Self::SelectWeapon10 => "select_weapon_10",
+            Self::SelectPropulsion1 => "select_propulsion_1",
+            Self::SelectPropulsion2 => "select_propulsion_2",
+            Self::SelectPropulsion3 => "select_propulsion_3",
+            Self::SelectPropulsion4 => "select_propulsion_4",
+            Self::SelectPropulsion5 => "select_propulsion_5",
+            Self::SelectPropulsion6 => "select_propulsion_6",
+            Self::SelectPropulsion7 => "select_propulsion_7",
+            Self::SelectPropulsion8 => "select_propulsion_8",
+            Self::SelectPropulsion9 => "select_propulsion_9",
+            Self::SelectPropulsion10 => "select_propulsion_10",
         }
     }
 
@@ -127,6 +187,26 @@ impl LogicalAction {
             Self::CycleTargetNext,
             Self::CycleTargetPrev,
             Self::ToggleTargetingMode,
+            Self::SelectWeapon1,
+            Self::SelectWeapon2,
+            Self::SelectWeapon3,
+            Self::SelectWeapon4,
+            Self::SelectWeapon5,
+            Self::SelectWeapon6,
+            Self::SelectWeapon7,
+            Self::SelectWeapon8,
+            Self::SelectWeapon9,
+            Self::SelectWeapon10,
+            Self::SelectPropulsion1,
+            Self::SelectPropulsion2,
+            Self::SelectPropulsion3,
+            Self::SelectPropulsion4,
+            Self::SelectPropulsion5,
+            Self::SelectPropulsion6,
+            Self::SelectPropulsion7,
+            Self::SelectPropulsion8,
+            Self::SelectPropulsion9,
+            Self::SelectPropulsion10,
         ]
     }
 }

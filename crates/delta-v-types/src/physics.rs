@@ -29,6 +29,194 @@ impl PhysicalQuantityJson {
     pub fn unit_is(&self, unit: &str) -> bool {
         self.unit == unit
     }
+
+    /// Converts a length quantity to meters (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid length unit (m, km, Mm, Gm, AU, ly, pc, kpc, Mpc).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_meters(&self) -> f32 {
+        let conversion_factor = match self.unit.as_str() {
+            "m" => 1.0,
+            "km" => 1e3,
+            "Mm" => 1e6,
+            "Gm" => 1e9,
+            "AU" => 1.495_978_6e11,
+            "ly" => 9.460_731e15,
+            "pc" => 3.085_677_6e16,
+            "kpc" => 3.085_677_6e19,
+            "Mpc" => 3.085_677_5e22,
+            _ => panic!("Invalid length unit: {}", self.unit),
+        };
+        self.value * conversion_factor
+    }
+
+    /// Converts a mass quantity to kilograms (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid mass unit (kg, t, `M_earth`, `M_sun`).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_kilograms(&self) -> f32 {
+        let conversion_factor = match self.unit.as_str() {
+            "kg" => 1.0,
+            "t" => 1e3,
+            "M_earth" => 5.972_2e24,
+            "M_sun" => 1.988_47e30,
+            _ => panic!("Invalid mass unit: {}", self.unit),
+        };
+        self.value * conversion_factor
+    }
+
+    /// Converts a time quantity to seconds (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid time unit (s, min, h, d, a).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_seconds(&self) -> f32 {
+        let conversion_factor = match self.unit.as_str() {
+            "s" => 1.0,
+            "min" => 60.0,
+            "h" => 3600.0,
+            "d" => 86400.0,
+            "a" => 31_557_600.0,
+            _ => panic!("Invalid time unit: {}", self.unit),
+        };
+        self.value * conversion_factor
+    }
+
+    /// Converts an angle quantity to radians.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid angle unit (rad, deg).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_radians(&self) -> f32 {
+        match self.unit.as_str() {
+            "rad" => self.value,
+            "deg" => self.value.to_radians(),
+            _ => panic!("Invalid angle unit: {}", self.unit),
+        }
+    }
+
+    /// Converts a force quantity to Newtons (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid force unit (N, kN, MN).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_newtons(&self) -> f32 {
+        let conversion_factor = match self.unit.as_str() {
+            "N" => 1.0,
+            "kN" => 1e3,
+            "MN" => 1e6,
+            _ => panic!("Invalid force unit: {}", self.unit),
+        };
+        self.value * conversion_factor
+    }
+
+    /// Converts a torque quantity to Newton-meters (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid torque unit (N⋅m).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_newton_meters(&self) -> f32 {
+        // Torque is always in N⋅m per the schema - no conversion needed
+        // but we validate the unit for consistency
+        match self.unit.as_str() {
+            "N⋅m" => self.value,
+            _ => panic!("Invalid torque unit: {}", self.unit),
+        }
+    }
+
+    /// Converts a velocity quantity to meters per second (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid velocity unit (m/s, km/s).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_meters_per_second(&self) -> f32 {
+        let conversion_factor = match self.unit.as_str() {
+            "m/s" => 1.0,
+            "km/s" => 1e3,
+            _ => panic!("Invalid velocity unit: {}", self.unit),
+        };
+        self.value * conversion_factor
+    }
+
+    /// Converts an acceleration quantity to meters per second squared (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid acceleration unit (m/s²).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_meters_per_second_squared(&self) -> f32 {
+        // Acceleration is always in m/s² per the schema - no conversion needed
+        // but we validate the unit for consistency
+        match self.unit.as_str() {
+            "m/s²" => self.value,
+            _ => panic!("Invalid acceleration unit: {}", self.unit),
+        }
+    }
+
+    /// Converts a frequency quantity to Hertz (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid frequency unit (Hz).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_hertz(&self) -> f32 {
+        // Frequency is always in Hz per the schema - no conversion needed
+        // but we validate the unit for consistency
+        match self.unit.as_str() {
+            "Hz" => self.value,
+            _ => panic!("Invalid frequency unit: {}", self.unit),
+        }
+    }
+
+    /// Converts a damage quantity to hit points.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid damage unit (hp).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_hit_points(&self) -> f32 {
+        // Damage is always in hp per the schema - no conversion needed
+        // but we validate the unit for consistency
+        match self.unit.as_str() {
+            "hp" => self.value,
+            _ => panic!("Invalid damage unit: {}", self.unit),
+        }
+    }
+
+    /// Converts a dimensionless quantity to its numeric value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not "dimensionless".
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_dimensionless(&self) -> f32 {
+        // Dimensionless is always dimensionless - no conversion needed
+        // but we validate the unit for consistency
+        match self.unit.as_str() {
+            "dimensionless" => self.value,
+            _ => panic!("Invalid dimensionless unit: {}", self.unit),
+        }
+    }
 }
 
 /// Plain data for a rigid body (no Bevy `Component` derive).
@@ -140,4 +328,13 @@ impl RigidBodyData {
 
         self.angular_velocity += Vec3::new(alpha_x, alpha_y, alpha_z) * delta_time;
     }
+}
+
+/// Resolves the final mass value, using override if present.
+///
+/// Mass is NOT scaled - it is used as-is from the template, or overridden if
+/// `mass_override` is specified.
+#[must_use]
+pub fn resolve_mass(template_mass: f32, mass_override: Option<f32>) -> f32 {
+    mass_override.unwrap_or(template_mass)
 }

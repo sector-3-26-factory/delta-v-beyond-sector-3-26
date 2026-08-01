@@ -1,0 +1,11 @@
+{
+    "type": "antimatter",
+    "max_forward_thrust": {
+        "value": 50000000000,
+        "unit": "N"
+    },
+    "max_backward_thrust": {
+        "value": 20000000000,
+        "unit": "N"
+    }
+}

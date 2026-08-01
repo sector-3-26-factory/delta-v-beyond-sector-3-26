@@ -1,32 +1,25 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Tests for collision shape conversion from JSON.
+//! Tests for collision shape scaling.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use delta_v_types::{CollisionShapeJson, CollisionShapeType};
+use delta_v_types::{CollisionShapeData, CollisionShapeType};
 
-use crate::collision::shape_from_json;
+use crate::collision::scale_collision_shape;
 
 // ---------------------------------------------------------------------------
-// shape_from_json: sphere
+// scale_collision_shape: sphere
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_shape_from_json_sphere() {
-    let json = CollisionShapeJson {
-        shape_type: "sphere".to_string(),
-        radius: Some(delta_v_types::PhysicalQuantityJson {
-            value: 2.5,
-            unit: "m".to_string(),
-        }),
-        half_extents: None,
-        offset: None,
+fn test_scale_collision_shape_sphere() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Sphere { radius: 2.5 },
+        offset: bevy::prelude::Vec3::ZERO,
     };
 
-    let result = shape_from_json(&json, 1.0);
-    assert!(result.is_ok(), "sphere shape should convert successfully");
-    let data = result.unwrap();
+    let data = scale_collision_shape(&shape, 1.0);
     match data.shape_type {
         CollisionShapeType::Sphere { radius } => {
             assert!(
@@ -36,139 +29,134 @@ fn test_shape_from_json_sphere() {
         }
         other => panic!("expected Sphere, got {other:?}"),
     }
-    assert_eq!(data.offset, Vec3::ZERO, "offset should default to ZERO");
-}
-
-#[test]
-fn test_shape_from_json_sphere_with_offset() {
-    let json = CollisionShapeJson {
-        shape_type: "sphere".to_string(),
-        radius: Some(delta_v_types::PhysicalQuantityJson {
-            value: 1.0,
-            unit: "m".to_string(),
-        }),
-        half_extents: None,
-        offset: Some(delta_v_types::Vec3Json {
-            x: 1.0,
-            y: 2.0,
-            z: 3.0,
-        }),
-    };
-
-    let result = shape_from_json(&json, 1.0);
-    assert!(result.is_ok());
-    let data = result.unwrap();
-    assert_eq!(data.offset, Vec3::new(1.0, 2.0, 3.0));
-}
-
-#[test]
-fn test_shape_from_json_sphere_missing_radius() {
-    let json = CollisionShapeJson {
-        shape_type: "sphere".to_string(),
-        radius: None,
-        half_extents: None,
-        offset: None,
-    };
-
-    let result = shape_from_json(&json, 1.0);
-    assert!(result.is_err(), "sphere without radius should fail");
-    let err = result.unwrap_err();
-    assert!(
-        err.contains("radius"),
-        "error should mention radius, got: {err}"
+    assert_eq!(
+        data.offset,
+        bevy::prelude::Vec3::ZERO,
+        "offset should default to ZERO"
     );
 }
 
+#[test]
+fn test_scale_collision_shape_sphere_with_offset() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+        offset: bevy::prelude::Vec3::new(1.0, 2.0, 3.0),
+    };
+
+    let data = scale_collision_shape(&shape, 1.0);
+    assert_eq!(data.offset, bevy::prelude::Vec3::new(1.0, 2.0, 3.0));
+}
+
 // ---------------------------------------------------------------------------
-// shape_from_json: box
+// scale_collision_shape: box
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_shape_from_json_box() {
-    let json = CollisionShapeJson {
-        shape_type: "box".to_string(),
-        radius: None,
-        half_extents: Some(delta_v_types::Vec3Json {
-            x: 1.0,
-            y: 2.0,
-            z: 3.0,
-        }),
-        offset: None,
+fn test_scale_collision_shape_box() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Box {
+            half_extents: bevy::prelude::Vec3::new(1.0, 2.0, 3.0),
+        },
+        offset: bevy::prelude::Vec3::ZERO,
     };
 
-    let result = shape_from_json(&json, 1.0);
-    assert!(result.is_ok(), "box shape should convert successfully");
-    let data = result.unwrap();
+    let data = scale_collision_shape(&shape, 1.0);
     match data.shape_type {
         CollisionShapeType::Box { half_extents } => {
-            assert_eq!(half_extents, Vec3::new(1.0, 2.0, 3.0));
+            assert_eq!(half_extents, bevy::prelude::Vec3::new(1.0, 2.0, 3.0));
         }
         other => panic!("expected Box, got {other:?}"),
     }
 }
 
 #[test]
-fn test_shape_from_json_box_with_offset() {
-    let json = CollisionShapeJson {
-        shape_type: "box".to_string(),
-        radius: None,
-        half_extents: Some(delta_v_types::Vec3Json {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
-        }),
-        offset: Some(delta_v_types::Vec3Json {
-            x: 0.5,
-            y: 0.5,
-            z: 0.5,
-        }),
+fn test_scale_collision_shape_box_with_offset() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Box {
+            half_extents: bevy::prelude::Vec3::new(1.0, 1.0, 1.0),
+        },
+        offset: bevy::prelude::Vec3::new(0.5, 0.5, 0.5),
     };
 
-    let result = shape_from_json(&json, 1.0);
-    assert!(result.is_ok());
-    let data = result.unwrap();
-    assert_eq!(data.offset, Vec3::new(0.5, 0.5, 0.5));
-}
-
-#[test]
-fn test_shape_from_json_box_missing_half_extents() {
-    let json = CollisionShapeJson {
-        shape_type: "box".to_string(),
-        radius: None,
-        half_extents: None,
-        offset: None,
-    };
-
-    let result = shape_from_json(&json, 1.0);
-    assert!(result.is_err(), "box without half_extents should fail");
-    let err = result.unwrap_err();
-    assert!(
-        err.contains("half_extents"),
-        "error should mention half_extents, got: {err}"
-    );
+    let data = scale_collision_shape(&shape, 1.0);
+    assert_eq!(data.offset, bevy::prelude::Vec3::new(0.5, 0.5, 0.5));
 }
 
 // ---------------------------------------------------------------------------
-// shape_from_json: unknown type
+// scale_collision_shape: scaling
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_shape_from_json_unknown_type() {
-    let json = CollisionShapeJson {
-        shape_type: "cylinder".to_string(),
-        radius: None,
-        half_extents: None,
-        offset: None,
+fn test_scale_collision_shape_sphere_with_scale() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Sphere { radius: 10.0 },
+        offset: bevy::prelude::Vec3::ZERO,
     };
 
-    let result = shape_from_json(&json, 1.0);
-    assert!(result.is_err(), "unknown shape type should fail");
-    let err = result.unwrap_err();
-    assert!(
-        err.contains("Unknown"),
-        "error should mention unknown type, got: {err}"
-    );
+    // Scale by 100x
+    let data = scale_collision_shape(&shape, 100.0);
+    match data.shape_type {
+        CollisionShapeType::Sphere { radius } => {
+            assert!(
+                (radius - 1000.0).abs() < 0.01,
+                "radius should be scaled to 1000.0, got {radius}"
+            );
+        }
+        other => panic!("expected Sphere, got {other:?}"),
+    }
 }
 
-// Re-export for test use
-use bevy::prelude::Vec3;
+#[test]
+fn test_scale_collision_shape_sphere_with_scale_less_than_one() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Sphere { radius: 100.0 },
+        offset: bevy::prelude::Vec3::ZERO,
+    };
+
+    // Scale by 0.1x
+    let data = scale_collision_shape(&shape, 0.1);
+    match data.shape_type {
+        CollisionShapeType::Sphere { radius } => {
+            assert!(
+                (radius - 10.0).abs() < 0.01,
+                "radius should be scaled to 10.0, got {radius}"
+            );
+        }
+        other => panic!("expected Sphere, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_scale_collision_shape_box_with_scale() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Box {
+            half_extents: bevy::prelude::Vec3::new(10.0, 20.0, 30.0),
+        },
+        offset: bevy::prelude::Vec3::ZERO,
+    };
+
+    // Scale by 10x
+    let data = scale_collision_shape(&shape, 10.0);
+    match data.shape_type {
+        CollisionShapeType::Box { half_extents } => {
+            assert_eq!(half_extents, bevy::prelude::Vec3::new(100.0, 200.0, 300.0));
+        }
+        other => panic!("expected Box, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_scale_collision_shape_offset_scaled() {
+    let shape = CollisionShapeData {
+        shape_type: CollisionShapeType::Sphere { radius: 5.0 },
+        offset: bevy::prelude::Vec3::new(1.0, 2.0, 3.0),
+    };
+
+    // Scale by 10x
+    let data = scale_collision_shape(&shape, 10.0);
+    assert_eq!(
+        data.offset,
+        bevy::prelude::Vec3::new(10.0, 20.0, 30.0),
+        "offset should be scaled"
+    );
+}

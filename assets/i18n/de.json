@@ -7,13 +7,15 @@
         "unit_ms": "m/s",
         "unit_kmh": "km/h",
         "unit_kms": "km/s",
-        "unit_pch": "pc/h",
+        "unit_mms": "Mm/s",
         "unit_c": "c"
     },
     "entity_types": {
         "ship": "Raumschiff",
         "asteroid": "Asteroid",
-        "station": "Raumstation"
+        "station": "Raumstation",
+        "sun": "Stern",
+        "planet": "Planet"
     },
     "ui": {
         "menu": {
@@ -48,7 +50,27 @@
                     "toggle_keybindings_menu": "Tastenbelegung",
                     "cycle_target_next": "nächstes Ziel",
                     "cycle_target_prev": "vorheriges Ziel",
-                    "toggle_targeting_mode": "Navigation/Targeting umschalten"
+                    "toggle_targeting_mode": "Navigation/Targeting umschalten",
+                    "select_weapon_1": "Waffe 1 auswählen",
+                    "select_weapon_2": "Waffe 2 auswählen",
+                    "select_weapon_3": "Waffe 3 auswählen",
+                    "select_weapon_4": "Waffe 4 auswählen",
+                    "select_weapon_5": "Waffe 5 auswählen",
+                    "select_weapon_6": "Waffe 6 auswählen",
+                    "select_weapon_7": "Waffe 7 auswählen",
+                    "select_weapon_8": "Waffe 8 auswählen",
+                    "select_weapon_9": "Waffe 9 auswählen",
+                    "select_weapon_10": "Waffe 10 auswählen",
+                    "select_propulsion_1": "Antrieb 1 auswählen",
+                    "select_propulsion_2": "Antrieb 2 auswählen",
+                    "select_propulsion_3": "Antrieb 3 auswählen",
+                    "select_propulsion_4": "Antrieb 4 auswählen",
+                    "select_propulsion_5": "Antrieb 5 auswählen",
+                    "select_propulsion_6": "Antrieb 6 auswählen",
+                    "select_propulsion_7": "Antrieb 7 auswählen",
+                    "select_propulsion_8": "Antrieb 8 auswählen",
+                    "select_propulsion_9": "Antrieb 9 auswählen",
+                    "select_propulsion_10": "Antrieb 10 auswählen"
                 },
                 "key": {
                     "KeyW": "W",
@@ -72,7 +94,17 @@
                     "F3": "F3",
                     "ControlLeft": "Strg Links",
                     "ShiftLeft": "Umschalt Links",
-                    "AltLeft": "Alt Links"
+                    "AltLeft": "Alt Links",
+                    "Digit1": "1",
+                    "Digit2": "2",
+                    "Digit3": "3",
+                    "Digit4": "4",
+                    "Digit5": "5",
+                    "Digit6": "6",
+                    "Digit7": "7",
+                    "Digit8": "8",
+                    "Digit9": "9",
+                    "Digit0": "0"
                 }
             },
             "navigation": {
@@ -101,7 +133,9 @@
             "target_selected": "Ziel ausgewählt: {entity_id} ({entity_type})",
             "nav_object_selected": "Nav-Objekt ausgewählt: {entity_id} ({entity_type})",
             "no_targets": "Keine Ziele verfügbar",
-            "no_nav_objects": "Keine Navigationsobjekte verfügbar"
+            "no_nav_objects": "Keine Navigationsobjekte verfügbar",
+            "weapon_selected": "Waffe ausgewählt: {name}",
+            "propulsion_selected": "Antrieb ausgewählt: {name}"
         }
     }
 }

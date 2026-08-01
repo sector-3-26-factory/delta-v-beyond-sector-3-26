@@ -21,7 +21,7 @@
 use bevy::prelude::*;
 use bevy::ui::widget::NodeImageMode;
 
-use crate::ship_templates::CockpitStation;
+use crate::{CockpitStation, GaugeShape};
 use delta_v_core::RenderLayer;
 
 use super::ActiveCockpitStation;
@@ -223,7 +223,7 @@ pub fn spawn_status_gauges(
             // Build the gauge node based on the slot shape.
             // For circles, we need to apply border_radius to make the fill round.
             let (width, height, left, top, border_radius) = match &slot.shape {
-                crate::ship_templates::GaugeShape::Rectangle { x1, y1, x2, y2 } => {
+                GaugeShape::Rectangle { x1, y1, x2, y2 } => {
                     let w = (x2 - x1).abs() * scale_x;
                     let h = (y2 - y1).abs() * scale_y;
                     (
@@ -234,7 +234,7 @@ pub fn spawn_status_gauges(
                         BorderRadius::ZERO,
                     )
                 }
-                crate::ship_templates::GaugeShape::Circle { cx, cy, r } => {
+                GaugeShape::Circle { cx, cy, r } => {
                     let size_w = Val::Vw(r * 2.0 * scale_x);
                     let size_h = Val::Vh(r * 2.0 * scale_y);
                     // Convert radius to percentage for border_radius.
@@ -292,7 +292,7 @@ pub fn spawn_status_gauges(
             // so init_gauge_visibility can control its visibility.
             // The scale is 2/3 of the circle (240° arc), colored from red (low) to green (high).
             // The bottom 1/3 (120° arc) is free (dark).
-            if let crate::ship_templates::GaugeShape::Circle { cx, cy, r } = &slot.shape {
+            if let GaugeShape::Circle { cx, cy, r } = &slot.shape {
                 // Create the scale image at a fixed pixel resolution (256x256).
                 // The UI will scale it to fit the gauge size.
                 let scale_image = create_circular_gauge_scale_image(256.0);

@@ -1,0 +1,267 @@
+// AGENTS: before modifying this file, read AGENTS.md at the repository root.
+//
+// Delta-V beyond Sector 3.26
+// Copyright (C) 2025  Cute-Donkey
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+//! Celestial body types for suns, planets, and asteroids.
+//!
+//! These are plain data types used for JSON deserialization and shared across
+//! crates. Per ADR-0046, this crate MUST NOT contain systems, plugins, or Bevy
+//! `Component` derives — only plain types and serde structs.
+
+use serde::Deserialize;
+
+use crate::collision::CollisionShapeData;
+use crate::physics::PhysicalQuantityJson;
+use crate::spatial::{BoundingBox, BoundingBoxJson};
+
+/// RGB color for light sources.
+///
+/// Each component is in the range 0.0-1.0.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct LightColorJson {
+    /// Red component (0.0-1.0).
+    pub r: f32,
+    /// Green component (0.0-1.0).
+    pub g: f32,
+    /// Blue component (0.0-1.0).
+    pub b: f32,
+}
+
+/// JSON schema type for sun templates.
+///
+/// Deserialized from `assets/templates/suns/*/sun.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct SunTemplateJson {
+    /// Entity type discriminator. Must be "sun".
+    pub entity_type: String,
+    /// Mass in kilograms.
+    pub mass: PhysicalQuantityJson,
+    /// Collision shape for the sun.
+    pub collision_shape: super::CollisionShapeJson,
+    /// Axis-aligned bounding box of the mesh in sun-local coordinates (metres).
+    /// Used for debug axes and spatial calculations.
+    pub bounding_box: BoundingBoxJson,
+    /// If true, this body generates gravity on other entities.
+    /// Default: true (from schema).
+    pub is_gravity_source: bool,
+    /// Rotation period in hours.
+    pub rotation_period: Option<PhysicalQuantityJson>,
+    /// Light intensity in lux.
+    /// Default: 10000.0 (from schema).
+    pub light_intensity: f32,
+    /// Light color as RGB values.
+    /// Default: {r: 1.0, g: 0.95, b: 0.8} (from schema).
+    pub light_color: LightColorJson,
+    /// Light range in metres.
+    /// Default: 6e12 (from schema).
+    pub light_range: PhysicalQuantityJson,
+}
+
+/// JSON schema type for planet templates.
+///
+/// Deserialized from `assets/templates/planets/*/planet.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct PlanetTemplateJson {
+    /// Entity type discriminator. Must be "planet".
+    pub entity_type: String,
+    /// Mass in kilograms.
+    pub mass: PhysicalQuantityJson,
+    /// Collision shape for the planet.
+    pub collision_shape: super::CollisionShapeJson,
+    /// Axis-aligned bounding box of the mesh in planet-local coordinates (metres).
+    /// Used for debug axes and spatial calculations.
+    pub bounding_box: BoundingBoxJson,
+    /// If true, this body generates gravity on other entities.
+    /// Default: true (from schema).
+    pub is_gravity_source: bool,
+    /// ID of the parent body this planet orbits.
+    pub orbital_parent: String,
+    /// Orbital distance in metres.
+    pub orbital_distance: PhysicalQuantityJson,
+    /// Orbital period in seconds.
+    pub orbital_period: PhysicalQuantityJson,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
+    /// Default: 0.0 (from schema).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in degrees.
+    /// Default: 0.0 (from schema).
+    pub orbital_inclination: PhysicalQuantityJson,
+    /// Initial orbital angle in degrees.
+    /// Default: 0.0 (from schema).
+    pub initial_orbital_angle: PhysicalQuantityJson,
+    /// Rotation period in hours.
+    /// Default: None (from schema).
+    pub rotation_period: Option<PhysicalQuantityJson>,
+    /// Axial tilt (obliquity) in degrees.
+    /// Default: 0.0 (from schema).
+    pub axial_tilt: PhysicalQuantityJson,
+}
+
+/// JSON schema type for asteroid templates.
+///
+/// Deserialized from `assets/templates/asteroids/*/asteroid.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AsteroidTemplateJson {
+    /// Entity type discriminator. Must be "asteroid".
+    pub entity_type: String,
+    /// Mass in kilograms.
+    pub mass: PhysicalQuantityJson,
+    /// Collision shape for the asteroid.
+    pub collision_shape: super::CollisionShapeJson,
+    /// Axis-aligned bounding box of the mesh in asteroid-local coordinates (metres).
+    /// Used for debug axes and spatial calculations.
+    pub bounding_box: BoundingBoxJson,
+    /// If true, this body generates gravity on other entities.
+    /// Default: false (from schema).
+    pub is_gravity_source: bool,
+}
+
+/// Runtime sun template with SI units.
+///
+/// This is the converted version of [`SunTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct SunTemplate {
+    /// Entity type discriminator ("sun").
+    pub entity_type: String,
+    /// Mass in kilograms (SI base unit).
+    pub mass: f32,
+    /// Collision shape data for the sun.
+    pub collision_shape: CollisionShapeData,
+    /// Axis-aligned bounding box of the mesh in sun-local coordinates (metres).
+    pub bounding_box: BoundingBox,
+    /// If true, this body generates gravity on other entities.
+    pub is_gravity_source: bool,
+    /// Rotation period in seconds (SI base unit).
+    pub rotation_period: Option<f32>,
+    /// Light intensity in lux.
+    pub light_intensity: f32,
+    /// Light color as RGB values.
+    pub light_color: super::LightColorJson,
+    /// Light range in metres (SI base unit).
+    pub light_range: f32,
+}
+
+impl From<SunTemplateJson> for SunTemplate {
+    fn from(json: SunTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            mass: json.mass.to_kilograms(),
+            collision_shape: json.collision_shape.into(),
+            bounding_box: json.bounding_box.into(),
+            is_gravity_source: json.is_gravity_source,
+            rotation_period: json.rotation_period.map(|p| p.to_seconds()),
+            light_intensity: json.light_intensity,
+            light_color: json.light_color,
+            light_range: json.light_range.to_meters(),
+        }
+    }
+}
+
+/// Runtime planet template with SI units.
+///
+/// This is the converted version of [`PlanetTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct PlanetTemplate {
+    /// Entity type discriminator ("planet").
+    pub entity_type: String,
+    /// Mass in kilograms (SI base unit).
+    pub mass: f32,
+    /// Collision shape data for the planet.
+    pub collision_shape: CollisionShapeData,
+    /// Axis-aligned bounding box of the mesh in planet-local coordinates (metres).
+    pub bounding_box: BoundingBox,
+    /// If true, this body generates gravity on other entities.
+    pub is_gravity_source: bool,
+    /// ID of the parent body this planet orbits.
+    pub orbital_parent: String,
+    /// Orbital distance in metres (SI base unit).
+    pub orbital_distance: f32,
+    /// Orbital period in seconds (SI base unit).
+    pub orbital_period: f32,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in radians (SI base unit).
+    pub orbital_inclination: f32,
+    /// Initial orbital angle in radians (SI base unit).
+    pub initial_orbital_angle: f32,
+    /// Rotation period in seconds (SI base unit). None means no rotation.
+    pub rotation_period: Option<f32>,
+    /// Axial tilt (obliquity) in radians (SI base unit).
+    pub axial_tilt: f32,
+}
+
+impl From<PlanetTemplateJson> for PlanetTemplate {
+    fn from(json: PlanetTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            mass: json.mass.to_kilograms(),
+            collision_shape: json.collision_shape.into(),
+            bounding_box: json.bounding_box.into(),
+            is_gravity_source: json.is_gravity_source,
+            orbital_parent: json.orbital_parent,
+            orbital_distance: json.orbital_distance.to_meters(),
+            orbital_period: json.orbital_period.to_seconds(),
+            orbital_eccentricity: json.orbital_eccentricity,
+            orbital_inclination: json.orbital_inclination.to_radians(),
+            initial_orbital_angle: json.initial_orbital_angle.to_radians(),
+            rotation_period: json.rotation_period.map(|p| p.to_seconds()),
+            axial_tilt: json.axial_tilt.to_radians(),
+        }
+    }
+}
+
+/// Runtime asteroid template with SI units.
+///
+/// This is the converted version of [`AsteroidTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct AsteroidTemplate {
+    /// Entity type discriminator ("asteroid").
+    pub entity_type: String,
+    /// Mass in kilograms (SI base unit).
+    pub mass: f32,
+    /// Collision shape data for the asteroid.
+    pub collision_shape: CollisionShapeData,
+    /// Axis-aligned bounding box of the mesh in asteroid-local coordinates (metres).
+    pub bounding_box: BoundingBox,
+    /// If true, this body generates gravity on other entities.
+    pub is_gravity_source: bool,
+}
+
+impl From<AsteroidTemplateJson> for AsteroidTemplate {
+    fn from(json: AsteroidTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            mass: json.mass.to_kilograms(),
+            collision_shape: json.collision_shape.into(),
+            bounding_box: json.bounding_box.into(),
+            is_gravity_source: json.is_gravity_source,
+        }
+    }
+}

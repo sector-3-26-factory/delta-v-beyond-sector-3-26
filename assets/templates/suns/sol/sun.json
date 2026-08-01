@@ -1,0 +1,41 @@
+{
+    "entity_type": "sun",
+    "mass": {
+        "value": 1.0,
+        "unit": "M_sun"
+    },
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 10.0,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": -10.0,
+            "y": -10.0,
+            "z": -10.0
+        },
+        "max": {
+            "x": 10.0,
+            "y": 10.0,
+            "z": 10.0
+        }
+    },
+    "is_gravity_source": true,
+    "rotation_period": {
+        "value": 600.0,
+        "unit": "h"
+    },
+    "light_intensity": 3.5e28,
+    "light_color": {
+        "r": 1.0,
+        "g": 0.95,
+        "b": 0.8
+    },
+    "light_range": {
+        "value": 6e12,
+        "unit": "m"
+    }
+}

@@ -55,7 +55,8 @@ mod tests {
             &root.join("assets/json/schema/flight-assist.schema.json"),
         )
         .expect("default flight-assist config should load without error");
-        let fa: delta_v_core::FlightAssistConfig = serde_json::from_value(fa).expect("deserialise");
+        let fa: delta_v_types::FlightAssistConfigJson =
+            serde_json::from_value(fa).expect("deserialise");
         assert!(
             fa.enabled_by_default,
             "expected enabled_by_default to be true"

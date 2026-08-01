@@ -1,5 +1,5 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
-//
+
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
 //
@@ -62,8 +62,8 @@ pub use debug::{
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::{
-    CameraSwitched, FireWeapon, NavigationListChanged, ProjectileHit, SpawnEntity, TargetSelected,
-    TargetingModeChanged,
+    CameraSwitched, FireWeapon, NavigationListChanged, ProjectileHit, PropulsionSelected,
+    SpawnEntity, TargetSelected, TargetingModeChanged, WeaponSelected,
 };
 pub use flight_assist::{FlightAssist, FlightAssistConfig, FlightAssistState};
 pub use floating_origin::{FloatingOrigin, FloatingOriginConfig, OriginThreshold};
@@ -75,7 +75,7 @@ pub use navigation::{
 pub use propulsion::Propulsion;
 pub use spawn::WorldSpawnSet;
 pub use state::AppState;
-pub use weapons::Weapon;
+pub use weapons::{SelectedWeapon, Weapon};
 
 // Re-exports from delta-v-types for shared types (ADR-0046)
 pub use delta_v_types::{
@@ -85,10 +85,6 @@ pub use delta_v_types::{
 #[cfg(test)]
 #[path = "state/tests.rs"]
 mod state_tests;
-
-#[cfg(test)]
-#[path = "diagnostics/tests.rs"]
-mod diagnostics_tests;
 
 use bevy::prelude::*;
 
@@ -114,6 +110,10 @@ impl Plugin for CorePlugin {
         app.add_message::<NavigationListChanged>();
         // Initialize message channel for target selected events.
         app.add_message::<TargetSelected>();
+        // Initialize message channel for weapon selected events.
+        app.add_message::<WeaponSelected>();
+        // Initialize message channel for propulsion selected events.
+        app.add_message::<PropulsionSelected>();
 
         // Initialize gizmo config with default render layer (will be updated dynamically).
         // The update_gizmo_render_layers system will set the correct layer based on active camera.

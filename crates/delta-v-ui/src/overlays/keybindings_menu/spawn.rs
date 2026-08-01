@@ -1,5 +1,5 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
-//
+
 // Delta-V beyond Sector 3.26
 // Copyright (C) 2025  Cute-Donkey
 //
@@ -195,7 +195,22 @@ fn keybindings_menu_content(
                 LogicalAction::StrafeDown,
             ],
         ),
-        ("combat", &[LogicalAction::FirePrimary]),
+        (
+            "combat",
+            &[
+                LogicalAction::FirePrimary,
+                LogicalAction::SelectWeapon1,
+                LogicalAction::SelectWeapon2,
+                LogicalAction::SelectWeapon3,
+                LogicalAction::SelectWeapon4,
+                LogicalAction::SelectWeapon5,
+                LogicalAction::SelectWeapon6,
+                LogicalAction::SelectWeapon7,
+                LogicalAction::SelectWeapon8,
+                LogicalAction::SelectWeapon9,
+                LogicalAction::SelectWeapon10,
+            ],
+        ),
         (
             "systems",
             &[
@@ -209,6 +224,16 @@ fn keybindings_menu_content(
                 LogicalAction::CycleTargetNext,
                 LogicalAction::CycleTargetPrev,
                 LogicalAction::ToggleTargetingMode,
+                LogicalAction::SelectPropulsion1,
+                LogicalAction::SelectPropulsion2,
+                LogicalAction::SelectPropulsion3,
+                LogicalAction::SelectPropulsion4,
+                LogicalAction::SelectPropulsion5,
+                LogicalAction::SelectPropulsion6,
+                LogicalAction::SelectPropulsion7,
+                LogicalAction::SelectPropulsion8,
+                LogicalAction::SelectPropulsion9,
+                LogicalAction::SelectPropulsion10,
             ],
         ),
     ];

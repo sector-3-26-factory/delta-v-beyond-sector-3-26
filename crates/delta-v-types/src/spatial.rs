@@ -2,7 +2,7 @@
 
 //! Spatial types for 3D geometry and bounding volumes.
 
-use bevy::prelude::{Quat, Vec3};
+pub use bevy::prelude::{Quat, Vec3};
 use serde::Deserialize;
 
 /// A 3-component position in metres, deserialized from JSON.
@@ -70,4 +70,64 @@ impl BoundingBoxJson {
     pub fn center(&self) -> Vec3 {
         (Vec3::from(self.min) + Vec3::from(self.max)) * 0.5
     }
+}
+
+/// Axis-aligned bounding box in ship-local coordinates (metres).
+///
+/// Runtime version with SI units (Vec3 instead of `Vec3Json`).
+/// Used for camera position defaults, debug axes, and spatial calculations.
+#[derive(Debug, Clone, Copy)]
+pub struct BoundingBox {
+    /// Minimum corner (x, y, z in metres).
+    pub min: Vec3,
+    /// Maximum corner (x, y, z in metres).
+    pub max: Vec3,
+}
+
+impl From<BoundingBoxJson> for BoundingBox {
+    fn from(json: BoundingBoxJson) -> Self {
+        Self {
+            min: Vec3::from(json.min),
+            max: Vec3::from(json.max),
+        }
+    }
+}
+
+impl BoundingBox {
+    /// Returns the size (extent) of the bounding box in metres.
+    #[must_use]
+    pub fn size(&self) -> Vec3 {
+        self.max - self.min
+    }
+
+    /// Returns the center point of the bounding box in metres.
+    #[must_use]
+    pub fn center(&self) -> Vec3 {
+        (self.min + self.max) * 0.5
+    }
+
+    /// Returns the half-extents of the bounding box in metres.
+    #[must_use]
+    pub fn half_extents(&self) -> Vec3 {
+        self.size() * 0.5
+    }
+}
+
+/// Scales a `BoundingBox` by the given scale factor.
+///
+/// Both min and max corners are multiplied by the scale.
+#[must_use]
+pub fn scale_bounding_box(bbox: &BoundingBox, scale: f32) -> BoundingBox {
+    BoundingBox {
+        min: bbox.min * scale,
+        max: bbox.max * scale,
+    }
+}
+
+/// Computes debug axis length from a `BoundingBox` (120% of longest side).
+#[must_use]
+pub fn compute_debug_axis_length(bbox: &BoundingBox) -> f32 {
+    let size = bbox.size();
+    let max_dim = size.x.max(size.y).max(size.z);
+    max_dim * 1.2
 }

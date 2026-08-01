@@ -7,7 +7,8 @@
 //!
 //! See ADR-0047 (centralized spawning) and ADR-0051 (dependency hierarchy).
 
-use crate::collision::shape_from_json;
+use crate::collision::scale_collision_shape;
+use crate::template_extraction::resolve_mass;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_assets::resolve_sound_path;
@@ -16,38 +17,11 @@ use delta_v_assets::template::{
     load_projectile_definition, load_weapon_definition,
 };
 use delta_v_core::{
-    DebugAxesEligible, EntityType, FlightAssist, Health, Propulsion, SpawnEntity, Targetable,
-    Weapon, WorldEntityId,
+    DebugAxesEligible, EntityType, FlightAssist, Health, Propulsion, SelectedWeapon, SpawnEntity,
+    Targetable, Weapon, WorldEntityId,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
-use delta_v_types::{
-    BoundingBoxJson, CollisionShapeJson, MainThrusterDefinitionJson,
-    ManeuveringThrusterDefinitionJson, PhysicalQuantityJson, ProjectileDefinitionJson,
-    PropulsionConfig, WeaponReference, WeaponTemplateJson,
-};
-
-/// Trait for accessing common ship template fields.
-/// Implemented for ship template types across domain crates.
-pub trait ShipTemplateBase {
-    /// Returns the ship's mass in kilograms.
-    fn mass(&self) -> &PhysicalQuantityJson;
-    /// Returns the dimensionless inertia multiplier.
-    fn inertia_scale(&self) -> f32;
-    /// Returns the axis-aligned bounding box in ship-local coordinates (metres).
-    fn bounding_box(&self) -> &BoundingBoxJson;
-    /// Returns the collision shape for the ship.
-    fn collision_shape(&self) -> &CollisionShapeJson;
-    /// Returns the ship's health in hit points.
-    fn health(&self) -> &PhysicalQuantityJson;
-    /// Returns the weapon configurations.
-    fn weapons(&self) -> &[WeaponReference];
-    /// Returns the entity type string (e.g., "`player_controlled_ship`", "`ship`", "`ai_controlled_ship`").
-    fn entity_type(&self) -> &str;
-    /// Returns the array of main thruster names (references to directories under assets/components/propulsion/main-thrusters/).
-    fn main_thruster_names(&self) -> &[String];
-    /// Returns the name of the maneuvering thruster (reference to a directory under assets/components/propulsion/maneuvering-thrusters/).
-    fn maneuvering_thruster_name(&self) -> &str;
-}
+use delta_v_types::{PropulsionConfig, ShipTemplateBase};
 
 /// Builds the base physical ship entity with common components.
 ///
@@ -86,10 +60,8 @@ pub fn build_physical_ship(
 
     // Build the ship entity spawn command.
     // Use delta-v-spawn for collision shape conversion (ADR-0047).
-    #[allow(clippy::expect_used)] // INVARIANT: validated by delta-v-json upstream (ADR-0013)
-    let _collision_shape_data = shape_from_json(template.collision_shape(), scale)
-        .map_err(|e| tracing::error!("collision shape invalid: {}", e))
-        .expect("collision shape must be valid (ADR-0013)");
+    // Collision shape is already validated and converted to runtime type.
+    let _collision_shape_data = scale_collision_shape(template.collision_shape(), scale);
 
     let ship_entity = spawn_ship_entity(commands, asset_server, event, template, axis_length);
 
@@ -103,6 +75,12 @@ pub fn build_physical_ship(
     // Per ADR-0014, all gameplay values come from JSON.
     // Weapons reference weapon definitions by name, which in turn reference projectile definitions.
     add_weapon_components(commands, ship_entity, template);
+
+    // Initialize SelectedWeapon resource with max_weapons_count
+    commands.insert_resource(SelectedWeapon {
+        index: 0,
+        max_weapons_count: template.max_weapons_count(),
+    });
 
     // Load propulsion configuration from thruster definitions.
     // Use the first main thruster in the array (M2: single active thruster).
@@ -133,6 +111,17 @@ fn spawn_ship_entity(
     template: &impl ShipTemplateBase,
     axis_length: f32,
 ) -> Entity {
+    // Extract uniform scale from event (use max of x, y, z for uniform scaling).
+    let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
+
+    // Resolve mass: use override if present, otherwise use template mass.
+    // Mass is NOT scaled - it is used as-is or overridden.
+    let mass = resolve_mass(template.mass(), event.mass);
+
+    // Derive mesh path from template path using filesystem functions.
+    // The mesh is always at mesh.glb in the template's directory.
+    let mesh_path = event.mesh_path();
+
     commands
         .spawn((
             Transform {
@@ -144,48 +133,43 @@ fn spawn_ship_entity(
             Visibility::default(),
             InheritedVisibility::default(),
             PendingShipMesh {
-                gltf_handle: asset_server.load::<Gltf>(event.mesh_template_path.clone()),
+                gltf_handle: asset_server.load::<Gltf>(&mesh_path),
             },
             DebugAxesEligible::new(event.id.clone(), axis_length),
             // Physics components: mass and inertia from template JSON (ADR-0014)
-            RigidBody::new(template.mass().value, template.inertia_scale()),
+            RigidBody::new(mass, template.inertia_scale()),
             FlightAssist,
-            CollisionShape(
-                shape_from_json(template.collision_shape(), 1.0)
-                    .map_err(|e| tracing::error!("collision shape invalid: {}", e))
-                    .expect("collision shape must be valid (ADR-0013)"),
-            ),
+            CollisionShape(scale_collision_shape(template.collision_shape(), scale)),
             CollisionLayersComponent::new(delta_v_types::collision::layers::SHIP),
             // Health component for damage model (M4)
-            Health::new(template.health().value),
+            Health::new(template.health()),
             // Targetable for targeting/navigation menu (M6 step 11a)
             Targetable,
         ))
         .id()
 }
 
-/// Adds Weapon components to the ship entity from the template.
+/// Adds Weapon components to the ship entity as children from the template.
+///
+/// Each weapon is spawned as a child entity with a Weapon component.
+/// This allows multiple weapons to be stored and selected.
 #[allow(clippy::expect_used)] // INVARIANT: validated by delta-v-json upstream (ADR-0013, ADR-0040)
 fn add_weapon_components(
     commands: &mut Commands<'_, '_>,
     ship_entity: Entity,
     template: &impl ShipTemplateBase,
 ) {
-    for (i, weapon_ref) in template.weapons().iter().enumerate() {
-        // Load weapon definition
-        let weapon_def = load_weapon_definition(&weapon_ref.name)
-            .expect("weapon definition must exist (ADR-0013)");
-        let weapon_def: WeaponTemplateJson = serde_json::from_value(weapon_def)
-            .expect("weapon definition deserialization must succeed (ADR-0040)");
+    for (i, weapon_name) in template.weapons().iter().enumerate() {
+        // Load weapon definition (already converted to runtime type with SI units)
+        let weapon_def =
+            load_weapon_definition(weapon_name).expect("weapon definition must exist (ADR-0013)");
 
-        // Load projectile definition referenced by weapon
+        // Load projectile definition (already converted to runtime type with SI units)
         let projectile_def = load_projectile_definition(&weapon_def.projectile_template)
             .expect("projectile definition must exist (ADR-0013)");
-        let projectile_def: ProjectileDefinitionJson = serde_json::from_value(projectile_def)
-            .expect("projectile definition deserialization must succeed (ADR-0040)");
 
         // Resolve sound paths at spawn time for performance
-        let weapon_dir = format!("assets/components/weapons/{}", weapon_ref.name);
+        let weapon_dir = format!("assets/components/weapons/{weapon_name}");
         let projectile_dir = format!(
             "assets/components/projectiles/{}",
             weapon_def.projectile_template
@@ -194,18 +178,21 @@ fn add_weapon_components(
         let fire_sound = resolve_sound_path(&weapon_dir, "fire");
         let hit_sound = resolve_sound_path(&projectile_dir, "hit");
 
-        commands.entity(ship_entity).insert(Weapon {
-            slot: u32::try_from(i).expect("weapon slot index fits in u32"),
-            cooldown: 0.0,
-            weapon_name: weapon_ref.name.clone(),
-            projectile_speed: projectile_def.speed.value,
-            damage: projectile_def.damage.value,
-            fire_rate: weapon_def.fire_rate.value,
-            lifetime: projectile_def.lifetime.value,
-            projectile_radius: projectile_def.radius.value,
-            fire_sound,
-            hit_sound,
-            projectile_template: weapon_def.projectile_template.clone(),
+        // Spawn weapon as a child entity
+        commands.entity(ship_entity).with_children(|parent| {
+            parent.spawn(Weapon {
+                slot: u32::try_from(i).expect("weapon slot index fits in u32"),
+                cooldown: 0.0,
+                weapon_name: weapon_name.clone(),
+                projectile_speed: projectile_def.speed,
+                damage: projectile_def.damage,
+                fire_rate: weapon_def.fire_rate,
+                lifetime: projectile_def.lifetime,
+                projectile_radius: projectile_def.radius,
+                fire_sound,
+                hit_sound,
+                projectile_template: weapon_def.projectile_template.clone(),
+            });
         });
     }
 }
@@ -219,27 +206,24 @@ fn load_propulsion_config(template: &impl ShipTemplateBase) -> PropulsionConfig 
         .get(active_main_thruster_index)
         .expect("at least one main thruster must be defined (schema minItems: 1)");
 
+    // Load main thruster definition (already converted to runtime type with SI units)
     let main_thruster_def = load_main_thruster_definition(main_thruster_name)
         .expect("main thruster definition must exist (ADR-0013)");
-    let main_thruster_def: MainThrusterDefinitionJson = serde_json::from_value(main_thruster_def)
-        .expect("main thruster definition deserialization must succeed (ADR-0040)");
 
     let maneuvering_thruster_name = template.maneuvering_thruster_name().to_string();
+    // Load maneuvering thruster definition (already converted to runtime type with SI units)
     let maneuvering_thruster_def = load_maneuvering_thruster_definition(&maneuvering_thruster_name)
         .expect("maneuvering thruster definition must exist (ADR-0013)");
-    let maneuvering_thruster_def: ManeuveringThrusterDefinitionJson =
-        serde_json::from_value(maneuvering_thruster_def)
-            .expect("maneuvering thruster definition deserialization must succeed (ADR-0040)");
 
     // Resolve thrust sound path at spawn time for performance
     let thruster_dir = format!("assets/components/propulsion/main-thrusters/{main_thruster_name}");
     let thrust_sound = resolve_sound_path(&thruster_dir, "thrust");
 
     PropulsionConfig {
-        max_forward_thrust: main_thruster_def.max_forward_thrust.value,
-        max_backward_thrust: main_thruster_def.max_backward_thrust.value,
-        max_torque: maneuvering_thruster_def.max_torque.value,
-        max_strafe_thrust: maneuvering_thruster_def.max_strafe_thrust.value,
+        max_forward_thrust: main_thruster_def.max_forward_thrust,
+        max_backward_thrust: main_thruster_def.max_backward_thrust,
+        max_torque: maneuvering_thruster_def.max_torque,
+        max_strafe_thrust: maneuvering_thruster_def.max_strafe_thrust,
         rotation_ramp_ticks: maneuvering_thruster_def.rotation_ramp_ticks,
         thrust_sound,
     }
@@ -255,6 +239,7 @@ fn add_propulsion_component(
     let main_thruster_names = template.main_thruster_names().to_vec();
     let maneuvering_thruster_name = template.maneuvering_thruster_name().to_string();
     let active_main_thruster_index = 0_usize;
+    let max_propulsions_count = template.max_propulsions_count();
 
     commands.entity(ship_entity).insert(Propulsion {
         main_thruster_names,
@@ -265,10 +250,14 @@ fn add_propulsion_component(
         max_strafe_thrust: propulsion_config.max_strafe_thrust,
         rotation_ramp_ticks: propulsion_config.rotation_ramp_ticks,
         active_main_thruster_index,
+        max_propulsions_count,
     });
 }
 
 /// Marker component for a pending ship entity waiting for its mesh to load.
+///
+/// Used by the ship spawn system in delta-v-ships. Implements the
+/// [`PendingMesh`] trait for the generic mesh attachment system.
 #[derive(Component)]
 pub struct PendingShipMesh {
     /// Handle to the glTF asset being loaded.

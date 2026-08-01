@@ -14,14 +14,12 @@ categories = ["game-development"]
 [dependencies]
 bevy = { workspace = true }
 tracing = { workspace = true }
-serde = { workspace = true }
 delta-v-assets = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-physics = { workspace = true }
 delta-v-types = { workspace = true }
 delta-v-spawn = { workspace = true }
 thiserror = { workspace = true }
-serde_json = { workspace = true }
 
 [lints]
 workspace = true

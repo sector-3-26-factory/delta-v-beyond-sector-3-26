@@ -114,6 +114,8 @@ fn navigation_menu_content(
                 "ship" => i18n.entity_types.ship.clone(),
                 "asteroid" => i18n.entity_types.asteroid.clone(),
                 "station" => i18n.entity_types.station.clone(),
+                "sun" => i18n.entity_types.sun.clone(),
+                "planet" => i18n.entity_types.planet.clone(),
                 _ => entry.entity_type.clone(),
             };
 

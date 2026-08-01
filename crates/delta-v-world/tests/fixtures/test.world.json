@@ -3,7 +3,7 @@
     "name": "Test World",
     "entities": [
         {
-            "template": "ships/test-ship",
+            "template": "ships/debug-ship-cube",
             "id": "test_ship",
             "player_controlled": true,
             "position": {

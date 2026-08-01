@@ -21,8 +21,12 @@
 use std::collections::BTreeSet;
 
 use bevy::prelude::*;
+use delta_v_assets::template::load_main_thruster_definition;
 use delta_v_core::input::ActionState;
-use delta_v_core::{FlightAssist, FlightAssistConfig, FlightAssistState, PlayerShipEntity};
+use delta_v_core::{
+    FlightAssist, FlightAssistConfig, FlightAssistState, PlayerShipEntity, Propulsion,
+    PropulsionSelected,
+};
 use delta_v_physics::RigidBody;
 use delta_v_types::LogicalAction;
 
@@ -36,6 +40,9 @@ use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 pub enum ShipInputSet {
     /// Read [`ActionState<LogicalAction>`] and accumulate [`ThrustCommand`] + [`TorqueCommand`].
     AccumulateCommands,
+    /// Select propulsion (main thruster) based on [`LogicalAction::SelectPropulsion1`] through
+    /// [`LogicalAction::SelectPropulsion10`].
+    SelectPropulsion,
     /// Toggle flight assist on/off based on [`LogicalAction::ToggleFlightAssist`].
     ToggleFlightAssist,
     /// Apply accumulated [`ThrustCommand`] as forces on the player ship.
@@ -97,7 +104,12 @@ pub fn input_reader_system(
 ) {
     let ramp_ticks_max = propulsion.rotation_ramp_ticks;
 
-    for action in action_state.get_pressed() {
+    let pressed_actions = action_state.get_pressed();
+    if !pressed_actions.is_empty() {
+        tracing::debug!("[input_reader] pressed actions: {:?}", pressed_actions);
+    }
+
+    for action in pressed_actions {
         match action {
             // Thrust: apply force in local frame
             // Forward = -Z, Backward = +Z (ADR-0006)
@@ -158,8 +170,28 @@ pub fn input_reader_system(
             | LogicalAction::ToggleKeybindingsMenu
             | LogicalAction::CycleTargetNext
             | LogicalAction::CycleTargetPrev
-            | LogicalAction::ToggleTargetingMode => {
-                // Handled by other systems (flight_assist_toggle_system / weapons plugin / cockpit module / camera module)
+            | LogicalAction::ToggleTargetingMode
+            | LogicalAction::SelectWeapon1
+            | LogicalAction::SelectWeapon2
+            | LogicalAction::SelectWeapon3
+            | LogicalAction::SelectWeapon4
+            | LogicalAction::SelectWeapon5
+            | LogicalAction::SelectWeapon6
+            | LogicalAction::SelectWeapon7
+            | LogicalAction::SelectWeapon8
+            | LogicalAction::SelectWeapon9
+            | LogicalAction::SelectWeapon10
+            | LogicalAction::SelectPropulsion1
+            | LogicalAction::SelectPropulsion2
+            | LogicalAction::SelectPropulsion3
+            | LogicalAction::SelectPropulsion4
+            | LogicalAction::SelectPropulsion5
+            | LogicalAction::SelectPropulsion6
+            | LogicalAction::SelectPropulsion7
+            | LogicalAction::SelectPropulsion8
+            | LogicalAction::SelectPropulsion9
+            | LogicalAction::SelectPropulsion10 => {
+                // Handled by other systems (flight_assist_toggle_system / weapons plugin / cockpit module / camera module / propulsion_selection_system)
             }
         }
     }
@@ -180,6 +212,91 @@ pub fn input_reader_system(
     {
         ramp.ramp_ticks.z = 0.0;
     }
+}
+
+/// Handles propulsion selection input.
+///
+/// Runs in `FixedUpdate` during `InGame` state.
+/// Updates the `active_main_thruster_index` in the `Propulsion` component
+/// and the `ShipPropulsionConfig` resource when the player presses
+/// `Shift+1` through `Shift+0`.
+/// Emits [`PropulsionSelected`] event for notification display.
+/// Only allows selecting thrusters that exist on the ship.
+#[allow(clippy::needless_pass_by_value)]
+pub fn propulsion_selection_system(
+    action_state: Res<'_, ActionState<LogicalAction>>,
+    player_ship: Res<'_, PlayerShipEntity>,
+    mut propulsion_query: Query<'_, '_, &mut Propulsion>,
+    mut config: ResMut<'_, ShipPropulsionConfig>,
+    mut events: MessageWriter<'_, PropulsionSelected>,
+) {
+    // Check each propulsion selection action and update the active thruster index
+    // on press (edge detection)
+    let new_index = if action_state.just_pressed(&LogicalAction::SelectPropulsion1) {
+        0
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion2) {
+        1
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion3) {
+        2
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion4) {
+        3
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion5) {
+        4
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion6) {
+        5
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion7) {
+        6
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion8) {
+        7
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion9) {
+        8
+    } else if action_state.just_pressed(&LogicalAction::SelectPropulsion10) {
+        9
+    } else {
+        return; // No propulsion selection action pressed
+    };
+
+    // Update the Propulsion component on the player ship
+    let Ok(mut propulsion) = propulsion_query.get_mut(player_ship.0) else {
+        return;
+    };
+    if propulsion.active_main_thruster_index == new_index {
+        return;
+    }
+
+    // Only allow selecting thrusters within the ship's max_propulsions_count limit
+    if new_index >= propulsion.max_propulsions_count {
+        return;
+    }
+
+    // Only allow selecting thrusters that actually exist
+    if new_index >= propulsion.main_thruster_names.len() {
+        return;
+    }
+
+    // Get the thruster name before modifying propulsion (to avoid borrow issues)
+    let Some(thruster_name) = propulsion.main_thruster_names.get(new_index).cloned() else {
+        return;
+    };
+
+    // Update the ShipPropulsionConfig resource with the new thruster's values
+    let Ok(thruster_def) = load_main_thruster_definition(&thruster_name) else {
+        return;
+    };
+
+    propulsion.active_main_thruster_index = new_index;
+    config.max_forward_thrust = thruster_def.max_forward_thrust;
+    config.max_backward_thrust = thruster_def.max_backward_thrust;
+    config.active_main_thruster_index = new_index;
+    tracing::info!(
+        "Propulsion selected: thruster '{}' (index {})",
+        thruster_name,
+        new_index
+    );
+    events.write(PropulsionSelected {
+        slot: new_index,
+        thruster_name,
+    });
 }
 
 /// Computes the linear ramp factor for a single rotation axis.

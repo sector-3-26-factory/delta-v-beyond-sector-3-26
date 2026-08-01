@@ -60,8 +60,8 @@ pub struct SpeedTranslations {
     pub unit_kmh: String,
     /// Unit abbreviation for kilometers per second.
     pub unit_kms: String,
-    /// Unit abbreviation for parsecs per hour.
-    pub unit_pch: String,
+    /// Unit abbreviation for megameters per second.
+    pub unit_mms: String,
     /// Unit abbreviation for fraction of light speed.
     pub unit_c: String,
 }
@@ -78,6 +78,10 @@ pub struct EntityTypeTranslations {
     pub asteroid: String,
     /// Station entity type translation.
     pub station: String,
+    /// Sun entity type translation.
+    pub sun: String,
+    /// Planet entity type translation.
+    pub planet: String,
 }
 
 /// UI translations.
@@ -152,4 +156,8 @@ pub struct NotificationTranslations {
     pub no_targets: String,
     /// No nav objects available notification.
     pub no_nav_objects: String,
+    /// Weapon selected notification template. Use `{name}` as placeholder.
+    pub weapon_selected: String,
+    /// Propulsion selected notification template. Use `{name}` as placeholder.
+    pub propulsion_selected: String,
 }

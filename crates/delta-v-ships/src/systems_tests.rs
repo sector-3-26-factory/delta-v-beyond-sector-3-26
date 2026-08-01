@@ -1,7 +1,10 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 //! Tests for the input → forces pipeline systems.
+//!
+//! See ADR-0021 (Testing strategy).
 
+// Test code is allowed to use expect/unwrap/indexing per ADR-0023.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -63,6 +66,30 @@ fn run_fixed_update(app: &mut App) {
 fn press_action(app: &mut App, action: LogicalAction) {
     let mut action_state = app.world_mut().resource_mut::<ActionState<LogicalAction>>();
     action_state.press(&action);
+}
+
+/// Builds a minimal Bevy app with the input → forces pipeline resources
+/// and a custom `rotation_ramp_ticks` value.
+fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
+    let mut app = App::new();
+    app.add_plugins(TimePlugin);
+    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    app.init_resource::<ActionState<LogicalAction>>();
+    app.init_resource::<ThrustCommand>();
+    app.init_resource::<TorqueCommand>();
+    app.init_resource::<PreviousActions>();
+    app.init_resource::<FlightAssistState>();
+    app.init_resource::<RotationRampState>();
+    app.insert_resource(ShipPropulsionConfig {
+        max_forward_thrust: 100_000.0,
+        max_backward_thrust: 40_000.0,
+        max_torque: 50_000.0,
+        max_strafe_thrust: 50_000.0,
+        active_main_thruster_index: 0,
+        rotation_ramp_ticks,
+        thrust_sound: None,
+    });
+    app
 }
 
 // ---------------------------------------------------------------------------
@@ -516,30 +543,6 @@ fn test_torque_system_applies_torque_to_rigid_body() {
 // ---------------------------------------------------------------------------
 // rotation force ramp
 // ---------------------------------------------------------------------------
-
-/// Builds a minimal Bevy app with the input → forces pipeline resources
-/// and a custom `rotation_ramp_ticks` value.
-fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.init_resource::<ActionState<LogicalAction>>();
-    app.init_resource::<ThrustCommand>();
-    app.init_resource::<TorqueCommand>();
-    app.init_resource::<PreviousActions>();
-    app.init_resource::<FlightAssistState>();
-    app.init_resource::<RotationRampState>();
-    app.insert_resource(ShipPropulsionConfig {
-        max_forward_thrust: 100_000.0,
-        max_backward_thrust: 40_000.0,
-        max_torque: 50_000.0,
-        max_strafe_thrust: 50_000.0,
-        active_main_thruster_index: 0,
-        rotation_ramp_ticks,
-        thrust_sound: None,
-    });
-    app
-}
 
 /// Test: ramp starts at 1/N on first tick.
 #[test]

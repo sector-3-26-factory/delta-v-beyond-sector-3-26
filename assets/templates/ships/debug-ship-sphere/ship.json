@@ -26,13 +26,14 @@
     },
     "propulsion": {
         "main_thrusters": [
-            "chemical-main"
+            "chemical-main",
+            "antimatter-torch"
         ],
         "maneuvering_thruster": "rcs-standard"
     },
     "weapons": [
-        {
-            "name": "laser-standard"
-        }
-    ]
+        "laser-standard"
+    ],
+    "max_weapons_count": 2,
+    "max_propulsions_count": 2
 }

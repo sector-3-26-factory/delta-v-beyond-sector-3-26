@@ -27,7 +27,7 @@ use delta_v_core::{
     ActiveCameraName, CameraName, CameraSwitched, EntityType, FireWeapon, Health, I18n,
     PlayerShipEntity, ProjectileHit, RenderLayer, TargetSelected, Weapon, WorldEntityId,
 };
-use delta_v_physics::{CollisionDetected, RigidBody};
+use delta_v_physics::{CollisionDetected, CollisionShape, RigidBody, distance_to_surface};
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
@@ -426,6 +426,7 @@ pub fn velocity_vector_system(
 ) {
     let _span = tracing::info_span!("delta_v_ships::velocity_vector_system").entered();
     let Ok(ship_body) = ship_query.get(player_ship.0) else {
+        tracing::debug!("[vvi] player ship not found or no RigidBody");
         return;
     };
 
@@ -439,8 +440,16 @@ pub fn velocity_vector_system(
         }
     };
 
+    tracing::debug!(
+        "[vvi] speed={:.3} threshold={:.3} current_visibility={:?}",
+        speed,
+        MIN_SPEED_THRESHOLD,
+        *visibility
+    );
+
     if speed < MIN_SPEED_THRESHOLD {
         if *visibility != Visibility::Hidden {
+            tracing::debug!("[vvi] hiding indicator and text (speed below threshold)");
             *visibility = Visibility::Hidden;
         }
         if let Ok((_, mut text_visibility)) = text_query.single_mut() {
@@ -452,6 +461,7 @@ pub fn velocity_vector_system(
     }
 
     if *visibility != Visibility::Visible {
+        tracing::debug!("[vvi] showing indicator (speed above threshold)");
         *visibility = Visibility::Visible;
     }
 
@@ -531,16 +541,21 @@ pub fn velocity_vector_system(
         &i18n.speed.unit_ms,
         &i18n.speed.unit_kmh,
         &i18n.speed.unit_kms,
-        &i18n.speed.unit_pch,
+        &i18n.speed.unit_mms,
         &i18n.speed.unit_c,
     );
+
+    tracing::debug!("[vvi] speed_text='{}' updating text entity", speed_text);
 
     // Update the speed text entity.
     if let Ok((mut text, mut text_visibility)) = text_query.single_mut() {
         if *text_visibility != Visibility::Visible {
+            tracing::debug!("[vvi] setting text visibility to Visible");
             *text_visibility = Visibility::Visible;
         }
         text.0 = speed_text;
+    } else {
+        tracing::warn!("[vvi] failed to get speed text entity - query error");
     }
 
     tracing::debug!(
@@ -636,7 +651,7 @@ pub fn status_gauge_system(
         entity: Entity,
         station_id: String,
         slot_id: String,
-        shape: crate::ship_templates::GaugeShape,
+        shape: crate::GaugeShape,
         gauge_type: String,
         children: Vec<Entity>,
         node: Node,
@@ -664,7 +679,7 @@ pub fn status_gauge_system(
     // Process each gauge
     for update in &gauge_updates {
         // Handle circular gauges - update the needle rotation and position.
-        if let crate::ship_templates::GaugeShape::Circle { .. } = update.shape {
+        if let crate::GaugeShape::Circle { .. } = update.shape {
             // For circular gauges, update the needle rotation based on health.
             // The scale arc is 240° (from 240° to 120°, wrapping).
             // Counter-clockwise movement:
@@ -856,6 +871,7 @@ pub fn cycle_target_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
         With<Targetable>,
     >,
@@ -868,7 +884,9 @@ pub fn cycle_target_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
+        With<delta_v_physics::Navigable>,
     >,
     mut events: MessageWriter<'_, TargetSelected>,
 ) {
@@ -882,7 +900,7 @@ pub fn cycle_target_system(
     // Get player position
     let Some(player_pos) = targetable_query
         .iter()
-        .find_map(|(entity, transform, _, _, _)| {
+        .find_map(|(entity, transform, _, _, _, _)| {
             if entity == player_ship.0 {
                 Some(transform.translation)
             } else {
@@ -898,11 +916,11 @@ pub fn cycle_target_system(
         super::components::TargetingModeType::Combat => {
             let mut targets: Vec<(Entity, f32, String, String)> = targetable_query
                 .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
                     if entity == player_ship.0 {
                         return None;
                     }
-                    let distance = (transform.translation - player_pos).length();
+                    let distance = distance_to_surface(player_pos, transform.translation, shape);
                     let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                     Some((entity, distance, name_str, entity_type.0.clone()))
                 })
@@ -917,11 +935,11 @@ pub fn cycle_target_system(
         super::components::TargetingModeType::Nav => {
             let mut targets: Vec<(Entity, f32, String, String)> = navigable_query
                 .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
                     if entity == player_ship.0 {
                         return None;
                     }
-                    let distance = (transform.translation - player_pos).length();
+                    let distance = distance_to_surface(player_pos, transform.translation, shape);
                     let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                     Some((entity, distance, name_str, entity_type.0.clone()))
                 })

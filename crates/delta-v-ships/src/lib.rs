@@ -52,38 +52,31 @@ pub mod ship_templates;
 pub mod spawn;
 pub mod systems;
 
-pub use delta_v_core::Propulsion;
-pub use delta_v_types::ShipPropulsionTemplate;
-pub use error::ShipError;
-pub use ship_templates::{
-    PlayerShipTemplate, ShipPropulsionConfig, ShipTemplate, StaticShipTemplate, ThrustCommand,
-    TorqueCommand,
-};
-pub use spawn::spawn_ship;
-
 #[cfg(test)]
 #[path = "spawn_tests.rs"]
 mod spawn_tests;
+
 #[cfg(test)]
 #[path = "systems_tests.rs"]
 mod systems_tests;
+
+pub use delta_v_core::Propulsion;
+pub use delta_v_types::{
+    CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot, PlayerShipTemplate,
+    ShipPropulsionTemplate, ShipTemplate, StaticShipTemplate,
+};
+pub use error::ShipError;
+pub use ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
+pub use spawn::spawn_ship;
 
 use bevy::prelude::*;
 use delta_v_core::{AppState, WorldSpawnSet};
 use delta_v_physics::PhysicsSet;
 use systems::{
     PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
-    flight_assist_damping_system, flight_assist_toggle_system, input_reader_system, thrust_system,
-    torque_system,
+    flight_assist_damping_system, flight_assist_toggle_system, input_reader_system,
+    propulsion_selection_system, thrust_system, torque_system,
 };
-
-/// Wrapper system that calls `delta_v_spawn::lighting::setup_scene_lighting`.
-///
-/// This is a thin adapter because `setup_scene_lighting` takes `&mut Commands`
-/// which is not a valid Bevy system signature on its own.
-fn setup_scene_lighting(mut commands: Commands<'_, '_>) {
-    delta_v_spawn::lighting::setup_scene_lighting(&mut commands);
-}
 
 /// Ships plugin for managing player and NPC vessels.
 ///
@@ -92,7 +85,7 @@ fn setup_scene_lighting(mut commands: Commands<'_, '_>) {
 /// their `entity_type` field.
 ///
 /// The plugin also sets up the input → forces pipeline in `FixedUpdate`
-/// during `InGame`, and sets up scene lighting on world load.
+/// during `InGame`.
 pub struct ShipsPlugin;
 
 impl Plugin for ShipsPlugin {
@@ -122,7 +115,6 @@ impl Plugin for ShipsPlugin {
                 .chain()
                 .run_if(in_state(AppState::SpawningEntities)),
         )
-        .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting)
         .add_systems(
             Update,
             spawn_ship
@@ -144,8 +136,10 @@ impl Plugin for ShipsPlugin {
         );
 
         // Camera switching system (M7).
+        // Must run in PreUpdate (after leafwing-input-manager's update_action_state)
+        // because tick_action_state runs in FixedPostUpdate which clears just_pressed before Update runs.
         app.add_systems(
-            Update,
+            PreUpdate,
             delta_v_core::camera_switch_system.run_if(in_state(AppState::InGame)),
         );
 
@@ -159,6 +153,7 @@ impl Plugin for ShipsPlugin {
             FixedUpdate,
             (
                 ShipInputSet::AccumulateCommands,
+                ShipInputSet::SelectPropulsion,
                 ShipInputSet::ToggleFlightAssist,
                 ShipInputSet::ApplyThrust,
                 ShipInputSet::ApplyTorque,
@@ -173,6 +168,7 @@ impl Plugin for ShipsPlugin {
             FixedUpdate,
             (
                 input_reader_system.in_set(ShipInputSet::AccumulateCommands),
+                propulsion_selection_system.in_set(ShipInputSet::SelectPropulsion),
                 flight_assist_toggle_system.in_set(ShipInputSet::ToggleFlightAssist),
                 thrust_system.in_set(ShipInputSet::ApplyThrust),
                 torque_system.in_set(ShipInputSet::ApplyTorque),

@@ -20,3 +20,28 @@ pub struct MainThrusterDefinitionJson {
     /// Maximum backward/reverse thrust in Newtons.
     pub max_backward_thrust: PhysicalQuantityJson,
 }
+
+/// Runtime main thruster definition with SI units.
+///
+/// This is the converted version of [`MainThrusterDefinitionJson`] with all
+/// physical quantities converted to SI base units (Newtons for force).
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct MainThrusterDefinition {
+    /// Thruster type identifier (e.g., "chemical", "ion", "fusion").
+    pub thruster_type: String,
+    /// Maximum forward thrust in Newtons (SI base unit).
+    pub max_forward_thrust: f32,
+    /// Maximum backward/reverse thrust in Newtons (SI base unit).
+    pub max_backward_thrust: f32,
+}
+
+impl From<MainThrusterDefinitionJson> for MainThrusterDefinition {
+    fn from(json: MainThrusterDefinitionJson) -> Self {
+        Self {
+            thruster_type: json.thruster_type,
+            max_forward_thrust: json.max_forward_thrust.to_newtons(),
+            max_backward_thrust: json.max_backward_thrust.to_newtons(),
+        }
+    }
+}

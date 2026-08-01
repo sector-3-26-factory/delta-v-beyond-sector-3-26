@@ -12,268 +12,156 @@
     clippy::panic
 )]
 
-use bevy::app::App;
-use bevy::asset::AssetPlugin;
-use bevy::gltf::Gltf;
-use bevy::prelude::*;
-use delta_v_core::{PlayerShipEntity, SpawnEntity};
+use delta_v_assets::template::load_player_controlled_ship;
 
-use crate::ship_templates::ShipPropulsionConfig;
-use crate::spawn::spawn_ship;
+/// Tests that a valid player-controlled ship template loads and validates correctly.
+#[test]
+fn test_load_player_controlled_ship() {
+    let result = load_player_controlled_ship("space-fighter-comrade1280");
+    assert!(
+        result.is_ok(),
+        "valid player-controlled ship should load: {:?}",
+        result.err()
+    );
 
-/// Creates a minimal Bevy app for testing ship spawning.
-///
-/// Sets up the asset plugin (needed for glTF loading), registers
-/// the `SpawnEntity` event, and adds the `spawn_ship` system.
-fn create_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(AssetPlugin {
-        file_path: "assets".to_string(),
-        ..default()
-    });
-    app.add_message::<SpawnEntity>();
-    app.init_asset::<Gltf>();
-    app.add_systems(Update, spawn_ship);
-    app
-}
+    let (template_path, template) = result.unwrap();
+    assert!(template_path.contains("space-fighter-comrade1280"));
+    assert!(template_path.contains("player_controlled_ship.json"));
 
-/// Builds a minimal `SpawnEntity` event for a player-controlled ship.
-///
-/// Uses a template JSON that matches the merged `player_controlled_ship`
-/// structure (ship properties + cameras + `bounding_box` + `health`).
-fn make_player_ship_event() -> SpawnEntity {
-    let template = serde_json::json!({
-        "entity_type": "player_controlled_ship",
-        "mass": { "value": 10_000.0, "unit": "kg" },
-        "inertia_scale": 1.0,
-        "bounding_box": {
-            "min": { "x": -1.0, "y": -1.0, "z": -1.0 },
-            "max": { "x": 1.0, "y": 1.0, "z": 1.0 }
-        },
-        "collision_shape": {
-            "type": "box",
-            "half_extents": { "x": 1.0, "y": 1.0, "z": 1.0 }
-        },
-        "propulsion": {
-                    "main_thrusters": ["chemical-main"],
-                    "maneuvering_thruster": "rcs-standard"
-                },
-        "cameras": {
-            "cockpit": {
-                "position": { "x": 0.0, "y": 0.5, "z": -0.2 },
-                "target": { "x": 0.0, "y": 0.5, "z": -10.0 },
-                "available": true
-            },
-            "drone": {
-                "position": { "x": 0.0, "y": 2.0, "z": 5.0 },
-                "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
-                "available": true
-            },
-            "rear": {
-                "position": { "x": 0.0, "y": 1.0, "z": 4.0 },
-                "target": { "x": 0.0, "y": 1.0, "z": -10.0 },
-                "available": true
-            },
-            "front": {
-                "position": { "x": 0.0, "y": 0.5, "z": -2.0 },
-                "target": { "x": 0.0, "y": 0.5, "z": -10.0 },
-                "available": true
-            },
-            "left": {
-                "position": { "x": -3.0, "y": 1.0, "z": 0.0 },
-                "target": { "x": 10.0, "y": 1.0, "z": 0.0 },
-                "available": true
-            },
-            "right": {
-                "position": { "x": 3.0, "y": 1.0, "z": 0.0 },
-                "target": { "x": -10.0, "y": 1.0, "z": 0.0 },
-                "available": true
-            },
-            "top": {
-                "position": { "x": 0.0, "y": 2.0, "z": 0.0 },
-                "target": { "x": 0.0, "y": -10.0, "z": 0.0 },
-                "available": true
-            },
-            "bottom": {
-                "position": { "x": 0.0, "y": -2.0, "z": 0.0 },
-                "target": { "x": 0.0, "y": 10.0, "z": 0.0 },
-                "available": true
+    // Verify the template is a PlayerShip variant
+    match template {
+        delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
+            // Verify core ship properties
+            assert!(player_ship.mass > 0.0, "mass should be positive");
+            assert!(
+                player_ship.inertia_scale > 0.0,
+                "inertia_scale should be positive"
+            );
+            assert!(player_ship.health > 0.0, "health should be positive");
+            assert!(
+                player_ship.max_weapons_count > 0,
+                "max_weapons_count should be positive"
+            );
+            assert!(
+                player_ship.max_propulsions_count > 0,
+                "max_propulsions_count should be positive"
+            );
+
+            // Verify propulsion
+            assert!(
+                !player_ship.propulsion.main_thruster_names.is_empty(),
+                "should have at least one main thruster"
+            );
+            assert!(
+                !player_ship.propulsion.maneuvering_thruster.is_empty(),
+                "should have maneuvering thruster"
+            );
+
+            // Verify cameras
+            assert!(
+                player_ship.cameras.cockpit.available,
+                "cockpit camera should be available"
+            );
+            assert!(
+                player_ship.cameras.drone.available,
+                "drone camera should be available"
+            );
+
+            // Verify bounding box
+            assert!(player_ship.bounding_box.max.x > player_ship.bounding_box.min.x);
+            assert!(player_ship.bounding_box.max.y > player_ship.bounding_box.min.y);
+            assert!(player_ship.bounding_box.max.z > player_ship.bounding_box.min.z);
+
+            // Verify collision shape
+            match &player_ship.collision_shape.shape_type {
+                delta_v_types::CollisionShapeType::Box { half_extents } => {
+                    assert!(half_extents.x > 0.0);
+                    assert!(half_extents.y > 0.0);
+                    assert!(half_extents.z > 0.0);
+                }
+                _ => panic!("expected Box collision shape"),
             }
-        },
-        "weapons": [],
-        "health": { "value": 100.0, "unit": "hp" },
-        "cockpit": {
-                    "stations": []
-                },
-        "sounds": {}
-    });
 
-    SpawnEntity::new(
-        "test_player_ship".to_string(),
-        "player_controlled_ship".to_string(),
-        template,
-        "templates/ships/space-fighter-comrade1280/player_controlled_ship.json".to_string(),
-        "templates/ships/space-fighter-comrade1280/template.json".to_string(),
-        Vec3::new(1.0, 2.0, 3.0),
-    )
+            // Verify cockpit
+            assert!(
+                !player_ship.cockpit.stations.is_empty(),
+                "cockpit should have at least one station"
+            );
+        }
+        _ => panic!("expected PlayerShip template variant"),
+    }
 }
 
-/// A `SpawnEntity` event with an unknown `entity_type` should not panic
-/// and should not spawn any entities.
+/// Tests that the player-controlled ship has all required cameras.
 #[test]
-fn test_unknown_entity_type_does_not_spawn() {
-    let mut app = create_test_app();
+fn test_player_ship_cameras() {
+    let result = load_player_controlled_ship("space-fighter-comrade1280");
+    assert!(result.is_ok());
 
-    let event = SpawnEntity::new(
-        "unknown_entity".to_string(),
-        "unknown_type".to_string(),
-        serde_json::json!({"entity_type": "unknown_type"}),
-        "templates/unknown/template.json".to_string(),
-        "templates/unknown/template.json".to_string(),
-        Vec3::ZERO,
-    );
+    let (_, template) = result.unwrap();
+    match template {
+        delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
+            let cameras = &player_ship.cameras;
+            // All 8 cameras should be present
+            assert!(cameras.cockpit.available);
+            assert!(cameras.drone.available);
+            assert!(cameras.rear.available);
+            assert!(cameras.front.available);
+            assert!(cameras.left.available);
+            assert!(cameras.right.available);
+            assert!(cameras.top.available);
+            assert!(cameras.bottom.available);
 
-    // Send the event.
-    app.world_mut().write_message(event);
-    // Run the spawn system.
-    app.update();
-
-    // No entities should have been spawned.
-    let entity_count = app.world_mut().entities().len();
-    // The spawn system should have logged a warning but not spawned anything.
-    assert!(
-        entity_count == 0,
-        "unknown entity_type should not spawn any entities, found {entity_count}"
-    );
+            // Each camera should have position and target
+            for cam in [
+                &cameras.cockpit,
+                &cameras.drone,
+                &cameras.rear,
+                &cameras.front,
+                &cameras.left,
+                &cameras.right,
+                &cameras.top,
+                &cameras.bottom,
+            ] {
+                // Position and target are Vec3Json, just verify they exist
+                let _ = cam.position;
+                let _ = cam.target;
+            }
+        }
+        _ => panic!("expected PlayerShip template variant"),
+    }
 }
 
-/// A `SpawnEntity` event with `npc_ship` type should not panic
-/// (NPC ships are not yet implemented).
+/// Tests that the player-controlled ship has valid propulsion configuration.
 #[test]
-fn test_npc_ship_does_not_panic() {
-    let mut app = create_test_app();
+fn test_player_ship_propulsion() {
+    let result = load_player_controlled_ship("space-fighter-comrade1280");
+    assert!(result.is_ok());
 
-    let event = SpawnEntity::new(
-        "npc_ship".to_string(),
-        "npc_ship".to_string(),
-        serde_json::json!({"entity_type": "npc_ship"}),
-        "templates/ships/npc/template.json".to_string(),
-        "templates/ships/npc/template.json".to_string(),
-        Vec3::ZERO,
-    );
-
-    app.world_mut().write_message(event);
-    // Should not panic — NPC ships log a warning.
-    app.update();
+    let (_, template) = result.unwrap();
+    match template {
+        delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
+            let propulsion = &player_ship.propulsion;
+            assert!(!propulsion.main_thruster_names.is_empty());
+            assert!(!propulsion.maneuvering_thruster.is_empty());
+        }
+        _ => panic!("expected PlayerShip template variant"),
+    }
 }
 
-/// Verifies that the `SpawnEntity` event can be created with the
-/// expected fields and that the builder methods work correctly.
+/// Tests that the player-controlled ship has valid weapons configuration.
 #[test]
-fn test_spawn_event_builder() {
-    let event = SpawnEntity::new(
-        "test_ship".to_string(),
-        "player_controlled_ship".to_string(),
-        serde_json::json!({}),
-        "templates/test/template.json".to_string(),
-        "templates/test/template.json".to_string(),
-        Vec3::new(10.0, 20.0, 30.0),
-    )
-    .with_rotation(Quat::from_xyzw(0.0, 1.0, 0.0, 0.0))
-    .with_scale(Vec3::new(2.0, 2.0, 2.0));
+fn test_player_ship_weapons() {
+    let result = load_player_controlled_ship("space-fighter-comrade1280");
+    assert!(result.is_ok());
 
-    assert_eq!(event.id, "test_ship");
-    assert_eq!(event.entity_type, "player_controlled_ship");
-    assert_eq!(event.position, Vec3::new(10.0, 20.0, 30.0));
-    assert_eq!(event.rotation, Quat::from_xyzw(0.0, 1.0, 0.0, 0.0));
-    assert_eq!(event.scale, Vec3::new(2.0, 2.0, 2.0));
-}
-
-/// Verifies that a `player_controlled_ship` event with a valid template
-/// produces the expected `PlayerShipEntity` and `ShipPropulsionConfig`
-/// resources after the spawn system runs.
-///
-/// Note: This test does NOT verify the glTF mesh loading (which requires
-/// the actual mesh file on disk). It verifies that the spawn system
-/// processes the event and creates the expected ECS entities and resources.
-#[test]
-fn test_player_ship_spawn_creates_resources() {
-    let mut app = create_test_app();
-
-    let event = make_player_ship_event();
-    app.world_mut().write_message(event);
-
-    // Run the system — it will attempt to load the glTF mesh, which
-    // will fail silently (the mesh file may not exist in the test
-    // environment), but the entity and resources should still be created.
-    app.update();
-
-    // Verify that the PlayerShipEntity resource was inserted.
-    let player_entity = app.world().get_resource::<PlayerShipEntity>();
-    assert!(
-        player_entity.is_some(),
-        "PlayerShipEntity resource should be inserted after spawning"
-    );
-
-    // Verify that the ShipPropulsionConfig resource was inserted.
-    let propulsion = app.world().get_resource::<ShipPropulsionConfig>();
-    assert!(
-        propulsion.is_some(),
-        "ShipPropulsionConfig resource should be inserted after spawning"
-    );
-
-    // Verify the propulsion values match the template.
-    // Use approximate comparison for f32 values (clippy::float_cmp).
-    let propulsion = propulsion.unwrap();
-    let eps = 0.001;
-    assert!(
-        (propulsion.max_forward_thrust - 100_000.0).abs() < eps,
-        "max_forward_thrust should be 100000, got {}",
-        propulsion.max_forward_thrust
-    );
-    assert!(
-        (propulsion.max_backward_thrust - 40_000.0).abs() < eps,
-        "max_backward_thrust should be 40000, got {}",
-        propulsion.max_backward_thrust
-    );
-    assert!(
-        (propulsion.max_torque - 50_000.0).abs() < eps,
-        "max_torque should be 50000, got {}",
-        propulsion.max_torque
-    );
-    assert!(
-        (propulsion.max_strafe_thrust - 50_000.0).abs() < eps,
-        "max_strafe_thrust should be 50000, got {}",
-        propulsion.max_strafe_thrust
-    );
-    assert_eq!(propulsion.active_main_thruster_index, 0);
-}
-
-/// Verifies that the player ship entity is spawned at the correct position
-/// from the event.
-#[test]
-fn test_player_ship_spawn_position() {
-    let mut app = create_test_app();
-
-    let event = make_player_ship_event();
-    let expected_pos = event.position;
-    app.world_mut().write_message(event);
-    app.update();
-
-    // The PlayerShipEntity resource should reference an entity at the
-    // expected position.
-    let player_entity = app.world().get_resource::<PlayerShipEntity>().unwrap();
-    let entity_ref = app.world().get_entity(player_entity.0);
-    assert!(
-        entity_ref.is_ok(),
-        "player ship entity should exist in the world"
-    );
-
-    let transform = entity_ref.unwrap().get::<Transform>();
-    assert!(
-        transform.is_some(),
-        "player ship entity should have a Transform"
-    );
-    assert_eq!(transform.unwrap().translation, expected_pos);
+    let (_, template) = result.unwrap();
+    match template {
+        delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
+            // Weapons may be empty, but the field should exist
+            let _ = &player_ship.weapons;
+            assert!(player_ship.max_weapons_count > 0);
+        }
+        _ => panic!("expected PlayerShip template variant"),
+    }
 }

@@ -15,8 +15,6 @@ categories = ["game-development"]
 bevy = { workspace = true }
 bevy_mesh = { workspace = true }
 tracing = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
 delta-v-types = { workspace = true }
 leafwing-input-manager = { workspace = true }
 

@@ -7,13 +7,15 @@
         "unit_ms": "m/s",
         "unit_kmh": "km/h",
         "unit_kms": "km/s",
-        "unit_pch": "pc/h",
+        "unit_mms": "Mm/s",
         "unit_c": "c"
     },
     "entity_types": {
         "ship": "Ship",
         "asteroid": "Asteroid",
-        "station": "Station"
+        "station": "Station",
+        "sun": "Sun",
+        "planet": "Planet"
     },
     "ui": {
         "menu": {
@@ -48,7 +50,27 @@
                     "toggle_keybindings_menu": "Keybindings",
                     "cycle_target_next": "Cycle Target Next",
                     "cycle_target_prev": "Cycle Target Prev",
-                    "toggle_targeting_mode": "Toggle Navigation/Targeting"
+                    "toggle_targeting_mode": "Toggle Navigation/Targeting",
+                    "select_weapon_1": "Select Weapon 1",
+                    "select_weapon_2": "Select Weapon 2",
+                    "select_weapon_3": "Select Weapon 3",
+                    "select_weapon_4": "Select Weapon 4",
+                    "select_weapon_5": "Select Weapon 5",
+                    "select_weapon_6": "Select Weapon 6",
+                    "select_weapon_7": "Select Weapon 7",
+                    "select_weapon_8": "Select Weapon 8",
+                    "select_weapon_9": "Select Weapon 9",
+                    "select_weapon_10": "Select Weapon 10",
+                    "select_propulsion_1": "Select Propulsion 1",
+                    "select_propulsion_2": "Select Propulsion 2",
+                    "select_propulsion_3": "Select Propulsion 3",
+                    "select_propulsion_4": "Select Propulsion 4",
+                    "select_propulsion_5": "Select Propulsion 5",
+                    "select_propulsion_6": "Select Propulsion 6",
+                    "select_propulsion_7": "Select Propulsion 7",
+                    "select_propulsion_8": "Select Propulsion 8",
+                    "select_propulsion_9": "Select Propulsion 9",
+                    "select_propulsion_10": "Select Propulsion 10"
                 },
                 "key": {
                     "KeyW": "W",
@@ -62,6 +84,16 @@
                     "KeyC": "C",
                     "KeyN": "N",
                     "KeyT": "T",
+                    "Digit1": "1",
+                    "Digit2": "2",
+                    "Digit3": "3",
+                    "Digit4": "4",
+                    "Digit5": "5",
+                    "Digit6": "6",
+                    "Digit7": "7",
+                    "Digit8": "8",
+                    "Digit9": "9",
+                    "Digit0": "0",
                     "ArrowUp": "↑",
                     "ArrowDown": "↓",
                     "ArrowLeft": "←",
@@ -101,7 +133,9 @@
             "target_selected": "Target selected: {entity_id} ({entity_type})",
             "nav_object_selected": "Nav object selected: {entity_id} ({entity_type})",
             "no_targets": "No targets available",
-            "no_nav_objects": "No navigation objects available"
+            "no_nav_objects": "No navigation objects available",
+            "weapon_selected": "Weapon selected: {name}",
+            "propulsion_selected": "Propulsion selected: {name}"
         }
     }
 }

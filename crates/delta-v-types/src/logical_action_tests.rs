@@ -19,8 +19,8 @@ fn test_logical_action_str_keys_are_unique() {
 fn test_logical_action_all_count() {
     assert_eq!(
         LogicalAction::all().len(),
-        23,
-        "expected 23 LogicalAction variants"
+        43,
+        "expected 43 LogicalAction variants (23 original + 10 SelectWeapon + 10 SelectPropulsion)"
     );
 }
 
@@ -50,6 +50,26 @@ fn test_logical_action_str_keys_match_expected() {
         "cycle_target_next",
         "cycle_target_prev",
         "toggle_targeting_mode",
+        "select_weapon_1",
+        "select_weapon_2",
+        "select_weapon_3",
+        "select_weapon_4",
+        "select_weapon_5",
+        "select_weapon_6",
+        "select_weapon_7",
+        "select_weapon_8",
+        "select_weapon_9",
+        "select_weapon_10",
+        "select_propulsion_1",
+        "select_propulsion_2",
+        "select_propulsion_3",
+        "select_propulsion_4",
+        "select_propulsion_5",
+        "select_propulsion_6",
+        "select_propulsion_7",
+        "select_propulsion_8",
+        "select_propulsion_9",
+        "select_propulsion_10",
     ];
     for key in &expected_keys {
         let found = LogicalAction::all().iter().any(|a| a.as_str() == *key);

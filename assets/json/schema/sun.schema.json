@@ -1,0 +1,156 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/sun",
+    "title": "Sun",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nA star that provides light and gravity in the game world. Per ADR-0009, suns are always gravity sources.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "entity_type",
+        "mass",
+        "collision_shape",
+        "bounding_box"
+    ],
+    "properties": {
+        "entity_type": {
+            "description": "Entity type discriminator. Must be 'sun'.",
+            "type": "string",
+            "const": "sun"
+        },
+        "mass": {
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
+        },
+        "collision_shape": {
+            "description": "Collision shape for the sun. Defines how it interacts with other objects.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Collision shape type. 'sphere' or 'box' are supported.",
+                    "type": "string",
+                    "enum": [
+                        "sphere",
+                        "box"
+                    ]
+                },
+                "radius": {
+                    "description": "Radius of the sphere in metres (for sphere shape type).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "half_extents": {
+                    "description": "Half-extents of the box (for box shape type).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "offset": {
+                    "description": "Offset of the box center from the mesh center (for box shape type).",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
+        },
+        "bounding_box": {
+            "description": "Axis-aligned bounding box of the mesh in sun-local coordinates (metres). Computed once from glTF mesh. Used for debug axes and spatial calculations. Min and max are opposite corners of the box.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "min",
+                "max"
+            ],
+            "properties": {
+                "min": {
+                    "description": "Minimum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "max": {
+                    "description": "Maximum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
+        },
+        "is_gravity_source": {
+            "description": "If true, this body generates gravity on other entities. Suns are always gravity sources. Default: true.",
+            "type": "boolean",
+            "default": true
+        },
+        "rotation_period": {
+            "description": "Rotation period in hours. The sun rotates slowly (approx. 600 hours at equator).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+        },
+        "light_intensity": {
+            "description": "Light intensity in lux. Default: 10000.0 (typical solar illuminance at 1 AU).",
+            "type": "number",
+            "default": 10000.0
+        },
+        "light_color": {
+            "description": "Light color as RGB values (0.0-1.0). Default: {r: 1.0, g: 0.95, b: 0.8} (slightly warm white).",
+            "type": "object",
+            "additionalProperties": false,
+            "default": {
+                "r": 1.0,
+                "g": 0.95,
+                "b": 0.8
+            },
+            "required": [
+                "r",
+                "g",
+                "b"
+            ],
+            "properties": {
+                "r": {
+                    "description": "Red component (0.0-1.0).",
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                },
+                "g": {
+                    "description": "Green component (0.0-1.0).",
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                },
+                "b": {
+                    "description": "Blue component (0.0-1.0).",
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                }
+            }
+        },
+        "light_range": {
+            "description": "Light range in metres. Default: 6e12 (reaches Pluto's aphelion at ~5.9e12 m).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length",
+            "default": {
+                "value": 6e12,
+                "unit": "m"
+            }
+        }
+    },
+    "$defs": {
+        "vec3": {
+            "description": "3-component vector (x, y, z) in metres.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "x",
+                "y",
+                "z"
+            ],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "X component (metres)."
+                },
+                "y": {
+                    "type": "number",
+                    "description": "Y component (metres)."
+                },
+                "z": {
+                    "type": "number",
+                    "description": "Z component (metres)."
+                }
+            }
+        }
+    }
+}

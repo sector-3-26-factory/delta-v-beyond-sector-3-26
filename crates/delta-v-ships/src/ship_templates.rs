@@ -1,149 +1,15 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Ship template types for deserializing ship configuration from JSON.
+//! Ship-specific runtime types for the ships plugin.
 //!
-//! These structs are used by `delta-v-ships` to extract gameplay values from
-//! validated template JSON (ADR-0014, ADR-0039, ADR-0040).
+//! These types are runtime state used by the ships plugin, not template JSON types.
+//! Template JSON types are defined in `delta-v-types` with `Json` suffix.
 //!
 //! See ADR-0009 (Newtonian physics) and ADR-0010 (configuration system).
 
 use bevy::prelude::*;
-use serde::Deserialize;
 
-use delta_v_core::camera::ShipCamerasTemplate;
-use delta_v_types::{
-    BoundingBoxJson, PhysicalQuantityJson, ShipPropulsionTemplate, WeaponReference,
-};
-
-/// Base deserialized ship template JSON.
-///
-/// Contains common properties for all ship types (mass, inertia, propulsion).
-/// This struct is produced by deserializing the validated + default-filled
-/// `serde_json::Value` from the template file. Per ADR-0040, the schema is
-/// the only source of defaults — no `#[serde(default)]` or `impl Default`.
-#[derive(Debug, Deserialize)]
-pub struct ShipTemplate {
-    /// Ship mass in kilograms.
-    pub mass: PhysicalQuantityJson,
-    /// Dimensionless inertia multiplier (default 1.0 from schema).
-    pub inertia_scale: f32,
-    /// Propulsion system configuration.
-    pub propulsion: ShipPropulsionTemplate,
-}
-
-/// Deserialized player-controlled ship template JSON.
-///
-/// Extends [`ShipTemplate`] with camera definitions.
-/// Used only for `entity_type` `player_controlled_ship`.
-/// The template JSON is merged from the `player_controlled_ship` template
-/// and the referenced ship template at load time.
-#[derive(Debug, Deserialize)]
-pub struct PlayerShipTemplate {
-    /// Ship mass in kilograms (from merged ship template).
-    pub mass: PhysicalQuantityJson,
-    /// Dimensionless inertia multiplier (from merged ship template).
-    pub inertia_scale: f32,
-    /// Propulsion system configuration (from merged ship template).
-    pub propulsion: ShipPropulsionTemplate,
-    /// Camera definitions (cockpit required, others optional).
-    pub cameras: ShipCamerasTemplate,
-    /// Axis-aligned bounding box in ship-local coordinates (metres).
-    /// Used for debug axes and spatial calculations.
-    pub bounding_box: BoundingBoxJson,
-    /// Collision shape for the ship.
-    /// Used for collision detection with asteroids.
-    pub collision_shape: delta_v_types::CollisionShapeJson,
-    /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<WeaponReference>,
-    /// Ship health in hit points (default 100.0 from schema).
-    /// Used for damage model (M4).
-    pub health: PhysicalQuantityJson,
-    /// Cockpit overlay definition with stations and gauge slots.
-    pub cockpit: CockpitDefinition,
-}
-
-/// Deserialized non-player ship template JSON.
-///
-/// Contains all ship properties except camera definitions.
-/// Used for `entity_type` `ship` (non-player ships).
-#[derive(Debug, Deserialize)]
-pub struct StaticShipTemplate {
-    /// Ship mass in kilograms.
-    pub mass: PhysicalQuantityJson,
-    /// Dimensionless inertia multiplier.
-    pub inertia_scale: f32,
-    /// Propulsion system configuration.
-    pub propulsion: ShipPropulsionTemplate,
-    /// Axis-aligned bounding box in ship-local coordinates (metres).
-    /// Used for debug axes and spatial calculations.
-    pub bounding_box: BoundingBoxJson,
-    /// Collision shape for the ship.
-    /// Used for collision detection with asteroids.
-    pub collision_shape: delta_v_types::CollisionShapeJson,
-    /// Weapon configurations. Optional; ships may have no weapons (default [] from schema).
-    pub weapons: Vec<WeaponReference>,
-    /// Ship health in hit points (default 100.0 from schema).
-    /// Used for damage model (M4).
-    pub health: PhysicalQuantityJson,
-}
-
-/// Cockpit overlay definition with stations and gauge slots.
-#[derive(Debug, Clone, Deserialize)]
-pub struct CockpitDefinition {
-    /// List of cockpit stations.
-    pub stations: Vec<CockpitStation>,
-}
-
-/// A cockpit station with its texture and gauge slots.
-///
-/// The `slots` field defaults to an empty array via the schema (cockpit.schema.json).
-/// Per ADR-0039, defaults are defined in schema only — no `#[serde(default)]`.
-#[derive(Debug, Clone, Deserialize)]
-pub struct CockpitStation {
-    /// Station identifier.
-    pub id: String,
-    /// PNG file path relative to the template directory.
-    pub texture: String,
-    /// Gauge slot definitions. Defaults to `[]` via schema.
-    pub slots: Vec<GaugeSlot>,
-}
-
-/// A gauge slot defining position/shape and the default gauge type.
-#[derive(Debug, Clone, Deserialize)]
-pub struct GaugeSlot {
-    /// Shape defining the slot position and size.
-    pub shape: GaugeShape,
-    /// Gauge type name (e.g., "altitude", "velocity").
-    pub default_gauge: String,
-}
-
-/// Shape for a gauge slot: either rectangle or circle.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
-pub enum GaugeShape {
-    /// Rectangle shape with pixel coordinates.
-    Rectangle {
-        /// Left edge (pixels).
-        x1: f32,
-        /// Top edge (pixels).
-        y1: f32,
-        /// Right edge (pixels).
-        x2: f32,
-        /// Bottom edge (pixels).
-        y2: f32,
-    },
-    /// Circle shape with center and radius.
-    Circle {
-        /// Center X (pixels).
-        cx: f32,
-        /// Center Y (pixels).
-        cy: f32,
-        /// Radius (pixels).
-        r: f32,
-    },
-}
-
-/// Ship propulsion configuration read from the ship template JSON.
+/// Ship propulsion configuration for resource insertion.
 ///
 /// Contains the active thruster's force/torque values that the input → forces
 /// pipeline uses each tick. Inserted as a resource at ship spawn time.

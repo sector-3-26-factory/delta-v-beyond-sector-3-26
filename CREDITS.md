@@ -108,6 +108,33 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/components/projectiles/laser-standard/mesh.glb`
 - **Modifications:** *None*
 
+### "Sun"
+
+- **Creator:** [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/suns/sol/mesh.glb`
+- **Modifications:** *None*
+
+### "Mercury (planet)"
+
+- **Creator:** [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/mercury-planet-ccb6c6a9ac3742109cc67c0f16032b49)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/mercury/mesh.glb`
+- **Modifications:** *None*
+
+### "Venus (planet)"
+
+- **Creator:** [uperesito](https://sketchfab.com/uperesito)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/venus-v11-99be254b68da48d092c3b8917020c67a)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/venus/mesh.glb`
+- **Modifications:** Baked root node rotation transform into vertex positions and normals; flattened node hierarchy to single mesh node for proper glTF loading.
+
 ## Fonts
 
 ### DejaVu Sans Mono

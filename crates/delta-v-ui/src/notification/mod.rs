@@ -31,6 +31,9 @@ impl Plugin for NotificationPlugin {
                     systems::notification_spawn_system.run_if(in_state(AppState::InGame)),
                     systems::targeting_mode_notification_system.run_if(in_state(AppState::InGame)),
                     systems::target_selected_notification_system.run_if(in_state(AppState::InGame)),
+                    systems::weapon_selected_notification_system.run_if(in_state(AppState::InGame)),
+                    systems::propulsion_selected_notification_system
+                        .run_if(in_state(AppState::InGame)),
                     systems::notification_cleanup_system.run_if(in_state(AppState::InGame)),
                 ),
             );

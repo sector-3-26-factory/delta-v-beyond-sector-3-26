@@ -30,6 +30,7 @@ use delta_v_core::events::{NavigationListChanged, TargetSelected};
 use delta_v_core::navigation::{
     EntityType, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,
 };
+use delta_v_physics::{CollisionShape, distance_to_surface};
 
 /// Internal function to rebuild the navigation list entries.
 ///
@@ -52,6 +53,7 @@ fn rebuild_navigation_list(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
         With<Targetable>,
     >,
@@ -64,6 +66,7 @@ fn rebuild_navigation_list(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
     >,
 ) {
@@ -72,7 +75,7 @@ fn rebuild_navigation_list(
     #[allow(clippy::expect_used)]
     let player_pos = targetable_query
         .iter()
-        .find_map(|(entity, transform, _, _, _)| {
+        .find_map(|(entity, transform, _, _, _, _)| {
             if entity == player_ship.0 {
                 Some(transform.translation)
             } else {
@@ -84,11 +87,11 @@ fn rebuild_navigation_list(
     let mut entries: Vec<delta_v_core::NavEntry> = match targeting_mode.mode {
         TargetingModeType::Combat => targetable_query
             .iter()
-            .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+            .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
                 if entity == player_ship.0 {
                     return None;
                 }
-                let distance = (transform.translation - player_pos).length();
+                let distance = distance_to_surface(player_pos, transform.translation, shape);
                 let _name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                 Some(delta_v_core::NavEntry {
                     entity,
@@ -100,11 +103,11 @@ fn rebuild_navigation_list(
             .collect(),
         TargetingModeType::Nav => navigable_query
             .iter()
-            .filter_map(|(entity, transform, name, entity_type, entity_id)| {
+            .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
                 if entity == player_ship.0 {
                     return None;
                 }
-                let distance = (transform.translation - player_pos).length();
+                let distance = distance_to_surface(player_pos, transform.translation, shape);
                 let _name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                 Some(delta_v_core::NavEntry {
                     entity,
@@ -166,6 +169,7 @@ pub fn update_navigation_list_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
         With<Targetable>,
     >,
@@ -179,6 +183,7 @@ pub fn update_navigation_list_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
     >,
     mut events: MessageReader<'_, '_, delta_v_core::TargetingModeChanged>,
@@ -195,7 +200,7 @@ pub fn update_navigation_list_system(
         "[nav_list] Combat query found {} entities",
         targetable_query.iter().count()
     );
-    for (entity, _, name, entity_type, entity_id) in targetable_query.iter() {
+    for (entity, _, name, entity_type, entity_id, _) in targetable_query.iter() {
         tracing::debug!(
             "[nav_list] Combat entity: {:?} name={:?} type={} id={}",
             entity,
@@ -209,7 +214,7 @@ pub fn update_navigation_list_system(
         "[nav_list] Nav query found {} entities",
         navigable_query.iter().count()
     );
-    for (entity, _, name, entity_type, entity_id) in navigable_query.iter() {
+    for (entity, _, name, entity_type, entity_id, _) in navigable_query.iter() {
         tracing::debug!(
             "[nav_list] Nav entity: {:?} name={:?} type={} id={}",
             entity,
@@ -234,7 +239,7 @@ pub fn update_navigation_list_system(
     // Debug: log all entities found by the navigable query
     if current_mode == TargetingModeType::Nav {
         tracing::debug!("[nav_list] Nav mode - all entities with EntityType+EntityId:");
-        for (entity, _, name, entity_type, entity_id) in navigable_query.iter() {
+        for (entity, _, name, entity_type, entity_id, _) in navigable_query.iter() {
             tracing::debug!(
                 "[nav_list]   entity={:?} name={:?} type={} id={}",
                 entity,
@@ -314,6 +319,7 @@ pub fn update_navigation_list_distances_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
         With<Targetable>,
     >,
@@ -326,6 +332,7 @@ pub fn update_navigation_list_distances_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
     >,
     mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
@@ -335,7 +342,7 @@ pub fn update_navigation_list_distances_system(
     #[allow(clippy::expect_used)]
     let player_pos = targetable_query
         .iter()
-        .find_map(|(entity, transform, _, _, _)| {
+        .find_map(|(entity, transform, _, _, _, _)| {
             if entity == player_ship.0 {
                 Some(transform.translation)
             } else {
@@ -353,9 +360,13 @@ pub fn update_navigation_list_distances_system(
             TargetingModeType::Combat => {
                 targetable_query
                     .iter()
-                    .find_map(|(entity, transform, _, _, _)| {
+                    .find_map(|(entity, transform, _, _, _, shape)| {
                         if entity == entry.entity {
-                            Some((transform.translation - player_pos).length())
+                            Some(distance_to_surface(
+                                player_pos,
+                                transform.translation,
+                                shape,
+                            ))
                         } else {
                             None
                         }
@@ -364,9 +375,13 @@ pub fn update_navigation_list_distances_system(
             TargetingModeType::Nav => {
                 navigable_query
                     .iter()
-                    .find_map(|(entity, transform, _, _, _)| {
+                    .find_map(|(entity, transform, _, _, _, shape)| {
                         if entity == entry.entity {
-                            Some((transform.translation - player_pos).length())
+                            Some(distance_to_surface(
+                                player_pos,
+                                transform.translation,
+                                shape,
+                            ))
                         } else {
                             None
                         }
@@ -421,6 +436,7 @@ pub fn init_navigation_list_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
         With<Targetable>,
     >,
@@ -434,6 +450,7 @@ pub fn init_navigation_list_system(
             Option<&Name>,
             &EntityType,
             &WorldEntityId,
+            &CollisionShape,
         ),
     >,
     mut nav_list_events: MessageWriter<'_, NavigationListChanged>,

@@ -9,7 +9,8 @@
 //! Per ADR-0013 (no silent fallbacks), missing or invalid debug config is a hard error.
 
 use bevy::prelude::Resource;
-use serde::Deserialize;
+
+use delta_v_types::DebugConfigJson;
 
 #[cfg(test)]
 #[path = "debug_config_tests.rs"]
@@ -20,7 +21,7 @@ mod debug_config_tests;
 /// Controls debug features like axis indicators, collision shape visualization,
 /// and profiling. Loaded as a resource during `LoadingDefaults` state.
 /// Supports hot-reload in dev builds (ADR-0035).
-#[derive(Debug, Deserialize, Clone, Resource)]
+#[derive(Debug, Clone, Resource)]
 pub struct DebugConfig {
     /// Master switch for debug axis indicators (RGB arrows from entity origins).
     /// When true with empty `axis_indicator_entities`, show axes for ALL entities.
@@ -36,6 +37,16 @@ pub struct DebugConfig {
     /// When true, renders wireframe boxes/spheres around entities with collision
     /// shapes. Green = no collision, red = collision detected this frame.
     pub show_collision_shapes: bool,
+}
+
+impl From<DebugConfigJson> for DebugConfig {
+    fn from(json: DebugConfigJson) -> Self {
+        Self {
+            show_axis_indicators: json.show_axis_indicators,
+            axis_indicator_entities: json.axis_indicator_entities,
+            show_collision_shapes: json.show_collision_shapes,
+        }
+    }
 }
 
 impl DebugConfig {

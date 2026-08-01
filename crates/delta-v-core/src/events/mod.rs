@@ -9,13 +9,13 @@
 //! See ADR-0005 (plugin architecture) and ADR-0038 (entity template system).
 
 use bevy::prelude::*;
-use serde_json::Value;
+use delta_v_types::EntityTemplate;
 
 /// Event emitted when an entity should be spawned from a template.
 ///
 /// The world plugin emits these events during [`AppState::LoadingWorld`].
 /// Domain-specific plugins (`ShipsPlugin`, `SunPlugin`, etc.) listen for this
-/// event, filter by `entity_type`, and spawn the entity with appropriate
+/// event, filter by `template` variant, and spawn the entity with appropriate
 /// components.
 ///
 /// This decouples world loading from entity spawning, allowing each domain
@@ -26,22 +26,14 @@ pub struct SpawnEntity {
     /// Used for debug filtering, save/load, networking, and player-facing UI.
     pub id: String,
 
-    /// The entity type discriminator (e.g., `"player_controlled_ship"`, `"sun"`).
-    /// Must match an `entity_type` in a template JSON file.
-    pub entity_type: String,
-
-    /// The loaded and validated template JSON.
-    /// Contains all static properties for the entity.
-    pub template: Value,
+    /// The loaded and validated template as a runtime type.
+    /// Contains all static properties for the entity with SI units.
+    /// The entity type is derived from the `EntityTemplate` variant.
+    pub template: EntityTemplate,
 
     /// Path to the template file (e.g., `templates/ships/player_ship/template.json`).
-    pub template_path: String,
-
-    /// Path to the template that contains the mesh (e.g., `templates/ships/space-fighter-comrade1280/template.json`).
-    /// For standalone ship templates, this is the same as `template_path`.
-    /// For `player_controlled_ship`, this is the referenced `ship_template` path.
     /// The mesh is always at `mesh.glb` in this template's directory.
-    pub mesh_template_path: String,
+    pub template_path: String,
 
     /// Spawn position in world coordinates (metres).
     pub position: Vec3,
@@ -56,6 +48,12 @@ pub struct SpawnEntity {
     /// If `Some`, the entity is AI-driven and the task determines its mission.
     /// If `None`, the entity is static or player-controlled.
     pub ai_task: Option<String>,
+
+    /// Optional mass override from the world definition.
+    /// If `Some`, this value overrides the template's mass.
+    /// If `None`, the template's mass is used.
+    /// Mass is NOT scaled with the scale factor.
+    pub mass: Option<f32>,
 }
 
 impl SpawnEntity {
@@ -64,30 +62,25 @@ impl SpawnEntity {
     /// # Arguments
     ///
     /// * `id` - Unique identifier for this entity instance.
-    /// * `entity_type` - Discriminator for the entity type.
-    /// * `template` - Loaded template JSON.
+    /// * `template` - Loaded template as runtime type.
     /// * `template_path` - Path to the template file.
-    /// * `mesh_template_path` - Path to the template containing the mesh.
     /// * `position` - Spawn position in metres.
     #[allow(clippy::missing_const_for_fn)]
     pub fn new(
         id: String,
-        entity_type: String,
-        template: Value,
+        template: EntityTemplate,
         template_path: String,
-        mesh_template_path: String,
         position: Vec3,
     ) -> Self {
         Self {
             id,
-            entity_type,
             template,
             template_path,
-            mesh_template_path,
             position,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
             ai_task: None,
+            mass: None,
         }
     }
 
@@ -113,6 +106,27 @@ impl SpawnEntity {
     pub fn with_ai_task(mut self, ai_task: String) -> Self {
         self.ai_task = Some(ai_task);
         self
+    }
+
+    /// Sets the mass override for this spawn event.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn with_mass(mut self, mass: f32) -> Self {
+        self.mass = Some(mass);
+        self
+    }
+
+    /// Derives the mesh path from the template path.
+    ///
+    /// The mesh is always at `mesh.glb` in the template's directory.
+    /// For example, `templates/ships/space-fighter/template.json` -> `templates/ships/space-fighter/mesh.glb`.
+    #[must_use]
+    pub fn mesh_path(&self) -> String {
+        use std::path::Path;
+        Path::new(&self.template_path).parent().map_or_else(
+            || self.template_path.clone(),
+            |p| p.join("mesh.glb").to_string_lossy().into_owned(),
+        )
     }
 }
 
@@ -185,4 +199,28 @@ pub struct TargetSelected {
     pub target: Entity,
     /// The targeting mode when the target was selected.
     pub mode: super::navigation::TargetingModeType,
+}
+
+/// Event emitted when the player selects a weapon.
+///
+/// Emitted by `weapon_selection_system` when the player presses a weapon
+/// selection key. The notification system listens for this to show a notification.
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
+pub struct WeaponSelected {
+    /// The weapon slot index (0-9).
+    pub slot: usize,
+    /// The weapon name (e.g., "laser-standard").
+    pub weapon_name: String,
+}
+
+/// Event emitted when the player selects a propulsion (main thruster).
+///
+/// Emitted by `propulsion_selection_system` when the player presses a propulsion
+/// selection key. The notification system listens for this to show a notification.
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
+pub struct PropulsionSelected {
+    /// The thruster slot index (0-9).
+    pub slot: usize,
+    /// The thruster name (e.g., "chemical-main").
+    pub thruster_name: String,
 }

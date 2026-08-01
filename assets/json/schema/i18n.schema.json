@@ -43,7 +43,7 @@
                 "unit_ms",
                 "unit_kmh",
                 "unit_kms",
-                "unit_pch",
+                "unit_mms",
                 "unit_c"
             ],
             "properties": {
@@ -59,8 +59,8 @@
                     "description": "Unit abbreviation for kilometers per second.",
                     "type": "string"
                 },
-                "unit_pch": {
-                    "description": "Unit abbreviation for parsecs per hour.",
+                "unit_mms": {
+                    "description": "Unit abbreviation for megameters per second.",
                     "type": "string"
                 },
                 "unit_c": {
@@ -70,13 +70,15 @@
             }
         },
         "entity_types": {
-            "description": "Entity type translations (e.g., ship, asteroid, station).",
+            "description": "Entity type translations (e.g., ship, asteroid, station, sun, planet).",
             "type": "object",
             "additionalProperties": false,
             "required": [
                 "ship",
                 "asteroid",
-                "station"
+                "station",
+                "sun",
+                "planet"
             ],
             "properties": {
                 "ship": {
@@ -89,6 +91,14 @@
                 },
                 "station": {
                     "description": "Station entity type translation.",
+                    "type": "string"
+                },
+                "sun": {
+                    "description": "Sun entity type translation.",
+                    "type": "string"
+                },
+                "planet": {
+                    "description": "Planet entity type translation.",
                     "type": "string"
                 }
             }
@@ -192,7 +202,9 @@
                         "target_selected",
                         "nav_object_selected",
                         "no_targets",
-                        "no_nav_objects"
+                        "no_nav_objects",
+                        "weapon_selected",
+                        "propulsion_selected"
                     ],
                     "properties": {
                         "camera": {
@@ -243,6 +255,14 @@
                         },
                         "no_nav_objects": {
                             "description": "No navigation objects available notification.",
+                            "type": "string"
+                        },
+                        "weapon_selected": {
+                            "description": "Weapon selected notification template. Use `{name}` as placeholder.",
+                            "type": "string"
+                        },
+                        "propulsion_selected": {
+                            "description": "Propulsion selected notification template. Use `{name}` as placeholder.",
                             "type": "string"
                         }
                     }

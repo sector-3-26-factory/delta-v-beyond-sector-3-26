@@ -21,6 +21,31 @@ pub struct WeaponTemplateJson {
     pub fire_rate: PhysicalQuantityJson,
 }
 
+/// Runtime weapon template with SI units.
+///
+/// This is the converted version of [`WeaponTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct WeaponTemplate {
+    /// Weapon type identifier (e.g., "laser", "railgun").
+    pub weapon_type: String,
+    /// Name of the projectile template to use (e.g., "laser-standard").
+    pub projectile_template: String,
+    /// Fire rate in Hertz (SI base unit).
+    pub fire_rate: f32,
+}
+
+impl From<WeaponTemplateJson> for WeaponTemplate {
+    fn from(json: WeaponTemplateJson) -> Self {
+        Self {
+            weapon_type: json.weapon_type,
+            projectile_template: json.projectile_template,
+            fire_rate: json.fire_rate.to_hertz(),
+        }
+    }
+}
+
 /// Projectile template deserialized from projectile definition JSON.
 ///
 /// Defines a projectile entity that is spawned when a weapon fires.
@@ -37,12 +62,30 @@ pub struct ProjectileDefinitionJson {
     pub radius: PhysicalQuantityJson,
 }
 
-/// Weapon reference in ship/AI templates.
+/// Runtime projectile definition with SI units.
 ///
-/// References a weapon definition by name. The actual weapon configuration
-/// is loaded from `assets/components/weapons/<name>/weapon.json` at spawn time.
-#[derive(Debug, Deserialize, Clone)]
-pub struct WeaponReference {
-    /// Name of the weapon definition (e.g., "laser-standard").
-    pub name: String,
+/// This is the converted version of [`ProjectileDefinitionJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct ProjectileDefinition {
+    /// Projectile speed in metres per second (SI base unit).
+    pub speed: f32,
+    /// Damage per hit in hit points.
+    pub damage: f32,
+    /// Projectile lifetime in seconds (SI base unit).
+    pub lifetime: f32,
+    /// Collision shape radius in metres (SI base unit).
+    pub radius: f32,
+}
+
+impl From<ProjectileDefinitionJson> for ProjectileDefinition {
+    fn from(json: ProjectileDefinitionJson) -> Self {
+        Self {
+            speed: json.speed.to_meters_per_second(),
+            damage: json.damage.to_hit_points(),
+            lifetime: json.lifetime.to_seconds(),
+            radius: json.radius.to_meters(),
+        }
+    }
 }

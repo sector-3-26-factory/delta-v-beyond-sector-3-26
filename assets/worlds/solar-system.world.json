@@ -1,0 +1,68 @@
+{
+    "format_version": 1,
+    "name": "Solar System",
+    "entities": [
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "player_ship",
+            "player_controlled": true,
+            "position": {
+                "x": 1.071e11,
+                "y": 0.0,
+                "z": 0.0
+            }
+        },
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "ship 1",
+            "player_controlled": false,
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 6.9599997951e10
+            }
+        },
+        {
+            "template": "suns/sol",
+            "id": "sun",
+            "position": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 6.96e8,
+                "y": 6.96e8,
+                "z": 6.96e8
+            }
+        },
+        {
+            "template": "planets/mercury",
+            "id": "mercury",
+            "position": {
+                "x": 5.79e10,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 4.8794e5,
+                "y": 4.8794e5,
+                "z": 4.8794e5
+            }
+        },
+        {
+            "template": "planets/venus",
+            "id": "venus",
+            "position": {
+                "x": 1.081e11,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 6.0518e6,
+                "y": 6.0518e6,
+                "z": 6.0518e6
+            }
+        }
+    ]
+}

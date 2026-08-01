@@ -9,7 +9,8 @@
 //! See ADR-0009 (Newtonian physics) and ADR-0010 (configuration system).
 
 use bevy::prelude::*;
-use serde::Deserialize;
+
+use delta_v_types::FlightAssistConfigJson;
 
 /// Marker component for entities that use flight assist (inertial damping).
 ///
@@ -22,12 +23,21 @@ pub struct FlightAssist;
 ///
 /// All defaults are in the JSON schema (ADR-0012, ADR-0039).
 /// This type is deserialised via `delta-v-json` (ADR-0040).
-#[derive(Resource, Debug, Clone, Deserialize)]
+#[derive(Resource, Debug, Clone)]
 pub struct FlightAssistConfig {
     /// Whether flight assist is enabled on startup.
     pub enabled_by_default: bool,
     /// Velocity damping coefficient (0-1). Higher = more aggressive damping.
     pub damping_coefficient: f32,
+}
+
+impl From<FlightAssistConfigJson> for FlightAssistConfig {
+    fn from(json: FlightAssistConfigJson) -> Self {
+        Self {
+            enabled_by_default: json.enabled_by_default,
+            damping_coefficient: json.damping_coefficient,
+        }
+    }
 }
 
 /// Current runtime state of flight assist.

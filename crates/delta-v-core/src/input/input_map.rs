@@ -37,9 +37,19 @@ pub fn build_input_map(keybindings: &KeybindingsResource) -> InputMap<LogicalAct
             [] => {}
             [single] => {
                 input_map = input_map.with(*action, *single);
+                tracing::debug!(
+                    "[build_input_map] action '{}' bound to single key: {:?}",
+                    name,
+                    single
+                );
             }
             keys => {
                 input_map = input_map.with(*action, ButtonlikeChord::new(keys.to_vec()));
+                tracing::debug!(
+                    "[build_input_map] action '{}' bound to chord: {:?}",
+                    name,
+                    keys
+                );
             }
         }
 
@@ -66,6 +76,16 @@ fn parse_key_code(name: &str) -> Option<KeyCode> {
         "KeyC" => Some(KeyCode::KeyC),
         "KeyN" => Some(KeyCode::KeyN),
         "KeyT" => Some(KeyCode::KeyT),
+        "Digit1" => Some(KeyCode::Digit1),
+        "Digit2" => Some(KeyCode::Digit2),
+        "Digit3" => Some(KeyCode::Digit3),
+        "Digit4" => Some(KeyCode::Digit4),
+        "Digit5" => Some(KeyCode::Digit5),
+        "Digit6" => Some(KeyCode::Digit6),
+        "Digit7" => Some(KeyCode::Digit7),
+        "Digit8" => Some(KeyCode::Digit8),
+        "Digit9" => Some(KeyCode::Digit9),
+        "Digit0" => Some(KeyCode::Digit0),
         "F1" => Some(KeyCode::F1),
         "F2" => Some(KeyCode::F2),
         "F3" => Some(KeyCode::F3),

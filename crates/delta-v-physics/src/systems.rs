@@ -21,6 +21,7 @@
 //! These systems run in the `FixedUpdate` schedule at a fixed 60 Hz rate.
 //! They implement F=ma and tau=I*alpha integration (ADR-0017).
 
+use crate::celestial::{Planet, Sun};
 use crate::constants::{GRAVITATIONAL_CONSTANT, GRAVITY_CUTOFF_RADIUS_M};
 use crate::rigid_body::{MassSource, RigidBody};
 use bevy::prelude::*;
@@ -138,10 +139,13 @@ pub fn integrate_angular_velocity_system(
 ///
 /// Updates the entity's `Transform` based on its `RigidBody` velocity
 /// and angular velocity.
-#[allow(clippy::needless_pass_by_value)]
+///
+/// Excludes entities with `Sun` or `Planet` components, as those are
+/// handled by `sun_rotation_system` and `orbital_motion_system` respectively.
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
 pub fn integrate_position_system(
-    mut bodies: Query<'_, '_, (&RigidBody, &mut Transform)>,
     time: Res<'_, Time<Fixed>>,
+    mut bodies: Query<'_, '_, (&RigidBody, &mut Transform), (Without<Sun>, Without<Planet>)>,
 ) {
     let delta_time = time.delta().as_secs_f32();
 
@@ -165,5 +169,185 @@ pub fn integrate_position_system(
 pub fn clear_accumulators_system(mut bodies: Query<'_, '_, &mut RigidBody>) {
     for mut body in &mut bodies {
         body.clear_accumulators();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Orbital motion system (ADR-0017)
+// ---------------------------------------------------------------------------
+
+/// Updates the position of planets along their orbital paths.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The orbital motion uses circular orbits with optional inclination.
+/// Position is computed relative to the parent body's current position.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::explicit_iter_loop,
+    clippy::suboptimal_flops,
+    clippy::type_complexity
+)]
+pub fn orbital_motion_system(
+    time: Res<'_, Time<Fixed>>,
+    planets: Query<'_, '_, (Entity, &Planet)>,
+    // Use ParamSet to separate immutable and mutable access to Transform.
+    // Include Sun in the parent query so we get its actual position after floating origin recentering.
+    mut transform_set: ParamSet<
+        '_,
+        '_,
+        (
+            Query<'_, '_, &Transform>,
+            Query<'_, '_, &mut Transform, Without<Sun>>,
+        ),
+    >,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    // First pass: collect all planet data
+    let planet_data: Vec<(Entity, Entity, f32, f32, f32, f32, f32)> = planets
+        .iter()
+        .map(|(entity, planet)| {
+            (
+                entity,
+                planet.orbital_parent,
+                planet.orbital_distance,
+                planet.orbital_period,
+                planet.orbital_inclination,
+                planet.initial_orbital_angle,
+                planet.orbital_eccentricity,
+            )
+        })
+        .collect();
+
+    // Get immutable access to parent positions first
+    {
+        let parents = transform_set.p0();
+
+        // Pre-compute all parent positions to avoid holding the immutable borrow
+        // while we need mutable access later
+        let mut parent_positions: Vec<(Entity, Vec3)> = Vec::new();
+        for (entity, parent_id, distance, period, inclination, initial_angle, _eccentricity) in
+            &planet_data
+        {
+            // Get parent position. The Sun is now included in the query, so we get its
+            // actual position after floating origin recentering. For other parents, query their position.
+            let parent_pos = parents
+                .get(*parent_id)
+                .map_or(Vec3::ZERO, |parent_transform| parent_transform.translation);
+
+            // Compute current angle: initial + (elapsed / period) * TAU
+            // This gives us the angle in radians around the orbital circle
+            let angle = (elapsed / *period).mul_add(std::f32::consts::TAU, *initial_angle);
+
+            // Compute position in the orbital plane (X-Z plane, Y=0)
+            // Then apply inclination: y_offset = distance * sin(inclination) * sin(angle)
+            let x_offset = distance * angle.cos();
+            let z_offset = distance * angle.sin();
+            let y_offset = distance * inclination.sin() * angle.sin();
+
+            let new_pos = parent_pos + Vec3::new(x_offset, y_offset, z_offset);
+            parent_positions.push((*entity, new_pos));
+        }
+
+        // Now get mutable access and apply updates
+        let mut transforms = transform_set.p1();
+        for (entity, new_pos) in parent_positions {
+            if let Ok(mut transform) = transforms.get_mut(entity) {
+                transform.translation = new_pos;
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Sun rotation system (ADR-0017)
+// ---------------------------------------------------------------------------
+
+/// Rotates suns around their Y axis.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The rotation period is in hours, converted to seconds for the calculation.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(clippy::needless_pass_by_value, clippy::explicit_iter_loop)]
+pub fn sun_rotation_system(
+    mut suns: Query<'_, '_, (Entity, &Sun, &mut Transform)>,
+    time: Res<'_, Time<Fixed>>,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    for (entity, sun, mut transform) in &mut suns {
+        let Some(rotation_period_hours) = sun.rotation_period else {
+            continue;
+        };
+
+        // Convert hours to seconds
+        let rotation_period_seconds = rotation_period_hours * 3600.0;
+
+        // Compute rotation angle: (elapsed / period) * TAU
+        let angle = (elapsed / rotation_period_seconds) * std::f32::consts::TAU;
+
+        // Set rotation around Y axis
+        transform.rotation = Quat::from_axis_angle(Vec3::Y, angle);
+
+        tracing::trace!(
+            "Sun {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_hours:.1} h"
+        );
+    }
+}
+
+/// Rotates planets around their tilted axis, accounting for orbital inclination.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The rotation period is in seconds (stored in the Planet component).
+/// The axial tilt is in radians (angle between rotation axis and orbital axis).
+/// The orbital inclination is in radians (angle between orbital plane and ecliptic).
+///
+/// The planet's rotation axis is computed as:
+/// 1. Start with orbital axis (Y, perpendicular to ecliptic)
+/// 2. Tilt by `orbital_inclination` around X axis (orbital plane inclination)
+/// 3. Tilt by `axial_tilt` around the line of nodes (X axis, intersection of orbital plane with ecliptic)
+///    This assumes longitude of ascending node = 0 for simplicity.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(clippy::needless_pass_by_value, clippy::explicit_iter_loop)]
+pub fn planet_rotation_system(
+    mut planets: Query<'_, '_, (Entity, &Planet, &mut Transform)>,
+    time: Res<'_, Time<Fixed>>,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    for (entity, planet, mut transform) in &mut planets {
+        let Some(rotation_period_seconds) = planet.rotation_period else {
+            continue;
+        };
+
+        // Compute rotation angle: (elapsed / period) * TAU
+        let angle = (elapsed / rotation_period_seconds) * std::f32::consts::TAU;
+
+        // Orbital axis: start with Y (ecliptic normal), tilt by orbital_inclination around X
+        let orbital_axis = Quat::from_axis_angle(Vec3::X, planet.orbital_inclination) * Vec3::Y;
+
+        // Planet's rotation axis: tilt orbital axis by axial_tilt around the line of nodes.
+        // The line of nodes is the intersection of the orbital plane with the ecliptic plane.
+        // Since we incline the orbital plane around the X axis, the X axis lies in both planes
+        // and is the line of nodes (assuming longitude of ascending node = 0).
+        // This gives a physically consistent tilt direction independent of orbital inclination.
+        let tilt_axis = Vec3::X;
+        let rotation_axis = Quat::from_axis_angle(tilt_axis, planet.axial_tilt) * orbital_axis;
+
+        // Set rotation around tilted axis
+        transform.rotation = Quat::from_axis_angle(rotation_axis, angle);
+
+        tracing::trace!(
+            "Planet {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_seconds:.1} s, axial_tilt={:.4} rad, orbital_inclination={:.4} rad",
+            planet.axial_tilt,
+            planet.orbital_inclination
+        );
     }
 }
