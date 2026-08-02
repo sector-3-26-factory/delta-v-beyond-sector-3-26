@@ -106,22 +106,22 @@ pub fn camera_switch_system(
 ) {
     use LogicalAction;
 
-    let next_pressed = action_state.just_pressed(&LogicalAction::CameraSwitchNext);
-    let prev_pressed = action_state.just_pressed(&LogicalAction::CameraSwitchPrev);
+    let next_active = action_state.pressed(&LogicalAction::CameraSwitchNext);
+    let prev_active = action_state.pressed(&LogicalAction::CameraSwitchPrev);
 
     // Edge detection: only switch when key is first pressed
-    let switching = if next_pressed && !cycle_state.next_pressed {
+    let switching = if next_active && !cycle_state.next_pressed {
         1
-    } else if prev_pressed && !cycle_state.prev_pressed {
+    } else if prev_active && !cycle_state.prev_pressed {
         -1
     } else {
-        cycle_state.next_pressed = next_pressed;
-        cycle_state.prev_pressed = prev_pressed;
+        cycle_state.next_pressed = next_active;
+        cycle_state.prev_pressed = prev_active;
         return;
     };
 
-    cycle_state.next_pressed = next_pressed;
-    cycle_state.prev_pressed = prev_pressed;
+    cycle_state.next_pressed = next_active;
+    cycle_state.prev_pressed = prev_active;
 
     // Collect all available cameras in the fixed order
     let mut cameras: Vec<_> = query

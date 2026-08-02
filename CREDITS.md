@@ -15,9 +15,10 @@ For license text, see the LICENSE file at the repository root.
 - **License:** CC Attribution 4.0 (CC BY 4.0)
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/ships/space-fighter-comrade1280/mesh.glb`
-- **Modifications:** 
+- **Modifications:**
   - Mesh rotated 180° around Y axis to align ship's nose with -Z (ADR-0006 coordinate convention). Original asset had +Z as forward.
   - Mesh scaled by factor of 0.05 (from ~300m to ~15m) to match realistic fighter size.
+  - Mesh centered at origin (was offset by ~[0.00, 0.69, 1.32] in world space).
 
 ### Asteroid low poly
 
@@ -26,7 +27,8 @@ For license text, see the LICENSE file at the repository root.
 - **License:** CC Attribution 4.0 (CC BY 4.0)
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/asteroids/asteroid-low-poly-pasquill/mesh.glb`
-- **Modifications:** *None*
+- **Modifications:**
+  - Mesh centered at origin (was offset by ~[1.36, 0.12, 1.05] in world space).
 
 ### Daphne planetoid
 
@@ -36,8 +38,8 @@ For license text, see the LICENSE file at the repository root.
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/asteroids/daphne-planetoid-sebastiansosnowski/mesh.glb`
 - **Modifications:**
-  No artwork changed. Just technical optimizations to get the mesh.glb loaded.
-  Optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, inverted UV Y-scale and applied all transforms
+  - Mesh centered at origin (was offset by ~[11.74, 1.85, 7.89] in world space).
+  - No artwork changed. Technical optimizations: Removed nested root nodes, re-mapped PBR textures to standard PNGs, inverted UV Y-scale and applied all transforms.
 
 ### Archimedes (Meshy AI)
 
@@ -134,6 +136,16 @@ For license text, see the LICENSE file at the repository root.
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/planets/venus/mesh.glb`
 - **Modifications:** Baked root node rotation transform into vertex positions and normals; flattened node hierarchy to single mesh node for proper glTF loading.
+
+### "Earth (planet)"
+
+- **Creator:** [c4m5ron](https://sketchfab.com/c4m5ron)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/earth-16k-high-resolution-e2f01432233b4c0983583ba5066af83d)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/earth/mesh.glb`
+- **Modifications:**
+  - Mesh centered at origin (was offset by ~[-0.15, -0.30, 0.90] in world space) so collision shape, reticle, and visual mesh align.
 
 ## Fonts
 
