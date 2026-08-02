@@ -31,8 +31,7 @@ use delta_v_core::{
     DebugAxesEligible, EntityType, RenderLayer, SpawnEntity, Targetable, WorldEntityId,
 };
 use delta_v_types::{
-    CollisionShapeType, compute_debug_axis_length, resolve_mass, scale_bounding_box,
-    scale_collision_shape,
+    compute_debug_axis_length, resolve_mass, scale_bounding_box, scale_collision_shape,
 };
 
 use crate::{
@@ -112,13 +111,27 @@ pub fn spawn_sun(
             ))
             .id();
 
-        // Add collision shape with scaling
-        if let CollisionShapeType::Sphere { radius } = collision_shape_data.shape_type {
-            let scaled_radius = radius * scale_factor;
-            commands
-                .entity(sun_entity)
-                .insert(CollisionShape::sphere(scaled_radius, Vec3::ZERO));
-        }
+        // Add collision shape with scaling using shared function
+        let scaled_collision_shape = scale_collision_shape(&collision_shape_data, scale_factor);
+
+        // Debug output to understand collision shape scaling
+        tracing::debug!(
+            "Sun {entity_id} collision shape: template_radius={:.6}, scale_factor={:.6}, scaled_radius={:.6}, offset={:?}",
+            match collision_shape_data.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scale_factor,
+            match scaled_collision_shape.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scaled_collision_shape.offset
+        );
+
+        commands
+            .entity(sun_entity)
+            .insert(CollisionShape(scaled_collision_shape));
 
         // Spawn a child entity with PointLight
         // The light follows the sun's transform automatically via ChildOf
@@ -219,11 +232,25 @@ pub fn spawn_planet(
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));
 
-        // Add collision shape with scaling
-        if let CollisionShapeType::Sphere { radius } = collision_shape_data.shape_type {
-            let scaled_radius = radius * scale_factor;
-            entity_commands.insert(CollisionShape::sphere(scaled_radius, Vec3::ZERO));
-        }
+        // Add collision shape with scaling using shared function
+        let scaled_collision_shape = scale_collision_shape(&collision_shape_data, scale_factor);
+
+        // Debug output to understand collision shape scaling
+        tracing::debug!(
+            "Planet {entity_id} collision shape: template_radius={:.6}, scale_factor={:.6}, scaled_radius={:.6}, offset={:?}",
+            match collision_shape_data.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scale_factor,
+            match scaled_collision_shape.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scaled_collision_shape.offset
+        );
+
+        entity_commands.insert(CollisionShape(scaled_collision_shape));
 
         tracing::info!(
             "spawned planet: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",
@@ -280,13 +307,30 @@ pub fn spawn_asteroid(
         // Spawn the asteroid entity
         // Asteroids are dynamic bodies that respond to collisions based on their mass.
         // They use the ASTEROID collision layer.
+        let scaled_collision_shape = scale_collision_shape(&collision_shape_data, scale_factor);
+
+        // Debug output to understand collision shape scaling
+        tracing::debug!(
+            "Asteroid {entity_id} collision shape: template_radius={:.6}, scale_factor={:.6}, scaled_radius={:.6}, offset={:?}",
+            match collision_shape_data.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scale_factor,
+            match scaled_collision_shape.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scaled_collision_shape.offset
+        );
+
         commands.spawn((
             Name::new(format!("Asteroid: {entity_id}")),
             Transform::from_translation(spawn.position)
                 .with_rotation(spawn.rotation)
                 .with_scale(spawn.scale),
             RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
-            CollisionShape(scale_collision_shape(&collision_shape_data, scale_factor)),
+            CollisionShape(scaled_collision_shape),
             CollisionLayersComponent::new(delta_v_types::collision::layers::ASTEROID),
             Navigable,
             Targetable,

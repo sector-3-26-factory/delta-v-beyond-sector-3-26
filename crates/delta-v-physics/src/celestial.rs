@@ -99,9 +99,9 @@ pub struct OrbitalParentId(pub String);
 pub fn attach_celestial_meshes(
     mut commands: Commands<'_, '_>,
     gltf_assets: Res<'_, Assets<Gltf>>,
-    query: Query<'_, '_, (Entity, &PendingCelestialMesh)>,
+    query: Query<'_, '_, (Entity, &PendingCelestialMesh, &Transform)>,
 ) {
-    for (entity, pending) in &query {
+    for (entity, pending, parent_transform) in &query {
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
             if gltf.scenes.is_empty() {
                 continue;
@@ -109,6 +109,13 @@ pub fn attach_celestial_meshes(
             for scene_handle in &gltf.scenes {
                 let child = commands.spawn(SceneRoot(scene_handle.clone())).id();
                 commands.entity(entity).add_child(child);
+
+                // Debug: log the parent and child transforms
+                tracing::debug!(
+                    "Attached celestial mesh to entity {entity:?}, child: {child:?}, parent_scale={:?}, parent_translation={:?}",
+                    parent_transform.scale,
+                    parent_transform.translation
+                );
             }
             commands.entity(entity).remove::<PendingCelestialMesh>();
         }
