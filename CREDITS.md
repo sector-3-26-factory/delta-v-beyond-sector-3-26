@@ -157,6 +157,33 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/templates/moons/moon/mesh.glb`
 - **Modifications:** *None*
 
+### "Mars (planet)"
+
+- **Creator:** [ARCTIC WOLVES™ (@arctic.wolves)](https://sketchfab.com/arctic.wolves)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/mars-156a95dfec244e07a3ae423f579ffb05)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/mars/mesh.glb`
+- **Modifications:** *None*
+
+### "Phobos (moon of Mars)"
+
+- **Creator:** [harperanneviolet (@harperanneviolet)](https://sketchfab.com/harperanneviolet)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/phobos-1-1000-434a2b5523554918a13c1c41e3ee9be6)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/moons/phobos/mesh.glb`
+- **Modifications:** Mesh centered at origin (was offset by ~[-0.13, 0.28, -0.72] in world space).
+
+### "Deimos (moon of Mars)"
+
+- **Creator:** [uperesito (@uperesito)](https://sketchfab.com/uperesito)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/deimos-db9c281d0a7b4452aaac26eb1d3738ad)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/moons/deimos/mesh.glb`
+- **Modifications:** Mesh centered at origin (was offset by ~[-2647, -38, 6339] in world space).
+
 ## Fonts
 
 ### DejaVu Sans Mono

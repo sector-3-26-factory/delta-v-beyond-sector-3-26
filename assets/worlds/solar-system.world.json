@@ -7,7 +7,7 @@
             "id": "player_ship",
             "player_controlled": true,
             "position": {
-                "x": 1.071e11,
+                "x": 2.27e11,
                 "y": 0.0,
                 "z": 0.0
             }
@@ -90,6 +90,48 @@
                 "x": 1.7374e6,
                 "y": 1.7374e6,
                 "z": 1.7374e6
+            }
+        },
+        {
+            "template": "planets/mars",
+            "id": "mars",
+            "position": {
+                "x": 2.28e11,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 1.3558e6,
+                "y": 1.3558e6,
+                "z": 1.3558e6
+            }
+        },
+        {
+            "template": "moons/phobos",
+            "id": "phobos",
+            "position": {
+                "x": 2.28009376e11,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 834.6,
+                "y": 834.6,
+                "z": 834.6
+            }
+        },
+        {
+            "template": "moons/deimos",
+            "id": "deimos",
+            "position": {
+                "x": 2.2802346e11,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 8.05,
+                "y": 8.05,
+                "z": 8.05
             }
         }
     ]
