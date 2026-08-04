@@ -190,10 +190,10 @@ pub fn clear_accumulators_system(mut bodies: Query<'_, '_, &mut RigidBody>) {
 ///
 /// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
 #[allow(
-    clippy::needless_pass_by_value,
-    clippy::explicit_iter_loop,
-    clippy::suboptimal_flops,
-    clippy::type_complexity
+    clippy::needless_pass_by_value, // Bevy system parameters require pass-by-value
+    clippy::explicit_iter_loop, // Manual iteration needed for ParamSet borrow splitting
+    clippy::suboptimal_flops, // Trigonometric operations are inherent to orbital mechanics
+    clippy::type_complexity // ParamSet with two queries is required for borrow separation
 )]
 pub fn orbital_motion_system(
     time: Res<'_, Time<Fixed>>,
@@ -212,7 +212,7 @@ pub fn orbital_motion_system(
     let elapsed = time.elapsed().as_secs_f32();
 
     // First pass: collect all planet data
-    let planet_data: Vec<(Entity, Entity, f32, f32, f32, f32, f32)> = planets
+    let planet_data: Vec<(Entity, Entity, f32, f32, f32, f32)> = planets
         .iter()
         .map(|(entity, planet)| {
             (
@@ -222,7 +222,6 @@ pub fn orbital_motion_system(
                 planet.orbital_period,
                 planet.orbital_inclination,
                 planet.initial_orbital_angle,
-                planet.orbital_eccentricity,
             )
         })
         .collect();
@@ -234,14 +233,105 @@ pub fn orbital_motion_system(
         // Pre-compute all parent positions to avoid holding the immutable borrow
         // while we need mutable access later
         let mut parent_positions: Vec<(Entity, Vec3)> = Vec::new();
-        for (entity, parent_id, distance, period, inclination, initial_angle, _eccentricity) in
-            &planet_data
-        {
+        for (entity, parent_id, distance, period, inclination, initial_angle) in &planet_data {
             // Get parent position. The Sun is now included in the query, so we get its
             // actual position after floating origin recentering. For other parents, query their position.
-            let parent_pos = parents
-                .get(*parent_id)
-                .map_or(Vec3::ZERO, |parent_transform| parent_transform.translation);
+            // If parent is not found, skip this entity (it has no valid orbital parent).
+            let Ok(parent_transform) = parents.get(*parent_id) else {
+                continue;
+            };
+            let parent_pos = parent_transform.translation;
+
+            // Compute current angle: initial + (elapsed / period) * TAU
+            // This gives us the angle in radians around the orbital circle
+            let angle = (elapsed / *period).mul_add(std::f32::consts::TAU, *initial_angle);
+
+            // Compute position in the orbital plane (X-Z plane, Y=0)
+            // Then apply inclination: y_offset = distance * sin(inclination) * sin(angle)
+            let x_offset = distance * angle.cos();
+            let z_offset = distance * angle.sin();
+            let y_offset = distance * inclination.sin() * angle.sin();
+
+            let new_pos = parent_pos + Vec3::new(x_offset, y_offset, z_offset);
+            parent_positions.push((*entity, new_pos));
+        }
+
+        // Now get mutable access and apply updates
+        let mut transforms = transform_set.p1();
+        for (entity, new_pos) in parent_positions {
+            if let Ok(mut transform) = transforms.get_mut(entity) {
+                transform.translation = new_pos;
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Moon orbital motion system (ADR-0017)
+// ---------------------------------------------------------------------------
+
+/// Updates the position of moons along their orbital paths.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The orbital motion uses circular orbits with optional inclination.
+/// Position is computed relative to the parent body's current position.
+/// This is essential because the parent planet is also moving in its orbit,
+/// so the moon's position must be updated relative to the planet's current position.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(
+    clippy::needless_pass_by_value, // Bevy system parameters require pass-by-value
+    clippy::explicit_iter_loop, // Manual iteration needed for ParamSet borrow splitting
+    clippy::suboptimal_flops, // Trigonometric operations are inherent to orbital mechanics
+    clippy::type_complexity // ParamSet with two queries is required for borrow separation
+)]
+pub fn moon_orbital_motion_system(
+    time: Res<'_, Time<Fixed>>,
+    moons: Query<'_, '_, (Entity, &Moon)>,
+    // Use ParamSet to separate immutable and mutable access to Transform.
+    // Include Planet in the parent query so we get its actual position after orbital motion.
+    mut transform_set: ParamSet<
+        '_,
+        '_,
+        (
+            Query<'_, '_, &Transform>,
+            Query<'_, '_, &mut Transform, Without<Planet>>,
+        ),
+    >,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    // First pass: collect all moon data
+    let moon_data: Vec<(Entity, Entity, f32, f32, f32, f32)> = moons
+        .iter()
+        .map(|(entity, moon)| {
+            (
+                entity,
+                moon.orbital_parent,
+                moon.orbital_distance,
+                moon.orbital_period,
+                moon.orbital_inclination,
+                moon.initial_orbital_angle,
+            )
+        })
+        .collect();
+
+    // Get immutable access to parent positions first
+    {
+        let parents = transform_set.p0();
+
+        // Pre-compute all parent positions to avoid holding the immutable borrow
+        // while we need mutable access later
+        let mut parent_positions: Vec<(Entity, Vec3)> = Vec::new();
+        for (entity, parent_id, distance, period, inclination, initial_angle) in &moon_data {
+            // Get parent position. The Planet is now included in the query, so we get its
+            // actual position after orbital motion. For other parents, query their position.
+            // If parent is not found, skip this entity (it has no valid orbital parent).
+            let Ok(parent_transform) = parents.get(*parent_id) else {
+                continue;
+            };
+            let parent_pos = parent_transform.translation;
 
             // Compute current angle: initial + (elapsed / period) * TAU
             // This gives us the angle in radians around the orbital circle
