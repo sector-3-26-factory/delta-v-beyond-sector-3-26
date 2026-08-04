@@ -1,0 +1,53 @@
+{
+    "entity_type": "moon",
+    "mass": {
+        "value": 0.0123,
+        "unit": "M_earth"
+    },
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 0.999917,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": -0.997992,
+            "y": -0.997990,
+            "z": -0.999917
+        },
+        "max": {
+            "x": 0.997992,
+            "y": 0.997994,
+            "z": 0.999917
+        }
+    },
+    "is_gravity_source": true,
+    "orbital_parent": "earth",
+    "orbital_distance": {
+        "value": 384400,
+        "unit": "km"
+    },
+    "orbital_period": {
+        "value": 27.32,
+        "unit": "d"
+    },
+    "orbital_inclination": {
+        "value": 5.14,
+        "unit": "deg"
+    },
+    "initial_orbital_angle": {
+        "value": 0.0,
+        "unit": "deg"
+    },
+    "rotation_period": {
+        "value": 655.7,
+        "unit": "h"
+    },
+    "axial_tilt": {
+        "value": 6.68,
+        "unit": "deg"
+    },
+    "animations_enabled": true
+}

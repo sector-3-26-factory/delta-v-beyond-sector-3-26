@@ -114,6 +114,9 @@ pub struct PlanetTemplateJson {
     /// Axial tilt (obliquity) in degrees.
     /// Default: 0.0 (from schema).
     pub axial_tilt: PhysicalQuantityJson,
+    /// If true, mesh animations (e.g., moving clouds) will be played.
+    /// Default: true (from schema).
+    pub animations_enabled: bool,
 }
 
 /// JSON schema type for asteroid templates.
@@ -135,6 +138,51 @@ pub struct AsteroidTemplateJson {
     /// If true, this body generates gravity on other entities.
     /// Default: false (from schema).
     pub is_gravity_source: bool,
+}
+
+/// JSON schema type for moon templates.
+///
+/// Deserialized from `assets/templates/moons/*/moon.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct MoonTemplateJson {
+    /// Entity type discriminator. Must be "moon".
+    pub entity_type: String,
+    /// Mass in kilograms.
+    pub mass: PhysicalQuantityJson,
+    /// Collision shape for the moon.
+    pub collision_shape: super::CollisionShapeJson,
+    /// Axis-aligned bounding box of the mesh in moon-local coordinates (metres).
+    /// Used for debug axes and spatial calculations.
+    pub bounding_box: BoundingBoxJson,
+    /// If true, this body generates gravity on other entities.
+    /// Default: true (from schema).
+    pub is_gravity_source: bool,
+    /// ID of the parent body this moon orbits.
+    pub orbital_parent: String,
+    /// Orbital distance in metres.
+    pub orbital_distance: PhysicalQuantityJson,
+    /// Orbital period in seconds.
+    pub orbital_period: PhysicalQuantityJson,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
+    /// Default: 0.0 (from schema).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in degrees.
+    /// Default: 0.0 (from schema).
+    pub orbital_inclination: PhysicalQuantityJson,
+    /// Initial orbital angle in degrees.
+    /// Default: 0.0 (from schema).
+    pub initial_orbital_angle: PhysicalQuantityJson,
+    /// Rotation period in hours.
+    /// Default: None (from schema).
+    pub rotation_period: Option<PhysicalQuantityJson>,
+    /// Axial tilt (obliquity) in degrees.
+    /// Default: 0.0 (from schema).
+    pub axial_tilt: PhysicalQuantityJson,
+    /// If true, mesh animations (e.g., moving clouds) will be played.
+    /// Default: true (from schema).
+    pub animations_enabled: bool,
 }
 
 /// Runtime sun template with SI units.
@@ -213,6 +261,8 @@ pub struct PlanetTemplate {
     pub rotation_period: Option<f32>,
     /// Axial tilt (obliquity) in radians (SI base unit).
     pub axial_tilt: f32,
+    /// If true, mesh animations (e.g., moving clouds) will be played.
+    pub animations_enabled: bool,
 }
 
 impl From<PlanetTemplateJson> for PlanetTemplate {
@@ -231,6 +281,7 @@ impl From<PlanetTemplateJson> for PlanetTemplate {
             initial_orbital_angle: json.initial_orbital_angle.to_radians(),
             rotation_period: json.rotation_period.map(|p| p.to_seconds()),
             axial_tilt: json.axial_tilt.to_radians(),
+            animations_enabled: json.animations_enabled,
         }
     }
 }
@@ -262,6 +313,64 @@ impl From<AsteroidTemplateJson> for AsteroidTemplate {
             collision_shape: json.collision_shape.into(),
             bounding_box: json.bounding_box.into(),
             is_gravity_source: json.is_gravity_source,
+        }
+    }
+}
+
+/// Runtime moon template with SI units.
+///
+/// This is the converted version of [`MoonTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct MoonTemplate {
+    /// Entity type discriminator ("moon").
+    pub entity_type: String,
+    /// Mass in kilograms (SI base unit).
+    pub mass: f32,
+    /// Collision shape data for the moon.
+    pub collision_shape: CollisionShapeData,
+    /// Axis-aligned bounding box of the mesh in moon-local coordinates (metres).
+    pub bounding_box: BoundingBox,
+    /// If true, this body generates gravity on other entities.
+    pub is_gravity_source: bool,
+    /// ID of the parent body this moon orbits.
+    pub orbital_parent: String,
+    /// Orbital distance in metres (SI base unit).
+    pub orbital_distance: f32,
+    /// Orbital period in seconds (SI base unit).
+    pub orbital_period: f32,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in radians (SI base unit).
+    pub orbital_inclination: f32,
+    /// Initial orbital angle in radians (SI base unit).
+    pub initial_orbital_angle: f32,
+    /// Rotation period in seconds (SI base unit). None means no rotation.
+    pub rotation_period: Option<f32>,
+    /// Axial tilt (obliquity) in radians (SI base unit).
+    pub axial_tilt: f32,
+    /// If true, mesh animations (e.g., moving clouds) will be played.
+    pub animations_enabled: bool,
+}
+
+impl From<MoonTemplateJson> for MoonTemplate {
+    fn from(json: MoonTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            mass: json.mass.to_kilograms(),
+            collision_shape: json.collision_shape.into(),
+            bounding_box: json.bounding_box.into(),
+            is_gravity_source: json.is_gravity_source,
+            orbital_parent: json.orbital_parent,
+            orbital_distance: json.orbital_distance.to_meters(),
+            orbital_period: json.orbital_period.to_seconds(),
+            orbital_eccentricity: json.orbital_eccentricity,
+            orbital_inclination: json.orbital_inclination.to_radians(),
+            initial_orbital_angle: json.initial_orbital_angle.to_radians(),
+            rotation_period: json.rotation_period.map(|p| p.to_seconds()),
+            axial_tilt: json.axial_tilt.to_radians(),
+            animations_enabled: json.animations_enabled,
         }
     }
 }

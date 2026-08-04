@@ -1,0 +1,157 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/moon",
+    "title": "Moon",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nA moon that orbits a parent planet. Per ADR-0009, moons are always gravity sources.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "entity_type",
+        "mass",
+        "collision_shape",
+        "bounding_box",
+        "orbital_parent",
+        "orbital_distance",
+        "orbital_period"
+    ],
+    "properties": {
+        "entity_type": {
+            "description": "Entity type discriminator. Must be 'moon'.",
+            "type": "string",
+            "const": "moon"
+        },
+        "mass": {
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
+        },
+        "collision_shape": {
+            "description": "Collision shape for the moon. Defines how it interacts with other objects.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Collision shape type. 'sphere' or 'box' are supported.",
+                    "type": "string",
+                    "enum": [
+                        "sphere",
+                        "box"
+                    ]
+                },
+                "radius": {
+                    "description": "Radius of the sphere in metres (for sphere shape type).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "half_extents": {
+                    "description": "Half-extents of the box (for box shape type).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "offset": {
+                    "description": "Offset of the box center from the mesh center (for box shape type).",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
+        },
+        "bounding_box": {
+            "description": "Axis-aligned bounding box of the mesh in moon-local coordinates (metres). Computed once from glTF mesh. Used for debug axes and spatial calculations. Min and max are opposite corners of the box.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "min",
+                "max"
+            ],
+            "properties": {
+                "min": {
+                    "description": "Minimum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                },
+                "max": {
+                    "description": "Maximum corner (x, y, z in metres).",
+                    "$ref": "#/$defs/vec3"
+                }
+            }
+        },
+        "is_gravity_source": {
+            "description": "If true, this body generates gravity on other entities. Moons are always gravity sources. Default: true.",
+            "type": "boolean",
+            "default": true
+        },
+        "orbital_parent": {
+            "description": "ID of the parent body this moon orbits. The orbital motion system will compute position relative to the parent.",
+            "type": "string"
+        },
+        "orbital_distance": {
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+        },
+        "orbital_period": {
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+        },
+        "orbital_eccentricity": {
+            "description": "Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical). Default: 0 (circular).",
+            "type": "number",
+            "default": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.99
+        },
+        "orbital_inclination": {
+            "description": "Orbital inclination in degrees (angle above/below the ecliptic plane). Default: 0 (in ecliptic).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
+            "default": {
+                "value": 0.0,
+                "unit": "degrees"
+            }
+        },
+        "initial_orbital_angle": {
+            "description": "Starting angle in the orbital plane at time zero, in degrees. Default: 0.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
+            "default": {
+                "value": 0.0,
+                "unit": "degrees"
+            }
+        },
+        "rotation_period": {
+            "description": "Rotation period in hours. The moon rotates around its tilted axis. None means no rotation.",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+        },
+        "axial_tilt": {
+            "description": "Axial tilt (obliquity) in degrees. Angle between rotation axis and orbital axis. Default: 0 (no tilt).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
+            "default": {
+                "value": 0.0,
+                "unit": "degrees"
+            }
+        },
+        "animations_enabled": {
+            "description": "If true, mesh animations (e.g., moving clouds) will be played. Default: true.",
+            "type": "boolean",
+            "default": true
+        }
+    },
+    "$defs": {
+        "vec3": {
+            "description": "3-component vector (x, y, z) in metres.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "x",
+                "y",
+                "z"
+            ],
+            "properties": {
+                "x": {
+                    "type": "number",
+                    "description": "X component (metres)."
+                },
+                "y": {
+                    "type": "number",
+                    "description": "Y component (metres)."
+                },
+                "z": {
+                    "type": "number",
+                    "description": "Z component (metres)."
+                }
+            }
+        }
+    }
+}

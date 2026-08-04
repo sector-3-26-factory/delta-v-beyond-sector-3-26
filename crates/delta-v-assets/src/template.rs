@@ -371,6 +371,39 @@ pub fn load_planet(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     Ok((template_path, runtime_template))
 }
 
+/// Loads a moon template.
+///
+/// Returns a tuple of (`template_path`, `template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+/// The mesh path is derived from `template_path` via `SpawnEntity::mesh_path()`.
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_moon(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+    // INVARIANT: The name may or may not have the "moons/" prefix.
+    // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
+    // The `unwrap_or` is intentional: callers may pass either "moons/my-moon" or "my-moon".
+    // Both are valid and result in the same template being loaded.
+    let template_name = name.strip_prefix("moons/").unwrap_or(name);
+    let template_path = format!("templates/moons/{template_name}/moon.json");
+    let template = load_template("moons", name, "moon.json", "moon.schema.json")?;
+
+    // Convert to runtime type
+    let template_json: delta_v_types::MoonTemplateJson =
+        serde_json::from_value(template).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::Moon(template_json.into());
+
+    Ok((template_path, runtime_template))
+}
+
 /// Loads and validates a template from explicit paths.
 ///
 /// Used by tests and future tooling.

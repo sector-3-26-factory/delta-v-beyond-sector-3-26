@@ -64,6 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         mesa-vulkan-drivers \
         vulkan-tools \
         ca-certificates \
+        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure ALSA to use PulseAudio as the default audio output.
@@ -79,3 +80,6 @@ RUN rustup component add rustfmt clippy && \
     cargo install cargo-sweep && \
     cargo install cargo-deny && \
     cargo install tokei
+
+# Install Python dependencies for mesh processing scripts (calc_mesh_bounds.py, etc.)
+RUN pip install --break-system-packages numpy trimesh

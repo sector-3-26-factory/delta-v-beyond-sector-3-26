@@ -23,6 +23,8 @@
 //!
 //! Spawn systems are in `spawn.rs` per ADR-0047.
 
+use bevy::animation::graph::{AnimationGraph, AnimationGraphHandle};
+use bevy::animation::{AnimationClip, AnimationPlayer};
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_core::WorldEntityId;
@@ -63,6 +65,35 @@ pub struct Planet {
     pub rotation_period: Option<f32>,
     /// Axial tilt (obliquity) in radians. Angle between rotation axis and orbital axis.
     pub axial_tilt: f32,
+    /// If true, mesh animations (e.g., moving clouds) will be played.
+    pub animations_enabled: bool,
+}
+
+/// Component for moon entities.
+///
+/// Moons orbit a parent planet and are always gravity sources per ADR-0009.
+///
+/// Orbital parameters are stored in SI units (metres, seconds, radians).
+#[derive(Component, Clone, Debug)]
+pub struct Moon {
+    /// The parent entity this moon orbits.
+    pub orbital_parent: Entity,
+    /// Orbital distance in metres.
+    pub orbital_distance: f32,
+    /// Orbital period in seconds.
+    pub orbital_period: f32,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in radians.
+    pub orbital_inclination: f32,
+    /// Initial orbital angle in radians.
+    pub initial_orbital_angle: f32,
+    /// Rotation period in seconds. None means no rotation.
+    pub rotation_period: Option<f32>,
+    /// Axial tilt (obliquity) in radians. Angle between rotation axis and orbital axis.
+    pub axial_tilt: f32,
+    /// If true, mesh animations (e.g., moving clouds) will be played.
+    pub animations_enabled: bool,
 }
 
 /// Marker component for entities that can be targeted or selected in navigation.
@@ -99,9 +130,10 @@ pub struct OrbitalParentId(pub String);
 pub fn attach_celestial_meshes(
     mut commands: Commands<'_, '_>,
     gltf_assets: Res<'_, Assets<Gltf>>,
-    query: Query<'_, '_, (Entity, &PendingCelestialMesh, &Transform)>,
+    mut animation_graphs: ResMut<'_, Assets<AnimationGraph>>,
+    query: Query<'_, '_, (Entity, &PendingCelestialMesh, &Transform, Option<&Planet>)>,
 ) {
-    for (entity, pending, parent_transform) in &query {
+    for (entity, pending, parent_transform, planet) in &query {
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
             if gltf.scenes.is_empty() {
                 continue;
@@ -117,6 +149,36 @@ pub fn attach_celestial_meshes(
                     parent_transform.translation
                 );
             }
+
+            // If this is a planet with animations enabled and the glTF has animations,
+            // add an AnimationPlayer and play the animations.
+            if let Some(planet) = planet
+                && planet.animations_enabled
+                && !gltf.animations.is_empty()
+            {
+                // Create an AnimationGraph from the animation clips
+                let clips: Vec<Handle<AnimationClip>> = gltf.animations.clone();
+                let (animation_graph, node_indices) = AnimationGraph::from_clips(clips);
+
+                // Add the AnimationGraph as an asset and get a handle to it
+                let animation_graph_handle = animation_graphs.add(animation_graph);
+
+                // Add AnimationPlayer and AnimationGraphHandle to the planet entity
+                let mut animation_player = AnimationPlayer::default();
+                for node_index in node_indices {
+                    animation_player.play(node_index).repeat();
+                }
+
+                commands.entity(entity).insert((
+                    animation_player,
+                    AnimationGraphHandle(animation_graph_handle),
+                ));
+                tracing::info!(
+                    "Started {} animations for planet entity {entity:?}",
+                    gltf.animations.len()
+                );
+            }
+
             commands.entity(entity).remove::<PendingCelestialMesh>();
         }
     }
@@ -172,6 +234,7 @@ pub fn make_sun_emissive(
 pub fn resolve_orbital_parents(
     mut commands: Commands<'_, '_>,
     mut planets: Query<'_, '_, (Entity, &OrbitalParentId, &mut Planet)>,
+    mut moons: Query<'_, '_, (Entity, &OrbitalParentId, &mut Moon)>,
     all_entities: Query<'_, '_, (Entity, &WorldEntityId)>,
 ) {
     for (entity, parent_id, mut planet) in &mut planets {
@@ -179,6 +242,21 @@ pub fn resolve_orbital_parents(
         for (potential_parent, world_id) in &all_entities {
             if world_id.0 == parent_id.0 {
                 planet.orbital_parent = potential_parent;
+                commands.entity(entity).remove::<OrbitalParentId>();
+                tracing::debug!(
+                    "Resolved orbital parent for {entity:?}: {} -> {potential_parent:?}",
+                    parent_id.0
+                );
+                break;
+            }
+        }
+    }
+
+    for (entity, parent_id, mut moon) in &mut moons {
+        // Find the parent entity by WorldEntityId (matches the world definition ID)
+        for (potential_parent, world_id) in &all_entities {
+            if world_id.0 == parent_id.0 {
+                moon.orbital_parent = potential_parent;
                 commands.entity(entity).remove::<OrbitalParentId>();
                 tracing::debug!(
                     "Resolved orbital parent for {entity:?}: {} -> {potential_parent:?}",

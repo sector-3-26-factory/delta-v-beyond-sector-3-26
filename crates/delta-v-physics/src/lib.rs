@@ -53,7 +53,7 @@ pub use collision::{
 pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
 pub use delta_v_types::CollisionLayers;
 pub use rigid_body::{MassSource, RigidBody};
-pub use spawn::{spawn_asteroid, spawn_planet, spawn_sun};
+pub use spawn::{spawn_asteroid, spawn_moon, spawn_planet, spawn_sun};
 pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
@@ -61,8 +61,8 @@ use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health, World
 use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
-    integrate_position_system, integrate_velocity_system, orbital_motion_system,
-    planet_rotation_system, sun_rotation_system,
+    integrate_position_system, integrate_velocity_system, moon_rotation_system,
+    orbital_motion_system, planet_rotation_system, sun_rotation_system,
 };
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
@@ -173,6 +173,15 @@ impl Plugin for PhysicsPlugin {
                 .run_if(in_state(AppState::InGame)),
         );
 
+        // Moon rotation system.
+        // Runs in FixedUpdate to rotate moons around their tilted axis.
+        app.add_systems(
+            FixedUpdate,
+            moon_rotation_system
+                .in_set(PhysicsSet::IntegratePosition)
+                .run_if(in_state(AppState::InGame)),
+        );
+
         // Collision shape debug visualization
         app.add_systems(
             Update,
@@ -194,6 +203,12 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             Update,
             spawn_planet
+                .in_set(WorldSpawnSet::SpawnPlanets)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+        app.add_systems(
+            Update,
+            spawn_moon
                 .in_set(WorldSpawnSet::SpawnPlanets)
                 .run_if(in_state(AppState::SpawningEntities)),
         );

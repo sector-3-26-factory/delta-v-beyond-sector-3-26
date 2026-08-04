@@ -15,7 +15,8 @@
         "asteroid": "Asteroid",
         "station": "Raumstation",
         "sun": "Stern",
-        "planet": "Planet"
+        "planet": "Planet",
+        "moon": "Mond"
     },
     "ui": {
         "menu": {

@@ -146,6 +146,16 @@ For license text, see the LICENSE file at the repository root.
 - **File:** `assets/templates/planets/earth/mesh.glb`
 - **Modifications:**
   - Mesh centered at origin (was offset by ~[-0.15, -0.30, 0.90] in world space) so collision shape, reticle, and visual mesh align.
+  - Fixed PBR materials: Set `emissiveFactor` to `[0.0, 0.0, 0.0]` for all 4 Earth surface materials (was `[1.0, 1.0, 1.0]` causing full white self-illumination that overrode base color textures). Atmosphere material emissive preserved for atmospheric scattering effect.
+
+### "Moon"
+
+- **Creator:** [RenderX (@RenderX)](https://sketchfab.com/RenderX)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/moon-26cc0b7878bb4d919b68e2be399db466)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/moons/moon/mesh.glb`
+- **Modifications:** *None*
 
 ## Fonts
 

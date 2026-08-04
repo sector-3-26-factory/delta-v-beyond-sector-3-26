@@ -8,7 +8,7 @@
 //!
 //! See ADR-0038 (entity template system) and ADR-0046 (shared types crate).
 
-use crate::celestial::{AsteroidTemplate, PlanetTemplate, SunTemplate};
+use crate::celestial::{AsteroidTemplate, MoonTemplate, PlanetTemplate, SunTemplate};
 use crate::main_thruster::MainThrusterDefinition;
 use crate::maneuvering_thruster::ManeuveringThrusterDefinition;
 use crate::ship_templates::{AiShipTemplate, PlayerShipTemplate, ShipTemplate, StaticShipTemplate};
@@ -26,6 +26,8 @@ pub enum EntityTemplate {
     Sun(SunTemplate),
     /// Planet template with SI units.
     Planet(PlanetTemplate),
+    /// Moon template with SI units.
+    Moon(MoonTemplate),
     /// Asteroid template with SI units.
     Asteroid(AsteroidTemplate),
     /// Base ship template with SI units.
@@ -53,6 +55,7 @@ impl EntityTemplate {
         match self {
             Self::Sun(_) => "sun",
             Self::Planet(_) => "planet",
+            Self::Moon(_) => "moon",
             Self::Asteroid(_) => "asteroid",
             Self::Ship(_) | Self::StaticShip(_) => "ship",
             Self::PlayerShip(_) => "player_controlled_ship",
@@ -73,10 +76,13 @@ impl EntityTemplate {
         )
     }
 
-    /// Returns true if this template is a celestial body (sun, planet, asteroid).
+    /// Returns true if this template is a celestial body (sun, planet, moon, asteroid).
     #[must_use]
     pub const fn is_celestial(&self) -> bool {
-        matches!(self, Self::Sun(_) | Self::Planet(_) | Self::Asteroid(_))
+        matches!(
+            self,
+            Self::Sun(_) | Self::Planet(_) | Self::Moon(_) | Self::Asteroid(_)
+        )
     }
 
     /// Returns the mass in kilograms for this template.
@@ -85,6 +91,7 @@ impl EntityTemplate {
         match self {
             Self::Sun(t) => t.mass,
             Self::Planet(t) => t.mass,
+            Self::Moon(t) => t.mass,
             Self::Asteroid(t) => t.mass,
             Self::Ship(t) => t.mass,
             Self::PlayerShip(t) => t.mass,
@@ -103,6 +110,7 @@ impl EntityTemplate {
         match self {
             Self::Sun(t) => &t.collision_shape,
             Self::Planet(t) => &t.collision_shape,
+            Self::Moon(t) => &t.collision_shape,
             Self::Asteroid(t) => &t.collision_shape,
             Self::Ship(t) => &t.collision_shape,
             Self::PlayerShip(t) => &t.collision_shape,
@@ -128,6 +136,7 @@ impl EntityTemplate {
         match self {
             Self::Sun(t) => &t.bounding_box,
             Self::Planet(t) => &t.bounding_box,
+            Self::Moon(t) => &t.bounding_box,
             Self::Asteroid(t) => &t.bounding_box,
             Self::Ship(t) => &t.bounding_box,
             Self::PlayerShip(t) => &t.bounding_box,
@@ -156,6 +165,7 @@ impl EntityTemplate {
             Self::StaticShip(t) => t.health,
             Self::Sun(t) => t.mass,      // Suns use mass as health proxy
             Self::Planet(t) => t.mass,   // Planets use mass as health proxy
+            Self::Moon(t) => t.mass,     // Moons use mass as health proxy
             Self::Asteroid(t) => t.mass, // Asteroids use mass as health proxy
             Self::Weapon(_)
             | Self::Projectile(_)
@@ -175,6 +185,7 @@ impl EntityTemplate {
             Self::StaticShip(t) => &t.weapons,
             Self::Sun(_)
             | Self::Planet(_)
+            | Self::Moon(_)
             | Self::Asteroid(_)
             | Self::Weapon(_)
             | Self::Projectile(_)
@@ -193,6 +204,7 @@ impl EntityTemplate {
             Self::StaticShip(t) => t.inertia_scale,
             Self::Sun(_)
             | Self::Planet(_)
+            | Self::Moon(_)
             | Self::Asteroid(_)
             | Self::Weapon(_)
             | Self::Projectile(_)
@@ -212,6 +224,7 @@ impl EntityTemplate {
             Self::StaticShip(t) => Some(&t.propulsion),
             Self::Sun(_)
             | Self::Planet(_)
+            | Self::Moon(_)
             | Self::Asteroid(_)
             | Self::Weapon(_)
             | Self::Projectile(_)
@@ -306,6 +319,7 @@ impl EntityTemplate {
         match self {
             Self::Sun(t) => t.is_gravity_source,
             Self::Planet(t) => t.is_gravity_source,
+            Self::Moon(t) => t.is_gravity_source,
             Self::Asteroid(t) => t.is_gravity_source,
             _ => false,
         }
@@ -355,57 +369,63 @@ impl EntityTemplate {
         }
     }
 
-    /// Returns the orbital parent for this template (for planets).
+    /// Returns the orbital parent for this template (for planets and moons).
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]
     pub fn orbital_parent(&self) -> Option<&str> {
         match self {
             Self::Planet(t) => Some(&t.orbital_parent),
+            Self::Moon(t) => Some(&t.orbital_parent),
             _ => None,
         }
     }
 
-    /// Returns the orbital distance for this template (for planets).
+    /// Returns the orbital distance for this template (for planets and moons).
     #[must_use]
     pub const fn orbital_distance(&self) -> f32 {
         match self {
             Self::Planet(t) => t.orbital_distance,
+            Self::Moon(t) => t.orbital_distance,
             _ => 0.0,
         }
     }
 
-    /// Returns the orbital period for this template (for planets).
+    /// Returns the orbital period for this template (for planets and moons).
     #[must_use]
     pub const fn orbital_period(&self) -> f32 {
         match self {
             Self::Planet(t) => t.orbital_period,
+            Self::Moon(t) => t.orbital_period,
             _ => 0.0,
         }
     }
 
-    /// Returns the orbital eccentricity for this template (for planets).
+    /// Returns the orbital eccentricity for this template (for planets and moons).
     #[must_use]
     pub const fn orbital_eccentricity(&self) -> f32 {
         match self {
             Self::Planet(t) => t.orbital_eccentricity,
+            Self::Moon(t) => t.orbital_eccentricity,
             _ => 0.0,
         }
     }
 
-    /// Returns the orbital inclination for this template (for planets).
+    /// Returns the orbital inclination for this template (for planets and moons).
     #[must_use]
     pub const fn orbital_inclination(&self) -> f32 {
         match self {
             Self::Planet(t) => t.orbital_inclination,
+            Self::Moon(t) => t.orbital_inclination,
             _ => 0.0,
         }
     }
 
-    /// Returns the initial orbital angle for this template (for planets).
+    /// Returns the initial orbital angle for this template (for planets and moons).
     #[must_use]
     pub const fn initial_orbital_angle(&self) -> f32 {
         match self {
             Self::Planet(t) => t.initial_orbital_angle,
+            Self::Moon(t) => t.initial_orbital_angle,
             _ => 0.0,
         }
     }

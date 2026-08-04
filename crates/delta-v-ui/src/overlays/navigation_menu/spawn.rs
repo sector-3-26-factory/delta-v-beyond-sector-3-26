@@ -116,6 +116,7 @@ fn navigation_menu_content(
                 "station" => i18n.entity_types.station.clone(),
                 "sun" => i18n.entity_types.sun.clone(),
                 "planet" => i18n.entity_types.planet.clone(),
+                "moon" => i18n.entity_types.moon.clone(),
                 _ => entry.entity_type.clone(),
             };
 

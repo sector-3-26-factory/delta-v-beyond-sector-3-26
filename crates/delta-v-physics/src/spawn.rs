@@ -34,6 +34,7 @@ use delta_v_types::{
     compute_debug_axis_length, resolve_mass, scale_bounding_box, scale_collision_shape,
 };
 
+use crate::celestial::Moon;
 use crate::{
     CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalParentId,
     PendingCelestialMesh, Planet, RigidBody, Sun,
@@ -222,6 +223,7 @@ pub fn spawn_planet(
                 initial_orbital_angle: planet_template.initial_orbital_angle,
                 rotation_period: planet_template.rotation_period,
                 axial_tilt: planet_template.axial_tilt,
+                animations_enabled: planet_template.animations_enabled,
             },
             OrbitalParentId(planet_template.orbital_parent.clone()),
             Navigable,
@@ -341,5 +343,103 @@ pub fn spawn_asteroid(
         ));
 
         tracing::info!("spawned asteroid: {entity_id} (mass={mass:.3e} kg)",);
+    }
+}
+
+/// Spawns a moon entity from a `SpawnEntity` event.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// # Panics
+///
+/// Panics if the template is missing required fields. This is intentional per
+/// ADR-0013 (no silent fallbacks).
+#[allow(clippy::needless_pass_by_value, clippy::cast_possible_truncation)]
+pub fn spawn_moon(
+    mut events: MessageReader<'_, '_, SpawnEntity>,
+    mut commands: Commands<'_, '_>,
+    asset_server: Res<'_, AssetServer>,
+) {
+    for spawn in events.read() {
+        // Use the template from the event (already loaded by WorldPlugin)
+        let delta_v_types::EntityTemplate::Moon(moon_template) = &spawn.template else {
+            continue;
+        };
+
+        // Resolve mass: use override if present, otherwise use template mass.
+        // Mass is NOT scaled - it is used as-is or overridden.
+        let mass = resolve_mass(moon_template.mass, spawn.mass);
+
+        // Extract collision shape data
+        let collision_shape_data = moon_template.collision_shape;
+
+        // Extract bounding box for debug axes computation
+        let bbox = &moon_template.bounding_box;
+        // Use the maximum scale component for uniform scaling
+        let scale_factor = spawn.scale.x.max(spawn.scale.y).max(spawn.scale.z);
+        // Scale the bounding box for debug axis computation
+        let scaled_bbox = scale_bounding_box(bbox, scale_factor);
+        let axis_length = compute_debug_axis_length(&scaled_bbox);
+
+        let entity_id = spawn.id.clone();
+
+        // Queue glTF mesh load
+        let gltf_handle = asset_server.load::<Gltf>(&spawn.mesh_path());
+
+        // We need to resolve the orbital_parent_id to an Entity.
+        // This is done in a second pass after all entities are spawned.
+        // For now, we store the parent ID as a placeholder.
+        let mut entity_commands = commands.spawn((
+            Name::new(format!("Moon: {entity_id}")),
+            Transform::from_translation(spawn.position)
+                .with_rotation(spawn.rotation)
+                .with_scale(spawn.scale),
+            RigidBody::new(mass, 1.0),
+            MassSource,
+            Moon {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance: moon_template.orbital_distance,
+                orbital_period: moon_template.orbital_period,
+                orbital_eccentricity: moon_template.orbital_eccentricity,
+                orbital_inclination: moon_template.orbital_inclination,
+                initial_orbital_angle: moon_template.initial_orbital_angle,
+                rotation_period: moon_template.rotation_period,
+                axial_tilt: moon_template.axial_tilt,
+                animations_enabled: moon_template.animations_enabled,
+            },
+            OrbitalParentId(moon_template.orbital_parent.clone()),
+            Navigable,
+            Targetable,
+            EntityType("moon".to_string()),
+            WorldEntityId(entity_id.clone()),
+            PendingCelestialMesh { gltf_handle },
+            DebugAxesEligible::new(entity_id.clone(), axis_length),
+        ));
+
+        // Add collision shape with scaling using shared function
+        let scaled_collision_shape = scale_collision_shape(&collision_shape_data, scale_factor);
+
+        // Debug output to understand collision shape scaling
+        tracing::debug!(
+            "Moon {entity_id} collision shape: template_radius={:.6}, scale_factor={:.6}, scaled_radius={:.6}, offset={:?}",
+            match collision_shape_data.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scale_factor,
+            match scaled_collision_shape.shape_type {
+                delta_v_types::CollisionShapeType::Sphere { radius } => radius,
+                _ => 0.0,
+            },
+            scaled_collision_shape.offset
+        );
+
+        entity_commands.insert(CollisionShape(scaled_collision_shape));
+
+        tracing::info!(
+            "spawned moon: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",
+            orbital_distance = moon_template.orbital_distance,
+            orbital_period = moon_template.orbital_period
+        );
     }
 }

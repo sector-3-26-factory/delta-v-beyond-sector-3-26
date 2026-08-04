@@ -121,6 +121,11 @@
                 "value": 0.0,
                 "unit": "degrees"
             }
+        },
+        "animations_enabled": {
+            "description": "If true, mesh animations (e.g., moving clouds) will be played. Default: true.",
+            "type": "boolean",
+            "default": true
         }
     },
     "$defs": {

@@ -21,7 +21,7 @@
 //! These systems run in the `FixedUpdate` schedule at a fixed 60 Hz rate.
 //! They implement F=ma and tau=I*alpha integration (ADR-0017).
 
-use crate::celestial::{Planet, Sun};
+use crate::celestial::{Moon, Planet, Sun};
 use crate::constants::{GRAVITATIONAL_CONSTANT, GRAVITY_CUTOFF_RADIUS_M};
 use crate::rigid_body::{MassSource, RigidBody};
 use bevy::prelude::*;
@@ -140,12 +140,17 @@ pub fn integrate_angular_velocity_system(
 /// Updates the entity's `Transform` based on its `RigidBody` velocity
 /// and angular velocity.
 ///
-/// Excludes entities with `Sun` or `Planet` components, as those are
-/// handled by `sun_rotation_system` and `orbital_motion_system` respectively.
+/// Excludes entities with `Sun`, `Planet`, or `Moon` components, as those are
+/// handled by `sun_rotation_system`, `orbital_motion_system`, and `moon_rotation_system` respectively.
 #[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
 pub fn integrate_position_system(
     time: Res<'_, Time<Fixed>>,
-    mut bodies: Query<'_, '_, (&RigidBody, &mut Transform), (Without<Sun>, Without<Planet>)>,
+    mut bodies: Query<
+        '_,
+        '_,
+        (&RigidBody, &mut Transform),
+        (Without<Sun>, Without<Planet>, Without<Moon>),
+    >,
 ) {
     let delta_time = time.delta().as_secs_f32();
 
@@ -348,6 +353,58 @@ pub fn planet_rotation_system(
             "Planet {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_seconds:.1} s, axial_tilt={:.4} rad, orbital_inclination={:.4} rad",
             planet.axial_tilt,
             planet.orbital_inclination
+        );
+    }
+}
+
+/// Rotates moons around their tilted axis, accounting for orbital inclination.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The rotation period is in seconds (stored in the Moon component).
+/// The axial tilt is in radians (angle between rotation axis and orbital axis).
+/// The orbital inclination is in radians (angle between orbital plane and ecliptic).
+///
+/// The moon's rotation axis is computed as:
+/// 1. Start with orbital axis (Y, perpendicular to ecliptic)
+/// 2. Tilt by `orbital_inclination` around X axis (orbital plane inclination)
+/// 3. Tilt by `axial_tilt` around the line of nodes (X axis, intersection of orbital plane with ecliptic)
+///    This assumes longitude of ascending node = 0 for simplicity.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(clippy::needless_pass_by_value, clippy::explicit_iter_loop)]
+pub fn moon_rotation_system(
+    mut moons: Query<'_, '_, (Entity, &Moon, &mut Transform)>,
+    time: Res<'_, Time<Fixed>>,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    for (entity, moon, mut transform) in &mut moons {
+        let Some(rotation_period_seconds) = moon.rotation_period else {
+            continue;
+        };
+
+        // Compute rotation angle: (elapsed / period) * TAU
+        let angle = (elapsed / rotation_period_seconds) * std::f32::consts::TAU;
+
+        // Orbital axis: start with Y (ecliptic normal), tilt by orbital_inclination around X
+        let orbital_axis = Quat::from_axis_angle(Vec3::X, moon.orbital_inclination) * Vec3::Y;
+
+        // Moon's rotation axis: tilt orbital axis by axial_tilt around the line of nodes.
+        // The line of nodes is the intersection of the orbital plane with the ecliptic plane.
+        // Since we incline the orbital plane around the X axis, the X axis lies in both planes
+        // and is the line of nodes (assuming longitude of ascending node = 0).
+        // This gives a physically consistent tilt direction independent of orbital inclination.
+        let tilt_axis = Vec3::X;
+        let rotation_axis = Quat::from_axis_angle(tilt_axis, moon.axial_tilt) * orbital_axis;
+
+        // Set rotation around tilted axis
+        transform.rotation = Quat::from_axis_angle(rotation_axis, angle);
+
+        tracing::trace!(
+            "Moon {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_seconds:.1} s, axial_tilt={:.4} rad, orbital_inclination={:.4} rad",
+            moon.axial_tilt,
+            moon.orbital_inclination
         );
     }
 }
