@@ -65,6 +65,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         vulkan-tools \
         ca-certificates \
         python3-pip \
+        npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure ALSA to use PulseAudio as the default audio output.

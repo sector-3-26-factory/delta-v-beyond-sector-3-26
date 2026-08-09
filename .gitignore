@@ -40,3 +40,6 @@ docs/pending-ai-steps.md
 
 # Generated assets caches
 /assets/.cache/
+node_modules/
+package-lock.json
+package.json

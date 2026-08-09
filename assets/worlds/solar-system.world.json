@@ -7,7 +7,7 @@
             "id": "player_ship",
             "player_controlled": true,
             "position": {
-                "x": 2.27e11,
+                "x": 1.439e12,
                 "y": 0.0,
                 "z": 0.0
             }
@@ -132,6 +132,34 @@
                 "x": 8.05,
                 "y": 8.05,
                 "z": 8.05
+            }
+        },
+        {
+            "template": "planets/jupiter",
+            "id": "jupiter",
+            "position": {
+                "x": 7.785e11,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 6.9911e7,
+                "y": 6.9911e7,
+                "z": 6.9911e7
+            }
+        },
+        {
+            "template": "planets/saturn",
+            "id": "saturn",
+            "position": {
+                "x": 1.433e12,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 97053.33,
+                "y": 97053.33,
+                "z": 97053.33
             }
         }
     ]
