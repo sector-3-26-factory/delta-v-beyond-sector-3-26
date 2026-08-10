@@ -16,6 +16,7 @@ bevy = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 rand = { workspace = true }
+leafwing-input-manager = { workspace = true }
 delta-v-assets = { path = "../delta-v-assets", version = "0.0.1" }
 delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
 delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }

@@ -123,7 +123,7 @@ fn spawn_keybinding_row(
             Name::new(format!("LabelText_{action_name}")),
             Text::new(&action_display),
             TextFont {
-                font: theme.font.clone(),
+                font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                 font_size: UiTheme::TEXT_FONT_SIZE,
                 ..default()
             },
@@ -146,7 +146,7 @@ fn spawn_keybinding_row(
             Name::new(format!("ValueText_{action_name}")),
             Text::new(&key_text),
             TextFont {
-                font: theme.font.clone(),
+                font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                 font_size: UiTheme::TEXT_FONT_SIZE,
                 ..default()
             },

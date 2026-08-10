@@ -99,7 +99,7 @@ pub struct CameraSwitch;
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn camera_switch_system(
     mut events: MessageWriter<'_, CameraSwitched>,
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut active_camera: ResMut<'_, ActiveCameraName>,
     mut cycle_state: ResMut<'_, CameraSwitchCycleState>,
     mut query: Query<'_, '_, (Entity, &CameraName, &Camera3d, &'static mut Camera)>,

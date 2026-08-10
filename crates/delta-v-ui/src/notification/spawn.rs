@@ -63,7 +63,7 @@ pub fn spawn_notification(
                 Name::new("NotificationText"),
                 Text::new(&message),
                 TextFont {
-                    font: theme.font.clone(),
+                    font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                     font_size: config.font_size,
                     ..default()
                 },
