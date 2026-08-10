@@ -4,6 +4,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use bevy_world_serialization::WorldAssetRoot;
 use delta_v_core::input::ActionState;
 use delta_v_core::{FireWeapon, Health, PlayerShipEntity, ProjectileHit, SelectedWeapon, Weapon};
 use delta_v_physics::{CollisionDetected, RigidBody};
@@ -35,7 +36,7 @@ pub enum WeaponsSet {
 /// Only allows selecting weapons that exist on the ship.
 #[allow(clippy::needless_pass_by_value, clippy::missing_panics_doc)]
 pub fn weapon_selection_system(
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut selected_weapon: ResMut<'_, SelectedWeapon>,
     mut events: MessageWriter<'_, WeaponSelected>,
     ship_entity: Res<'_, PlayerShipEntity>,
@@ -110,7 +111,7 @@ pub fn weapon_selection_system(
 /// Fires from the currently selected weapon (child entity).
 #[allow(clippy::needless_pass_by_value)]
 pub fn fire_input_system(
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut weapon_state: ResMut<'_, WeaponState>,
     mut events: MessageWriter<'_, FireWeapon>,
     ship_entity: Res<'_, PlayerShipEntity>,
@@ -318,7 +319,7 @@ pub fn attach_projectile_meshes(
                 continue;
             }
             for scene_handle in &gltf.scenes {
-                let child = commands.spawn(SceneRoot(scene_handle.clone())).id();
+                let child = commands.spawn(WorldAssetRoot(scene_handle.clone())).id();
                 commands.entity(entity).add_child(child);
             }
             commands

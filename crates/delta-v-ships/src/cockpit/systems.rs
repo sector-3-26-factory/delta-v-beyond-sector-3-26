@@ -96,7 +96,7 @@ pub fn cockpit_station_cycle_system(
     mut active_station: ResMut<'_, ActiveCockpitStation>,
     query: Query<'_, '_, (Entity, &'static Children), With<CockpitOverlay>>,
     mut image_node_query: Query<'_, '_, &'static mut ImageNode>,
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut cycle_state: ResMut<'_, CockpitCycleState>,
     mut gauge_query: Query<
         '_,
@@ -404,7 +404,7 @@ pub fn velocity_vector_system(
     player_ship: Res<'_, PlayerShipEntity>,
     ship_query: Query<'_, '_, &'static RigidBody>,
     i18n: Res<'_, I18n>,
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     asset_server: Res<'_, AssetServer>,
     mut cache: ResMut<'_, ArrowTextureCache>,
     mut indicator_query: Query<
@@ -819,7 +819,7 @@ pub fn status_gauge_system(
 )]
 pub fn targeting_mode_toggle_system(
     mut mode: ResMut<'_, TargetingMode>,
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut events: MessageWriter<'_, delta_v_core::TargetingModeChanged>,
 ) {
     use super::components::TargetingModeType;
@@ -861,7 +861,7 @@ pub fn cycle_target_system(
     mut selected_target: ResMut<'_, SelectedTarget>,
     mut selected_nav_object: ResMut<'_, SelectedNavObject>,
     targeting_mode: Res<'_, super::components::TargetingMode>,
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     targetable_query: Query<
         '_,
         '_,

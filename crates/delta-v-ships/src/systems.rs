@@ -96,7 +96,7 @@ pub struct RotationRampState {
 /// until reaching full torque. This allows fine-grained rotation control.
 #[allow(clippy::needless_pass_by_value)]
 pub fn input_reader_system(
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     propulsion: Res<'_, ShipPropulsionConfig>,
     mut thrust_cmd: ResMut<'_, ThrustCommand>,
     mut torque_cmd: ResMut<'_, TorqueCommand>,
@@ -224,7 +224,7 @@ pub fn input_reader_system(
 /// Only allows selecting thrusters that exist on the ship.
 #[allow(clippy::needless_pass_by_value)]
 pub fn propulsion_selection_system(
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     player_ship: Res<'_, PlayerShipEntity>,
     mut propulsion_query: Query<'_, '_, &mut Propulsion>,
     mut config: ResMut<'_, ShipPropulsionConfig>,
@@ -328,7 +328,7 @@ fn ramp_factor(ramp_counter: &mut f32, ramp_ticks_max: u32) -> f32 {
 /// (i.e. on press, not on hold). Uses [`PreviousActions`] for edge detection.
 #[allow(clippy::needless_pass_by_value)]
 pub fn flight_assist_toggle_system(
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut prev: ResMut<'_, PreviousActions>,
     mut state: ResMut<'_, FlightAssistState>,
 ) {

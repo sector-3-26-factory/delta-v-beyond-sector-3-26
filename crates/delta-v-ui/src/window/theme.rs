@@ -61,13 +61,13 @@ impl UiTheme {
     pub const HEADER_PADDING: f32 = 5.0;
 
     /// Title text font size.
-    pub const TITLE_FONT_SIZE: f32 = 20.0;
+    pub const TITLE_FONT_SIZE: bevy::prelude::FontSize = bevy::prelude::FontSize::Px(20.0);
 
     /// Title text color.
     pub const TITLE_COLOR: Color = Color::WHITE;
 
     /// Hint text font size.
-    pub const HINT_FONT_SIZE: f32 = 14.0;
+    pub const HINT_FONT_SIZE: bevy::prelude::FontSize = bevy::prelude::FontSize::Px(14.0);
 
     /// Hint text color.
     pub const HINT_COLOR: Color = Color::srgb(0.7, 0.7, 0.7);
@@ -75,13 +75,13 @@ impl UiTheme {
     // --- Content ---
 
     /// Group header font size.
-    pub const GROUP_HEADER_FONT_SIZE: f32 = 14.0;
+    pub const GROUP_HEADER_FONT_SIZE: bevy::prelude::FontSize = bevy::prelude::FontSize::Px(14.0);
 
     /// Group header text color.
     pub const GROUP_HEADER_COLOR: Color = Color::srgb(1.0, 0.85, 0.0);
 
     /// General content text font size.
-    pub const TEXT_FONT_SIZE: f32 = 12.0;
+    pub const TEXT_FONT_SIZE: bevy::prelude::FontSize = bevy::prelude::FontSize::Px(12.0);
 
     /// Label text color (e.g. action names, primary text).
     pub const LABEL_COLOR: Color = Color::WHITE;

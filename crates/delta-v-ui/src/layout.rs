@@ -51,7 +51,7 @@ pub fn spawn_group_header(ui: &mut ChildSpawnerCommands<'_>, theme: &Res<'_, UiT
             Name::new("GroupHeaderText"),
             Text::new(text),
             TextFont {
-                font: theme.font.clone(),
+                font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                 font_size: UiTheme::GROUP_HEADER_FONT_SIZE,
                 ..default()
             },
@@ -99,7 +99,7 @@ pub fn spawn_grid_label_value_row(
             Name::new("LabelText"),
             Text::new(label),
             TextFont {
-                font: theme.font.clone(),
+                font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                 font_size: UiTheme::TEXT_FONT_SIZE,
                 ..default()
             },
@@ -122,7 +122,7 @@ pub fn spawn_grid_label_value_row(
             Name::new("ValueText"),
             Text::new(value),
             TextFont {
-                font: theme.font.clone(),
+                font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                 font_size: UiTheme::TEXT_FONT_SIZE,
                 ..default()
             },

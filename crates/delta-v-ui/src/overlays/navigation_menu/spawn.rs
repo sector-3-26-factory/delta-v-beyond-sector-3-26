@@ -139,7 +139,7 @@ fn navigation_menu_content(
                 BackgroundColor(row_bg_color),
                 Text::new(&entity_type_str),
                 TextFont {
-                    font: theme.font.clone(),
+                    font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                     font_size: UiTheme::TEXT_FONT_SIZE,
                     ..default()
                 },
@@ -161,7 +161,7 @@ fn navigation_menu_content(
                 BackgroundColor(row_bg_color),
                 Text::new(&entry.entity_id),
                 TextFont {
-                    font: theme.font.clone(),
+                    font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                     font_size: UiTheme::TEXT_FONT_SIZE,
                     ..default()
                 },
@@ -183,7 +183,7 @@ fn navigation_menu_content(
                 BackgroundColor(row_bg_color),
                 Text::new(&distance_str),
                 TextFont {
-                    font: theme.font.clone(),
+                    font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                     font_size: UiTheme::TEXT_FONT_SIZE,
                     ..default()
                 },
@@ -203,7 +203,7 @@ fn navigation_menu_content(
                 Name::new("EmptyList"),
                 Text::new(i18n.ui.menu.navigation.empty_list.clone()),
                 TextFont {
-                    font: theme.font.clone(),
+                    font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                     font_size: UiTheme::TEXT_FONT_SIZE,
                     ..default()
                 },

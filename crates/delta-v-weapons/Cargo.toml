@@ -13,6 +13,7 @@ categories = ["game-development"]
 
 [dependencies]
 bevy = { workspace = true }
+bevy_world_serialization = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-physics = { workspace = true }
 delta-v-spawn = { workspace = true }

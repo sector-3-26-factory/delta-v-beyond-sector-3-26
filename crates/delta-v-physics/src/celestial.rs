@@ -25,6 +25,7 @@
 
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use bevy_world_serialization::WorldAssetRoot;
 use delta_v_core::WorldEntityId;
 
 /// Component for sun entities.
@@ -107,7 +108,7 @@ pub fn attach_celestial_meshes(
                 continue;
             }
             for scene_handle in &gltf.scenes {
-                let child = commands.spawn(SceneRoot(scene_handle.clone())).id();
+                let child = commands.spawn((WorldAssetRoot(scene_handle.clone()),)).id();
                 commands.entity(entity).add_child(child);
             }
             commands.entity(entity).remove::<PendingCelestialMesh>();
@@ -137,13 +138,15 @@ pub fn make_sun_emissive(
             stack.push(child);
         }
         while let Some(entity) = stack.pop() {
-            if let Ok(mat_handle) = mesh_query.get(entity)
-                && let Some(material) = materials.get_mut(&mat_handle.0)
-            {
-                // Make the material emissive with a bright yellow-white color
-                // matching the light color (warm white: 1.0, 0.95, 0.8)
-                material.emissive = LinearRgba::new(1.0, 0.95, 0.8, 1.0);
-                tracing::debug!("Made sun descendant {entity:?} emissive (sun: {sun_entity:?})");
+            if let Ok(mat_handle) = mesh_query.get(entity) {
+                if let Some(ref mut material) = materials.get_mut(&mat_handle.0) {
+                    // Make the material emissive with a bright yellow-white color
+                    // matching the light color (warm white: 1.0, 0.95, 0.8)
+                    material.emissive = LinearRgba::new(1.0, 0.95, 0.8, 1.0);
+                    tracing::debug!(
+                        "Made sun descendant {entity:?} emissive (sun: {sun_entity:?})"
+                    );
+                }
             }
             // Add children to stack for depth-first traversal
             if let Ok(entity_children) = children_query.get(entity) {

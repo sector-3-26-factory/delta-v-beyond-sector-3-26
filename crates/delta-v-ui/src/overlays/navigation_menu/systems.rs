@@ -44,7 +44,7 @@ use crate::window::UiTheme;
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn navigation_menu_toggle_system(
     mut commands: Commands<'_, '_>,
-    action_state: Res<'_, ActionState<LogicalAction>>,
+    action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut menu_open: ResMut<'_, NavigationMenuOpen>,
     mut toggle_state: ResMut<'_, NavigationMenuToggleState>,
     query: Query<'_, '_, Entity, With<NavigationMenuRoot>>,

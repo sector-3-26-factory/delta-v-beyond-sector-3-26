@@ -35,7 +35,10 @@ fn build_input_app() -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.init_resource::<ActionState<LogicalAction>>();
+    // ActionState is now a component, not a resource. Spawn an entity with InputMap.
+    app.add_plugins(leafwing_input_manager::prelude::InputManagerPlugin::<
+        LogicalAction,
+    >::default());
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
     app.init_resource::<PreviousActions>();
@@ -50,6 +53,9 @@ fn build_input_app() -> App {
         rotation_ramp_ticks: 60,
         thrust_sound: None,
     });
+    // Spawn an entity with InputMap for ActionState
+    app.world_mut()
+        .spawn(leafwing_input_manager::prelude::InputMap::<LogicalAction>::default());
     app
 }
 
@@ -62,9 +68,10 @@ fn run_fixed_update(app: &mut App) {
     app.update();
 }
 
-/// Presses an action on the `ActionState` resource.
+/// Presses an action on the `ActionState` component.
 fn press_action(app: &mut App, action: LogicalAction) {
-    let mut action_state = app.world_mut().resource_mut::<ActionState<LogicalAction>>();
+    let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
+    let mut action_state = query.single_mut(app.world_mut());
     action_state.press(&action);
 }
 
@@ -74,7 +81,10 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.init_resource::<ActionState<LogicalAction>>();
+    // ActionState is now a component, not a resource. Spawn an entity with InputMap.
+    app.add_plugins(leafwing_input_manager::prelude::InputManagerPlugin::<
+        LogicalAction,
+    >::default());
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
     app.init_resource::<PreviousActions>();
@@ -89,6 +99,9 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
         rotation_ramp_ticks,
         thrust_sound: None,
     });
+    // Spawn an entity with InputMap for ActionState
+    app.world_mut()
+        .spawn(leafwing_input_manager::prelude::InputMap::<LogicalAction>::default());
     app
 }
 

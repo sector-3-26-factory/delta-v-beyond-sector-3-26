@@ -112,7 +112,7 @@ pub fn spawn_debug_axis_labels(
             commands.spawn((
                 Text::new(label_text),
                 TextFont {
-                    font_size: 16.0,
+                    font_size: bevy::prelude::FontSize::Px(16.0),
                     ..default()
                 },
                 TextColor(color),
