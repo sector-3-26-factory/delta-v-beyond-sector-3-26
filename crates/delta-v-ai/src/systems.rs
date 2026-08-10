@@ -145,8 +145,7 @@ pub fn skirmish_check_system(
 
     skirmish_state.player_alive = player_health
         .get(player_query.0)
-        .map(|h| !h.is_destroyed())
-        .unwrap_or(false);
+        .is_ok_and(|h| !h.is_destroyed());
 
     if !skirmish_state.player_alive {
         tracing::info!("Skirmish lost -- player destroyed");

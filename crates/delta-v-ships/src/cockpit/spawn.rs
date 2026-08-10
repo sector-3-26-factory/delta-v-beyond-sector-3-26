@@ -134,7 +134,7 @@ pub fn spawn_velocity_vector_indicator(
     commands.spawn((
         Text::new(""),
         TextFont {
-            font_size: 14.0,
+            font_size: bevy::prelude::FontSize::Px(14.0),
             ..default()
         },
         TextColor(Color::srgb(0.0, 1.0, 0.0)),

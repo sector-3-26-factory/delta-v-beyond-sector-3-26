@@ -27,6 +27,7 @@ use bevy::animation::graph::{AnimationGraph, AnimationGraphHandle};
 use bevy::animation::{AnimationClip, AnimationPlayer};
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
+use bevy_world_serialization::WorldAssetRoot;
 use delta_v_core::WorldEntityId;
 
 /// Component for sun entities.
@@ -139,7 +140,7 @@ pub fn attach_celestial_meshes(
                 continue;
             }
             for scene_handle in &gltf.scenes {
-                let child = commands.spawn(SceneRoot(scene_handle.clone())).id();
+                let child = commands.spawn((WorldAssetRoot(scene_handle.clone()),)).id();
                 commands.entity(entity).add_child(child);
 
                 // Debug: log the parent and child transforms
@@ -207,7 +208,7 @@ pub fn make_sun_emissive(
         }
         while let Some(entity) = stack.pop() {
             if let Ok(mat_handle) = mesh_query.get(entity)
-                && let Some(material) = materials.get_mut(&mat_handle.0)
+                && let Some(ref mut material) = materials.get_mut(&mat_handle.0)
             {
                 // Make the material emissive with a bright yellow-white color
                 // matching the light color (warm white: 1.0, 0.95, 0.8)

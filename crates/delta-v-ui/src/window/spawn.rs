@@ -259,7 +259,7 @@ pub fn spawn_window(
                     Name::new("Title"),
                     Text::new(&config.title),
                     TextFont {
-                        font: theme.font.clone(),
+                        font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                         font_size: UiTheme::TITLE_FONT_SIZE,
                         ..default()
                     },
@@ -271,7 +271,7 @@ pub fn spawn_window(
                     Name::new("Hint"),
                     Text::new(&config.hint),
                     TextFont {
-                        font: theme.font.clone(),
+                        font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                         font_size: UiTheme::HINT_FONT_SIZE,
                         ..default()
                     },

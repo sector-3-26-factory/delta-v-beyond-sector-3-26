@@ -20,7 +20,7 @@ pub struct NotificationConfig {
     /// Screen position for the first notification window (top-left corner).
     pub position: Vec2,
     /// Font size for notification text.
-    pub font_size: f32,
+    pub font_size: bevy::prelude::FontSize,
     /// Text color.
     pub color: Color,
     /// Flicker animation configuration.
@@ -47,7 +47,7 @@ impl Default for NotificationConfig {
         Self {
             window_size: Vec2::new(250.0, 30.0),
             position: Vec2::new(10.0, 10.0),
-            font_size: 16.0,
+            font_size: bevy::prelude::FontSize::Px(16.0),
             color: Color::srgb(0.0, 1.0, 1.0),
             animation: NotificationAnimation {
                 flicker_in_duration: 1.0,

@@ -124,7 +124,7 @@ pub fn update_collision_shape_debug_color(
 
     for (mat_handle, parent) in mesh_query.iter() {
         let is_colliding = colliding.contains(&parent.parent());
-        if let Some(mat) = materials.get_mut(&mat_handle.0) {
+        if let Some(mut mat) = materials.get_mut(&mat_handle.0) {
             mat.base_color = if is_colliding {
                 Color::srgb(1.0, 0.0, 0.0)
             } else {

@@ -591,16 +591,14 @@ fn collision_response_system(
             // SAFETY: We already validated the entity exists in the first pass
             all_bodies
                 .get(response.target)
-                .map(|(body, _)| 1.0 / body.mass)
-                .unwrap_or(0.0)
+                .map_or(0.0, |(body, _)| 1.0 / body.mass)
         };
         let inv_mass_b = if response.other_is_static {
             0.0
         } else {
             all_bodies
                 .get(response.other)
-                .map(|(body, _)| 1.0 / body.mass)
-                .unwrap_or(0.0)
+                .map_or(0.0, |(body, _)| 1.0 / body.mass)
         };
         let total_inv_mass = inv_mass_a + inv_mass_b;
 

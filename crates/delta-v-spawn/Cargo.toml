@@ -11,6 +11,7 @@ categories = ["game-development"]
 
 [dependencies]
 bevy = { workspace = true }
+bevy_world_serialization = { workspace = true }
 delta-v-types = { workspace = true }
 delta-v-json = { workspace = true }
 delta-v-assets = { workspace = true }
