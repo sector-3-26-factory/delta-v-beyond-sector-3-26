@@ -138,15 +138,13 @@ pub fn make_sun_emissive(
             stack.push(child);
         }
         while let Some(entity) = stack.pop() {
-            if let Ok(mat_handle) = mesh_query.get(entity) {
-                if let Some(ref mut material) = materials.get_mut(&mat_handle.0) {
-                    // Make the material emissive with a bright yellow-white color
-                    // matching the light color (warm white: 1.0, 0.95, 0.8)
-                    material.emissive = LinearRgba::new(1.0, 0.95, 0.8, 1.0);
-                    tracing::debug!(
-                        "Made sun descendant {entity:?} emissive (sun: {sun_entity:?})"
-                    );
-                }
+            if let Ok(mat_handle) = mesh_query.get(entity)
+                && let Some(ref mut material) = materials.get_mut(&mat_handle.0)
+            {
+                // Make the material emissive with a bright yellow-white color
+                // matching the light color (warm white: 1.0, 0.95, 0.8)
+                material.emissive = LinearRgba::new(1.0, 0.95, 0.8, 1.0);
+                tracing::debug!("Made sun descendant {entity:?} emissive (sun: {sun_entity:?})");
             }
             // Add children to stack for depth-first traversal
             if let Ok(entity_children) = children_query.get(entity) {

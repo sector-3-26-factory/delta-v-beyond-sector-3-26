@@ -190,8 +190,7 @@ pub fn process_fire_commands(
                 .find(|child| {
                     weapon_query
                         .get(*child)
-                        .map(|w| w.slot == event.weapon_index)
-                        .unwrap_or(false)
+                        .is_ok_and(|w| w.slot == event.weapon_index)
                 })
                 .and_then(|child| weapon_query.get(child).ok())
         });

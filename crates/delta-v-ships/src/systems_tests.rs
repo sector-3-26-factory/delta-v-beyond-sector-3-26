@@ -35,10 +35,8 @@ fn build_input_app() -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    // ActionState is now a component, not a resource. Spawn an entity with InputMap.
-    app.add_plugins(leafwing_input_manager::prelude::InputManagerPlugin::<
-        LogicalAction,
-    >::default());
+    // ActionState is a component. Spawn an entity with ActionState directly
+    // (tests manually press actions, so InputManagerPlugin is not needed).
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
     app.init_resource::<PreviousActions>();
@@ -53,9 +51,9 @@ fn build_input_app() -> App {
         rotation_ramp_ticks: 60,
         thrust_sound: None,
     });
-    // Spawn an entity with InputMap for ActionState
+    // Spawn an entity with ActionState for manual action pressing
     app.world_mut()
-        .spawn(leafwing_input_manager::prelude::InputMap::<LogicalAction>::default());
+        .spawn(leafwing_input_manager::prelude::ActionState::<LogicalAction>::default());
     app
 }
 
@@ -71,7 +69,9 @@ fn run_fixed_update(app: &mut App) {
 /// Presses an action on the `ActionState` component.
 fn press_action(app: &mut App, action: LogicalAction) {
     let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
-    let mut action_state = query.single_mut(app.world_mut());
+    let mut action_state = query
+        .single_mut(app.world_mut())
+        .expect("ActionState not found");
     action_state.press(&action);
 }
 
@@ -81,10 +81,8 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    // ActionState is now a component, not a resource. Spawn an entity with InputMap.
-    app.add_plugins(leafwing_input_manager::prelude::InputManagerPlugin::<
-        LogicalAction,
-    >::default());
+    // ActionState is a component. Spawn an entity with ActionState directly
+    // (tests manually press actions, so InputManagerPlugin is not needed).
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
     app.init_resource::<PreviousActions>();
@@ -99,9 +97,9 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
         rotation_ramp_ticks,
         thrust_sound: None,
     });
-    // Spawn an entity with InputMap for ActionState
+    // Spawn an entity with ActionState for manual action pressing
     app.world_mut()
-        .spawn(leafwing_input_manager::prelude::InputMap::<LogicalAction>::default());
+        .spawn(leafwing_input_manager::prelude::ActionState::<LogicalAction>::default());
     app
 }
 
@@ -338,7 +336,10 @@ fn test_flight_assist_toggle_off_on_second_press() {
 
     // Release the key by creating a fresh ActionState with no pressed actions
     {
-        let mut action_state = app.world_mut().resource_mut::<ActionState<LogicalAction>>();
+        let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
+        let mut action_state = query
+            .single_mut(app.world_mut())
+            .expect("ActionState not found");
         // Re-initialize to clear all pressed actions
         *action_state = ActionState::<LogicalAction>::default();
     }

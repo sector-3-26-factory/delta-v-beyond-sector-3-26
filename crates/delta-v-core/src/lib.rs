@@ -262,6 +262,7 @@ fn advance_from_boot(mut next: ResMut<'_, NextState<AppState>>) {
 /// Spawns an entity with the `InputMap<LogicalAction>` component built from the loaded keybindings.
 /// The `InputManagerPlugin` will automatically add an `ActionState<LogicalAction>` component
 /// to this entity via required components.
+#[allow(clippy::needless_pass_by_value)]
 fn spawn_input_map_entity(
     keybindings: Res<'_, input::KeybindingsResource>,
     mut commands: Commands<'_, '_>,
