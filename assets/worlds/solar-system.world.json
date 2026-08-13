@@ -7,7 +7,7 @@
             "id": "player_ship",
             "player_controlled": true,
             "position": {
-                "x": 1.439e12,
+                "x": 2.87599e12,
                 "y": 0.0,
                 "z": 0.0
             }
@@ -160,6 +160,20 @@
                 "x": 5.8232e7,
                 "y": 5.8232e7,
                 "z": 5.8232e7
+            }
+        },
+        {
+            "template": "planets/uranus",
+            "id": "uranus",
+            "position": {
+                "x": 2.875e12,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "scale": {
+                "x": 100069.24,
+                "y": 100069.24,
+                "z": 100069.24
             }
         }
     ]

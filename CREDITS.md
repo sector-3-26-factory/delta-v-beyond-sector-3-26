@@ -204,6 +204,17 @@ For license text, see the LICENSE file at the repository root.
 - **Modifications:**
   - Removed the moons. Moons are own objects in the game.
 
+### "Uranus (planet)"
+
+- **Creator:** [Nestaeric](https://sketchfab.com/Nestaeric)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/uranus-0009a69dbace44608c0bd09af9ba20db)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/uranus/mesh.glb`
+- **Modifications:**
+  - Removed the moon. Moons are separate objects in the game.
+  - Mesh centered at origin (was offset by ~[-21.8, 1.3, -15.7] in world space).
+
 ## Fonts
 
 ### DejaVu Sans Mono
