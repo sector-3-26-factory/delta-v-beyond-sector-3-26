@@ -194,20 +194,6 @@ For license text, see the LICENSE file at the repository root.
 - **Modifications:**
   - Converted material from specular/glossiness workflow (KHR_materials_pbrSpecularGlossiness extension) to standard metallic/roughness workflow for compatibility with Bevy's glTF loader.
 
-### "Saturn (planet)"
-
-- **Creator:** [Nestaeric (@Nestaeric)](https://sketchfab.com/Nestaeric)
-- **Source:** [Sketchfab](https://sketchfab.com/3d-models/saturn-c09a1970148c43ad99db134a9d6d00b5)
-- **License:** CC Attribution 4.0 (CC BY 4.0)
-- **License URL:** https://creativecommons.org/licenses/by/4.0/
-- **File:** `assets/templates/planets/saturn/mesh.glb`
-- **Modifications:**
-  - Converted material from specular/glossiness workflow (KHR_materials_pbrSpecularGlossiness extension) to standard metallic/roughness workflow for compatibility with Bevy's glTF loader.
-  - Centered mesh at origin (was offset by ~[-1365, -650, -1362] to [2199, 651, 1362] in world space).
-  - Collision shape uses planet radius only (60,000 km), excluding rings.
-  - Removed Mimas and Enceladus moon meshes (will be added as separate entities).
-  - Pruned unused objects using glTF-Transform.
-
 ## Fonts
 
 ### DejaVu Sans Mono
