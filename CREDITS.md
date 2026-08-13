@@ -194,6 +194,16 @@ For license text, see the LICENSE file at the repository root.
 - **Modifications:**
   - Converted material from specular/glossiness workflow (KHR_materials_pbrSpecularGlossiness extension) to standard metallic/roughness workflow for compatibility with Bevy's glTF loader.
 
+### "Saturn (planet)"
+
+- **Creator:** [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/saturn-planet-9ab1eb3bb97f4e4a9305c0aae2d280a6)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/saturn/mesh.glb`
+- **Modifications:**
+  - Removed the moons. Moons are own objects in the game.
+
 ## Fonts
 
 ### DejaVu Sans Mono
