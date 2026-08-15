@@ -44,11 +44,11 @@
                 },
                 "half_extents": {
                     "description": "Half-extents of the box (for box shape type).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "offset": {
                     "description": "Offset of the box center from the mesh center (for box shape type).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 }
             }
         },
@@ -63,11 +63,11 @@
             "properties": {
                 "min": {
                     "description": "Minimum corner (x, y, z in metres).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "max": {
                     "description": "Maximum corner (x, y, z in metres).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 }
             }
         },
@@ -75,29 +75,6 @@
             "description": "If true, this body generates gravity on other entities. Default: false (from schema).",
             "type": "boolean",
             "default": false
-        }
-    },
-    "$defs": {
-        "vec3": {
-            "description": "3-component vector (x, y, z) in metres. Each component uses value+unit format per ADR-0008.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "x",
-                "y",
-                "z"
-            ],
-            "properties": {
-                "x": {
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
-                },
-                "y": {
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
-                },
-                "z": {
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
-                }
-            }
         }
     }
 }

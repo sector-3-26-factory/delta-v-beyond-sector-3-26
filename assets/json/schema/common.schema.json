@@ -1,0 +1,64 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/common",
+    "title": "Common Type Definitions",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nShared type definitions used across multiple schemas. Referenced via cross-schema $ref.",
+    "type": "object",
+    "additionalProperties": false,
+    "$defs": {
+        "vec3": {
+            "description": "3-component vector (x, y, z) in metres. Each component uses value+unit format per ADR-0008.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "x",
+                "y",
+                "z"
+            ],
+            "properties": {
+                "x": {
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "y": {
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "z": {
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                }
+            }
+        },
+        "quat": {
+            "description": "Unit quaternion (x, y, z, w) for rotation. Defaults to identity (no rotation).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "x",
+                "y",
+                "z",
+                "w"
+            ],
+            "properties": {
+                "x": {
+                    "description": "X component of the quaternion imaginary part. Default 0.0.",
+                    "type": "number",
+                    "default": 0.0
+                },
+                "y": {
+                    "description": "Y component of the quaternion imaginary part. Default 0.0.",
+                    "type": "number",
+                    "default": 0.0
+                },
+                "z": {
+                    "description": "Z component of the quaternion imaginary part. Default 0.0.",
+                    "type": "number",
+                    "default": 0.0
+                },
+                "w": {
+                    "description": "W component (real/scalar part) of the quaternion. Default 1.0 (identity).",
+                    "type": "number",
+                    "default": 1.0
+                }
+            }
+        }
+    }
+}
