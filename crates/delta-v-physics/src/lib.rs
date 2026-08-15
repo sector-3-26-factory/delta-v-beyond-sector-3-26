@@ -60,9 +60,10 @@ use bevy::prelude::*;
 use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health, WorldSpawnSet};
 use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
-    clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
-    integrate_position_system, integrate_velocity_system, moon_orbital_motion_system,
-    moon_rotation_system, orbital_motion_system, planet_rotation_system, sun_rotation_system,
+    clear_accumulators_system, debug_position_logging_system, gravity_system,
+    integrate_angular_velocity_system, integrate_position_system, integrate_velocity_system,
+    moon_orbital_motion_system, moon_rotation_system, orbital_motion_system,
+    planet_rotation_system, sun_rotation_system,
 };
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
@@ -121,11 +122,23 @@ impl Plugin for PhysicsPlugin {
             ),
         );
 
-        // Floating origin recentering runs in FixedUpdate, before physics.
-        // This ensures positions are relative to the current origin before forces are applied.
+        // Debug position logging system - runs last in FixedUpdate to log final positions
         app.add_systems(
             FixedUpdate,
-            check_and_recenter_origin_system.run_if(in_state(AppState::InGame)),
+            debug_position_logging_system
+                .run_if(in_state(AppState::InGame))
+                .after(PhysicsSet::ClearAccumulators),
+        );
+
+        // Floating origin recentering runs in FixedUpdate, before physics.
+        // This ensures positions are relative to the current origin before forces are applied.
+        // Must run BEFORE PhysicsSet::AccumulateForces so that orbital_motion_system (which runs
+        // in PhysicsSet::IntegratePosition) doesn't get overwritten by recentering.
+        app.add_systems(
+            FixedUpdate,
+            check_and_recenter_origin_system
+                .run_if(in_state(AppState::InGame))
+                .before(PhysicsSet::AccumulateForces),
         );
 
         // Collision detection using avian3d.

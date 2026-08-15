@@ -13,14 +13,32 @@
     },
     "bounding_box": {
         "min": {
-            "x": -2.496,
-            "y": 0.004,
-            "z": -2.496
+            "x": {
+                "value": -2.496,
+                "unit": "m"
+            },
+            "y": {
+                "value": 0.004,
+                "unit": "m"
+            },
+            "z": {
+                "value": -2.496,
+                "unit": "m"
+            }
         },
         "max": {
-            "x": 2.496,
-            "y": 4.996,
-            "z": 2.496
+            "x": {
+                "value": 2.496,
+                "unit": "m"
+            },
+            "y": {
+                "value": 4.996,
+                "unit": "m"
+            },
+            "z": {
+                "value": 2.496,
+                "unit": "m"
+            }
         }
     },
     "is_gravity_source": true,

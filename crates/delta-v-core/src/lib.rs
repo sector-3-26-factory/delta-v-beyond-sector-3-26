@@ -56,9 +56,10 @@ pub use camera::{
     spawn_menu_camera,
 };
 pub use debug::{
-    AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig,
-    debug_axes_visibility_system, init_debug_axes_visibility, mark_debug_axes, render_debug_axes,
-    spawn_debug_axis_labels, update_debug_axis_labels, update_gizmo_render_layers,
+    AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, LightDebugPlugin,
+    debug_axes_visibility_system, debug_log_all_lights, debug_log_lights_once,
+    init_debug_axes_visibility, mark_debug_axes, render_debug_axes, spawn_debug_axis_labels,
+    update_debug_axis_labels, update_gizmo_render_layers,
 };
 pub use diagnostics::{DiagnosticsConfig, DiagnosticsPlugin};
 pub use events::{
@@ -98,6 +99,10 @@ impl Plugin for CorePlugin {
         app.init_state::<AppState>()
             .add_plugins(DiagnosticsPlugin)
             .add_plugins(input::InputManagerPlugin::<delta_v_types::LogicalAction>::default());
+
+        // LightDebugPlugin is a debug-only plugin; enable with `--features dev`
+        #[cfg(feature = "dev")]
+        app.add_plugins(debug::LightDebugPlugin);
 
         // Ensure ClashStrategy resource exists (required by update_action_state).
         app.init_resource::<leafwing_input_manager::prelude::ClashStrategy>();

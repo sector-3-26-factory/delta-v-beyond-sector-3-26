@@ -1,7 +1,7 @@
 {
     "entity_type": "moon",
     "mass": {
-        "value": 1.79e-9,
+        "value": 1.79e-09,
         "unit": "M_earth"
     },
     "collision_shape": {
@@ -13,14 +13,32 @@
     },
     "bounding_box": {
         "min": {
-            "x": -12.317,
-            "y": -9.982,
-            "z": -14.236
+            "x": {
+                "value": -12.317,
+                "unit": "m"
+            },
+            "y": {
+                "value": -9.982,
+                "unit": "m"
+            },
+            "z": {
+                "value": -14.236,
+                "unit": "m"
+            }
         },
         "max": {
-            "x": 12.054,
-            "y": 10.539,
-            "z": 12.802
+            "x": {
+                "value": 12.054,
+                "unit": "m"
+            },
+            "y": {
+                "value": 10.539,
+                "unit": "m"
+            },
+            "z": {
+                "value": 12.802,
+                "unit": "m"
+            }
         }
     },
     "is_gravity_source": true,

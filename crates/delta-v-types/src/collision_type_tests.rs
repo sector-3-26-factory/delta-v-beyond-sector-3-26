@@ -33,7 +33,7 @@ fn test_collision_shape_json_deserialize_sphere() {
 fn test_collision_shape_json_deserialize_box() {
     let json = r#"{
         "type": "box",
-        "half_extents": { "x": 1.0, "y": 2.0, "z": 3.0 }
+        "half_extents": { "x": {"value": 1.0, "unit": "m"}, "y": {"value": 2.0, "unit": "m"}, "z": {"value": 3.0, "unit": "m"} }
     }"#;
 
     let shape: CollisionShapeJson = serde_json::from_str(json).expect("should parse box JSON");
@@ -42,9 +42,9 @@ fn test_collision_shape_json_deserialize_box() {
     assert!(!shape.is_sphere());
     assert!(shape.half_extents.is_some());
     let he = &shape.half_extents.unwrap();
-    assert_eq!(he.x, 1.0);
-    assert_eq!(he.y, 2.0);
-    assert_eq!(he.z, 3.0);
+    assert_eq!(he.x.value, 1.0);
+    assert_eq!(he.y.value, 2.0);
+    assert_eq!(he.z.value, 3.0);
 }
 
 #[test]
@@ -52,16 +52,16 @@ fn test_collision_shape_json_deserialize_with_offset() {
     let json = r#"{
         "type": "sphere",
         "radius": { "value": 1.0, "unit": "m" },
-        "offset": { "x": 0.5, "y": 1.0, "z": -0.5 }
+        "offset": { "x": {"value": 0.5, "unit": "m"}, "y": {"value": 1.0, "unit": "m"}, "z": {"value": -0.5, "unit": "m"} }
     }"#;
 
     let shape: CollisionShapeJson =
         serde_json::from_str(json).expect("should parse sphere with offset");
     assert!(shape.offset.is_some());
     let offset = shape.offset.unwrap();
-    assert_eq!(offset.x, 0.5);
-    assert_eq!(offset.y, 1.0);
-    assert_eq!(offset.z, -0.5);
+    assert_eq!(offset.x.value, 0.5);
+    assert_eq!(offset.y.value, 1.0);
+    assert_eq!(offset.z.value, -0.5);
 }
 
 #[test]
@@ -81,9 +81,18 @@ fn test_collision_shape_json_shape_type_method() {
         shape_type: "box".to_string(),
         radius: None,
         half_extents: Some(Vec3Json {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
+            x: PhysicalQuantityJson {
+                value: 1.0,
+                unit: "m".to_string(),
+            },
+            y: PhysicalQuantityJson {
+                value: 1.0,
+                unit: "m".to_string(),
+            },
+            z: PhysicalQuantityJson {
+                value: 1.0,
+                unit: "m".to_string(),
+            },
         }),
         offset: None,
     };

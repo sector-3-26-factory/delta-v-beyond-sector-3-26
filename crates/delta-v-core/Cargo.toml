@@ -18,5 +18,8 @@ tracing = { workspace = true }
 delta-v-types = { workspace = true }
 leafwing-input-manager = { workspace = true }
 
+[features]
+dev = []
+
 [lints]
 workspace = true

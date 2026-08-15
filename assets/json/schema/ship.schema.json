@@ -100,9 +100,18 @@
                     "description": "Offset of the collision shape center from the entity origin in metres. Default (0,0,0) centers the collision shape on the entity. Use this to align the collision shape with the visual mesh when the mesh is not centered at the entity origin.",
                     "$ref": "#/$defs/vec3",
                     "default": {
-                        "x": 0,
-                        "y": 0,
-                        "z": 0
+                        "x": {
+                            "value": 0,
+                            "unit": "m"
+                        },
+                        "y": {
+                            "value": 0,
+                            "unit": "m"
+                        },
+                        "z": {
+                            "value": 0,
+                            "unit": "m"
+                        }
                     }
                 }
             }
@@ -138,7 +147,7 @@
     },
     "$defs": {
         "vec3": {
-            "description": "3-component vector (x, y, z) in metres.",
+            "description": "3-component vector (x, y, z) in metres. Each component uses value+unit format per ADR-0008.",
             "type": "object",
             "additionalProperties": false,
             "required": [
@@ -148,16 +157,13 @@
             ],
             "properties": {
                 "x": {
-                    "type": "number",
-                    "description": "X component (metres)."
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
                 },
                 "y": {
-                    "type": "number",
-                    "description": "Y component (metres)."
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
                 },
                 "z": {
-                    "type": "number",
-                    "description": "Z component (metres)."
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
                 }
             }
         }

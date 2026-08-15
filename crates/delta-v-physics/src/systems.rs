@@ -25,6 +25,7 @@ use crate::celestial::{Moon, Planet, Sun};
 use crate::constants::{GRAVITATIONAL_CONSTANT, GRAVITY_CUTOFF_RADIUS_M};
 use crate::rigid_body::{MassSource, RigidBody};
 use bevy::prelude::*;
+use delta_v_core::{FloatingOrigin, PlayerShipEntity, WorldEntityId};
 
 /// System set for physics integration, allowing ordered execution.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -495,6 +496,106 @@ pub fn moon_rotation_system(
             "Moon {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_seconds:.1} s, axial_tilt={:.4} rad, orbital_inclination={:.4} rad",
             moon.axial_tilt,
             moon.orbital_inclination
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Debug position logging system
+// ---------------------------------------------------------------------------
+
+type ShipQueryItem<'a> = (Entity, &'a Transform, &'a WorldEntityId, &'a RigidBody);
+type ShipQueryFilter = (Without<Planet>, Without<Moon>, Without<Sun>);
+
+/// Logs positions of all celestial bodies and the player ship relative to the player ship
+/// in floating origin space. Runs every fixed tick for debugging purposes.
+#[allow(clippy::needless_pass_by_value)]
+pub fn debug_position_logging_system(
+    time: Res<'_, Time<Fixed>>,
+    player_ship: Option<Res<'_, PlayerShipEntity>>,
+    floating_origin: Res<'_, FloatingOrigin>,
+    planets: Query<'_, '_, (Entity, &Planet, &Transform, &WorldEntityId)>,
+    moons: Query<'_, '_, (Entity, &Moon, &Transform, &WorldEntityId)>,
+    suns: Query<'_, '_, (Entity, &Sun, &Transform, &WorldEntityId)>,
+    ships: Query<'_, '_, ShipQueryItem<'_>, ShipQueryFilter>,
+) {
+    let Some(player) = player_ship else {
+        return;
+    };
+
+    // Get player ship transform and rigid body
+    let Ok((_, player_transform, player_world_id, player_rigid_body)) = ships.get(player.0) else {
+        return;
+    };
+
+    let player_pos = player_transform.translation;
+    let player_forward = player_transform.rotation * Vec3::NEG_Z; // Forward is -Z per ADR-0006
+    let player_velocity = player_rigid_body.velocity;
+    let elapsed = time.elapsed().as_secs_f32();
+
+    // Log player ship position (relative to floating origin), forward direction, and velocity
+    tracing::info!(
+        "TICK {:.3} | Player ({}): pos={:?} (floating_origin={:?}) forward={:?} velocity={:?}",
+        elapsed,
+        player_world_id.0,
+        player_pos,
+        floating_origin.offset,
+        player_forward,
+        player_velocity
+    );
+
+    // Log planets relative to player
+    for (_entity, _planet, transform, world_id) in &planets {
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Planet ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
+        );
+    }
+
+    // Log moons relative to player
+    for (_entity, _moon, transform, world_id) in &moons {
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Moon ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
+        );
+    }
+
+    // Log suns relative to player
+    for (_entity, _sun, transform, world_id) in &suns {
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Sun ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
+        );
+    }
+
+    // Log other ships relative to player
+    for (entity, transform, world_id, _rigid_body) in &ships {
+        if entity == player.0 {
+            continue;
+        }
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Ship ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
         );
     }
 }

@@ -3,105 +3,249 @@
     "cameras": {
         "cockpit": {
             "position": {
-                "x": 0,
-                "y": 0.05,
-                "z": 0.4
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.05,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.4,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": 0,
-                "y": 0,
-                "z": 1
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1,
+                    "unit": "m"
+                }
             },
             "available": true
         },
         "drone": {
             "position": {
-                "x": 0,
-                "y": 0.3,
-                "z": -2
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.3,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -2,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": 0,
-                "y": 0,
-                "z": 1
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1,
+                    "unit": "m"
+                }
             },
             "available": true
         },
         "rear": {
             "position": {
-                "x": 0,
-                "y": 0,
-                "z": -1.6
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -1.6,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": 0,
-                "y": 0,
-                "z": 1
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1,
+                    "unit": "m"
+                }
             },
             "available": true
         },
         "front": {
             "position": {
-                "x": 0,
-                "y": 0,
-                "z": 1.6
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.6,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": 0,
-                "y": 0,
-                "z": -1
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -1,
+                    "unit": "m"
+                }
             },
             "available": true
         },
         "left": {
             "position": {
-                "x": -1.6,
-                "y": 0,
-                "z": 0
+                "x": {
+                    "value": -1.6,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": 1,
-                "y": 0,
-                "z": 0
+                "x": {
+                    "value": 1,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "available": true
         },
         "right": {
             "position": {
-                "x": 1.6,
-                "y": 0,
-                "z": 0
+                "x": {
+                    "value": 1.6,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": -1,
-                "y": 0,
-                "z": 0
+                "x": {
+                    "value": -1,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "available": true
         },
         "top": {
             "position": {
-                "x": 0,
-                "y": 1.6,
-                "z": 0
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.6,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": 0,
-                "y": -1,
-                "z": 0
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": -1,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "available": true
         },
         "bottom": {
             "position": {
-                "x": 0,
-                "y": -1.6,
-                "z": 0
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": -1.6,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "target": {
-                "x": 0,
-                "y": 1,
-                "z": 0
+                "x": {
+                    "value": 0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0,
+                    "unit": "m"
+                }
             },
             "available": true
         }
@@ -113,5 +257,5 @@
                 "texture": "cockpit/default.png"
             }
         ]
-    },
+    }
 }

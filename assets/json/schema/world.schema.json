@@ -65,9 +65,18 @@
           "description": "Optional scale factor (x, y, z). Defaults to (1, 1, 1) (no scaling).",
           "$ref": "#/$defs/vec3",
           "default": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
+            "x": {
+              "value": 1.0,
+              "unit": "m"
+            },
+            "y": {
+              "value": 1.0,
+              "unit": "m"
+            },
+            "z": {
+              "value": 1.0,
+              "unit": "m"
+            }
           }
         },
         "player_controlled": {
@@ -89,7 +98,7 @@
       }
     },
     "vec3": {
-      "description": "3-component vector (x, y, z).",
+      "description": "3-component vector (x, y, z) in metres. Each component uses value+unit format per ADR-0008.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -99,16 +108,13 @@
       ],
       "properties": {
         "x": {
-          "description": "X component.",
-          "type": "number"
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
         },
         "y": {
-          "description": "Y component.",
-          "type": "number"
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
         },
         "z": {
-          "description": "Z component.",
-          "type": "number"
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
         }
       }
     },

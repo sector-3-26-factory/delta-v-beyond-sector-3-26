@@ -7,32 +7,68 @@
             "id": "player_ship",
             "player_controlled": true,
             "position": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
             }
         },
         {
             "template": "asteroids/daphne-planetoid-sebastiansosnowski",
             "id": "inspect_item",
             "position": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": -1600.0
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -1600.0,
+                    "unit": "m"
+                }
             },
             "scale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
             }
         },
         {
             "template": "ships/space-fighter-comrade1280",
             "id": "ship_1",
             "position": {
-                "x": 500.0,
-                "y": 0.0,
-                "z": -500.0
+                "x": {
+                    "value": 500.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -500.0,
+                    "unit": "m"
+                }
             },
             "rotation": {
                 "x": 0.0,
@@ -41,9 +77,18 @@
                 "w": 1.0
             },
             "scale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
             }
         }
     ]
