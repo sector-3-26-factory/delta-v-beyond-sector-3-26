@@ -41,11 +41,11 @@
             "properties": {
                 "min": {
                     "description": "Minimum corner (x, y, z in metres).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "max": {
                     "description": "Maximum corner (x, y, z in metres).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 }
             }
         },
@@ -94,15 +94,24 @@
                 },
                 "half_extents": {
                     "description": "Half-extents of the box (for box shape type).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "offset": {
                     "description": "Offset of the collision shape center from the entity origin in metres. Default (0,0,0) centers the collision shape on the entity. Use this to align the collision shape with the visual mesh when the mesh is not centered at the entity origin.",
-                    "$ref": "#/$defs/vec3",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3",
                     "default": {
-                        "x": 0,
-                        "y": 0,
-                        "z": 0
+                        "x": {
+                            "value": 0,
+                            "unit": "m"
+                        },
+                        "y": {
+                            "value": 0,
+                            "unit": "m"
+                        },
+                        "z": {
+                            "value": 0,
+                            "unit": "m"
+                        }
                     }
                 }
             }
@@ -133,32 +142,6 @@
             "default": {
                 "value": 100.0,
                 "unit": "hp"
-            }
-        }
-    },
-    "$defs": {
-        "vec3": {
-            "description": "3-component vector (x, y, z) in metres.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "x",
-                "y",
-                "z"
-            ],
-            "properties": {
-                "x": {
-                    "type": "number",
-                    "description": "X component (metres)."
-                },
-                "y": {
-                    "type": "number",
-                    "description": "Y component (metres)."
-                },
-                "z": {
-                    "type": "number",
-                    "description": "Z component (metres)."
-                }
             }
         }
     }

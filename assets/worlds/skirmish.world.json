@@ -7,9 +7,18 @@
             "id": "player_ship",
             "player_controlled": true,
             "position": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
             }
         },
         {
@@ -17,9 +26,18 @@
             "id": "enemy_1",
             "ai_task": "patrol",
             "position": {
-                "x": 500.0,
-                "y": 0.0,
-                "z": 1000.0
+                "x": {
+                    "value": 500.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1000.0,
+                    "unit": "m"
+                }
             }
         },
         {
@@ -27,9 +45,18 @@
             "id": "enemy_2",
             "ai_task": "patrol",
             "position": {
-                "x": -300.0,
-                "y": 100.0,
-                "z": 800.0
+                "x": {
+                    "value": -300.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 100.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 800.0,
+                    "unit": "m"
+                }
             }
         }
     ]

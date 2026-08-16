@@ -42,11 +42,11 @@
                 },
                 "half_extents": {
                     "description": "Half-extents of the box (for box shape type).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "offset": {
                     "description": "Offset of the box center from the mesh center (for box shape type).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 }
             }
         },
@@ -61,11 +61,11 @@
             "properties": {
                 "min": {
                     "description": "Minimum corner (x, y, z in metres).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "max": {
                     "description": "Maximum corner (x, y, z in metres).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 }
             }
         },
@@ -124,32 +124,6 @@
             "default": {
                 "value": 6e12,
                 "unit": "m"
-            }
-        }
-    },
-    "$defs": {
-        "vec3": {
-            "description": "3-component vector (x, y, z) in metres.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "x",
-                "y",
-                "z"
-            ],
-            "properties": {
-                "x": {
-                    "type": "number",
-                    "description": "X component (metres)."
-                },
-                "y": {
-                    "type": "number",
-                    "description": "Y component (metres)."
-                },
-                "z": {
-                    "type": "number",
-                    "description": "Z component (metres)."
-                }
             }
         }
     }

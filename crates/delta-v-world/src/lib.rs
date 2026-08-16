@@ -51,8 +51,8 @@ pub use resources::WorldPath;
 
 use bevy::prelude::*;
 use delta_v_assets::template::{
-    load_ai_controlled_ship, load_asteroid, load_planet, load_player_controlled_ship, load_ship,
-    load_sun, load_world,
+    load_ai_controlled_ship, load_asteroid, load_moon, load_planet, load_player_controlled_ship,
+    load_ship, load_sun, load_world,
 };
 use delta_v_core::AppState;
 
@@ -191,6 +191,9 @@ fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
     } else if template_short.starts_with("planets/") {
         // INVARIANT: planet template is required by schema (ADR-0013)
         load_planet(template_short).expect("planet template must load successfully")
+    } else if template_short.starts_with("moons/") {
+        // INVARIANT: moon template is required by schema (ADR-0013)
+        load_moon(template_short).expect("moon template must load successfully")
     } else {
         // INVARIANT: ship template is required by schema (ADR-0013)
         load_ship(template_short).expect("ship template must load successfully")

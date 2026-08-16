@@ -70,7 +70,7 @@
             }
         },
         "entity_types": {
-            "description": "Entity type translations (e.g., ship, asteroid, station, sun, planet).",
+            "description": "Entity type translations (e.g., ship, asteroid, station, sun, planet, moon).",
             "type": "object",
             "additionalProperties": false,
             "required": [
@@ -78,7 +78,8 @@
                 "asteroid",
                 "station",
                 "sun",
-                "planet"
+                "planet",
+                "moon"
             ],
             "properties": {
                 "ship": {
@@ -99,6 +100,10 @@
                 },
                 "planet": {
                     "description": "Planet entity type translation.",
+                    "type": "string"
+                },
+                "moon": {
+                    "description": "Moon entity type translation.",
                     "type": "string"
                 }
             }

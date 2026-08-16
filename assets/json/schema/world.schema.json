@@ -49,11 +49,11 @@
         },
         "position": {
           "description": "Spawn position in world coordinates (metres). Coordinate system is right-handed, +Y up, -Z forward per ADR-0006.",
-          "$ref": "#/$defs/vec3"
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
         },
         "rotation": {
           "description": "Optional rotation as a unit quaternion (x, y, z, w). Defaults to identity (no rotation).",
-          "$ref": "#/$defs/quat",
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/quat",
           "default": {
             "x": 0.0,
             "y": 0.0,
@@ -63,11 +63,20 @@
         },
         "scale": {
           "description": "Optional scale factor (x, y, z). Defaults to (1, 1, 1) (no scaling).",
-          "$ref": "#/$defs/vec3",
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3",
           "default": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
+            "x": {
+              "value": 1.0,
+              "unit": "m"
+            },
+            "y": {
+              "value": 1.0,
+              "unit": "m"
+            },
+            "z": {
+              "value": 1.0,
+              "unit": "m"
+            }
           }
         },
         "player_controlled": {
@@ -86,63 +95,6 @@
           "description": "Optional mass override. If present, this value overrides the template's mass. Mass is NOT scaled with the scale factor - it is used as-is or overridden. Per ADR-0008, uses value+unit format. Units: kg, t, M_earth, M_sun. Converted to kilograms at load time.",
           "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         }
-      }
-    },
-    "vec3": {
-      "description": "3-component vector (x, y, z).",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "x",
-        "y",
-        "z"
-      ],
-      "properties": {
-        "x": {
-          "description": "X component.",
-          "type": "number"
-        },
-        "y": {
-          "description": "Y component.",
-          "type": "number"
-        },
-        "z": {
-          "description": "Z component.",
-          "type": "number"
-        }
-      }
-    },
-    "quat": {
-      "description": "Unit quaternion (x, y, z, w) for rotation. Defaults to identity (no rotation).",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "x": {
-          "description": "X component of the quaternion imaginary part. Default 0.0.",
-          "type": "number",
-          "default": 0.0
-        },
-        "y": {
-          "description": "Y component of the quaternion imaginary part. Default 0.0.",
-          "type": "number",
-          "default": 0.0
-        },
-        "z": {
-          "description": "Z component of the quaternion imaginary part. Default 0.0.",
-          "type": "number",
-          "default": 0.0
-        },
-        "w": {
-          "description": "W component (real/scalar part) of the quaternion. Default 1.0 (identity).",
-          "type": "number",
-          "default": 1.0
-        }
-      },
-      "default": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 1.0
       }
     }
   }

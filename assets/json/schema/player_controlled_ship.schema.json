@@ -83,39 +83,15 @@
             "properties": {
                 "position": {
                     "description": "Camera position relative to ship center (metres).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "target": {
                     "description": "Point the camera looks at, relative to ship center (metres). Direction = normalize(target - position).",
-                    "$ref": "#/$defs/vec3"
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/vec3"
                 },
                 "available": {
                     "description": "If true, this camera is physically present and accessible. If false, the position/target are computed but the camera is not available to the player.",
                     "type": "boolean"
-                }
-            }
-        },
-        "vec3": {
-            "description": "3-component vector (x, y, z) in metres.",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "x",
-                "y",
-                "z"
-            ],
-            "properties": {
-                "x": {
-                    "type": "number",
-                    "description": "X component (metres)."
-                },
-                "y": {
-                    "type": "number",
-                    "description": "Y component (metres)."
-                },
-                "z": {
-                    "type": "number",
-                    "description": "Z component (metres)."
                 }
             }
         }

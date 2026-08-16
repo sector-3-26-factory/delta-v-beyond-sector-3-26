@@ -21,10 +21,11 @@
 //! These systems run in the `FixedUpdate` schedule at a fixed 60 Hz rate.
 //! They implement F=ma and tau=I*alpha integration (ADR-0017).
 
-use crate::celestial::{Planet, Sun};
+use crate::celestial::{Moon, Planet, Sun};
 use crate::constants::{GRAVITATIONAL_CONSTANT, GRAVITY_CUTOFF_RADIUS_M};
 use crate::rigid_body::{MassSource, RigidBody};
 use bevy::prelude::*;
+use delta_v_core::{FloatingOrigin, PlayerShipEntity, WorldEntityId};
 
 /// System set for physics integration, allowing ordered execution.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -140,12 +141,17 @@ pub fn integrate_angular_velocity_system(
 /// Updates the entity's `Transform` based on its `RigidBody` velocity
 /// and angular velocity.
 ///
-/// Excludes entities with `Sun` or `Planet` components, as those are
-/// handled by `sun_rotation_system` and `orbital_motion_system` respectively.
+/// Excludes entities with `Sun`, `Planet`, or `Moon` components, as those are
+/// handled by `sun_rotation_system`, `orbital_motion_system`, and `moon_rotation_system` respectively.
 #[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
 pub fn integrate_position_system(
     time: Res<'_, Time<Fixed>>,
-    mut bodies: Query<'_, '_, (&RigidBody, &mut Transform), (Without<Sun>, Without<Planet>)>,
+    mut bodies: Query<
+        '_,
+        '_,
+        (&RigidBody, &mut Transform),
+        (Without<Sun>, Without<Planet>, Without<Moon>),
+    >,
 ) {
     let delta_time = time.delta().as_secs_f32();
 
@@ -185,10 +191,10 @@ pub fn clear_accumulators_system(mut bodies: Query<'_, '_, &mut RigidBody>) {
 ///
 /// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
 #[allow(
-    clippy::needless_pass_by_value,
-    clippy::explicit_iter_loop,
-    clippy::suboptimal_flops,
-    clippy::type_complexity
+    clippy::needless_pass_by_value, // Bevy system parameters require pass-by-value
+    clippy::explicit_iter_loop, // Manual iteration needed for ParamSet borrow splitting
+    clippy::suboptimal_flops, // Trigonometric operations are inherent to orbital mechanics
+    clippy::type_complexity // ParamSet with two queries is required for borrow separation
 )]
 pub fn orbital_motion_system(
     time: Res<'_, Time<Fixed>>,
@@ -207,7 +213,7 @@ pub fn orbital_motion_system(
     let elapsed = time.elapsed().as_secs_f32();
 
     // First pass: collect all planet data
-    let planet_data: Vec<(Entity, Entity, f32, f32, f32, f32, f32)> = planets
+    let planet_data: Vec<(Entity, Entity, f32, f32, f32, f32)> = planets
         .iter()
         .map(|(entity, planet)| {
             (
@@ -217,7 +223,6 @@ pub fn orbital_motion_system(
                 planet.orbital_period,
                 planet.orbital_inclination,
                 planet.initial_orbital_angle,
-                planet.orbital_eccentricity,
             )
         })
         .collect();
@@ -229,14 +234,105 @@ pub fn orbital_motion_system(
         // Pre-compute all parent positions to avoid holding the immutable borrow
         // while we need mutable access later
         let mut parent_positions: Vec<(Entity, Vec3)> = Vec::new();
-        for (entity, parent_id, distance, period, inclination, initial_angle, _eccentricity) in
-            &planet_data
-        {
+        for (entity, parent_id, distance, period, inclination, initial_angle) in &planet_data {
             // Get parent position. The Sun is now included in the query, so we get its
             // actual position after floating origin recentering. For other parents, query their position.
-            let parent_pos = parents
-                .get(*parent_id)
-                .map_or(Vec3::ZERO, |parent_transform| parent_transform.translation);
+            // If parent is not found, skip this entity (it has no valid orbital parent).
+            let Ok(parent_transform) = parents.get(*parent_id) else {
+                continue;
+            };
+            let parent_pos = parent_transform.translation;
+
+            // Compute current angle: initial + (elapsed / period) * TAU
+            // This gives us the angle in radians around the orbital circle
+            let angle = (elapsed / *period).mul_add(std::f32::consts::TAU, *initial_angle);
+
+            // Compute position in the orbital plane (X-Z plane, Y=0)
+            // Then apply inclination: y_offset = distance * sin(inclination) * sin(angle)
+            let x_offset = distance * angle.cos();
+            let z_offset = distance * angle.sin();
+            let y_offset = distance * inclination.sin() * angle.sin();
+
+            let new_pos = parent_pos + Vec3::new(x_offset, y_offset, z_offset);
+            parent_positions.push((*entity, new_pos));
+        }
+
+        // Now get mutable access and apply updates
+        let mut transforms = transform_set.p1();
+        for (entity, new_pos) in parent_positions {
+            if let Ok(mut transform) = transforms.get_mut(entity) {
+                transform.translation = new_pos;
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Moon orbital motion system (ADR-0017)
+// ---------------------------------------------------------------------------
+
+/// Updates the position of moons along their orbital paths.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The orbital motion uses circular orbits with optional inclination.
+/// Position is computed relative to the parent body's current position.
+/// This is essential because the parent planet is also moving in its orbit,
+/// so the moon's position must be updated relative to the planet's current position.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(
+    clippy::needless_pass_by_value, // Bevy system parameters require pass-by-value
+    clippy::explicit_iter_loop, // Manual iteration needed for ParamSet borrow splitting
+    clippy::suboptimal_flops, // Trigonometric operations are inherent to orbital mechanics
+    clippy::type_complexity // ParamSet with two queries is required for borrow separation
+)]
+pub fn moon_orbital_motion_system(
+    time: Res<'_, Time<Fixed>>,
+    moons: Query<'_, '_, (Entity, &Moon)>,
+    // Use ParamSet to separate immutable and mutable access to Transform.
+    // Include Planet in the parent query so we get its actual position after orbital motion.
+    mut transform_set: ParamSet<
+        '_,
+        '_,
+        (
+            Query<'_, '_, &Transform>,
+            Query<'_, '_, &mut Transform, Without<Planet>>,
+        ),
+    >,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    // First pass: collect all moon data
+    let moon_data: Vec<(Entity, Entity, f32, f32, f32, f32)> = moons
+        .iter()
+        .map(|(entity, moon)| {
+            (
+                entity,
+                moon.orbital_parent,
+                moon.orbital_distance,
+                moon.orbital_period,
+                moon.orbital_inclination,
+                moon.initial_orbital_angle,
+            )
+        })
+        .collect();
+
+    // Get immutable access to parent positions first
+    {
+        let parents = transform_set.p0();
+
+        // Pre-compute all parent positions to avoid holding the immutable borrow
+        // while we need mutable access later
+        let mut parent_positions: Vec<(Entity, Vec3)> = Vec::new();
+        for (entity, parent_id, distance, period, inclination, initial_angle) in &moon_data {
+            // Get parent position. The Planet is now included in the query, so we get its
+            // actual position after orbital motion. For other parents, query their position.
+            // If parent is not found, skip this entity (it has no valid orbital parent).
+            let Ok(parent_transform) = parents.get(*parent_id) else {
+                continue;
+            };
+            let parent_pos = parent_transform.translation;
 
             // Compute current angle: initial + (elapsed / period) * TAU
             // This gives us the angle in radians around the orbital circle
@@ -348,6 +444,158 @@ pub fn planet_rotation_system(
             "Planet {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_seconds:.1} s, axial_tilt={:.4} rad, orbital_inclination={:.4} rad",
             planet.axial_tilt,
             planet.orbital_inclination
+        );
+    }
+}
+
+/// Rotates moons around their tilted axis, accounting for orbital inclination.
+///
+/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+///
+/// The rotation period is in seconds (stored in the Moon component).
+/// The axial tilt is in radians (angle between rotation axis and orbital axis).
+/// The orbital inclination is in radians (angle between orbital plane and ecliptic).
+///
+/// The moon's rotation axis is computed as:
+/// 1. Start with orbital axis (Y, perpendicular to ecliptic)
+/// 2. Tilt by `orbital_inclination` around X axis (orbital plane inclination)
+/// 3. Tilt by `axial_tilt` around the line of nodes (X axis, intersection of orbital plane with ecliptic)
+///    This assumes longitude of ascending node = 0 for simplicity.
+///
+/// Runs in [`PhysicsSet::IntegratePosition`] each fixed tick.
+#[allow(clippy::needless_pass_by_value, clippy::explicit_iter_loop)]
+pub fn moon_rotation_system(
+    mut moons: Query<'_, '_, (Entity, &Moon, &mut Transform)>,
+    time: Res<'_, Time<Fixed>>,
+) {
+    let elapsed = time.elapsed().as_secs_f32();
+
+    for (entity, moon, mut transform) in &mut moons {
+        let Some(rotation_period_seconds) = moon.rotation_period else {
+            continue;
+        };
+
+        // Compute rotation angle: (elapsed / period) * TAU
+        let angle = (elapsed / rotation_period_seconds) * std::f32::consts::TAU;
+
+        // Orbital axis: start with Y (ecliptic normal), tilt by orbital_inclination around X
+        let orbital_axis = Quat::from_axis_angle(Vec3::X, moon.orbital_inclination) * Vec3::Y;
+
+        // Moon's rotation axis: tilt orbital axis by axial_tilt around the line of nodes.
+        // The line of nodes is the intersection of the orbital plane with the ecliptic plane.
+        // Since we incline the orbital plane around the X axis, the X axis lies in both planes
+        // and is the line of nodes (assuming longitude of ascending node = 0).
+        // This gives a physically consistent tilt direction independent of orbital inclination.
+        let tilt_axis = Vec3::X;
+        let rotation_axis = Quat::from_axis_angle(tilt_axis, moon.axial_tilt) * orbital_axis;
+
+        // Set rotation around tilted axis
+        transform.rotation = Quat::from_axis_angle(rotation_axis, angle);
+
+        tracing::trace!(
+            "Moon {entity:?} rotation: angle={angle:.4} rad, period={rotation_period_seconds:.1} s, axial_tilt={:.4} rad, orbital_inclination={:.4} rad",
+            moon.axial_tilt,
+            moon.orbital_inclination
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Debug position logging system
+// ---------------------------------------------------------------------------
+
+type ShipQueryItem<'a> = (Entity, &'a Transform, &'a WorldEntityId, &'a RigidBody);
+type ShipQueryFilter = (Without<Planet>, Without<Moon>, Without<Sun>);
+
+/// Logs positions of all celestial bodies and the player ship relative to the player ship
+/// in floating origin space. Runs every fixed tick for debugging purposes.
+#[allow(clippy::needless_pass_by_value)]
+pub fn debug_position_logging_system(
+    time: Res<'_, Time<Fixed>>,
+    player_ship: Option<Res<'_, PlayerShipEntity>>,
+    floating_origin: Res<'_, FloatingOrigin>,
+    planets: Query<'_, '_, (Entity, &Planet, &Transform, &WorldEntityId)>,
+    moons: Query<'_, '_, (Entity, &Moon, &Transform, &WorldEntityId)>,
+    suns: Query<'_, '_, (Entity, &Sun, &Transform, &WorldEntityId)>,
+    ships: Query<'_, '_, ShipQueryItem<'_>, ShipQueryFilter>,
+) {
+    let Some(player) = player_ship else {
+        return;
+    };
+
+    // Get player ship transform and rigid body
+    let Ok((_, player_transform, player_world_id, player_rigid_body)) = ships.get(player.0) else {
+        return;
+    };
+
+    let player_pos = player_transform.translation;
+    let player_forward = player_transform.rotation * Vec3::NEG_Z; // Forward is -Z per ADR-0006
+    let player_velocity = player_rigid_body.velocity;
+    let elapsed = time.elapsed().as_secs_f32();
+
+    // Log player ship position (relative to floating origin), forward direction, and velocity
+    tracing::info!(
+        "TICK {:.3} | Player ({}): pos={:?} (floating_origin={:?}) forward={:?} velocity={:?}",
+        elapsed,
+        player_world_id.0,
+        player_pos,
+        floating_origin.offset,
+        player_forward,
+        player_velocity
+    );
+
+    // Log planets relative to player
+    for (_entity, _planet, transform, world_id) in &planets {
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Planet ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
+        );
+    }
+
+    // Log moons relative to player
+    for (_entity, _moon, transform, world_id) in &moons {
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Moon ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
+        );
+    }
+
+    // Log suns relative to player
+    for (_entity, _sun, transform, world_id) in &suns {
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Sun ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
+        );
+    }
+
+    // Log other ships relative to player
+    for (entity, transform, world_id, _rigid_body) in &ships {
+        if entity == player.0 {
+            continue;
+        }
+        let rel_pos = transform.translation - player_pos;
+        let dist = rel_pos.length();
+        tracing::info!(
+            "TICK {:.3} | Ship ({}): rel_pos={:?}, dist={:.1} m",
+            elapsed,
+            world_id.0,
+            rel_pos,
+            dist
         );
     }
 }

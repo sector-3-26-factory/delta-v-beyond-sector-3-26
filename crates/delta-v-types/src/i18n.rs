@@ -82,6 +82,8 @@ pub struct EntityTypeTranslations {
     pub sun: String,
     /// Planet entity type translation.
     pub planet: String,
+    /// Moon entity type translation.
+    pub moon: String,
 }
 
 /// UI translations.

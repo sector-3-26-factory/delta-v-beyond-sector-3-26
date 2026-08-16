@@ -18,7 +18,7 @@ path = "src/main.rs"
 [features]
 # Enable hot-reload of configs and extra debug overlays.
 # See ADR-0035.
-dev = ["delta-v-config/dev", "delta-v-ui/dev"]
+dev = ["delta-v-config/dev", "delta-v-ui/dev", "delta-v-core/dev"]
 
 [dependencies]
 delta-v-core = { workspace = true }

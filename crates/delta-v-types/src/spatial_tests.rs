@@ -6,6 +6,7 @@
 
 use bevy::prelude::{Quat, Vec3};
 
+use crate::physics::PhysicalQuantityJson;
 use crate::spatial::{BoundingBoxJson, QuatJson, Vec3Json};
 
 // ---------------------------------------------------------------------------
@@ -15,9 +16,18 @@ use crate::spatial::{BoundingBoxJson, QuatJson, Vec3Json};
 #[test]
 fn test_vec3_json_to_vec3() {
     let v = Vec3Json {
-        x: 1.0,
-        y: 2.0,
-        z: 3.0,
+        x: PhysicalQuantityJson {
+            value: 1.0,
+            unit: "m".to_string(),
+        },
+        y: PhysicalQuantityJson {
+            value: 2.0,
+            unit: "m".to_string(),
+        },
+        z: PhysicalQuantityJson {
+            value: 3.0,
+            unit: "m".to_string(),
+        },
     };
     let bevy_vec: Vec3 = v.into();
     assert_eq!(bevy_vec, Vec3::new(1.0, 2.0, 3.0));
@@ -26,9 +36,18 @@ fn test_vec3_json_to_vec3() {
 #[test]
 fn test_vec3_json_negative() {
     let v = Vec3Json {
-        x: -1.5,
-        y: 0.0,
-        z: 4.2,
+        x: PhysicalQuantityJson {
+            value: -1.5,
+            unit: "m".to_string(),
+        },
+        y: PhysicalQuantityJson {
+            value: 0.0,
+            unit: "m".to_string(),
+        },
+        z: PhysicalQuantityJson {
+            value: 4.2,
+            unit: "m".to_string(),
+        },
     };
     let bevy_vec: Vec3 = v.into();
     assert_eq!(bevy_vec, Vec3::new(-1.5, 0.0, 4.2));
@@ -37,9 +56,18 @@ fn test_vec3_json_negative() {
 #[test]
 fn test_vec3_json_zero() {
     let v = Vec3Json {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
+        x: PhysicalQuantityJson {
+            value: 0.0,
+            unit: "m".to_string(),
+        },
+        y: PhysicalQuantityJson {
+            value: 0.0,
+            unit: "m".to_string(),
+        },
+        z: PhysicalQuantityJson {
+            value: 0.0,
+            unit: "m".to_string(),
+        },
     };
     let bevy_vec: Vec3 = v.into();
     assert_eq!(bevy_vec, Vec3::ZERO);
@@ -85,18 +113,25 @@ fn test_quat_json_to_quat_90_deg_y() {
 // BoundingBoxJson
 // ---------------------------------------------------------------------------
 
+fn pq(value: f32) -> PhysicalQuantityJson {
+    PhysicalQuantityJson {
+        value,
+        unit: "m".to_string(),
+    }
+}
+
 #[test]
 fn test_bounding_box_size_cube() {
     let bbox = BoundingBoxJson {
         min: Vec3Json {
-            x: -1.0,
-            y: -1.0,
-            z: -1.0,
+            x: pq(-1.0),
+            y: pq(-1.0),
+            z: pq(-1.0),
         },
         max: Vec3Json {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
+            x: pq(1.0),
+            y: pq(1.0),
+            z: pq(1.0),
         },
     };
     let size = bbox.size();
@@ -107,14 +142,14 @@ fn test_bounding_box_size_cube() {
 fn test_bounding_box_size_rectangular() {
     let bbox = BoundingBoxJson {
         min: Vec3Json {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
+            x: pq(0.0),
+            y: pq(0.0),
+            z: pq(0.0),
         },
         max: Vec3Json {
-            x: 10.0,
-            y: 5.0,
-            z: 2.0,
+            x: pq(10.0),
+            y: pq(5.0),
+            z: pq(2.0),
         },
     };
     let size = bbox.size();
@@ -125,14 +160,14 @@ fn test_bounding_box_size_rectangular() {
 fn test_bounding_box_size_asymmetric() {
     let bbox = BoundingBoxJson {
         min: Vec3Json {
-            x: -3.0,
-            y: -2.0,
-            z: -1.0,
+            x: pq(-3.0),
+            y: pq(-2.0),
+            z: pq(-1.0),
         },
         max: Vec3Json {
-            x: 7.0,
-            y: 4.0,
-            z: 5.0,
+            x: pq(7.0),
+            y: pq(4.0),
+            z: pq(5.0),
         },
     };
     let size = bbox.size();
@@ -143,14 +178,14 @@ fn test_bounding_box_size_asymmetric() {
 fn test_bounding_box_center_cube() {
     let bbox = BoundingBoxJson {
         min: Vec3Json {
-            x: -1.0,
-            y: -1.0,
-            z: -1.0,
+            x: pq(-1.0),
+            y: pq(-1.0),
+            z: pq(-1.0),
         },
         max: Vec3Json {
-            x: 1.0,
-            y: 1.0,
-            z: 1.0,
+            x: pq(1.0),
+            y: pq(1.0),
+            z: pq(1.0),
         },
     };
     let center = bbox.center();
@@ -161,14 +196,14 @@ fn test_bounding_box_center_cube() {
 fn test_bounding_box_center_offset() {
     let bbox = BoundingBoxJson {
         min: Vec3Json {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
+            x: pq(0.0),
+            y: pq(0.0),
+            z: pq(0.0),
         },
         max: Vec3Json {
-            x: 10.0,
-            y: 10.0,
-            z: 10.0,
+            x: pq(10.0),
+            y: pq(10.0),
+            z: pq(10.0),
         },
     };
     let center = bbox.center();
@@ -179,14 +214,14 @@ fn test_bounding_box_center_offset() {
 fn test_bounding_box_center_asymmetric() {
     let bbox = BoundingBoxJson {
         min: Vec3Json {
-            x: -5.0,
-            y: 0.0,
-            z: -3.0,
+            x: pq(-5.0),
+            y: pq(0.0),
+            z: pq(-3.0),
         },
         max: Vec3Json {
-            x: 5.0,
-            y: 4.0,
-            z: 7.0,
+            x: pq(5.0),
+            y: pq(4.0),
+            z: pq(7.0),
         },
     };
     let center = bbox.center();

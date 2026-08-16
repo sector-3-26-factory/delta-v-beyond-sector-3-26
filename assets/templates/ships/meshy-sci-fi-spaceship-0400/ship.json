@@ -7,27 +7,63 @@
     "inertia_scale": 1.0,
     "bounding_box": {
         "min": {
-            "x": -8.494845,
-            "y": -1.665664,
-            "z": -10.5
+            "x": {
+                "value": -8.494845,
+                "unit": "m"
+            },
+            "y": {
+                "value": -1.665664,
+                "unit": "m"
+            },
+            "z": {
+                "value": -10.5,
+                "unit": "m"
+            }
         },
         "max": {
-            "x": 8.494845,
-            "y": 1.665664,
-            "z": 10.5
+            "x": {
+                "value": 8.494845,
+                "unit": "m"
+            },
+            "y": {
+                "value": 1.665664,
+                "unit": "m"
+            },
+            "z": {
+                "value": 10.5,
+                "unit": "m"
+            }
         }
     },
     "collision_shape": {
         "type": "box",
         "half_extents": {
-            "x": 8.494845,
-            "y": 1.665664,
-            "z": 10.5
+            "x": {
+                "value": 8.494845,
+                "unit": "m"
+            },
+            "y": {
+                "value": 1.665664,
+                "unit": "m"
+            },
+            "z": {
+                "value": 10.5,
+                "unit": "m"
+            }
         },
         "offset": {
-            "x": 0,
-            "y": 0,
-            "z": 0
+            "x": {
+                "value": 0,
+                "unit": "m"
+            },
+            "y": {
+                "value": 0,
+                "unit": "m"
+            },
+            "z": {
+                "value": 0,
+                "unit": "m"
+            }
         }
     },
     "propulsion": {

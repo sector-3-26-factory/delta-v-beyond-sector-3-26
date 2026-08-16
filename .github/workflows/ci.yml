@@ -51,6 +51,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: |
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/lib/android
+          df -h /
+
+      - name: Clean cargo artifacts (cargo sweep)
+        run: |
+          cargo install cargo-sweep --locked
+          cargo sweep --time 2
+          df -h /
+
       - name: Install Bevy system dependencies
         run: |
           sudo apt-get update

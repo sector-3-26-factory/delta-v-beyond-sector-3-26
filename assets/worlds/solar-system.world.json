@@ -7,9 +7,18 @@
             "id": "player_ship",
             "player_controlled": true,
             "position": {
-                "x": 1.071e11,
-                "y": 0.0,
-                "z": 0.0
+                "x": {
+                    "value": 4.496e12,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
             }
         },
         {
@@ -17,51 +26,402 @@
             "id": "ship 1",
             "player_controlled": false,
             "position": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 6.9599997951e10
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 6.9599997951e10,
+                    "unit": "m"
+                }
             }
         },
         {
             "template": "suns/sol",
             "id": "sun",
             "position": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
             },
             "scale": {
-                "x": 6.96e8,
-                "y": 6.96e8,
-                "z": 6.96e8
+                "x": {
+                    "value": 6.96e8,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 6.96e8,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 6.96e8,
+                    "unit": "m"
+                }
             }
         },
         {
             "template": "planets/mercury",
             "id": "mercury",
             "position": {
-                "x": 5.79e10,
-                "y": 0.0,
-                "z": 0.0
+                "x": {
+                    "value": 5.79e10,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
             },
             "scale": {
-                "x": 4.8794e5,
-                "y": 4.8794e5,
-                "z": 4.8794e5
+                "x": {
+                    "value": 4.8794e5,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 4.8794e5,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 4.8794e5,
+                    "unit": "m"
+                }
             }
         },
         {
             "template": "planets/venus",
             "id": "venus",
             "position": {
-                "x": 1.081e11,
-                "y": 0.0,
-                "z": 0.0
+                "x": {
+                    "value": 1.081e11,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
             },
             "scale": {
-                "x": 6.0518e6,
-                "y": 6.0518e6,
-                "z": 6.0518e6
+                "x": {
+                    "value": 6.0518e6,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 6.0518e6,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 6.0518e6,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "planets/earth",
+            "id": "earth",
+            "position": {
+                "x": {
+                    "value": 1.496e11,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 1.2304e7,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.2304e7,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.2304e7,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "moons/moon",
+            "id": "moon",
+            "position": {
+                "x": {
+                    "value": 1.499844e11,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 1.7374e6,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.7374e6,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.7374e6,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "planets/mars",
+            "id": "mars",
+            "position": {
+                "x": {
+                    "value": 2.28e11,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 1.3558e6,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.3558e6,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.3558e6,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "moons/phobos",
+            "id": "phobos",
+            "position": {
+                "x": {
+                    "value": 2.28009376e11,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 834.6,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 834.6,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 834.6,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "moons/deimos",
+            "id": "deimos",
+            "position": {
+                "x": {
+                    "value": 2.2802346e11,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 8.05,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 8.05,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 8.05,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "planets/jupiter",
+            "id": "jupiter",
+            "position": {
+                "x": {
+                    "value": 7.785e11,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 6.9911e7,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 6.9911e7,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 6.9911e7,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "planets/saturn",
+            "id": "saturn",
+            "position": {
+                "x": {
+                    "value": 1.433e12,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 5.8232e7,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 5.8232e7,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 5.8232e7,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "planets/uranus",
+            "id": "uranus",
+            "position": {
+                "x": {
+                    "value": 2.875e12,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 100069.24,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 100069.24,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 100069.24,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "planets/neptune",
+            "id": "neptune",
+            "position": {
+                "x": {
+                    "value": 4.498e12,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 101367.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 101367.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 101367.0,
+                    "unit": "m"
+                }
             }
         }
     ]
