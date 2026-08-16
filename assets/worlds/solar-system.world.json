@@ -8,7 +8,7 @@
             "player_controlled": true,
             "position": {
                 "x": {
-                    "value": 5.908e12,
+                    "value": 1.495e11,
                     "unit": "m"
                 },
                 "y": {
@@ -102,6 +102,34 @@
                     "value": 4.8794e5,
                     "unit": "m"
                 }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 0.387,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 88,
+                    "unit": "d"
+                },
+                "orbital_eccentricity": 0.2056,
+                "orbital_inclination": {
+                    "value": 7.0,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 1407.6,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 0.03,
+                    "unit": "deg"
+                }
             }
         },
         {
@@ -133,6 +161,34 @@
                 "z": {
                     "value": 6.0518e6,
                     "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 0.723,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 225,
+                    "unit": "d"
+                },
+                "orbital_eccentricity": 0.0068,
+                "orbital_inclination": {
+                    "value": 3.4,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 5832.5,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 177.4,
+                    "unit": "deg"
                 }
             }
         },
@@ -166,6 +222,34 @@
                     "value": 1.2304e7,
                     "unit": "m"
                 }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 1.0,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 365.25,
+                    "unit": "d"
+                },
+                "orbital_eccentricity": 0.0167,
+                "orbital_inclination": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 23.93,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 23.44,
+                    "unit": "deg"
+                }
             }
         },
         {
@@ -197,6 +281,34 @@
                 "z": {
                     "value": 1.7374e6,
                     "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "earth",
+                "orbital_distance": {
+                    "value": 384400,
+                    "unit": "km"
+                },
+                "orbital_period": {
+                    "value": 27.32,
+                    "unit": "d"
+                },
+                "orbital_eccentricity": 0.0549,
+                "orbital_inclination": {
+                    "value": 5.14,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 655.7,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 6.68,
+                    "unit": "deg"
                 }
             }
         },
@@ -230,6 +342,34 @@
                     "value": 1.3558e6,
                     "unit": "m"
                 }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 1.52,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 687,
+                    "unit": "d"
+                },
+                "orbital_eccentricity": 0.0934,
+                "orbital_inclination": {
+                    "value": 1.85,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 24.62,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 25.19,
+                    "unit": "deg"
+                }
             }
         },
         {
@@ -261,6 +401,34 @@
                 "z": {
                     "value": 834.6,
                     "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "mars",
+                "orbital_distance": {
+                    "value": 9376,
+                    "unit": "km"
+                },
+                "orbital_period": {
+                    "value": 0.3189,
+                    "unit": "d"
+                },
+                "orbital_eccentricity": 0.0151,
+                "orbital_inclination": {
+                    "value": 1.08,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 7.66,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 0.0,
+                    "unit": "deg"
                 }
             }
         },
@@ -294,6 +462,34 @@
                     "value": 8.05,
                     "unit": "m"
                 }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "mars",
+                "orbital_distance": {
+                    "value": 23460,
+                    "unit": "km"
+                },
+                "orbital_period": {
+                    "value": 1.262,
+                    "unit": "d"
+                },
+                "orbital_eccentricity": 0.0002,
+                "orbital_inclination": {
+                    "value": 1.79,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 30.3,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 0.0,
+                    "unit": "deg"
+                }
             }
         },
         {
@@ -325,6 +521,34 @@
                 "z": {
                     "value": 6.9911e7,
                     "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 5.20,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 11.86,
+                    "unit": "a"
+                },
+                "orbital_eccentricity": 0.0489,
+                "orbital_inclination": {
+                    "value": 1.3,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 9.93,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 3.13,
+                    "unit": "deg"
                 }
             }
         },
@@ -358,6 +582,34 @@
                     "value": 5.8232e7,
                     "unit": "m"
                 }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 9.54,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 29.46,
+                    "unit": "a"
+                },
+                "orbital_eccentricity": 0.0565,
+                "orbital_inclination": {
+                    "value": 2.49,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 10.66,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 26.73,
+                    "unit": "deg"
+                }
             }
         },
         {
@@ -389,6 +641,34 @@
                 "z": {
                     "value": 100069.24,
                     "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 19.19,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 84.01,
+                    "unit": "a"
+                },
+                "orbital_eccentricity": 0.0472,
+                "orbital_inclination": {
+                    "value": 0.77,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 17.24,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 97.77,
+                    "unit": "deg"
                 }
             }
         },
@@ -422,6 +702,34 @@
                     "value": 101367.0,
                     "unit": "m"
                 }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 30.07,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 164.8,
+                    "unit": "a"
+                },
+                "orbital_eccentricity": 0.0086,
+                "orbital_inclination": {
+                    "value": 1.77,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 16.11,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 28.32,
+                    "unit": "deg"
+                }
             }
         },
         {
@@ -453,6 +761,34 @@
                 "z": {
                     "value": 1.188e6,
                     "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 39.5,
+                    "unit": "AU"
+                },
+                "orbital_period": {
+                    "value": 248.0,
+                    "unit": "a"
+                },
+                "orbital_eccentricity": 0.2488,
+                "orbital_inclination": {
+                    "value": 17.16,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                },
+                "rotation_period": {
+                    "value": 153.3,
+                    "unit": "h"
+                },
+                "axial_tilt": {
+                    "value": 122.5,
+                    "unit": "deg"
                 }
             }
         }

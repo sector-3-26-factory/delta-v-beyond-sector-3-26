@@ -42,29 +42,5 @@
         }
     },
     "is_gravity_source": true,
-    "orbital_parent": "sun",
-    "orbital_distance": {
-        "value": 0.723,
-        "unit": "AU"
-    },
-    "orbital_period": {
-        "value": 224.7,
-        "unit": "d"
-    },
-    "orbital_inclination": {
-        "value": 3.39,
-        "unit": "deg"
-    },
-    "initial_orbital_angle": {
-        "value": 0.0,
-        "unit": "deg"
-    },
-    "rotation_period": {
-        "value": 5832.5,
-        "unit": "h"
-    },
-    "axial_tilt": {
-        "value": 177.36,
-        "unit": "deg"
-    }
+    "animations_enabled": true
 }

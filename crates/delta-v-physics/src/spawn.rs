@@ -36,7 +36,7 @@ use delta_v_types::{
 
 use crate::celestial::Moon;
 use crate::{
-    CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalParentId,
+    CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalBody, OrbitalParentId,
     PendingCelestialMesh, Planet, RigidBody, Sun,
 };
 
@@ -207,6 +207,32 @@ pub fn spawn_planet(
         // We need to resolve the orbital_parent_id to an Entity.
         // This is done in a second pass after all entities are spawned.
         // For now, we store the parent ID as a placeholder.
+        // Read orbital parameters from world definition (spawn.orbital_parameters)
+        let (
+            orbital_parent_id,
+            orbital_distance,
+            orbital_period,
+            orbital_eccentricity,
+            orbital_inclination,
+            initial_orbital_angle,
+            rotation_period,
+            axial_tilt,
+        ) = spawn.orbital_parameters.as_ref().map_or_else(
+            || (String::new(), 0.0, 0.0, 0.0, 0.0, 0.0, None, 0.0),
+            |op| {
+                (
+                    op.orbital_parent.clone(),
+                    op.orbital_distance,
+                    op.orbital_period,
+                    op.orbital_eccentricity,
+                    op.orbital_inclination,
+                    op.initial_orbital_angle,
+                    op.rotation_period,
+                    op.axial_tilt,
+                )
+            },
+        );
+
         let mut entity_commands = commands.spawn((
             Name::new(format!("Planet: {entity_id}")),
             Transform::from_translation(spawn.position)
@@ -215,17 +241,11 @@ pub fn spawn_planet(
             RigidBody::new(mass, 1.0),
             MassSource,
             Planet {
-                orbital_parent: Entity::PLACEHOLDER,
-                orbital_distance: planet_template.orbital_distance,
-                orbital_period: planet_template.orbital_period,
-                orbital_eccentricity: planet_template.orbital_eccentricity,
-                orbital_inclination: planet_template.orbital_inclination,
-                initial_orbital_angle: planet_template.initial_orbital_angle,
-                rotation_period: planet_template.rotation_period,
-                axial_tilt: planet_template.axial_tilt,
+                rotation_period,
+                axial_tilt,
                 animations_enabled: planet_template.animations_enabled,
             },
-            OrbitalParentId(planet_template.orbital_parent.clone()),
+            OrbitalParentId(orbital_parent_id.clone()),
             Navigable,
             Targetable,
             EntityType("planet".to_string()),
@@ -233,6 +253,18 @@ pub fn spawn_planet(
             PendingCelestialMesh { gltf_handle },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));
+
+        // Add OrbitalBody component if orbital parameters are present
+        if !orbital_parent_id.is_empty() {
+            entity_commands.insert(OrbitalBody {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance,
+                orbital_period,
+                orbital_eccentricity,
+                orbital_inclination,
+                initial_orbital_angle,
+            });
+        }
 
         // Add collision shape with scaling using shared function
         let scaled_collision_shape = scale_collision_shape(&collision_shape_data, scale_factor);
@@ -256,8 +288,8 @@ pub fn spawn_planet(
 
         tracing::info!(
             "spawned planet: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",
-            orbital_distance = planet_template.orbital_distance,
-            orbital_period = planet_template.orbital_period
+            orbital_distance = orbital_distance,
+            orbital_period = orbital_period
         );
     }
 }
@@ -389,6 +421,32 @@ pub fn spawn_moon(
         // We need to resolve the orbital_parent_id to an Entity.
         // This is done in a second pass after all entities are spawned.
         // For now, we store the parent ID as a placeholder.
+        // Read orbital parameters from world definition (spawn.orbital_parameters)
+        let (
+            orbital_parent_id,
+            orbital_distance,
+            orbital_period,
+            orbital_eccentricity,
+            orbital_inclination,
+            initial_orbital_angle,
+            rotation_period,
+            axial_tilt,
+        ) = spawn.orbital_parameters.as_ref().map_or_else(
+            || (String::new(), 0.0, 0.0, 0.0, 0.0, 0.0, None, 0.0),
+            |op| {
+                (
+                    op.orbital_parent.clone(),
+                    op.orbital_distance,
+                    op.orbital_period,
+                    op.orbital_eccentricity,
+                    op.orbital_inclination,
+                    op.initial_orbital_angle,
+                    op.rotation_period,
+                    op.axial_tilt,
+                )
+            },
+        );
+
         let mut entity_commands = commands.spawn((
             Name::new(format!("Moon: {entity_id}")),
             Transform::from_translation(spawn.position)
@@ -397,17 +455,11 @@ pub fn spawn_moon(
             RigidBody::new(mass, 1.0),
             MassSource,
             Moon {
-                orbital_parent: Entity::PLACEHOLDER,
-                orbital_distance: moon_template.orbital_distance,
-                orbital_period: moon_template.orbital_period,
-                orbital_eccentricity: moon_template.orbital_eccentricity,
-                orbital_inclination: moon_template.orbital_inclination,
-                initial_orbital_angle: moon_template.initial_orbital_angle,
-                rotation_period: moon_template.rotation_period,
-                axial_tilt: moon_template.axial_tilt,
+                rotation_period,
+                axial_tilt,
                 animations_enabled: moon_template.animations_enabled,
             },
-            OrbitalParentId(moon_template.orbital_parent.clone()),
+            OrbitalParentId(orbital_parent_id.clone()),
             Navigable,
             Targetable,
             EntityType("moon".to_string()),
@@ -415,6 +467,18 @@ pub fn spawn_moon(
             PendingCelestialMesh { gltf_handle },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));
+
+        // Add OrbitalBody component if orbital parameters are present
+        if !orbital_parent_id.is_empty() {
+            entity_commands.insert(OrbitalBody {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance,
+                orbital_period,
+                orbital_eccentricity,
+                orbital_inclination,
+                initial_orbital_angle,
+            });
+        }
 
         // Add collision shape with scaling using shared function
         let scaled_collision_shape = scale_collision_shape(&collision_shape_data, scale_factor);
@@ -438,8 +502,8 @@ pub fn spawn_moon(
 
         tracing::info!(
             "spawned moon: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",
-            orbital_distance = moon_template.orbital_distance,
-            orbital_period = moon_template.orbital_period
+            orbital_distance = orbital_distance,
+            orbital_period = orbital_period
         );
     }
 }

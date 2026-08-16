@@ -74,6 +74,30 @@ pub struct EntitySpawnJson {
     /// Per ADR-0008, uses value+unit format. Units: `kg`, `t`, `M_earth`, `M_sun`.
     /// Converted to kilograms at load time.
     pub mass: Option<PhysicalQuantityJson>,
+    /// Optional orbital parameters. If present, the entity will orbit the specified parent body.
+    /// These parameters are world-specific and override any template defaults.
+    pub orbital_parameters: Option<OrbitalParametersJson>,
+}
+
+/// Orbital parameters for an entity (JSON deserialization type).
+#[derive(Debug, Deserialize)]
+pub struct OrbitalParametersJson {
+    /// ID of the parent body this entity orbits.
+    pub orbital_parent: String,
+    /// Orbital distance (semi-major axis) in metres.
+    pub orbital_distance: PhysicalQuantityJson,
+    /// Orbital period in seconds.
+    pub orbital_period: PhysicalQuantityJson,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical). Default: 0 (circular).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in degrees.
+    pub orbital_inclination: PhysicalQuantityJson,
+    /// Initial orbital angle in degrees.
+    pub initial_orbital_angle: PhysicalQuantityJson,
+    /// Rotation period in hours. None means no rotation.
+    pub rotation_period: Option<PhysicalQuantityJson>,
+    /// Axial tilt (obliquity) in degrees.
+    pub axial_tilt: PhysicalQuantityJson,
 }
 
 /// Runtime world definition with SI units.
@@ -125,6 +149,29 @@ pub struct EntitySpawn {
     pub mass: Option<f32>,
     /// The loaded template (populated by loader).
     pub template: Option<EntityTemplate>,
+    /// Optional orbital parameters in SI units.
+    pub orbital_parameters: Option<OrbitalParameters>,
+}
+
+/// Orbital parameters for an entity (runtime type with SI units).
+#[derive(Debug, Clone)]
+pub struct OrbitalParameters {
+    /// ID of the parent body this entity orbits.
+    pub orbital_parent: String,
+    /// Orbital distance (semi-major axis) in metres.
+    pub orbital_distance: f32,
+    /// Orbital period in seconds.
+    pub orbital_period: f32,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in radians.
+    pub orbital_inclination: f32,
+    /// Initial orbital angle in radians.
+    pub initial_orbital_angle: f32,
+    /// Rotation period in seconds. None means no rotation.
+    pub rotation_period: Option<f32>,
+    /// Axial tilt (obliquity) in radians.
+    pub axial_tilt: f32,
 }
 
 impl From<WorldDefJson> for WorldDef {
@@ -149,6 +196,16 @@ impl From<EntitySpawnJson> for EntitySpawn {
             ai_task: json.ai_task.map(Into::into),
             mass: json.mass.map(|m| m.to_kilograms()),
             template: None, // Populated by loader
+            orbital_parameters: json.orbital_parameters.map(|op| OrbitalParameters {
+                orbital_parent: op.orbital_parent,
+                orbital_distance: op.orbital_distance.to_meters(),
+                orbital_period: op.orbital_period.to_seconds(),
+                orbital_eccentricity: op.orbital_eccentricity,
+                orbital_inclination: op.orbital_inclination.to_radians(),
+                initial_orbital_angle: op.initial_orbital_angle.to_radians(),
+                rotation_period: op.rotation_period.map(|p| p.to_seconds()),
+                axial_tilt: op.axial_tilt.to_radians(),
+            }),
         }
     }
 }

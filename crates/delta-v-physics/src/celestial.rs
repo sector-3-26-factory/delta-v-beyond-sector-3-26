@@ -44,24 +44,10 @@ pub struct Sun {
 
 /// Component for planet entities.
 ///
-/// Planets orbit a parent body (sun or another planet) and are always
-/// gravity sources per ADR-0009.
-///
-/// Orbital parameters are stored in SI units (metres, seconds, radians).
+/// Planets are gravity sources per ADR-0009.
+/// Orbital parameters are now in the separate `OrbitalBody` component.
 #[derive(Component, Clone, Debug)]
 pub struct Planet {
-    /// The parent entity this planet orbits.
-    pub orbital_parent: Entity,
-    /// Orbital distance in metres.
-    pub orbital_distance: f32,
-    /// Orbital period in seconds.
-    pub orbital_period: f32,
-    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
-    pub orbital_eccentricity: f32,
-    /// Orbital inclination in radians.
-    pub orbital_inclination: f32,
-    /// Initial orbital angle in radians.
-    pub initial_orbital_angle: f32,
     /// Rotation period in seconds. None means no rotation.
     pub rotation_period: Option<f32>,
     /// Axial tilt (obliquity) in radians. Angle between rotation axis and orbital axis.
@@ -72,23 +58,10 @@ pub struct Planet {
 
 /// Component for moon entities.
 ///
-/// Moons orbit a parent planet and are always gravity sources per ADR-0009.
-///
-/// Orbital parameters are stored in SI units (metres, seconds, radians).
+/// Moons are gravity sources per ADR-0009.
+/// Orbital parameters are now in the separate `OrbitalBody` component.
 #[derive(Component, Clone, Debug)]
 pub struct Moon {
-    /// The parent entity this moon orbits.
-    pub orbital_parent: Entity,
-    /// Orbital distance in metres.
-    pub orbital_distance: f32,
-    /// Orbital period in seconds.
-    pub orbital_period: f32,
-    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
-    pub orbital_eccentricity: f32,
-    /// Orbital inclination in radians.
-    pub orbital_inclination: f32,
-    /// Initial orbital angle in radians.
-    pub initial_orbital_angle: f32,
     /// Rotation period in seconds. None means no rotation.
     pub rotation_period: Option<f32>,
     /// Axial tilt (obliquity) in radians. Angle between rotation axis and orbital axis.
@@ -113,6 +86,27 @@ pub struct Navigable;
 pub struct PendingCelestialMesh {
     /// Handle to the glTF asset being loaded.
     pub gltf_handle: Handle<Gltf>,
+}
+
+/// Component for entities that orbit a parent body.
+///
+/// This unified component replaces the orbital fields that were previously
+/// duplicated in `Planet` and `Moon` components. Any entity with this component
+/// will have its position updated by the `orbital_motion_system`.
+#[derive(Component, Clone, Debug)]
+pub struct OrbitalBody {
+    /// The parent entity this body orbits.
+    pub orbital_parent: Entity,
+    /// Orbital distance in metres.
+    pub orbital_distance: f32,
+    /// Orbital period in seconds.
+    pub orbital_period: f32,
+    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
+    pub orbital_eccentricity: f32,
+    /// Orbital inclination in radians.
+    pub orbital_inclination: f32,
+    /// Initial orbital angle in radians.
+    pub initial_orbital_angle: f32,
 }
 
 /// Component storing the parent entity ID string for resolution.
@@ -228,21 +222,22 @@ pub fn make_sun_emissive(
 /// Resolves orbital parent IDs to Entity references.
 ///
 /// This system runs after all entities are spawned to resolve the `OrbitalParentId`
-/// component to an actual `Entity` reference.
+/// component to an actual `Entity` reference for both `Planet`/`Moon` and `OrbitalBody` components.
 ///
-/// Per ADR-0017, this system runs in `FixedUpdate` at 60 Hz.
+/// Runs once during `AppState::SpawningEntities` in `Update` schedule (not `FixedUpdate`).
 #[allow(clippy::needless_pass_by_value, clippy::explicit_iter_loop)]
 pub fn resolve_orbital_parents(
     mut commands: Commands<'_, '_>,
     mut planets: Query<'_, '_, (Entity, &OrbitalParentId, &mut Planet)>,
     mut moons: Query<'_, '_, (Entity, &OrbitalParentId, &mut Moon)>,
+    mut orbital_bodies: Query<'_, '_, (Entity, &OrbitalParentId, &mut OrbitalBody)>,
     all_entities: Query<'_, '_, (Entity, &WorldEntityId)>,
 ) {
-    for (entity, parent_id, mut planet) in &mut planets {
+    for (entity, parent_id, _planet) in &mut planets {
         // Find the parent entity by WorldEntityId (matches the world definition ID)
         for (potential_parent, world_id) in &all_entities {
             if world_id.0 == parent_id.0 {
-                planet.orbital_parent = potential_parent;
+                // Planet component no longer has orbital_parent, but we still need to remove OrbitalParentId
                 commands.entity(entity).remove::<OrbitalParentId>();
                 tracing::debug!(
                     "Resolved orbital parent for {entity:?}: {} -> {potential_parent:?}",
@@ -253,11 +248,26 @@ pub fn resolve_orbital_parents(
         }
     }
 
-    for (entity, parent_id, mut moon) in &mut moons {
+    for (entity, parent_id, _moon) in &mut moons {
         // Find the parent entity by WorldEntityId (matches the world definition ID)
         for (potential_parent, world_id) in &all_entities {
             if world_id.0 == parent_id.0 {
-                moon.orbital_parent = potential_parent;
+                // Moon component no longer has orbital_parent, but we still need to remove OrbitalParentId
+                commands.entity(entity).remove::<OrbitalParentId>();
+                tracing::debug!(
+                    "Resolved orbital parent for {entity:?}: {} -> {potential_parent:?}",
+                    parent_id.0
+                );
+                break;
+            }
+        }
+    }
+
+    for (entity, parent_id, mut orbital_body) in &mut orbital_bodies {
+        // Find the parent entity by WorldEntityId (matches the world definition ID)
+        for (potential_parent, world_id) in &all_entities {
+            if world_id.0 == parent_id.0 {
+                orbital_body.orbital_parent = potential_parent;
                 commands.entity(entity).remove::<OrbitalParentId>();
                 tracing::debug!(
                     "Resolved orbital parent for {entity:?}: {} -> {potential_parent:?}",

@@ -44,7 +44,7 @@ pub mod rigid_body;
 pub mod spawn;
 pub mod systems;
 
-pub use celestial::{Navigable, OrbitalParentId, PendingCelestialMesh, Planet, Sun};
+pub use celestial::{Navigable, OrbitalBody, OrbitalParentId, PendingCelestialMesh, Planet, Sun};
 pub use celestial::{attach_celestial_meshes, make_sun_emissive, resolve_orbital_parents};
 pub use collision::{
     CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeType, DynamicBody,
@@ -62,8 +62,7 @@ use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
     clear_accumulators_system, debug_position_logging_system, gravity_system,
     integrate_angular_velocity_system, integrate_position_system, integrate_velocity_system,
-    moon_orbital_motion_system, moon_rotation_system, orbital_motion_system,
-    planet_rotation_system, sun_rotation_system,
+    moon_rotation_system, orbital_motion_system, planet_rotation_system, sun_rotation_system,
 };
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
@@ -159,24 +158,13 @@ impl Plugin for PhysicsPlugin {
                 .run_if(in_state(AppState::InGame)),
         );
 
-        // Orbital motion system for planets.
-        // Runs in FixedUpdate to update planet positions along their orbital paths.
+        // Unified orbital motion system for all orbiting bodies (planets, moons, etc.).
+        // Runs in FixedUpdate to update positions along their orbital paths.
         app.add_systems(
             FixedUpdate,
             orbital_motion_system
                 .in_set(PhysicsSet::IntegratePosition)
                 .run_if(in_state(AppState::InGame)),
-        );
-
-        // Moon orbital motion system.
-        // Runs in FixedUpdate to update moon positions along their orbital paths.
-        // Must run AFTER orbital_motion_system so parent planets have updated positions.
-        app.add_systems(
-            FixedUpdate,
-            moon_orbital_motion_system
-                .in_set(PhysicsSet::IntegratePosition)
-                .run_if(in_state(AppState::InGame))
-                .after(orbital_motion_system),
         );
 
         // Sun rotation system.
