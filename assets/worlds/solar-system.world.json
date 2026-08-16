@@ -8,7 +8,7 @@
             "player_controlled": true,
             "position": {
                 "x": {
-                    "value": 4.496e12,
+                    "value": 5.908e12,
                     "unit": "m"
                 },
                 "y": {
@@ -420,6 +420,38 @@
                 },
                 "z": {
                     "value": 101367.0,
+                    "unit": "m"
+                }
+            }
+        },
+        {
+            "template": "planets/pluto",
+            "id": "pluto",
+            "position": {
+                "x": {
+                    "value": 5.909e12,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 1.188e6,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.188e6,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.188e6,
                     "unit": "m"
                 }
             }

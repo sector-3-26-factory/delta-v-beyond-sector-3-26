@@ -279,6 +279,17 @@ fn test_load_planet_mercury() {
     );
 }
 
+#[test]
+fn test_load_planet_pluto() {
+    // Validate that the pluto planet template is valid against the schema
+    let result = crate::template::load_planet("pluto");
+    assert!(
+        result.is_ok(),
+        "pluto planet template should be valid: {:?}",
+        result.unwrap_err()
+    );
+}
+
 // ---------------------------------------------------------------------------
 // World definition loading tests
 // ---------------------------------------------------------------------------

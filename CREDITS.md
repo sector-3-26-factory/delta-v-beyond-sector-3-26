@@ -222,6 +222,15 @@ The following technical transformations are applied to most or all `mesh.glb` fi
 - **File:** `assets/templates/planets/neptune/mesh.glb`
 - **Modifications:** None
 
+### "Pluto (planet)"
+
+- **Creator:** [Akshat (@shooter24994)](https://sketchfab.com/shooter24994)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/pluto-a30ff3a5f4f3477d87fc534e0d1df7e2)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/planets/pluto/mesh.glb`
+- **Modifications:** Standard modifications
+
 ## Fonts
 
 ### DejaVu Sans Mono
