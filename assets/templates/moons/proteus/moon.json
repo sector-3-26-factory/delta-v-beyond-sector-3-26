@@ -1,0 +1,46 @@
+{
+    "entity_type": "moon",
+    "mass": {
+        "value": 50000000000,
+        "unit": "kg"
+    },
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 117.11408996582031,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": {
+                "value": -105.36968994140625,
+                "unit": "m"
+            },
+            "y": {
+                "value": -100.43141937255861,
+                "unit": "m"
+            },
+            "z": {
+                "value": -92.07124328613283,
+                "unit": "m"
+            }
+        },
+        "max": {
+            "x": {
+                "value": 128.85848999023438,
+                "unit": "m"
+            },
+            "y": {
+                "value": 96.72916412353516,
+                "unit": "m"
+            },
+            "z": {
+                "value": 76.28707885742188,
+                "unit": "m"
+            }
+        }
+    },
+    "is_gravity_source": true,
+    "animations_enabled": true
+}
