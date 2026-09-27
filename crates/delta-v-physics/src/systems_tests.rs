@@ -52,7 +52,7 @@ fn test_soi_gravity_ship_feels_planet_gravity() {
     let mut app = build_test_app();
 
     // Spawn a planet (celestial body with MassSource and OrbitalBody)
-    let planet_id = app
+    let _planet_id = app
         .world_mut()
         .spawn((
             RigidBody::new(5.972e24, 1.0), // Earth mass
@@ -112,7 +112,7 @@ fn test_soi_gravity_force_magnitude() {
     let ship_mass = 1000.0_f32;
     let distance = 6.371e6 + 400_000.0; // Earth radius + 400km altitude
 
-    let planet_id = app
+    let _planet_id = app
         .world_mut()
         .spawn((
             RigidBody::new(planet_mass, 1.0),
@@ -161,7 +161,7 @@ fn test_soi_gravity_sun_soi_encompasses_all() {
     let mut app = build_test_app();
 
     // Spawn the Sun (no orbital parent = infinite SOI)
-    let sun_id = app
+    let _sun_id = app
         .world_mut()
         .spawn((
             RigidBody::new(1.989e30, 1.0), // Solar mass
@@ -229,7 +229,7 @@ fn test_soi_gravity_attractor_overrides() {
     let mut app = build_test_app();
 
     // Spawn a planet
-    let planet_id = app
+    let _planet_id = app
         .world_mut()
         .spawn((
             RigidBody::new(5.972e24, 1.0),
@@ -252,7 +252,7 @@ fn test_soi_gravity_attractor_overrides() {
         .id();
 
     // Spawn a gravity attractor (black hole) near the ship
-    let attractor_id = app
+    let _attractor_id = app
         .world_mut()
         .spawn((
             RigidBody::new(1e12, 1.0), // Small black hole

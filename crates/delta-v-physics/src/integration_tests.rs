@@ -8,8 +8,7 @@
 use bevy::prelude::*;
 use bevy::time::TimePlugin;
 
-use crate::celestial::{OrbitalBody, Planet, Sun};
-use crate::constants::GRAVITATIONAL_CONSTANT;
+use crate::celestial::{OrbitalBody, Planet};
 use crate::rigid_body::{MassSource, RigidBody};
 use crate::systems::{
     PhysicsSet, clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
@@ -86,7 +85,7 @@ fn test_soi_velocity_accumulates_over_multiple_ticks() {
     let mut app = build_physics_app();
 
     // Spawn a planet (celestial body with SOI)
-    let planet_id = app
+    let _planet_id = app
         .world_mut()
         .spawn((
             RigidBody::new(5.972e24, 1.0), // Earth mass
@@ -160,7 +159,7 @@ fn test_soi_clear_accumulators_resets_forces_between_ticks() {
     let mut app = build_physics_app();
 
     // Spawn a planet (celestial body with SOI)
-    let planet_id = app
+    let _planet_id = app
         .world_mut()
         .spawn((
             RigidBody::new(5.972e24, 1.0), // Earth mass
@@ -251,7 +250,7 @@ fn test_soi_gravity_inside_soi() {
 
     // Spawn a planet with known SOI
     let planet_mass = 5.972e24_f32; // Earth mass
-    let planet_id = app
+    let _planet_id = app
         .world_mut()
         .spawn((
             RigidBody::new(planet_mass, 1.0),

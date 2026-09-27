@@ -33,7 +33,7 @@ use delta_v_types::{
     compute_debug_axis_length, resolve_mass, scale_bounding_box, scale_collision_shape,
 };
 
-use crate::celestial::{LazyLoadMesh, Moon};
+use crate::celestial::{ALWAYS_VISIBLE_SCREEN_RADIUS_PX, LazyLoadMesh, Moon};
 use crate::{
     CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalBody, OrbitalParentId,
     Planet, RigidBody, Sun,
@@ -103,10 +103,11 @@ pub fn spawn_sun(
                 EntityType("sun".to_string()),
                 WorldEntityId(entity_id.clone()),
                 LazyLoadMesh {
-                    min_screen_radius_px: 1.0, // Load sun at large distances
+                    min_screen_radius_px: ALWAYS_VISIBLE_SCREEN_RADIUS_PX, // Load sun at large distances
                     loaded: false,
                     mesh_path: spawn.mesh_path(),
                     current_screen_radius_px: 0.0,
+                    mesh_child_entities: Vec::new(),
                 },
                 DebugAxesEligible::new(entity_id.clone(), axis_length),
                 NotShadowCaster,
@@ -249,10 +250,11 @@ pub fn spawn_planet(
             EntityType("planet".to_string()),
             WorldEntityId(entity_id.clone()),
             LazyLoadMesh {
-                min_screen_radius_px: 1.0, // Load planets at large distances
+                min_screen_radius_px: ALWAYS_VISIBLE_SCREEN_RADIUS_PX, // Load planets at large distances
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));
@@ -378,10 +380,11 @@ pub fn spawn_asteroid(
             EntityType("asteroid".to_string()),
             WorldEntityId(entity_id.clone()),
             LazyLoadMesh {
-                min_screen_radius_px: 1000.0, // Load asteroids only when close
+                min_screen_radius_px: ALWAYS_VISIBLE_SCREEN_RADIUS_PX, // Load asteroids when visible (≥1px)
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));
@@ -510,10 +513,11 @@ pub fn spawn_moon(
             EntityType("moon".to_string()),
             WorldEntityId(entity_id.clone()),
             LazyLoadMesh {
-                min_screen_radius_px: 1000.0, // Load moons only when close
+                min_screen_radius_px: ALWAYS_VISIBLE_SCREEN_RADIUS_PX, // Load moons when visible (≥1px)
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));

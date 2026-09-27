@@ -25,7 +25,6 @@ use crate::celestial::{Moon, OrbitalBody, Planet, Sun};
 use crate::constants::GRAVITATIONAL_CONSTANT;
 use crate::rigid_body::{MassSource, RigidBody};
 use bevy::prelude::*;
-use delta_v_core::{FloatingOrigin, PlayerShipEntity, WorldEntityId};
 
 /// System set for physics integration, allowing ordered execution.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -53,7 +52,10 @@ pub enum PhysicsSet {
 /// - Special objects (black holes, gravity bombs) may act as temporary dynamic point-attractors via `GravityAttractor` component.
 ///
 /// Runs in [`PhysicsSet::AccumulateForces`] each fixed tick.
+// INVARIANT: The Bevy query signatures are dictated by the ECS access pattern - factoring the
+// multi-element query data and filter tuples into `type` aliases would obscure the access set.
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::type_complexity)]
 pub fn gravity_system(
     // Celestial bodies that are gravity sources (have SOI)
     celestial_sources: Query<
@@ -174,11 +176,14 @@ pub fn gravity_system(
 
 /// Computes the Sphere of Influence radius for a celestial body.
 ///
-/// SOI formula: r_soi = a * (m/M)^(2/5)
+/// SOI formula: `r_soi` = a * (m/M)^(2/5)
 /// where a = orbital distance (semi-major axis), m = body mass, M = parent mass.
 ///
 /// For the Sun (no parent), returns a very large radius (effectively infinite).
 /// For planets/moons, computes based on parent mass if available.
+// INVARIANT: Takes the full `Query` type of `gravity_system` so the parent lookup uses the exact
+// same data and filter set; a partial alias would let the two drift apart silently.
+#[allow(clippy::type_complexity)]
 fn compute_soi_radius(
     _entity: Entity,
     mass: f32,

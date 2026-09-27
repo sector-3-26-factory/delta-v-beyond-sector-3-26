@@ -222,7 +222,7 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             Update,
             spawn_moon
-                .in_set(WorldSpawnSet::SpawnPlanets)
+                .in_set(WorldSpawnSet::SpawnMoons)
                 .run_if(in_state(AppState::SpawningEntities)),
         );
         app.add_systems(
@@ -233,11 +233,14 @@ impl Plugin for PhysicsPlugin {
         );
 
         // Resolve orbital parent IDs after all entities are spawned.
-        // This must run after SpawnSuns and SpawnPlanets.
+        // This must run after the whole spawn chain, not just SpawnSuns and SpawnPlanets:
+        // moons spawn in SpawnMoons and asteroids in SpawnAsteroids, and both also carry
+        // OrbitalParentId. MarkDebugAxes is the chain terminus, so ordering after it covers
+        // every spawn set (ADR-0038 second pass).
         app.add_systems(
             Update,
             resolve_orbital_parents
-                .after(WorldSpawnSet::SpawnPlanets)
+                .after(WorldSpawnSet::MarkDebugAxes)
                 .run_if(in_state(AppState::SpawningEntities)),
         );
 

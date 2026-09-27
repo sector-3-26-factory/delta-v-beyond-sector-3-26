@@ -26,7 +26,6 @@
 use crate::CollisionShape;
 use bevy::animation::graph::{AnimationGraph, AnimationGraphHandle};
 use bevy::animation::{AnimationClip, AnimationPlayer};
-use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
@@ -92,12 +91,28 @@ pub struct PendingCelestialMesh {
     pub gltf_handle: Handle<Gltf>,
 }
 
+/// Hysteresis factor for celestial mesh eviction.
+///
+/// A loaded mesh is kept resident until the body shrinks below
+/// `min_screen_radius_px * EVICTION_HYSTERESIS`. Without a gap between the load
+/// and evict thresholds, a body hovering at the boundary would re-decode its
+/// glTF every frame.
+pub const EVICTION_HYSTERESIS: f32 = 0.5;
+
+/// Screen-space radius in pixels at which a celestial body counts as visible.
+///
+/// Used as `min_screen_radius_px` for every celestial body (suns, planets, moons
+/// and asteroids): the mesh is loaded as soon as the body's apparent radius
+/// reaches one pixel on screen.
+pub const ALWAYS_VISIBLE_SCREEN_RADIUS_PX: f32 = 1.0;
+
 /// Component to control lazy loading of celestial meshes based on visibility.
 ///
-/// Large bodies (sun, planets) load if visible (≥1 pixel on screen).
-/// Small bodies (moons, asteroids) load only when near the player.
-/// Suns are always considered visible; the system calculates their screen radius
-/// and loads the mesh only when ≥1px, otherwise a 1-pixel fallback should be rendered.
+/// Every body (sun, planet, moon, asteroid) uses the same rule: the mesh is
+/// loaded once the body's apparent screen-space radius reaches
+/// `min_screen_radius_px` (one pixel, see [`ALWAYS_VISIBLE_SCREEN_RADIUS_PX`]).
+/// Suns additionally get a 1-pixel fallback VFX while their mesh is not loaded;
+/// their screen radius is tracked even below 1px.
 // allow-default: LazyLoadMesh is a runtime Component constructed programmatically during
 // entity spawning (see spawn.rs). It is never deserialized from JSON — all fields are
 // explicitly initialized from spawn event data. Default provides zero-initialization for
@@ -106,8 +121,8 @@ pub struct PendingCelestialMesh {
 #[derive(Component, Clone, Debug, Default)]
 pub struct LazyLoadMesh {
     /// Minimum screen-space radius in pixels to trigger mesh loading.
-    /// Set to 1.0 for large bodies (always load if visible).
-    /// Set to a larger value (e.g., 1000.0) for small bodies to only load when near.
+    /// Use [`ALWAYS_VISIBLE_SCREEN_RADIUS_PX`] to load as soon as the body is
+    /// visible. A larger value delays loading until the body is closer.
     pub min_screen_radius_px: f32,
 
     /// Whether the mesh has been loaded.
@@ -116,16 +131,21 @@ pub struct LazyLoadMesh {
     /// The mesh path to load when visible.
     pub mesh_path: String,
 
-    /// Current screen-space radius in pixels (updated each frame by lazy_load_celestial_meshes).
-    /// For suns: always updated, even when <1px (for 1-pixel fallback rendering).
-    /// For other bodies: only updated when on-screen.
+    /// Current screen-space radius in pixels. Updated every frame for every body
+    /// by `lazy_load_celestial_meshes`, independent of on-screen state.
+    /// For suns it is also read below 1px to drive the 1-pixel fallback rendering.
     pub current_screen_radius_px: f32,
+
+    /// Entities holding the spawned glTF scene roots for this body's mesh.
+    /// Recorded so eviction can despawn them and release the mesh/material assets.
+    /// Empty while the mesh is not resident.
+    pub mesh_child_entities: Vec<Entity>,
 }
 
 /// Component for the 1-pixel sun fallback VFX.
 ///
 /// When a sun's mesh is not loaded (screen radius < 1px) but the sun is visible
-/// (current_screen_radius_px > 0), this component marks an entity that renders
+/// (`current_screen_radius_px` > 0), this component marks an entity that renders
 /// a single bright pixel at the sun's position.
 ///
 /// Per ADR-0053, this is a VFX exemption - procedural rendering of a sun flare
@@ -169,14 +189,25 @@ pub struct OrbitalParentId(pub String);
 ///
 /// This system runs in `Update` during `AppState::InGame` to attach meshes
 /// once the glTF assets are loaded.
+#[tracing::instrument(target = "delta_v_physics", skip_all)]
 #[allow(clippy::needless_pass_by_value)]
 pub fn attach_celestial_meshes(
     mut commands: Commands<'_, '_>,
     gltf_assets: Res<'_, Assets<Gltf>>,
     mut animation_graphs: ResMut<'_, Assets<AnimationGraph>>,
-    query: Query<'_, '_, (Entity, &PendingCelestialMesh, &Transform, Option<&Planet>)>,
+    mut query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &PendingCelestialMesh,
+            &Transform,
+            Option<&Planet>,
+            &mut LazyLoadMesh,
+        ),
+    >,
 ) {
-    for (entity, pending, parent_transform, planet) in &query {
+    for (entity, pending, parent_transform, planet, mut lazy_load) in &mut query {
         if let Some(gltf) = gltf_assets.get(&pending.gltf_handle) {
             if gltf.scenes.is_empty() {
                 continue;
@@ -184,6 +215,7 @@ pub fn attach_celestial_meshes(
             for scene_handle in &gltf.scenes {
                 let child = commands.spawn((WorldAssetRoot(scene_handle.clone()),)).id();
                 commands.entity(entity).add_child(child);
+                lazy_load.mesh_child_entities.push(child);
 
                 // Debug: log the parent and child transforms
                 tracing::debug!(
@@ -269,21 +301,29 @@ pub fn make_sun_emissive(
 
 /// Lazily loads celestial body meshes based on screen-space pixel size.
 ///
-/// This system prevents OOM on startup by only loading meshes when they are
-/// visible on screen (for large bodies) or near the player (for small bodies).
-/// Uses true screen-space projection to calculate the apparent size in pixels.
+/// This system prevents OOM on startup by only loading a mesh once the body's
+/// apparent screen-space radius reaches its `min_screen_radius_px` threshold.
+/// The apparent size is computed analytically from the camera's focal length in
+/// pixels and the body's collision-shape radius. The direction of the body
+/// relative to the camera is deliberately ignored, so a mesh is already resident
+/// when the player turns toward the body. A resident mesh is evicted again once
+/// the body recedes below `min_screen_radius_px * EVICTION_HYSTERESIS`.
 ///
 /// Per ADR-0055, this is part of the performance optimization for the full
 /// solar system with 289 moons.
 ///
 /// Runs in `Update` during `AppState::InGame`.
+// INVARIANT: The Bevy query signature is dictated by the ECS access pattern - splitting the
+// six-element query data tuple into a `type` alias would obscure, not clarify, the access set.
+#[tracing::instrument(target = "delta_v_physics", skip_all)]
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::type_complexity)]
 pub fn lazy_load_celestial_meshes(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
     gltf_assets: Res<'_, Assets<Gltf>>,
     mut animation_graphs: ResMut<'_, Assets<AnimationGraph>>,
-    cameras: Query<'_, '_, (&Camera, &GlobalTransform)>,
+    cameras: Query<'_, '_, (&GlobalTransform, &Projection), With<delta_v_core::ActiveMainCamera>>,
     windows: Query<'_, '_, &Window>,
     mut query: Query<
         '_,
@@ -299,8 +339,11 @@ pub fn lazy_load_celestial_meshes(
         Without<PendingCelestialMesh>,
     >,
 ) {
-    // Get the main camera (first one found)
-    let Ok((camera, camera_transform)) = cameras.single() else {
+    // Get the main camera (the active gameplay camera with ActiveMainCamera marker)
+    let Ok((camera_transform, projection)) = cameras.single() else {
+        tracing::warn!(
+            "lazy_load_celestial_meshes: expected exactly one camera with the ActiveMainCamera marker, found none or multiple; skipping lazy loading"
+        );
         return;
     };
 
@@ -309,27 +352,27 @@ pub fn lazy_load_celestial_meshes(
         return;
     };
 
-    for (entity, mut lazy_load, global_transform, collision_shape, planet, sun) in &mut query {
-        if lazy_load.loaded {
-            continue;
-        }
+    // Focal length in pixels for the camera's vertical FOV.
+    // f_px = (viewport_height / 2) / tan(fov / 2)
+    // A body of world-radius R at distance D then covers
+    // screen_radius_px = f_px * R / D pixels, independent of where it sits
+    // relative to the view direction.
+    let Projection::Perspective(perspective) = projection else {
+        tracing::warn!(
+            "lazy_load_celestial_meshes: active camera is not perspective, skipping lazy loading"
+        );
+        return;
+    };
+    let viewport_height_px = window.height();
+    let focal_px = (viewport_height_px * 0.5) / (perspective.fov * 0.5).tan();
 
+    for (entity, mut lazy_load, global_transform, collision_shape, planet, sun) in &mut query {
         let world_pos = global_transform.translation();
 
-        // Project world position to screen space (viewport coordinates)
-        let Ok(viewport_pos) = camera.world_to_viewport(camera_transform, world_pos) else {
-            // Behind camera or projection failed
-            // For suns, still calculate a minimal screen radius for 1-pixel fallback
-            if sun.is_some() {
-                lazy_load.current_screen_radius_px = 0.0;
-            }
-            continue;
-        };
-
-        // Calculate screen-space radius in pixels using the collision shape
-        // The collision shape is already scaled by the world.json scale factor during spawning
-        // and represents the actual mesh bounds from the template JSON files.
-        let estimated_radius_m = match collision_shape.shape_type {
+        // Effective world radius from the collision shape. The collision shape is
+        // already scaled by the world.json scale factor during spawning and
+        // represents the actual mesh bounds from the template JSON files.
+        let radius_m = match collision_shape.shape_type {
             delta_v_types::CollisionShapeType::Sphere { radius } => radius,
             delta_v_types::CollisionShapeType::Box { half_extents } => {
                 // Use the maximum half-extent as the effective radius
@@ -341,32 +384,39 @@ pub fn lazy_load_celestial_meshes(
             }
         };
 
-        // Project a point at radius distance along the view direction
-        // to get the screen-space radius
-        let view_dir = (world_pos - camera_transform.translation()).normalize();
-        let radius_world_pos = world_pos + view_dir * estimated_radius_m;
-
-        let Ok(radius_viewport_pos) = camera.world_to_viewport(camera_transform, radius_world_pos)
-        else {
-            // For suns, still track screen radius even if radius projection fails
-            if sun.is_some() {
-                lazy_load.current_screen_radius_px = 0.0;
-            }
-            continue;
+        // Analytic apparent size: how many pixels this body would cover if the
+        // camera looked straight at it. Direction is deliberately ignored — the
+        // measurement answers only "is this body too far away to be worth
+        // loading?", so meshes are resident before the player turns toward them.
+        let distance_m = world_pos.distance(camera_transform.translation());
+        let screen_radius_px = if distance_m <= radius_m {
+            // Camera is inside the body: it fills the whole viewport.
+            viewport_height_px
+        } else {
+            focal_px * radius_m / distance_m
         };
 
-        let screen_radius_px = (viewport_pos - radius_viewport_pos).length();
+        // Track apparent size for the 1-pixel sun fallback renderer.
+        lazy_load.current_screen_radius_px = screen_radius_px;
 
-        // Always update current_screen_radius_px for suns (for 1-pixel fallback rendering)
-        // For other bodies, only update when on-screen
-        let is_sun = sun.is_some();
-        let on_screen = viewport_pos.x >= -100.0
-            && viewport_pos.x <= window.width() + 100.0
-            && viewport_pos.y >= -100.0
-            && viewport_pos.y <= window.height() + 100.0;
-
-        if is_sun || on_screen {
-            lazy_load.current_screen_radius_px = screen_radius_px;
+        // Evict a resident mesh once the body has receded well past the load
+        // threshold. Hysteresis (EVICTION_HYSTERESIS) keeps a body hovering at
+        // the boundary from thrashing a multi-megabyte glTF every frame.
+        if lazy_load.loaded {
+            let evict_below = lazy_load.min_screen_radius_px * EVICTION_HYSTERESIS;
+            if screen_radius_px < evict_below {
+                for child in lazy_load.mesh_child_entities.drain(..) {
+                    // Despawning the WorldAssetRoot entity fires that component's
+                    // on_remove hook, which unregisters the instance and releases
+                    // the scene's mesh/material assets.
+                    commands.entity(child).despawn();
+                }
+                lazy_load.loaded = false;
+                tracing::debug!(
+                    "lazy_load: EVICTED mesh for entity {entity:?} (screen_radius_px={screen_radius_px:.2} < evict_below={evict_below:.2})"
+                );
+            }
+            continue;
         }
 
         // Check if screen-space radius meets the threshold
@@ -380,6 +430,7 @@ pub fn lazy_load_celestial_meshes(
                     for scene_handle in &gltf.scenes {
                         let child = commands.spawn((WorldAssetRoot(scene_handle.clone()),)).id();
                         commands.entity(entity).add_child(child);
+                        lazy_load.mesh_child_entities.push(child);
                     }
 
                     // If this is a planet with animations enabled and the glTF has animations,
@@ -438,7 +489,7 @@ pub fn sun_fallback_vfx_system(
     asset_server: Res<'_, AssetServer>,
     suns: Query<'_, '_, (Entity, &Sun, &LazyLoadMesh, &GlobalTransform), Without<SunFallbackVfx>>,
 ) {
-    for (entity, _sun, lazy_load, global_transform) in &suns {
+    for (entity, _sun, lazy_load, _global_transform) in &suns {
         // Only spawn fallback if:
         // - Mesh is not loaded
         // - Sun is visible (current_screen_radius_px > 0)
