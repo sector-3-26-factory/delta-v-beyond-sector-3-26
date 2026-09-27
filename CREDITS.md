@@ -49,7 +49,10 @@ The following technical transformations are applied to most or all `mesh.glb` fi
 - **License:** CC Attribution 4.0 (CC BY 4.0)
 - **License URL:** https://creativecommons.org/licenses/by/4.0/
 - **File:** `assets/templates/asteroids/daphne-planetoid-sebastiansosnowski/mesh.glb`
-- **Modifications:** Standard modifications
+- **Also used as a shared mesh for minor moons:** `assets/templates/moons/shared/mesh_1/mesh.glb`
+- **Modifications:** Standard modifications. Also used as a placeholder mesh shared by
+  285 minor moons in the solar system world; each moon is scaled to its own real radius
+  via the `scale` factor in `assets/worlds/solar-system.world.json`.
 
 ### Archimedes (Meshy AI)
 
