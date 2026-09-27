@@ -20,11 +20,11 @@ use bevy::prelude::*;
 /// use bevy::prelude::*;
 /// use delta_v_core::spawn::WorldSpawnSet;
 ///
-/// #[derive(Resource, Default)]
+/// #[derive(Resource)]
 /// struct SpawnOrder(Vec<&'static str>);
 ///
 /// let mut app = App::new();
-/// app.init_resource::<SpawnOrder>();
+/// app.insert_resource(SpawnOrder(Vec::new()));
 /// app.configure_sets(
 ///     Update,
 ///     (
