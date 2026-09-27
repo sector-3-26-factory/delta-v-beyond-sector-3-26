@@ -1,8 +1,9 @@
 # ADR-0009: Newtonian physics with gravitational interaction
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0055
 - **Date**: 2026-05-19
 - **Deciders**: Cute-Donkey
+- **Superseded by**: ADR-0055
 
 ## Context
 

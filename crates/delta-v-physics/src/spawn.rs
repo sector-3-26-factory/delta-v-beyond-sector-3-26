@@ -22,9 +22,8 @@
 //! for celestial bodies (suns, planets, asteroids). Each system is named
 //! `spawn_<entity_type>` and listens for `SpawnEntity` events.
 //!
-//! See ADR-0038 (entity template system) and ADR-0009 (Newtonian physics).
+//! See ADR-0038 (entity template system) and ADR-0055 (Keplerian orbits + SOI gravity).
 
-use bevy::gltf::Gltf;
 use bevy::light::{NotShadowCaster, PointLight};
 use bevy::prelude::*;
 use delta_v_core::{
@@ -34,10 +33,10 @@ use delta_v_types::{
     compute_debug_axis_length, resolve_mass, scale_bounding_box, scale_collision_shape,
 };
 
-use crate::celestial::Moon;
+use crate::celestial::{LazyLoadMesh, Moon};
 use crate::{
     CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalBody, OrbitalParentId,
-    PendingCelestialMesh, Planet, RigidBody, Sun,
+    Planet, RigidBody, Sun,
 };
 
 // ---------------------------------------------------------------------------
@@ -60,7 +59,7 @@ use crate::{
 pub fn spawn_sun(
     mut events: MessageReader<'_, '_, SpawnEntity>,
     mut commands: Commands<'_, '_>,
-    asset_server: Res<'_, AssetServer>,
+    _asset_server: Res<'_, AssetServer>,
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
@@ -85,9 +84,6 @@ pub fn spawn_sun(
 
         let entity_id = spawn.id.clone();
 
-        // Queue glTF mesh load
-        let gltf_handle = asset_server.load::<Gltf>(&spawn.mesh_path());
-
         // Spawn the sun entity
         // Per ADR-0053, NotShadowCaster is a VFX exemption - prevents the sun mesh
         // from blocking its own light.
@@ -106,7 +102,12 @@ pub fn spawn_sun(
                 Targetable,
                 EntityType("sun".to_string()),
                 WorldEntityId(entity_id.clone()),
-                PendingCelestialMesh { gltf_handle },
+                LazyLoadMesh {
+                    min_screen_radius_px: 1.0, // Load sun at large distances
+                    loaded: false,
+                    mesh_path: spawn.mesh_path(),
+                    current_screen_radius_px: 0.0,
+                },
                 DebugAxesEligible::new(entity_id.clone(), axis_length),
                 NotShadowCaster,
             ))
@@ -176,7 +177,7 @@ pub fn spawn_sun(
 pub fn spawn_planet(
     mut events: MessageReader<'_, '_, SpawnEntity>,
     mut commands: Commands<'_, '_>,
-    asset_server: Res<'_, AssetServer>,
+    _asset_server: Res<'_, AssetServer>,
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
@@ -200,9 +201,6 @@ pub fn spawn_planet(
         let axis_length = compute_debug_axis_length(&scaled_bbox);
 
         let entity_id = spawn.id.clone();
-
-        // Queue glTF mesh load
-        let gltf_handle = asset_server.load::<Gltf>(&spawn.mesh_path());
 
         // We need to resolve the orbital_parent_id to an Entity.
         // This is done in a second pass after all entities are spawned.
@@ -250,7 +248,12 @@ pub fn spawn_planet(
             Targetable,
             EntityType("planet".to_string()),
             WorldEntityId(entity_id.clone()),
-            PendingCelestialMesh { gltf_handle },
+            LazyLoadMesh {
+                min_screen_radius_px: 1.0, // Load planets at large distances
+                loaded: false,
+                mesh_path: spawn.mesh_path(),
+                current_screen_radius_px: 0.0,
+            },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));
 
@@ -310,7 +313,7 @@ pub fn spawn_planet(
 pub fn spawn_asteroid(
     mut events: MessageReader<'_, '_, SpawnEntity>,
     mut commands: Commands<'_, '_>,
-    asset_server: Res<'_, AssetServer>,
+    _asset_server: Res<'_, AssetServer>,
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
@@ -335,13 +338,67 @@ pub fn spawn_asteroid(
 
         let entity_id = spawn.id.clone();
 
-        // Queue glTF mesh load
-        let gltf_handle = asset_server.load::<Gltf>(&spawn.mesh_path());
-
-        // Spawn the asteroid entity
-        // Asteroids are dynamic bodies that respond to collisions based on their mass.
-        // They use the ASTEROID collision layer.
+        // Scale collision shape
         let scaled_collision_shape = scale_collision_shape(&collision_shape_data, scale_factor);
+
+        // Read orbital parameters from world definition (spawn.orbital_parameters)
+        // Per ADR-0055: asteroids follow Keplerian orbits when idle; switch to rigid body
+        // impulse physics on collision/impact. No mutual gravitational attraction.
+        let (
+            orbital_parent_id,
+            orbital_distance,
+            orbital_period,
+            orbital_eccentricity,
+            orbital_inclination,
+            initial_orbital_angle,
+        ) = spawn.orbital_parameters.as_ref().map_or_else(
+            || (String::new(), 0.0, 0.0, 0.0, 0.0, 0.0),
+            |op| {
+                (
+                    op.orbital_parent.clone(),
+                    op.orbital_distance,
+                    op.orbital_period,
+                    op.orbital_eccentricity,
+                    op.orbital_inclination,
+                    op.initial_orbital_angle,
+                )
+            },
+        );
+
+        let mut entity_commands = commands.spawn((
+            Name::new(format!("Asteroid: {entity_id}")),
+            Transform::from_translation(spawn.position)
+                .with_rotation(spawn.rotation)
+                .with_scale(spawn.scale),
+            RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
+            CollisionShape(scaled_collision_shape),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::ASTEROID),
+            Navigable,
+            Targetable,
+            EntityType("asteroid".to_string()),
+            WorldEntityId(entity_id.clone()),
+            LazyLoadMesh {
+                min_screen_radius_px: 1000.0, // Load asteroids only when close
+                loaded: false,
+                mesh_path: spawn.mesh_path(),
+                current_screen_radius_px: 0.0,
+            },
+            DebugAxesEligible::new(entity_id.clone(), axis_length),
+        ));
+
+        // Add OrbitalBody component if orbital parameters are present
+        // This makes the asteroid follow a Keplerian orbit when idle
+        if !orbital_parent_id.is_empty() {
+            entity_commands.insert(OrbitalBody {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance,
+                orbital_period,
+                orbital_eccentricity,
+                orbital_inclination,
+                initial_orbital_angle,
+            });
+            entity_commands.insert(OrbitalParentId(orbital_parent_id.clone()));
+        }
 
         // Debug output to understand collision shape scaling
         tracing::debug!(
@@ -358,23 +415,14 @@ pub fn spawn_asteroid(
             scaled_collision_shape.offset
         );
 
-        commands.spawn((
-            Name::new(format!("Asteroid: {entity_id}")),
-            Transform::from_translation(spawn.position)
-                .with_rotation(spawn.rotation)
-                .with_scale(spawn.scale),
-            RigidBody::new(mass, 1.0), // inertia_scale = 1.0 for sphere
-            CollisionShape(scaled_collision_shape),
-            CollisionLayersComponent::new(delta_v_types::collision::layers::ASTEROID),
-            Navigable,
-            Targetable,
-            EntityType("asteroid".to_string()),
-            WorldEntityId(entity_id.clone()),
-            PendingCelestialMesh { gltf_handle },
-            DebugAxesEligible::new(entity_id.clone(), axis_length),
-        ));
-
-        tracing::info!("spawned asteroid: {entity_id} (mass={mass:.3e} kg)",);
+        tracing::info!(
+            "spawned asteroid: {entity_id} (mass={mass:.3e} kg, orbital={})",
+            if orbital_parent_id.is_empty() {
+                "none"
+            } else {
+                "yes"
+            }
+        );
     }
 }
 
@@ -390,7 +438,7 @@ pub fn spawn_asteroid(
 pub fn spawn_moon(
     mut events: MessageReader<'_, '_, SpawnEntity>,
     mut commands: Commands<'_, '_>,
-    asset_server: Res<'_, AssetServer>,
+    _asset_server: Res<'_, AssetServer>,
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
@@ -414,9 +462,6 @@ pub fn spawn_moon(
         let axis_length = compute_debug_axis_length(&scaled_bbox);
 
         let entity_id = spawn.id.clone();
-
-        // Queue glTF mesh load
-        let gltf_handle = asset_server.load::<Gltf>(&spawn.mesh_path());
 
         // We need to resolve the orbital_parent_id to an Entity.
         // This is done in a second pass after all entities are spawned.
@@ -464,7 +509,12 @@ pub fn spawn_moon(
             Targetable,
             EntityType("moon".to_string()),
             WorldEntityId(entity_id.clone()),
-            PendingCelestialMesh { gltf_handle },
+            LazyLoadMesh {
+                min_screen_radius_px: 1000.0, // Load moons only when close
+                loaded: false,
+                mesh_path: spawn.mesh_path(),
+                current_screen_radius_px: 0.0,
+            },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
         ));
 
