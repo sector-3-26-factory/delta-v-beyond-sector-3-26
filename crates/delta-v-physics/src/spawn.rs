@@ -111,6 +111,11 @@ pub fn spawn_sun(
                 },
                 DebugAxesEligible::new(entity_id.clone(), axis_length),
                 NotShadowCaster,
+                RenderLayer::Gameplay.render_layers(),
+                // The sun's PointLight child is parented here, and a PointLight
+                // requires InheritedVisibility. Without Visibility on this parent
+                // the child inherits nothing and Bevy logs warning B0004.
+                Visibility::default(),
             ))
             .id();
 
@@ -138,6 +143,9 @@ pub fn spawn_sun(
 
         // Spawn a child entity with PointLight
         // The light follows the sun's transform automatically via ChildOf
+        // The light entity carries no mesh of its own, so NotShadowCaster is
+        // defensive: it just keeps the entity out of the shadow-casting pass.
+        // It has no effect on how the light illuminates its surroundings.
         commands.spawn((
             Name::new(format!("Sun Light: {entity_id}")),
             PointLight {
@@ -150,6 +158,7 @@ pub fn spawn_sun(
                 range: sun_template.light_range,
                 ..default()
             },
+            NotShadowCaster,
             RenderLayer::Gameplay.render_layers(),
             ChildOf(sun_entity),
         ));
