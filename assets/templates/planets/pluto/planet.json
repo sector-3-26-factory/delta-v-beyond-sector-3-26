@@ -1,0 +1,46 @@
+{
+    "entity_type": "planet",
+    "mass": {
+        "value": 0.00218,
+        "unit": "M_earth"
+    },
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 100.0,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": {
+                "value": -100.0,
+                "unit": "m"
+            },
+            "y": {
+                "value": -100.0,
+                "unit": "m"
+            },
+            "z": {
+                "value": -100.0,
+                "unit": "m"
+            }
+        },
+        "max": {
+            "x": {
+                "value": 100.0,
+                "unit": "m"
+            },
+            "y": {
+                "value": 100.0,
+                "unit": "m"
+            },
+            "z": {
+                "value": 100.0,
+                "unit": "m"
+            }
+        }
+    },
+    "is_gravity_source": true,
+    "animations_enabled": true
+}

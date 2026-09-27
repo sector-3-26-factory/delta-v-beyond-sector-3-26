@@ -2,17 +2,14 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://delta-v-beyond-sector-3-26/schema/planet",
     "title": "Planet",
-    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nA planet that orbits a parent body (sun or another planet). Per ADR-0009, planets are always gravity sources.",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nA planet template containing mesh-specific data only. Orbital parameters are defined in the world definition per entity instance.",
     "type": "object",
     "additionalProperties": false,
     "required": [
         "entity_type",
         "mass",
         "collision_shape",
-        "bounding_box",
-        "orbital_parent",
-        "orbital_distance",
-        "orbital_period"
+        "bounding_box"
     ],
     "properties": {
         "entity_type": {
@@ -76,51 +73,6 @@
             "description": "If true, this body generates gravity on other entities. Planets are always gravity sources. Default: true.",
             "type": "boolean",
             "default": true
-        },
-        "orbital_parent": {
-            "description": "ID of the parent body this planet orbits. The orbital motion system will compute position relative to the parent.",
-            "type": "string"
-        },
-        "orbital_distance": {
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
-        },
-        "orbital_period": {
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
-        },
-        "orbital_eccentricity": {
-            "description": "Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical). Default: 0 (circular).",
-            "type": "number",
-            "default": 0.0,
-            "minimum": 0.0,
-            "maximum": 0.99
-        },
-        "orbital_inclination": {
-            "description": "Orbital inclination in degrees (angle above/below the ecliptic plane). Default: 0 (in ecliptic).",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
-            "default": {
-                "value": 0.0,
-                "unit": "degrees"
-            }
-        },
-        "initial_orbital_angle": {
-            "description": "Starting angle in the orbital plane at time zero, in degrees. Default: 0.",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
-            "default": {
-                "value": 0.0,
-                "unit": "degrees"
-            }
-        },
-        "rotation_period": {
-            "description": "Rotation period in hours. The planet rotates around its tilted axis. None means no rotation.",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
-        },
-        "axial_tilt": {
-            "description": "Axial tilt (obliquity) in degrees. Angle between rotation axis and orbital axis. Default: 0 (no tilt).",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
-            "default": {
-                "value": 0.0,
-                "unit": "degrees"
-            }
         },
         "animations_enabled": {
             "description": "If true, mesh animations (e.g., moving clouds) will be played. Default: true.",

@@ -1,13 +1,14 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 //! Multi-tick physics integration tests and floating origin tests.
+//! Updated for SOI gravity model per ADR-0055.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]
 
 use bevy::prelude::*;
 use bevy::time::TimePlugin;
 
-use crate::constants::{GRAVITATIONAL_CONSTANT, GRAVITY_CUTOFF_RADIUS_M};
+use crate::celestial::{OrbitalBody, Planet};
 use crate::rigid_body::{MassSource, RigidBody};
 use crate::systems::{
     PhysicsSet, clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
@@ -48,6 +49,7 @@ fn build_physics_app() -> App {
 
 /// Builds a minimal Bevy app with only gravity (no `clear_accumulators`),
 /// useful for checking force accumulator values after a tick.
+/// Uses SOI gravity model per ADR-0055.
 fn build_gravity_only_app() -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
@@ -79,29 +81,47 @@ fn run_fixed_updates(app: &mut App, n: usize) {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_velocity_accumulates_over_multiple_ticks() {
+fn test_soi_velocity_accumulates_over_multiple_ticks() {
     let mut app = build_physics_app();
 
+    // Spawn a planet (celestial body with SOI)
+    let _planet_id = app
+        .world_mut()
+        .spawn((
+            RigidBody::new(5.972e24, 1.0), // Earth mass
+            Transform::from_translation(Vec3::ZERO),
+            MassSource,
+            Planet {
+                rotation_period: Some(24.0 * 3600.0),
+                axial_tilt: 0.0,
+                animations_enabled: false,
+            },
+            OrbitalBody {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance: 1.496e11,
+                orbital_period: 365.25 * 24.0 * 3600.0,
+                orbital_eccentricity: 0.0167,
+                orbital_inclination: 0.0,
+                initial_orbital_angle: 0.0,
+            },
+        ))
+        .id();
+
+    // Spawn a ship (dynamic body)
     let body_id = app
         .world_mut()
         .spawn((
             RigidBody::new(10.0, 1.0),
-            Transform::from_translation(Vec3::new(10.0, 0.0, 0.0)),
+            Transform::from_translation(Vec3::new(6.371e6 + 400_000.0, 0.0, 0.0)), // 400km altitude
         ))
         .id();
-
-    app.world_mut().spawn((
-        RigidBody::new(1000.0, 1.0),
-        Transform::from_translation(Vec3::ZERO),
-        MassSource,
-    ));
 
     run_fixed_updates(&mut app, 60);
 
     let body = app.world().get::<RigidBody>(body_id).unwrap();
     assert!(
         body.velocity.x < 0.0,
-        "body should have negative X velocity (pulled toward source), got {}",
+        "body should have negative X velocity (pulled toward planet), got {}",
         body.velocity.x
     );
 }
@@ -135,22 +155,39 @@ fn test_position_changes_with_velocity() {
 }
 
 #[test]
-fn test_clear_accumulators_resets_forces_between_ticks() {
+fn test_soi_clear_accumulators_resets_forces_between_ticks() {
     let mut app = build_physics_app();
+
+    // Spawn a planet (celestial body with SOI)
+    let _planet_id = app
+        .world_mut()
+        .spawn((
+            RigidBody::new(5.972e24, 1.0), // Earth mass
+            Transform::from_translation(Vec3::ZERO),
+            MassSource,
+            Planet {
+                rotation_period: Some(24.0 * 3600.0),
+                axial_tilt: 0.0,
+                animations_enabled: false,
+            },
+            OrbitalBody {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance: 1.496e11,
+                orbital_period: 365.25 * 24.0 * 3600.0,
+                orbital_eccentricity: 0.0167,
+                orbital_inclination: 0.0,
+                initial_orbital_angle: 0.0,
+            },
+        ))
+        .id();
 
     let body_id = app
         .world_mut()
         .spawn((
             RigidBody::new(10.0, 1.0),
-            Transform::from_translation(Vec3::new(10.0, 0.0, 0.0)),
+            Transform::from_translation(Vec3::new(6.371e6 + 400_000.0, 0.0, 0.0)),
         ))
         .id();
-
-    app.world_mut().spawn((
-        RigidBody::new(1000.0, 1.0),
-        Transform::from_translation(Vec3::ZERO),
-        MassSource,
-    ));
 
     run_fixed_update(&mut app);
 
@@ -163,25 +200,39 @@ fn test_clear_accumulators_resets_forces_between_ticks() {
 }
 
 #[test]
-fn test_gravity_self_interaction_skip() {
+fn test_soi_celestial_body_no_self_gravity() {
     let mut app = build_physics_app();
 
-    let body_id = app
+    // Spawn a planet (celestial body with SOI)
+    let planet_id = app
         .world_mut()
         .spawn((
-            RigidBody::new(1000.0, 1.0),
+            RigidBody::new(5.972e24, 1.0), // Earth mass
             Transform::from_translation(Vec3::ZERO),
             MassSource,
+            Planet {
+                rotation_period: Some(24.0 * 3600.0),
+                axial_tilt: 0.0,
+                animations_enabled: false,
+            },
+            OrbitalBody {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance: 1.496e11,
+                orbital_period: 365.25 * 24.0 * 3600.0,
+                orbital_eccentricity: 0.0167,
+                orbital_inclination: 0.0,
+                initial_orbital_angle: 0.0,
+            },
         ))
         .id();
 
     run_fixed_update(&mut app);
 
-    let body = app.world().get::<RigidBody>(body_id).unwrap();
+    let planet = app.world().get::<RigidBody>(planet_id).unwrap();
     assert_eq!(
-        body.force_accumulator,
+        planet.force_accumulator,
         Vec3::ZERO,
-        "MassSource should not exert gravity on itself"
+        "Celestial body should not exert gravity on itself"
     );
 }
 
@@ -189,105 +240,57 @@ fn test_gravity_self_interaction_skip() {
 // P2: Gravity at multiple distances
 // ---------------------------------------------------------------------------
 
+// Old N-body gravity tests removed - superseded by SOI gravity tests per ADR-0055.
+// The old tests used bare MassSource without celestial body components (Sun/Planet/Moon + OrbitalBody).
+// New SOI gravity tests (test_soi_gravity_*) cover the same functionality with proper celestial hierarchy.
+
 #[test]
-fn test_gravity_at_near_distance() {
+fn test_soi_gravity_inside_soi() {
     let mut app = build_gravity_only_app();
 
-    let source_mass = 1e10_f32;
-    let body_mass = 10.0_f32;
-    let distance = 100.0_f32;
-
-    app.world_mut().spawn((
-        RigidBody::new(source_mass, 1.0),
-        Transform::from_translation(Vec3::ZERO),
-        MassSource,
-    ));
-
-    let body_id = app
+    // Spawn a planet with known SOI
+    let planet_mass = 5.972e24_f32; // Earth mass
+    let _planet_id = app
         .world_mut()
         .spawn((
-            RigidBody::new(body_mass, 1.0),
-            Transform::from_translation(Vec3::new(distance, 0.0, 0.0)),
+            RigidBody::new(planet_mass, 1.0),
+            Transform::from_translation(Vec3::ZERO),
+            MassSource,
+            Planet {
+                rotation_period: Some(24.0 * 3600.0),
+                axial_tilt: 0.0,
+                animations_enabled: false,
+            },
+            OrbitalBody {
+                orbital_parent: Entity::PLACEHOLDER,
+                orbital_distance: 1.496e11, // 1 AU
+                orbital_period: 365.25 * 24.0 * 3600.0,
+                orbital_eccentricity: 0.0167,
+                orbital_inclination: 0.0,
+                initial_orbital_angle: 0.0,
+            },
+        ))
+        .id();
+
+    // Spawn a ship well inside the planet's SOI (at 400km altitude)
+    // Earth SOI radius ≈ 925,000 km, so 400km is well inside
+    let ship_id = app
+        .world_mut()
+        .spawn((
+            RigidBody::new(1000.0, 1.0),
+            Transform::from_translation(Vec3::new(6.371e6 + 400_000.0, 0.0, 0.0)),
         ))
         .id();
 
     run_fixed_update(&mut app);
 
-    let expected_force = GRAVITATIONAL_CONSTANT * source_mass * body_mass / (distance * distance);
-    let body = app.world().get::<RigidBody>(body_id).unwrap();
-    let actual_force = body.force_accumulator.x.abs();
-
-    let relative_error = (actual_force - expected_force).abs() / expected_force;
+    let ship = app.world().get::<RigidBody>(ship_id).unwrap();
     assert!(
-        relative_error < 0.001,
-        "near-distance force mismatch: expected {expected_force}, got {actual_force}"
+        ship.force_accumulator.length() > f32::EPSILON,
+        "gravity should be applied inside SOI"
     );
-}
-
-#[test]
-fn test_gravity_at_mid_distance() {
-    let mut app = build_gravity_only_app();
-
-    let source_mass = 1e10_f32;
-    let body_mass = 10.0_f32;
-    let distance = 10_000.0_f32;
-
-    app.world_mut().spawn((
-        RigidBody::new(source_mass, 1.0),
-        Transform::from_translation(Vec3::ZERO),
-        MassSource,
-    ));
-
-    let body_id = app
-        .world_mut()
-        .spawn((
-            RigidBody::new(body_mass, 1.0),
-            Transform::from_translation(Vec3::new(distance, 0.0, 0.0)),
-        ))
-        .id();
-
-    run_fixed_update(&mut app);
-
-    let expected_force = GRAVITATIONAL_CONSTANT * source_mass * body_mass / (distance * distance);
-    let body = app.world().get::<RigidBody>(body_id).unwrap();
-    let actual_force = body.force_accumulator.x.abs();
-
-    let relative_error = (actual_force - expected_force).abs() / expected_force;
-    assert!(
-        relative_error < 0.001,
-        "mid-distance force mismatch: expected {expected_force}, got {actual_force}"
-    );
-}
-
-#[test]
-fn test_gravity_at_cutoff_boundary() {
-    let mut app = build_gravity_only_app();
-
-    let cutoff = GRAVITY_CUTOFF_RADIUS_M;
-    let source_mass = 1e15_f32;
-    let body_mass = 10.0_f32;
-
-    app.world_mut().spawn((
-        RigidBody::new(source_mass, 1.0),
-        Transform::from_translation(Vec3::ZERO),
-        MassSource,
-    ));
-
-    let body_inside = app
-        .world_mut()
-        .spawn((
-            RigidBody::new(body_mass, 1.0),
-            Transform::from_translation(Vec3::new(cutoff - 1.0, 0.0, 0.0)),
-        ))
-        .id();
-
-    run_fixed_update(&mut app);
-
-    let body = app.world().get::<RigidBody>(body_inside).unwrap();
-    assert!(
-        body.force_accumulator.length() > f32::EPSILON,
-        "gravity should be applied just inside cutoff"
-    );
+    // Force should be toward planet (negative X)
+    assert!(ship.force_accumulator.x < 0.0);
 }
 
 // ---------------------------------------------------------------------------

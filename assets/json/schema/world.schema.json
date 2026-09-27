@@ -94,6 +94,10 @@
         "mass": {
           "description": "Optional mass override. If present, this value overrides the template's mass. Mass is NOT scaled with the scale factor - it is used as-is or overridden. Per ADR-0008, uses value+unit format. Units: kg, t, M_earth, M_sun. Converted to kilograms at load time.",
           "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
+        },
+        "orbital_parameters": {
+          "description": "Optional orbital movement parameters for this entity. If present, the entity will orbit the specified parent body. These parameters are world-specific and override any template defaults.",
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/orbital_parameters"
         }
       }
     }

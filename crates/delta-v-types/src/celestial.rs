@@ -93,27 +93,6 @@ pub struct PlanetTemplateJson {
     /// If true, this body generates gravity on other entities.
     /// Default: true (from schema).
     pub is_gravity_source: bool,
-    /// ID of the parent body this planet orbits.
-    pub orbital_parent: String,
-    /// Orbital distance in metres.
-    pub orbital_distance: PhysicalQuantityJson,
-    /// Orbital period in seconds.
-    pub orbital_period: PhysicalQuantityJson,
-    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
-    /// Default: 0.0 (from schema).
-    pub orbital_eccentricity: f32,
-    /// Orbital inclination in degrees.
-    /// Default: 0.0 (from schema).
-    pub orbital_inclination: PhysicalQuantityJson,
-    /// Initial orbital angle in degrees.
-    /// Default: 0.0 (from schema).
-    pub initial_orbital_angle: PhysicalQuantityJson,
-    /// Rotation period in hours.
-    /// Default: None (from schema).
-    pub rotation_period: Option<PhysicalQuantityJson>,
-    /// Axial tilt (obliquity) in degrees.
-    /// Default: 0.0 (from schema).
-    pub axial_tilt: PhysicalQuantityJson,
     /// If true, mesh animations (e.g., moving clouds) will be played.
     /// Default: true (from schema).
     pub animations_enabled: bool,
@@ -159,27 +138,6 @@ pub struct MoonTemplateJson {
     /// If true, this body generates gravity on other entities.
     /// Default: true (from schema).
     pub is_gravity_source: bool,
-    /// ID of the parent body this moon orbits.
-    pub orbital_parent: String,
-    /// Orbital distance in metres.
-    pub orbital_distance: PhysicalQuantityJson,
-    /// Orbital period in seconds.
-    pub orbital_period: PhysicalQuantityJson,
-    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
-    /// Default: 0.0 (from schema).
-    pub orbital_eccentricity: f32,
-    /// Orbital inclination in degrees.
-    /// Default: 0.0 (from schema).
-    pub orbital_inclination: PhysicalQuantityJson,
-    /// Initial orbital angle in degrees.
-    /// Default: 0.0 (from schema).
-    pub initial_orbital_angle: PhysicalQuantityJson,
-    /// Rotation period in hours.
-    /// Default: None (from schema).
-    pub rotation_period: Option<PhysicalQuantityJson>,
-    /// Axial tilt (obliquity) in degrees.
-    /// Default: 0.0 (from schema).
-    pub axial_tilt: PhysicalQuantityJson,
     /// If true, mesh animations (e.g., moving clouds) will be played.
     /// Default: true (from schema).
     pub animations_enabled: bool,
@@ -245,22 +203,6 @@ pub struct PlanetTemplate {
     pub bounding_box: BoundingBox,
     /// If true, this body generates gravity on other entities.
     pub is_gravity_source: bool,
-    /// ID of the parent body this planet orbits.
-    pub orbital_parent: String,
-    /// Orbital distance in metres (SI base unit).
-    pub orbital_distance: f32,
-    /// Orbital period in seconds (SI base unit).
-    pub orbital_period: f32,
-    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
-    pub orbital_eccentricity: f32,
-    /// Orbital inclination in radians (SI base unit).
-    pub orbital_inclination: f32,
-    /// Initial orbital angle in radians (SI base unit).
-    pub initial_orbital_angle: f32,
-    /// Rotation period in seconds (SI base unit). None means no rotation.
-    pub rotation_period: Option<f32>,
-    /// Axial tilt (obliquity) in radians (SI base unit).
-    pub axial_tilt: f32,
     /// If true, mesh animations (e.g., moving clouds) will be played.
     pub animations_enabled: bool,
 }
@@ -273,14 +215,6 @@ impl From<PlanetTemplateJson> for PlanetTemplate {
             collision_shape: json.collision_shape.into(),
             bounding_box: json.bounding_box.into(),
             is_gravity_source: json.is_gravity_source,
-            orbital_parent: json.orbital_parent,
-            orbital_distance: json.orbital_distance.to_meters(),
-            orbital_period: json.orbital_period.to_seconds(),
-            orbital_eccentricity: json.orbital_eccentricity,
-            orbital_inclination: json.orbital_inclination.to_radians(),
-            initial_orbital_angle: json.initial_orbital_angle.to_radians(),
-            rotation_period: json.rotation_period.map(|p| p.to_seconds()),
-            axial_tilt: json.axial_tilt.to_radians(),
             animations_enabled: json.animations_enabled,
         }
     }
@@ -334,22 +268,6 @@ pub struct MoonTemplate {
     pub bounding_box: BoundingBox,
     /// If true, this body generates gravity on other entities.
     pub is_gravity_source: bool,
-    /// ID of the parent body this moon orbits.
-    pub orbital_parent: String,
-    /// Orbital distance in metres (SI base unit).
-    pub orbital_distance: f32,
-    /// Orbital period in seconds (SI base unit).
-    pub orbital_period: f32,
-    /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical).
-    pub orbital_eccentricity: f32,
-    /// Orbital inclination in radians (SI base unit).
-    pub orbital_inclination: f32,
-    /// Initial orbital angle in radians (SI base unit).
-    pub initial_orbital_angle: f32,
-    /// Rotation period in seconds (SI base unit). None means no rotation.
-    pub rotation_period: Option<f32>,
-    /// Axial tilt (obliquity) in radians (SI base unit).
-    pub axial_tilt: f32,
     /// If true, mesh animations (e.g., moving clouds) will be played.
     pub animations_enabled: bool,
 }
@@ -362,14 +280,6 @@ impl From<MoonTemplateJson> for MoonTemplate {
             collision_shape: json.collision_shape.into(),
             bounding_box: json.bounding_box.into(),
             is_gravity_source: json.is_gravity_source,
-            orbital_parent: json.orbital_parent,
-            orbital_distance: json.orbital_distance.to_meters(),
-            orbital_period: json.orbital_period.to_seconds(),
-            orbital_eccentricity: json.orbital_eccentricity,
-            orbital_inclination: json.orbital_inclination.to_radians(),
-            initial_orbital_angle: json.initial_orbital_angle.to_radians(),
-            rotation_period: json.rotation_period.map(|p| p.to_seconds()),
-            axial_tilt: json.axial_tilt.to_radians(),
             animations_enabled: json.animations_enabled,
         }
     }

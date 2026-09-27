@@ -9,7 +9,7 @@
 //! See ADR-0005 (plugin architecture) and ADR-0038 (entity template system).
 
 use bevy::prelude::*;
-use delta_v_types::EntityTemplate;
+use delta_v_types::{EntityTemplate, world_def::OrbitalParameters};
 
 /// Event emitted when an entity should be spawned from a template.
 ///
@@ -54,6 +54,11 @@ pub struct SpawnEntity {
     /// If `None`, the template's mass is used.
     /// Mass is NOT scaled with the scale factor.
     pub mass: Option<f32>,
+
+    /// Optional orbital parameters from the world definition.
+    /// If `Some`, the entity will orbit the specified parent body.
+    /// If `None`, the entity will not orbit (e.g., sun, free-floating body).
+    pub orbital_parameters: Option<OrbitalParameters>,
 }
 
 impl SpawnEntity {
@@ -81,6 +86,7 @@ impl SpawnEntity {
             scale: Vec3::ONE,
             ai_task: None,
             mass: None,
+            orbital_parameters: None,
         }
     }
 
@@ -113,6 +119,14 @@ impl SpawnEntity {
     #[allow(clippy::missing_const_for_fn)]
     pub fn with_mass(mut self, mass: f32) -> Self {
         self.mass = Some(mass);
+        self
+    }
+
+    /// Sets the orbital parameters for this spawn event.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn with_orbital_parameters(mut self, orbital_parameters: OrbitalParameters) -> Self {
+        self.orbital_parameters = Some(orbital_parameters);
         self
     }
 

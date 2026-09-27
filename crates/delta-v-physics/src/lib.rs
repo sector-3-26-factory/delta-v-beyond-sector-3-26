@@ -18,7 +18,7 @@
 
 //! Newtonian physics with gravity, floating origin, and avian3d integration.
 //!
-//! See ADR-0007 (Floating origin), ADR-0009 (Newtonian physics with gravity),
+//! See ADR-0007 (Floating origin), ADR-0055 (Keplerian orbits + SOI gravity),
 //! and ADR-0017 (Fixed timestep and determinism).
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
@@ -44,8 +44,14 @@ pub mod rigid_body;
 pub mod spawn;
 pub mod systems;
 
-pub use celestial::{Navigable, OrbitalParentId, PendingCelestialMesh, Planet, Sun};
-pub use celestial::{attach_celestial_meshes, make_sun_emissive, resolve_orbital_parents};
+pub use celestial::{
+    LazyLoadMesh, Navigable, OrbitalBody, OrbitalParentId, PendingCelestialMesh, Planet, Sun,
+    SunFallbackVfx,
+};
+pub use celestial::{
+    attach_celestial_meshes, lazy_load_celestial_meshes, make_sun_emissive,
+    resolve_orbital_parents, sun_fallback_vfx_system, update_sun_fallback_vfx_system,
+};
 pub use collision::{
     CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeType, DynamicBody,
     StaticBody, distance_to_surface,
@@ -60,10 +66,9 @@ use bevy::prelude::*;
 use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health, WorldSpawnSet};
 use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
-    clear_accumulators_system, debug_position_logging_system, gravity_system,
-    integrate_angular_velocity_system, integrate_position_system, integrate_velocity_system,
-    moon_orbital_motion_system, moon_rotation_system, orbital_motion_system,
-    planet_rotation_system, sun_rotation_system,
+    clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
+    integrate_position_system, integrate_velocity_system, moon_rotation_system,
+    orbital_motion_system, planet_rotation_system, sun_rotation_system,
 };
 
 /// Physics plugin providing Newtonian dynamics and collision detection.
@@ -74,11 +79,14 @@ use systems::{
 /// - All physics simulation systems run in `FixedUpdate`, not `Update`.
 /// - Provides the [`RigidBody`] component for Newtonian dynamics.
 /// - Integrates forces and torques each tick (F=ma, tau=I*alpha).
-/// - Computes gravity from [`MassSource`] entities (ADR-0009).
+/// - Computes gravity using Sphere of Influence (SOI) model (ADR-0055):
+///   * Celestial bodies (Sun, Planet, Moon) follow Keplerian orbits — NO N-body gravity between them.
+///   * Dynamic entities (ships, asteroids, debris) experience gravity only from their current SOI parent.
+///   * Temporary dynamic attractors (black holes, gravity bombs) via `GravityAttractor` component.
 /// - Manages floating origin recentering (ADR-0007).
 /// - Integrates avian3d for collision detection (M3).
 ///
-/// See ADR-0017 (Fixed timestep and determinism) and ADR-0009 (Newtonian physics).
+/// See ADR-0017 (Fixed timestep and determinism) and ADR-0055 (Keplerian orbits + SOI gravity).
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
@@ -122,14 +130,6 @@ impl Plugin for PhysicsPlugin {
             ),
         );
 
-        // Debug position logging system - runs last in FixedUpdate to log final positions
-        app.add_systems(
-            FixedUpdate,
-            debug_position_logging_system
-                .run_if(in_state(AppState::InGame))
-                .after(PhysicsSet::ClearAccumulators),
-        );
-
         // Floating origin recentering runs in FixedUpdate, before physics.
         // This ensures positions are relative to the current origin before forces are applied.
         // Must run BEFORE PhysicsSet::AccumulateForces so that orbital_motion_system (which runs
@@ -159,24 +159,13 @@ impl Plugin for PhysicsPlugin {
                 .run_if(in_state(AppState::InGame)),
         );
 
-        // Orbital motion system for planets.
-        // Runs in FixedUpdate to update planet positions along their orbital paths.
+        // Unified orbital motion system for all orbiting bodies (planets, moons, etc.).
+        // Runs in FixedUpdate to update positions along their orbital paths.
         app.add_systems(
             FixedUpdate,
             orbital_motion_system
                 .in_set(PhysicsSet::IntegratePosition)
                 .run_if(in_state(AppState::InGame)),
-        );
-
-        // Moon orbital motion system.
-        // Runs in FixedUpdate to update moon positions along their orbital paths.
-        // Must run AFTER orbital_motion_system so parent planets have updated positions.
-        app.add_systems(
-            FixedUpdate,
-            moon_orbital_motion_system
-                .in_set(PhysicsSet::IntegratePosition)
-                .run_if(in_state(AppState::InGame))
-                .after(orbital_motion_system),
         );
 
         // Sun rotation system.
@@ -233,7 +222,7 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             Update,
             spawn_moon
-                .in_set(WorldSpawnSet::SpawnPlanets)
+                .in_set(WorldSpawnSet::SpawnMoons)
                 .run_if(in_state(AppState::SpawningEntities)),
         );
         app.add_systems(
@@ -244,11 +233,14 @@ impl Plugin for PhysicsPlugin {
         );
 
         // Resolve orbital parent IDs after all entities are spawned.
-        // This must run after SpawnSuns and SpawnPlanets.
+        // This must run after the whole spawn chain, not just SpawnSuns and SpawnPlanets:
+        // moons spawn in SpawnMoons and asteroids in SpawnAsteroids, and both also carry
+        // OrbitalParentId. MarkDebugAxes is the chain terminus, so ordering after it covers
+        // every spawn set (ADR-0038 second pass).
         app.add_systems(
             Update,
             resolve_orbital_parents
-                .after(WorldSpawnSet::SpawnPlanets)
+                .after(WorldSpawnSet::MarkDebugAxes)
                 .run_if(in_state(AppState::SpawningEntities)),
         );
 
@@ -267,6 +259,23 @@ impl Plugin for PhysicsPlugin {
             make_sun_emissive
                 .run_if(in_state(AppState::InGame))
                 .after(attach_celestial_meshes),
+        );
+
+        // Lazy load celestial body meshes based on distance from camera.
+        // This prevents OOM on startup by only loading meshes when near the camera.
+        // Per ADR-0055, this is part of the performance optimization for the full
+        // solar system with 289 moons.
+        app.add_systems(
+            Update,
+            lazy_load_celestial_meshes.run_if(in_state(AppState::InGame)),
+        );
+
+        // 1-pixel sun fallback VFX for when mesh is not loaded but sun is visible.
+        // Per ADR-0053, this is a VFX exemption.
+        app.add_systems(
+            Update,
+            (sun_fallback_vfx_system, update_sun_fallback_vfx_system)
+                .run_if(in_state(AppState::InGame)),
         );
     }
 }

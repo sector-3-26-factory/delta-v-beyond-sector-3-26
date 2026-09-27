@@ -370,63 +370,51 @@ impl EntityTemplate {
     }
 
     /// Returns the orbital parent for this template (for planets and moons).
+    /// Note: Orbital parameters are now defined in the world definition, not in templates.
+    /// This method returns None as templates no longer contain orbital data.
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]
     pub fn orbital_parent(&self) -> Option<&str> {
-        match self {
-            Self::Planet(t) => Some(&t.orbital_parent),
-            Self::Moon(t) => Some(&t.orbital_parent),
-            _ => None,
-        }
+        None
     }
 
     /// Returns the orbital distance for this template (for planets and moons).
+    /// Note: Orbital parameters are now defined in the world definition, not in templates.
+    /// This method returns 0.0 as templates no longer contain orbital data.
     #[must_use]
     pub const fn orbital_distance(&self) -> f32 {
-        match self {
-            Self::Planet(t) => t.orbital_distance,
-            Self::Moon(t) => t.orbital_distance,
-            _ => 0.0,
-        }
+        0.0
     }
 
     /// Returns the orbital period for this template (for planets and moons).
+    /// Note: Orbital parameters are now defined in the world definition, not in templates.
+    /// This method returns 0.0 as templates no longer contain orbital data.
     #[must_use]
     pub const fn orbital_period(&self) -> f32 {
-        match self {
-            Self::Planet(t) => t.orbital_period,
-            Self::Moon(t) => t.orbital_period,
-            _ => 0.0,
-        }
+        0.0
     }
 
     /// Returns the orbital eccentricity for this template (for planets and moons).
+    /// Note: Orbital parameters are now defined in the world definition, not in templates.
+    /// This method returns 0.0 as templates no longer contain orbital data.
     #[must_use]
     pub const fn orbital_eccentricity(&self) -> f32 {
-        match self {
-            Self::Planet(t) => t.orbital_eccentricity,
-            Self::Moon(t) => t.orbital_eccentricity,
-            _ => 0.0,
-        }
+        0.0
     }
 
     /// Returns the orbital inclination for this template (for planets and moons).
+    /// Note: Orbital parameters are now defined in the world definition, not in templates.
+    /// This method returns 0.0 as templates no longer contain orbital data.
     #[must_use]
     pub const fn orbital_inclination(&self) -> f32 {
-        match self {
-            Self::Planet(t) => t.orbital_inclination,
-            Self::Moon(t) => t.orbital_inclination,
-            _ => 0.0,
-        }
+        0.0
     }
 
     /// Returns the initial orbital angle for this template (for planets and moons).
+    /// Note: Orbital parameters are now defined in the world definition, not in templates.
+    /// This method returns 0.0 as templates no longer contain orbital data.
     #[must_use]
     pub const fn initial_orbital_angle(&self) -> f32 {
-        match self {
-            Self::Planet(t) => t.initial_orbital_angle,
-            Self::Moon(t) => t.initial_orbital_angle,
-            _ => 0.0,
-        }
+        0.0
     }
 }

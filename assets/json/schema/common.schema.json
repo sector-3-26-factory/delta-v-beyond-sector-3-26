@@ -59,6 +59,65 @@
                     "default": 1.0
                 }
             }
+        },
+        "orbital_parameters": {
+            "description": "Orbital movement parameters for celestial bodies. All values in SI units (metres, seconds, radians) after conversion. These are world-specific, not template-specific.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "orbital_parent",
+                "orbital_distance",
+                "orbital_period"
+            ],
+            "properties": {
+                "orbital_parent": {
+                    "description": "ID of the parent body this entity orbits. If absent, the entity does not orbit (e.g., sun, free-floating body).",
+                    "type": "string"
+                },
+                "orbital_distance": {
+                    "description": "Orbital distance (semi-major axis) in metres.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "orbital_period": {
+                    "description": "Orbital period in seconds.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+                },
+                "orbital_eccentricity": {
+                    "description": "Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical). Default: 0 (circular).",
+                    "type": "number",
+                    "default": 0.0,
+                    "minimum": 0.0,
+                    "maximum": 0.99
+                },
+                "orbital_inclination": {
+                    "description": "Orbital inclination in degrees (angle above/below the ecliptic plane). Default: 0 (in ecliptic).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
+                    "default": {
+                        "value": 0.0,
+                        "unit": "deg"
+                    }
+                },
+                "initial_orbital_angle": {
+                    "description": "Starting angle in the orbital plane at time zero, in degrees. Default: 0.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
+                    "default": {
+                        "value": 0.0,
+                        "unit": "deg"
+                    }
+                },
+                "rotation_period": {
+                    "description": "Rotation period in hours. None means no rotation.",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
+                },
+                "axial_tilt": {
+                    "description": "Axial tilt (obliquity) in degrees. Angle between rotation axis and orbital axis. Default: 0 (no tilt).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/angle",
+                    "default": {
+                        "value": 0.0,
+                        "unit": "deg"
+                    }
+                }
+            }
         }
     }
 }
