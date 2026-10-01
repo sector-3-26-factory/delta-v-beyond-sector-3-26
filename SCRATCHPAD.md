@@ -121,6 +121,50 @@ A temporary file for capturing observations, TODOs, and follow-up items while fo
 - **Observation**: Need gameplay with resources (fuel, projectiles) that are consumed, income to buy fuel and projectiles (e.g. mission-based cargo transports), and ships need a cargo capacity value
 - **Follow-up**: Implement resource system, mission/cargo mechanics, and ship cargo capacity
 
+### 2026-09-28 UI fade zones and target switching broken (pre-existing)
+
+- **Context**: Noticed by the user while working on the asteroid belt plan. **Predates the
+  lazy-loading and shared-mesh work of 2026-09-26/27; not caused by it.** User observed
+  this roughly a week before 2026-09-28.
+- **Observation 1**: The window fade in / fade out zones are not visible any more. The
+  transition zones that should soften window edges are absent, so windows pop in and out.
+- **Observation 2**: Target switching with `T` (next) and `Shift+T` (previous) is not
+  working any more. Implemented in `camera_switch_system` for cameras and in
+  `delta-v-ships` for target cycling per ADR-0054, so the regression is likely in the
+  input translation or the `ActionState` edge detection, not in the cycling logic itself.
+- **Follow-up**: Investigate both. Check `delta-v-ui/src/window/` fade/border handling for
+  the first, and the `ActionState` press/just_pressed wiring plus keybinding overrides for
+  the second. Keep separate from the asteroid belt work.
+
+### 2026-09-30 World epoch: set the solar system to a point in time
+
+- **Context**: Designing the belt, and thinking about what happens to orbital positions
+  across a long absence. Raised in review.
+- **Idea**: the world definition should be able to place the solar system at a chosen
+  epoch, not always at zero. What did the system look like on 27 May 1996? What will it
+  look like on 11 June 2367?
+- **Why it is attractive**:
+  - It is free on top of what already exists. Orbital elements plus a mean anomaly at epoch
+    is the standard way to describe an orbit, and ADR-0055 already propagates Keplerian
+    motion analytically. Adding an epoch to a body is a parameter, not a new mechanism.
+  - It composes with sector generation. A belt sector already regenerates from
+    `(seed, belt_id, sector_index, simulation_time)`. A world epoch just moves where
+    `simulation_time` starts, so the same machinery gives a different, deterministic
+    configuration of the whole system.
+  - It gives naturally different playthroughs. The same world file with a different epoch
+    is a different universe, and worlds are authored by agents anyway, so an epoch is one
+    more number in the JSON.
+  - It makes orbital phase a content decision rather than an accident. Where the planets
+    are relative to each other at the moment a player arrives is currently incidental.
+- **Open questions to resolve when this is picked up**:
+  - Epoch must be an absolute instant, not an offset, or two clients cannot agree.
+  - It interacts with save state: the delta store in the belt plan records positions with
+    timestamps, so it already assumes a shared notion of time. An epoch needs the same.
+  - Retrocomputing real ephemerides for a 1996 or 2367 epoch is a much larger job than
+    picking a plausible epoch. Worth splitting into "epoch is a parameter" first and
+    "accurate historical ephemerides" later, if at all.
+- **Follow-up**: not a belt task. Keep separate, like the UI bugs above.
+
 ### [YYYY-MM-DD] Brief description
 
 - **Context**: What task you were working on

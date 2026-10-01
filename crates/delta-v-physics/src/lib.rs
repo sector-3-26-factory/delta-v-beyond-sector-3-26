@@ -719,3 +719,6 @@ mod integration_tests;
 #[cfg(test)]
 #[path = "rigid_body_panic_tests.rs"]
 mod rigid_body_panic_tests;
+
+#[cfg(all(test, feature = "bench"))]
+mod approach_comparison;

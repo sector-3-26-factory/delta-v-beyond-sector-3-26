@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing)]
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
+#![cfg(test)]
 
 //! Tests for `fill_defaults` with array items schema.
 

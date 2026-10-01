@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Tests for template field extraction helpers.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]

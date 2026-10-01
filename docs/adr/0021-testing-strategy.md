@@ -1,8 +1,11 @@
 # ADR-0021: Testing strategy
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0056
 - **Date**: 2026-05-19
 - **Deciders**: Cute-Donkey
+- **Superseded by**: ADR-0056 (benchmark tooling clause only; the four test
+  layers, the `_tests.rs` layout, the no-execution-order rule and the doctest
+  rule remain in force and are restated in ADR-0056)
 
 ## Context
 

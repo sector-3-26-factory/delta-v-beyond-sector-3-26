@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
+#![cfg(test)]
 
 //! Tests for collision shape type deserialization.
 
@@ -118,7 +119,10 @@ fn test_collision_layers_ship() {
 fn test_collision_layers_asteroid() {
     let asteroid = crate::collision::layers::ASTEROID;
     assert_eq!(asteroid.layers, crate::collision::layers::ASTEROID_LAYER);
-    assert_eq!(asteroid.mask, crate::collision::layers::SHIP_LAYER);
+    assert_eq!(
+        asteroid.mask,
+        crate::collision::layers::SHIP_LAYER | crate::collision::layers::ASTEROID_LAYER
+    );
 }
 
 #[test]
@@ -138,13 +142,17 @@ fn test_collision_layers_ship_can_collide_with_ships() {
 }
 
 #[test]
-fn test_collision_layers_asteroid_no_self_collision() {
-    // Asteroid layer should not collide with itself
+fn test_collision_layers_asteroid_self_collision() {
+    // Asteroid layer CAN collide with other asteroids
     let asteroid = crate::collision::layers::ASTEROID;
-    assert_eq!(
+    assert_ne!(
         asteroid.layers & asteroid.mask,
         0,
-        "asteroid should not collide with itself"
+        "asteroid should be able to collide with other asteroids"
+    );
+    assert_eq!(
+        asteroid.mask & crate::collision::layers::ASTEROID_LAYER,
+        crate::collision::layers::ASTEROID_LAYER
     );
 }
 

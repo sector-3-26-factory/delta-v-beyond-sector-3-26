@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Multi-tick physics integration tests and floating origin tests.
 //! Updated for SOI gravity model per ADR-0055.
 

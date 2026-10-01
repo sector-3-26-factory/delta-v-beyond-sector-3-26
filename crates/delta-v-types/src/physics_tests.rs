@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Tests for physical quantity conversion methods.
 
 use super::PhysicalQuantityJson;
