@@ -22,7 +22,7 @@
 //! and ADR-0017 (Fixed timestep and determinism).
 
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
-#![warn(clippy::all, clippy::pedantic)]
+#![warn(clippy::all, clippy::pedantic, clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
 #![deny(
     clippy::unwrap_used,
@@ -56,8 +56,9 @@ pub use collision::{
     CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeType, DynamicBody,
     StaticBody, distance_to_surface,
 };
-pub use constants::{CATCH_UP_TICKS_MAX, FIXED_TIMESTEP_HZ};
+pub use constants::{CATCH_UP_TICKS_MAX, COLLISION_RELEVANCE_PX, FIXED_TIMESTEP_HZ};
 pub use delta_v_types::CollisionLayers;
+pub use delta_v_types::collision::layers::ASTEROID_LAYER;
 pub use rigid_body::{MassSource, RigidBody};
 pub use spawn::{spawn_asteroid, spawn_moon, spawn_planet, spawn_sun};
 pub use systems::PhysicsSet;
@@ -280,6 +281,20 @@ impl Plugin for PhysicsPlugin {
     }
 }
 
+/// Whether a body counts as collision-relevant for the pair loop (ADR-0057).
+///
+/// `None` means the body carries no `LazyLoadMesh` and therefore no relevance value.
+/// Ships, projectiles and stations fall in this case and are **always** tested: a body
+/// without a number is never treated as irrelevant, so weapons, player flight and
+/// station docking cannot regress.
+///
+/// This is a distance test. It reads `current_screen_radius_px`, which
+/// `lazy_load_celestial_meshes` derives from distance alone, and never consults a
+/// camera, a frustum or the player's view direction.
+fn is_collision_relevant(lazy_load: Option<&LazyLoadMesh>) -> bool {
+    lazy_load.is_none_or(|lazy| lazy.current_screen_radius_px >= lazy.collision_relevance_px)
+}
+
 /// System that detects collisions and emits [`CollisionDetected`] events.
 ///
 /// Performs shape-aware collision detection:
@@ -292,7 +307,15 @@ impl Plugin for PhysicsPlugin {
 /// negatives in wide axes.
 ///
 /// Collision layers are checked to filter out non-colliding entity pairs.
-#[allow(clippy::needless_pass_by_value)]
+///
+/// Per ADR-0057 the pair loop is pre-filtered by collision relevance. This is a
+/// distance test and not a visibility test: no camera, frustum or view direction
+/// takes part in it. Bodies without a `LazyLoadMesh` have no relevance value and
+/// are always tested, so ships, projectiles and stations are unaffected.
+// `type_complexity` is allowed here only because adding `Option<&LazyLoadMesh>`
+// for ADR-0057 pushed this query past the lint's element threshold. Narrower than
+// introducing a type alias that would exist for a single signature.
+#[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
 fn collision_detection_system(
     mut events: MessageWriter<'_, CollisionDetected>,
     bodies: Query<
@@ -304,23 +327,92 @@ fn collision_detection_system(
             &Transform,
             &CollisionShape,
             &CollisionLayersComponent,
+            Option<&LazyLoadMesh>,
         ),
     >,
     health_query: Query<'_, '_, &Health>,
 ) {
+    let _span = tracing::info_span!("delta_v_physics::collision_detection_system").entered();
+
     let bodies_vec: Vec<_> = bodies.iter().collect();
-    let len = bodies_vec.len();
 
-    for i in 0..len {
-        for j in (i + 1)..len {
-            // SAFETY: i and j are valid indices from the loop bounds
-            #[allow(clippy::indexing_slicing)]
-            let (entity_a, body_a, transform_a, shape_a, layers_a) = bodies_vec[i];
-            #[allow(clippy::indexing_slicing)]
-            let (entity_b, body_b, transform_b, shape_b, layers_b) = bodies_vec[j];
+    // ADR-0057: partition ONCE, before any pair is examined. Deciding relevance
+    // inside the pair loop was measured at only ~3.4x, because the inner loop still
+    // ran n^2/2 times and skipped only the shape test. Partitioning up front means an
+    // irrelevant asteroid is never walked against another irrelevant asteroid at all.
+    //
+    // A body with no LazyLoadMesh has no relevance value and counts as relevant, so it
+    // belongs in `relevant_asteroids` or `others` on its own terms, never skipped.
+    let mut relevant_asteroids: Vec<BodyRef<'_>> = Vec::new();
+    let mut irrelevant_asteroids: Vec<BodyRef<'_>> = Vec::new();
+    let mut others: Vec<BodyRef<'_>> = Vec::new();
 
-            // Check collision layers: entity A can collide with B if B's layer is in A's mask
-            // and A's layer is in B's mask
+    for body in &bodies_vec {
+        // Destructure the collected query tuple to reach the layers and the optional
+        // relevance component. `*body` copies only the references.
+        let (_, _, _, _, layers, lazy_load) = *body;
+        let is_asteroid = (layers.layers & ASTEROID_LAYER) != 0;
+        if is_asteroid {
+            if is_collision_relevant(lazy_load) {
+                relevant_asteroids.push(*body);
+            } else {
+                irrelevant_asteroids.push(*body);
+            }
+        } else {
+            others.push(*body);
+        }
+    }
+
+    // Four tested groups. The two skipped groups — relevant x irrelevant and
+    // irrelevant x irrelevant — are simply never formed.
+    test_pairs(
+        &relevant_asteroids,
+        &relevant_asteroids,
+        &mut events,
+        &health_query,
+    );
+    test_pairs(&relevant_asteroids, &others, &mut events, &health_query);
+    test_pairs(&irrelevant_asteroids, &others, &mut events, &health_query);
+    test_pairs(&others, &others, &mut events, &health_query);
+}
+
+/// One body's data as borrowed from the collision query.
+type BodyRef<'w> = (
+    Entity,
+    &'w RigidBody,
+    &'w Transform,
+    &'w CollisionShape,
+    &'w CollisionLayersComponent,
+    Option<&'w LazyLoadMesh>,
+);
+
+/// Tests every unordered pair drawn from two lists and emits a message per overlap.
+///
+/// `a` and `b` may be the same list, in which case each unordered pair is tested once.
+/// Pairs whose collision layers do not permit them are skipped without a shape test.
+fn test_pairs(
+    a: &[BodyRef<'_>],
+    b: &[BodyRef<'_>],
+    events: &mut MessageWriter<'_, CollisionDetected>,
+    health_query: &Query<'_, '_, &Health>,
+) {
+    for (index, body_a) in a.iter().enumerate() {
+        // When both lists are the same one, start past `index` so each pair is
+        // visited once rather than twice. `index` comes from `enumerate` over `a`,
+        // and the slice is the same one, so `index + 1` is in bounds; `get` is
+        // used anyway because ADR-0023 denies `indexing_slicing`.
+        let rest = if std::ptr::eq(a.as_ptr(), b.as_ptr()) {
+            b.get(index + 1..).unwrap_or_default()
+        } else {
+            b
+        };
+
+        for body_b in rest {
+            let (entity_a, body_a, transform_a, shape_a, layers_a, _) = *body_a;
+            let (entity_b, body_b, transform_b, shape_b, layers_b, _) = *body_b;
+
+            // Collision layers: entity A can collide with B if B's layer is in A's
+            // mask and A's layer is in B's mask.
             let can_collide =
                 (layers_b.layers & layers_a.mask) != 0 && (layers_a.layers & layers_b.mask) != 0;
             if !can_collide {
@@ -331,9 +423,9 @@ fn collision_detection_system(
             let pos_a = transform_a.translation + shape_a.offset;
             let pos_b = transform_b.translation + shape_b.offset;
 
-            let collision = check_collision(pos_a, shape_a, pos_b, shape_b);
-
-            if let Some((normal, penetration_depth)) = collision {
+            if let Some((normal, penetration_depth)) =
+                check_collision(pos_a, shape_a, pos_b, shape_b)
+            {
                 let relative_velocity = body_b.velocity - body_a.velocity;
 
                 let health_a = health_query.get(entity_a).map_or_else(

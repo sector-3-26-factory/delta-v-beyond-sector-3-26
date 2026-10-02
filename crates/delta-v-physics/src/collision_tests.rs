@@ -65,6 +65,53 @@ fn box_shape(half_extents: Vec3) -> CollisionShape {
     CollisionShape(CollisionShapeData::box_shape(half_extents, Vec3::ZERO))
 }
 
+/// Builds an app that runs only the collision detection system, so a test can
+/// assert on the `CollisionDetected` messages it emits and nothing else.
+fn build_detection_app() -> App {
+    let mut app = App::new();
+    app.add_message::<CollisionDetected>();
+    app.add_systems(FixedUpdate, crate::collision_detection_system);
+    app
+}
+
+/// Runs one tick of `FixedUpdate` and drains the `CollisionDetected` messages.
+fn run_detection_and_collect(app: &mut App) -> Vec<CollisionDetected> {
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut()
+        .resource_mut::<Messages<CollisionDetected>>()
+        .drain()
+        .collect()
+}
+
+/// Builds a `LazyLoadMesh` carrying an explicit relevance verdict.
+///
+/// `screen_radius_px` is written directly rather than derived from a camera: the value
+/// is the only thing the filter reads, and it is a pure function of distance.
+fn lazy_mesh(screen_radius_px: f32) -> crate::celestial::LazyLoadMesh {
+    crate::celestial::LazyLoadMesh {
+        min_screen_radius_px: 1.0,
+        loaded: true,
+        mesh_path: String::new(),
+        current_screen_radius_px: screen_radius_px,
+        collision_relevance_px: crate::constants::COLLISION_RELEVANCE_PX,
+        mesh_child_entities: Vec::new(),
+    }
+}
+
+/// Spawns an asteroid at `position` whose apparent radius is `screen_radius_px`.
+fn spawn_relevance_asteroid(app: &mut App, position: Vec3, screen_radius_px: f32) -> Entity {
+    app.world_mut()
+        .spawn((
+            RigidBody::new(10.0, 1.0),
+            Transform::from_translation(position),
+            sphere_shape(2.0),
+            CollisionLayersComponent::new(layers::ASTEROID),
+            DynamicBody,
+            lazy_mesh(screen_radius_px),
+        ))
+        .id()
+}
+
 // ---------------------------------------------------------------------------
 // Collision detection: sphere-sphere
 // ---------------------------------------------------------------------------
@@ -1117,6 +1164,123 @@ fn test_distance_to_surface_convex_hull_placeholder() {
     assert!(
         (distance - 10.0).abs() < 0.01,
         "distance to convex hull should be center distance (10), got {distance}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ADR-0057: collision relevance filter
+// ---------------------------------------------------------------------------
+
+/// A collision between two bodies that are both above the threshold is still detected.
+#[test]
+fn test_collision_relevant_asteroid_pair_still_collides() {
+    let mut app = build_detection_app();
+
+    spawn_relevance_asteroid(&mut app, Vec3::ZERO, 20.0);
+    spawn_relevance_asteroid(&mut app, Vec3::new(3.0, 0.0, 0.0), 20.0);
+
+    let events = run_detection_and_collect(&mut app);
+    assert_eq!(
+        events.len(),
+        1,
+        "two relevant asteroids overlapping must still be detected"
+    );
+}
+
+/// Two asteroids both below the threshold are never tested, so no collision is reported.
+#[test]
+fn test_collision_irrelevant_asteroid_pair_is_skipped() {
+    let mut app = build_detection_app();
+
+    spawn_relevance_asteroid(&mut app, Vec3::ZERO, 0.5);
+    spawn_relevance_asteroid(&mut app, Vec3::new(3.0, 0.0, 0.0), 0.5);
+
+    let events = run_detection_and_collect(&mut app);
+    assert!(
+        events.is_empty(),
+        "two irrelevant asteroids must not be tested, got {} events",
+        events.len()
+    );
+}
+
+/// Asteroid/asteroid pairs require BOTH sides relevant, so one relevant and one
+/// irrelevant asteroid does not produce a collision.
+#[test]
+fn test_collision_asteroid_pair_requires_both_relevant() {
+    let mut app = build_detection_app();
+
+    spawn_relevance_asteroid(&mut app, Vec3::ZERO, 20.0);
+    spawn_relevance_asteroid(&mut app, Vec3::new(3.0, 0.0, 0.0), 0.5);
+
+    let events = run_detection_and_collect(&mut app);
+    assert!(
+        events.is_empty(),
+        "asteroid pairs need both sides relevant, got {} events",
+        events.len()
+    );
+}
+
+/// A body with no `LazyLoadMesh` has no relevance value and is always tested.
+/// A ship must therefore still hit an asteroid that is below the threshold.
+#[test]
+fn test_collision_body_without_lazy_mesh_is_always_tested() {
+    let mut app = build_detection_app();
+
+    // No LazyLoadMesh on the ship, and the asteroid is far below the threshold.
+    app.world_mut().spawn((
+        RigidBody::new(10.0, 1.0),
+        Transform::from_translation(Vec3::ZERO),
+        sphere_shape(2.0),
+        CollisionLayersComponent::new(layers::SHIP),
+        DynamicBody,
+    ));
+    spawn_relevance_asteroid(&mut app, Vec3::new(3.0, 0.0, 0.0), 0.1);
+
+    let events = run_detection_and_collect(&mut app);
+    assert_eq!(
+        events.len(),
+        1,
+        "a body without a relevance value must still be tested against everything"
+    );
+}
+
+/// The threshold itself is inclusive: a body exactly at the threshold is relevant.
+#[test]
+fn test_collision_relevance_threshold_is_inclusive() {
+    let mut app = build_detection_app();
+    let threshold = crate::constants::COLLISION_RELEVANCE_PX;
+
+    spawn_relevance_asteroid(&mut app, Vec3::ZERO, threshold);
+    spawn_relevance_asteroid(&mut app, Vec3::new(3.0, 0.0, 0.0), threshold);
+
+    let events = run_detection_and_collect(&mut app);
+    assert_eq!(
+        events.len(),
+        1,
+        "a body exactly at the threshold must count as relevant"
+    );
+}
+
+/// A mixed pair needs only one relevant side, so an asteroid that is relevant still
+/// collides with a ship that carries no relevance value at all.
+#[test]
+fn test_collision_mixed_pair_needs_only_one_relevant_side() {
+    let mut app = build_detection_app();
+
+    spawn_relevance_asteroid(&mut app, Vec3::ZERO, 20.0);
+    app.world_mut().spawn((
+        RigidBody::new(10.0, 1.0),
+        Transform::from_translation(Vec3::new(3.0, 0.0, 0.0)),
+        sphere_shape(2.0),
+        CollisionLayersComponent::new(layers::SHIP),
+        DynamicBody,
+    ));
+
+    let events = run_detection_and_collect(&mut app);
+    assert_eq!(
+        events.len(),
+        1,
+        "a mixed pair must be tested when either side is relevant"
     );
 }
 

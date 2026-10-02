@@ -27,6 +27,8 @@ use crate::CollisionDetected;
 use crate::celestial::{Moon, OrbitalBody, Planet, Sun};
 use crate::collision::{CollisionLayersComponent, CollisionShape, CollisionShapeType};
 use crate::rigid_body::{MassSource, RigidBody};
+use bevy::prelude::With;
+
 use crate::systems::{
     PhysicsSet, clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
     integrate_position_system, integrate_velocity_system,
@@ -730,4 +732,163 @@ fn benchmark_collision() {
 
     println!("\nBudget: 16.67 ms = 60 FPS, 33.33 ms = 30 FPS");
     println!("ns/pair is the median tick divided by the O(n^2) pair count.");
+}
+
+/// One variant of the relevance benchmark: how many of `count` asteroids are relevant.
+struct RelevanceVariant {
+    /// Label printed in the results table.
+    label: &'static str,
+    /// Number of asteroids marked collision-relevant.
+    relevant: usize,
+}
+
+/// Spawns `count` asteroids of which the first `relevant` carry a relevance value
+/// above the threshold and the rest carry one below it.
+///
+/// Both groups are laid out by [`spawn_belt`], so the two variants differ only in
+/// how many bodies the filter admits and not in where the bodies are. That is what
+/// makes the comparison a measurement of the filter rather than of the layout.
+fn spawn_belt_with_relevance(app: &mut App, count: usize, relevant: usize) {
+    spawn_belt(app, count);
+    let threshold = crate::constants::COLLISION_RELEVANCE_PX;
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<Entity, With<CollisionShape>>();
+    let entities: Vec<Entity> = query.iter(app.world()).collect();
+    for (index, entity) in entities.into_iter().enumerate() {
+        let is_relevant = index < relevant;
+        // Above or below the threshold, never exactly on it, so the comparison does
+        // not depend on the inclusive boundary.
+        let screen_radius_px = if is_relevant {
+            threshold * 10.0
+        } else {
+            threshold * 0.01
+        };
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(crate::celestial::LazyLoadMesh {
+                min_screen_radius_px: 1.0,
+                loaded: true,
+                mesh_path: String::new(),
+                current_screen_radius_px: screen_radius_px,
+                collision_relevance_px: threshold,
+                mesh_child_entities: Vec::new(),
+            });
+    }
+}
+
+/// Measures the collision relevance filter against the unfiltered loop.
+///
+/// ADR-0057 replaces the `n^2/2` pair loop with `n_relevant^2` for asteroid pairs.
+/// This measures that replacement rather than assuming it: every variant below uses
+/// the same body count and the same layout, and only the number of bodies the filter
+/// admits changes. The reported ratio is the quantity of interest — it is a property
+/// of the approach and not of the machine.
+///
+/// Run it explicitly:
+///
+/// ```text
+/// cargo test -p delta-v-physics --features bench -- --ignored --nocapture benchmark_collision_relevance
+/// ```
+#[test]
+#[ignore = "performance benchmark; run explicitly with --ignored"]
+fn benchmark_collision_relevance() {
+    let configs = [500usize, 1_000, 2_000, 4_000, 8_000];
+    let warmup = 3;
+    let frames = 15;
+
+    println!("\n=== COLLISION RELEVANCE BENCHMARK (ADR-0057) ===");
+    println!(
+        "{:>9} {:>9} {:>10} {:>11} {:>11} {:>10} {:>10}",
+        "Asteroids", "Relevant", "Pairs all", "Pairs filt", "Median(ms)", "Reduction", "ns/pair"
+    );
+    println!("{}", "-".repeat(80));
+
+    for count in configs {
+        // Variant set: an unfiltered baseline plus two filtered populations.
+        let variants = [
+            RelevanceVariant {
+                label: "unfiltered",
+                relevant: count,
+            },
+            RelevanceVariant {
+                label: "10% relevant",
+                relevant: count / 10,
+            },
+            RelevanceVariant {
+                label: "1% relevant",
+                relevant: count / 100,
+            },
+        ];
+
+        let mut medians: Vec<(&'static str, f64)> = Vec::new();
+
+        for variant in &variants {
+            let mut app = build_collision_app();
+            spawn_belt_with_relevance(&mut app, count, variant.relevant);
+
+            let bodies = app
+                .world_mut()
+                .query::<&CollisionShape>()
+                .iter(app.world())
+                .count();
+            assert_eq!(
+                bodies, count,
+                "collision query must see every spawned asteroid"
+            );
+
+            for _ in 0..warmup {
+                run_one_collision_tick(&mut app);
+            }
+
+            let mut times = Vec::with_capacity(frames);
+            for _ in 0..frames {
+                let start = Instant::now();
+                run_one_collision_tick(&mut app);
+                times.push(start.elapsed().as_secs_f64() * 1000.0);
+            }
+
+            times.sort_by(f64::total_cmp);
+            let Some(&median) = times.get(times.len() / 2) else {
+                continue;
+            };
+            medians.push((variant.label, median));
+
+            // Asteroid/asteroid pairs need both sides relevant, so the filtered pair
+            // count is n_relevant^2/2 rather than n_relevant * n_total.
+            let pairs_all = (count * count.saturating_sub(1)) / 2;
+            let n_relevant = variant.relevant;
+            let pairs_filtered = (n_relevant * n_relevant.saturating_sub(1)) / 2;
+            let ns_per_pair = if pairs_filtered == 0 {
+                0.0
+            } else {
+                median * 1.0e6 / f64::from(u32::try_from(pairs_filtered).unwrap_or(u32::MAX))
+            };
+
+            println!(
+                "{count:>9} {n_relevant:>9} {pairs_all:>10} {pairs_filtered:>11} {median:>11.3} {:>10} {ns_per_pair:>10.2}",
+                "-",
+            );
+        }
+
+        // Report the reduction against the unfiltered variant measured in this same run.
+        if let Some((_, baseline)) = medians.first().copied()
+            && baseline > 0.0
+        {
+            for (label, median) in medians.iter().skip(1) {
+                println!(
+                    "  {count:>7} asteroids, {label:<14} -> {median:>8.3} ms  ({:.1}x faster than unfiltered)",
+                    baseline / median
+                );
+            }
+        }
+    }
+
+    println!(
+        "\ns/pair uses the filtered pair count n_relevant^2/2, which is what the loop actually runs."
+    );
+    println!(
+        "Reduction is the unfiltered median divided by the filtered median, measured in the same run."
+    );
 }

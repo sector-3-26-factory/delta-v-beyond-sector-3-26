@@ -34,6 +34,7 @@ use delta_v_types::{
 };
 
 use crate::celestial::{ALWAYS_VISIBLE_SCREEN_RADIUS_PX, LazyLoadMesh, Moon};
+use crate::constants::COLLISION_RELEVANCE_PX;
 use crate::{
     CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalBody, OrbitalParentId,
     Planet, RigidBody, Sun,
@@ -107,6 +108,7 @@ pub fn spawn_sun(
                     loaded: false,
                     mesh_path: spawn.mesh_path(),
                     current_screen_radius_px: 0.0,
+                    collision_relevance_px: COLLISION_RELEVANCE_PX,
                     mesh_child_entities: Vec::new(),
                 },
                 DebugAxesEligible::new(entity_id.clone(), axis_length),
@@ -263,6 +265,7 @@ pub fn spawn_planet(
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                collision_relevance_px: COLLISION_RELEVANCE_PX,
                 mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
@@ -393,6 +396,7 @@ pub fn spawn_asteroid(
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                collision_relevance_px: COLLISION_RELEVANCE_PX,
                 mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
@@ -526,6 +530,7 @@ pub fn spawn_moon(
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                collision_relevance_px: COLLISION_RELEVANCE_PX,
                 mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),

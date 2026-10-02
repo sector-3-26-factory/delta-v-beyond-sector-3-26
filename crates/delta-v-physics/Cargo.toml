@@ -12,7 +12,7 @@ keywords = ["physics", "simulation"]
 categories = ["game-development"]
 
 [features]
-# ADR-0021: performance benchmarks live behind this flag so they do not slow
+# ADR-0056: performance benchmarks live behind this flag so they do not slow
 # down day-to-day `cargo test`. Run them explicitly with:
 #   cargo test -p delta-v-physics --features bench -- --ignored --nocapture
 bench = []

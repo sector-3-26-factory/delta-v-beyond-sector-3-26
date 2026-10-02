@@ -64,3 +64,18 @@ pub const GRAVITATIONAL_CONSTANT: f32 = 6.674e-11;
 /// most gameplay scenarios (planets, stations, nearby asteroids) while
 /// excluding truly distant objects.
 pub const GRAVITY_CUTOFF_RADIUS_M: f32 = 1_000_000.0;
+
+/// Default screen-space radius, in pixels, at which a celestial body counts as
+/// collision-relevant.
+///
+/// Per ADR-0057 a body is collision-relevant when its apparent screen radius reaches
+/// this value, and the pair loop skips pairs that cannot overlap. This is an engine
+/// constant, not a gameplay knob (ADR-0014), so it is a Rust constant rather than a
+/// JSON field.
+///
+/// The 1-pixel figure used for mesh loading is where a body first becomes resolvable.
+/// At 8 px a body is roughly eight times further away than that, so every collision a
+/// player can perceive happens inside the relevance radius. Lowering this below 1.0
+/// would begin to drop collisions the player can see, so any change to it is a
+/// gameplay change.
+pub const COLLISION_RELEVANCE_PX: f32 = 8.0;

@@ -116,8 +116,8 @@ pub const ALWAYS_VISIBLE_SCREEN_RADIUS_PX: f32 = 1.0;
 // allow-default: LazyLoadMesh is a runtime Component constructed programmatically during
 // entity spawning (see spawn.rs). It is never deserialized from JSON — all fields are
 // explicitly initialized from spawn event data. Default provides zero-initialization for
-// `loaded` and `current_screen_radius_px` only; `mesh_path` and `min_screen_radius_px`
-// are always set explicitly.
+// `loaded`, `current_screen_radius_px` and `collision_relevance_px` only; `mesh_path` and
+// `min_screen_radius_px` are always set explicitly.
 #[derive(Component, Clone, Debug, Default)]
 pub struct LazyLoadMesh {
     /// Minimum screen-space radius in pixels to trigger mesh loading.
@@ -135,6 +135,18 @@ pub struct LazyLoadMesh {
     /// by `lazy_load_celestial_meshes`, independent of on-screen state.
     /// For suns it is also read below 1px to drive the 1-pixel fallback rendering.
     pub current_screen_radius_px: f32,
+
+    /// Screen-space radius, in pixels, at which this body counts as
+    /// collision-relevant (ADR-0057).
+    ///
+    /// The body is collision-relevant when `current_screen_radius_px` reaches this
+    /// value. The collision pair loop uses it to skip pairs that cannot overlap. It is
+    /// a distance test and not a visibility test: where the player is looking is never
+    /// consulted, so a body behind the player scores the same as one ahead.
+    ///
+    /// Initialised to [`COLLISION_RELEVANCE_PX`](crate::constants::COLLISION_RELEVANCE_PX)
+    /// at spawn.
+    pub collision_relevance_px: f32,
 
     /// Entities holding the spawned glTF scene roots for this body's mesh.
     /// Recorded so eviction can despawn them and release the mesh/material assets.
