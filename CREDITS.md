@@ -64,14 +64,39 @@ The following technical transformations are applied to most or all `mesh.glb` fi
 - **Textures:** `assets/templates/asteroids/shared/textures/asteroids-pack-rocky-version-basecolor.jpg`,
   `assets/templates/asteroids/shared/textures/asteroids-pack-rocky-version-metallic-roughness.png`,
   `assets/templates/asteroids/shared/textures/asteroids-pack-rocky-version-normal.png`
-- **Modifications:** The downloaded pack holds ten asteroids in one GLB. It was split with
-  `scripts/split_glb_asteroids.py` into ten single-mesh GLBs, one per template directory.
-  The three textures are used unmodified and are shared by relative URI rather than embedded
-  per mesh, so they are stored once and decoded once. The Sketchfab wrapper nodes were dropped,
-  leaving a single node per mesh.
+- **Modifications:** The downloaded pack holds ten asteroids in one GLB, now split into ten
+  single-mesh GLBs, one per template directory. The three textures are used unmodified and
+  are shared by relative URI rather than embedded per mesh, so they are stored once and
+  decoded once. The Sketchfab wrapper nodes were dropped, leaving a single node per mesh.
 
   This is one licence covering all thirteen files above: they are all derived from the same
   source pack. The credit is intentionally recorded once rather than repeated per template.
+
+### Wandering Asteroids Of Andromeda
+
+- **Creator:** [ARCTIC WOLVES™ (@arctic.wolves)](https://sketchfab.com/arctic.wolves)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/wandering-asteroids-of-andromeda-6a8e84e0fdea43628b8b3ab85b130281)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/asteroids/shared/mesh_11/mesh.glb` … `assets/templates/asteroids/shared/mesh_13/mesh.glb`
+- **Modifications:** The downloaded pack holds three asteroids in one GLB, each with its own
+  material and its own three textures, now split into three single-mesh GLBs, one per template
+  directory. The nine textures are used unmodified and stay embedded in the mesh that uses
+  them, since no two of these asteroids share one.
+
+  `KHR_materials_pbrSpecularGlossiness` was converted to metallic/roughness, as listed among
+  the common steps above. The diffuse map became the base colour map and the normal and
+  occlusion maps were kept. `specularFactor` was zero on all three materials, so no specular
+  highlight was lost, but metallic/roughness cannot reproduce it exactly: a dielectric keeps
+  a 4% reflectance that the original had turned off. The glossiness of 1.0 on `AST_02_LOD0`
+  would have become a roughness of 0.0, a mirror, and that one value was held at 0.8; the
+  other two were converted literally, to 0.5 and 0.521.
+
+  The pack's single animation was dropped, so each asteroid keeps the orientation the world
+  gives it rather than looping on its own.
+
+  This is one licence covering all three files above, which are all derived from the same
+  source pack. The credit is intentionally recorded once.
 
 ### Archimedes (Meshy AI)
 

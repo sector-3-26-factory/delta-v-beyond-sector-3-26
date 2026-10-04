@@ -1,6 +1,6 @@
 {
     "format_version": 1,
-    "name": "Inspect World — Asteroids Pack (rocky version)",
+    "name": "Inspect World — Wandering Asteroids Of Andromeda",
     "entities": [
         {
             "template": "ships/space-fighter-comrade1280",
@@ -26,222 +26,68 @@
             }
         },
         {
-            "template": "asteroids/shared/mesh_1",
-            "id": "asteroid_1",
+            "template": "asteroids/shared/mesh_11",
+            "id": "asteroid_11",
             "position": {
                 "x": {
-                    "value": -25.0,
+                    "value": -32.0,
                     "unit": "m"
                 },
                 "y": {
-                    "value": 13.5,
+                    "value": 11.5,
                     "unit": "m"
                 },
                 "z": {
-                    "value": -66.0,
+                    "value": -86.0,
                     "unit": "m"
                 }
             },
             "mass": {
-                "value": 730809.5,
+                "value": 1257679.2,
                 "unit": "kg"
             }
         },
         {
-            "template": "asteroids/shared/mesh_2",
-            "id": "asteroid_2",
-            "position": {
-                "x": {
-                    "value": 0.0,
-                    "unit": "m"
-                },
-                "y": {
-                    "value": 13.5,
-                    "unit": "m"
-                },
-                "z": {
-                    "value": -66.0,
-                    "unit": "m"
-                }
-            },
-            "mass": {
-                "value": 102050.1,
-                "unit": "kg"
-            }
-        },
-        {
-            "template": "asteroids/shared/mesh_3",
-            "id": "asteroid_3",
-            "position": {
-                "x": {
-                    "value": 25.0,
-                    "unit": "m"
-                },
-                "y": {
-                    "value": 13.5,
-                    "unit": "m"
-                },
-                "z": {
-                    "value": -66.0,
-                    "unit": "m"
-                }
-            },
-            "mass": {
-                "value": 864910.8,
-                "unit": "kg"
-            }
-        },
-        {
-            "template": "asteroids/shared/mesh_4",
-            "id": "asteroid_4",
-            "position": {
-                "x": {
-                    "value": -40.0,
-                    "unit": "m"
-                },
-                "y": {
-                    "value": 1.5,
-                    "unit": "m"
-                },
-                "z": {
-                    "value": -96.0,
-                    "unit": "m"
-                }
-            },
-            "mass": {
-                "value": 815957.5,
-                "unit": "kg"
-            }
-        },
-        {
-            "template": "asteroids/shared/mesh_5",
-            "id": "asteroid_5",
-            "position": {
-                "x": {
-                    "value": 0.0,
-                    "unit": "m"
-                },
-                "y": {
-                    "value": 1.5,
-                    "unit": "m"
-                },
-                "z": {
-                    "value": -96.0,
-                    "unit": "m"
-                }
-            },
-            "mass": {
-                "value": 649609.8,
-                "unit": "kg"
-            }
-        },
-        {
-            "template": "asteroids/shared/mesh_6",
-            "id": "asteroid_6",
-            "position": {
-                "x": {
-                    "value": 40.0,
-                    "unit": "m"
-                },
-                "y": {
-                    "value": 1.5,
-                    "unit": "m"
-                },
-                "z": {
-                    "value": -96.0,
-                    "unit": "m"
-                }
-            },
-            "mass": {
-                "value": 584620.1,
-                "unit": "kg"
-            }
-        },
-        {
-            "template": "asteroids/shared/mesh_7",
-            "id": "asteroid_7",
-            "position": {
-                "x": {
-                    "value": -55.0,
-                    "unit": "m"
-                },
-                "y": {
-                    "value": -18.5,
-                    "unit": "m"
-                },
-                "z": {
-                    "value": -126.0,
-                    "unit": "m"
-                }
-            },
-            "mass": {
-                "value": 302235.0,
-                "unit": "kg"
-            }
-        },
-        {
-            "template": "asteroids/shared/mesh_8",
-            "id": "asteroid_8",
-            "position": {
-                "x": {
-                    "value": 0.0,
-                    "unit": "m"
-                },
-                "y": {
-                    "value": -18.5,
-                    "unit": "m"
-                },
-                "z": {
-                    "value": -126.0,
-                    "unit": "m"
-                }
-            },
-            "mass": {
-                "value": 664026.2,
-                "unit": "kg"
-            }
-        },
-        {
-            "template": "asteroids/shared/mesh_9",
-            "id": "asteroid_9",
+            "template": "asteroids/shared/mesh_12",
+            "id": "asteroid_12",
             "position": {
                 "x": {
                     "value": 55.0,
                     "unit": "m"
                 },
                 "y": {
-                    "value": -18.5,
+                    "value": -6.5,
                     "unit": "m"
                 },
                 "z": {
-                    "value": -126.0,
+                    "value": -146.0,
                     "unit": "m"
                 }
             },
             "mass": {
-                "value": 463132.0,
+                "value": 18031951.1,
                 "unit": "kg"
             }
         },
         {
-            "template": "asteroids/shared/mesh_10",
-            "id": "asteroid_10",
+            "template": "asteroids/shared/mesh_13",
+            "id": "asteroid_13",
             "position": {
                 "x": {
-                    "value": -80.0,
+                    "value": 20.0,
                     "unit": "m"
                 },
                 "y": {
-                    "value": -43.5,
+                    "value": 23.5,
                     "unit": "m"
                 },
                 "z": {
-                    "value": -156.0,
+                    "value": -106.0,
                     "unit": "m"
                 }
             },
             "mass": {
-                "value": 237452.1,
+                "value": 1060838.4,
                 "unit": "kg"
             }
         }

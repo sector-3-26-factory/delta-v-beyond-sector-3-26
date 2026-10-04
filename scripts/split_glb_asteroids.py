@@ -191,17 +191,65 @@ def texture_role(material, texture_index):
     return None
 
 
-def ordered_meshes(glb):
-    """Meshes sorted by the number in their name: `Asteroid_no_2` before `_10`.
+SPECULAR_GLOSSINESS = "KHR_materials_pbrSpecularGlossiness"
 
-    The pack stores them out of order, so sorting on the trailing integer gives
-    a stable mesh_1 -> Asteroid_no_1 mapping.
+
+def convert_specular_glossiness(material, roughness_floor):
+    """Rewrite a deprecated specular/glossiness material as core metallic/roughness.
+
+    `KHR_materials_pbrSpecularGlossiness` is not core glTF and this repository
+    lists it in CREDITS.md among the features that are converted rather than
+    kept. The diffuse map becomes the base colour map and the glossiness
+    becomes a roughness.
+
+    Glossiness 1.0 maps to roughness 0.0, which is a mirror, and that single
+    value is held at `roughness_floor`. A glossiness authored alongside a
+    specular factor of zero means the artist suppressed the specular highlight,
+    not that the surface was polished, and metallic/roughness cannot express
+    that exactly: a dielectric keeps a 4% reflectance the original had turned
+    off. Every other glossiness is converted literally, so the floor does not
+    flatten a surface that was already matte.
+
+    Returns the new material, or the original when no conversion applies.
+    """
+    extensions = material.get("extensions") or {}
+    if SPECULAR_GLOSSINESS not in extensions:
+        return material
+
+    source = extensions[SPECULAR_GLOSSINESS]
+    glossiness = float(source.get("glossinessFactor", 1.0))
+    pbr = {"metallicFactor": 0.0}
+    if "diffuseTexture" in source:
+        pbr["baseColorTexture"] = dict(source["diffuseTexture"])
+    if "diffuseFactor" in source:
+        pbr["baseColorFactor"] = list(source["diffuseFactor"])
+    pbr["roughnessFactor"] = roughness_floor if glossiness >= 1.0 else 1.0 - glossiness
+
+    converted = {"name": material.get("name"), "pbrMetallicRoughness": pbr}
+    for key in ("normalTexture", "occlusionTexture", "emissiveTexture", "doubleSided", "alphaMode"):
+        if key in material:
+            converted[key] = material[key]
+    return converted
+
+
+def mesh_slug(name):
+    """A short, stable file-name fragment for a mesh: `AST_01_LOD0` -> `01`."""
+    match = re.search(r"\d+", name)
+    return f"{int(match.group(0)):02d}" if match else re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def ordered_meshes(glb):
+    """Meshes sorted by the numbers in their name, so `_2` precedes `_10`.
+
+    Every Sketchfab name ends in `_0`, so the trailing integer alone cannot
+    order anything; the whole sequence of numbers is compared instead. That
+    puts `Asteroid_no_1` .. `_10` and `AST_01` .. `AST_03` in number order.
     """
 
     def key(index):
         name = glb.doc["meshes"][index]["name"]
-        match = re.search(r"(\d+)$", name)
-        return (0, int(match.group(1))) if match else (1, name)
+        numbers = tuple(int(part) for part in re.findall(r"\d+", name))
+        return (numbers, name)
 
     return sorted(range(len(glb.doc["meshes"])), key=key)
 
@@ -234,33 +282,64 @@ def build_template_json(minimum, maximum):
     }
 
 
-def extract_textures(glb, texture_dir, asset_name):
-    """Write every embedded texture to disk once; return texture index -> file name."""
-    materials = glb.doc["materials"]
+def extract_textures(glb, texture_dir, asset_name, materials):
+    """Write the shared textures to disk once; return texture index -> file name.
+
+    `materials` are the converted materials, so a texture belonging to
+    `KHR_materials_pbrSpecularGlossiness` is named by its new slot rather than
+    by the extension.
+
+    Only a texture used by more than one mesh is written out. A texture that
+    belongs to a single mesh is embedded in that mesh's own buffer instead, so
+    extracting it would move the same bytes into a neighbouring directory
+    without saving any space.
+    """
     images = glb.doc["images"]
     textures = glb.doc["textures"]
+    order = ordered_meshes(glb)
 
-    texture_dir.mkdir(parents=True, exist_ok=True)
+    owners = {}
+    roles = {}
+    for position, mesh_index in enumerate(order, start=1):
+        mesh = glb.doc["meshes"][mesh_index]
+        for primitive in mesh["primitives"]:
+            material_index = primitive.get("material")
+            if material_index is None:
+                continue
+            material = materials[material_index]
+            pbr = material.get("pbrMetallicRoughness", {})
+            # The base colour and metallic/roughness maps sit inside
+            # pbrMetallicRoughness; the rest sit on the material itself.
+            slots = [pbr.get(key) for key in ("baseColorTexture", "metallicRoughnessTexture")]
+            slots += [material.get(key) for key in ("normalTexture", "occlusionTexture", "emissiveTexture")]
+            for info in slots:
+                if not info:
+                    continue
+                index = info["index"]
+                owners.setdefault(index, []).append(position)
+                roles.setdefault(index, texture_role(material, index))
+
     files = {}
     for texture_index, texture in enumerate(textures):
+        used_by = owners.get(texture_index, [])
+        if len(used_by) < 2:
+            print(f"texture {texture_index} -> embedded in its own mesh.glb")
+            continue
+
         image = images[texture["source"]]
         if "bufferView" not in image:
             raise ValueError(f"image {texture['source']} has no uri and no bufferView")
-
-        role = None
-        for mesh in glb.doc["meshes"]:
-            for primitive in mesh["primitives"]:
-                material_index = primitive.get("material")
-                if material_index is not None:
-                    role = role or texture_role(materials[material_index], texture_index)
-        role = role or f"texture-{texture_index}"
-
-        mime = image["mimeType"]
-        file_name = f"{asset_name}-{TEXTURE_SLOTS[role]}{MIME_EXTENSIONS[mime]}"
+        role = TEXTURE_SLOTS.get(roles.get(texture_index), f"texture-{texture_index}")
+        file_name = f"{asset_name}-{role}{MIME_EXTENSIONS[image['mimeType']]}"
         payload = view_bytes(glb, image["bufferView"])
+
+        texture_dir.mkdir(parents=True, exist_ok=True)
         (texture_dir / file_name).write_bytes(payload)
         files[texture_index] = file_name
-        print(f"texture {texture_index} -> textures/{file_name} ({len(payload)/1048576:.2f} MiB)")
+        print(
+            f"texture {texture_index} -> textures/{file_name} "
+            f"({len(payload)/1048576:.2f} MiB, shared by {len(used_by)} meshes)"
+        )
     return files
 
 
@@ -360,7 +439,21 @@ def main():
         "--prefix", default="mesh", help="Output directory prefix (default: mesh)"
     )
     parser.add_argument(
-        "--force", action="store_true", help="Overwrite an existing output directory"
+        "--start-index",
+        type=int,
+        default=1,
+        help="Number the first output directory mesh_<start-index> (default: 1). "
+        "Use it to add a pack to a directory that already holds templates.",
+    )
+    parser.add_argument(
+        "--roughness-floor",
+        type=float,
+        default=0.0,
+        help="Lowest roughness produced when converting "
+        "KHR_materials_pbrSpecularGlossiness (default: 0.0, a literal conversion)",
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="Overwrite output that already exists"
     )
     args = parser.parse_args()
 
@@ -374,23 +467,35 @@ def main():
     if any(len(mesh["primitives"]) != 1 for mesh in glb.doc["meshes"]):
         raise ValueError("every mesh must have exactly one primitive")
 
-    if out_dir.exists() and any(out_dir.iterdir()):
-        if not args.force:
-            print(f"error: {out_dir} is not empty; pass --force to overwrite", file=sys.stderr)
-            return 1
-        shutil.rmtree(out_dir)
+    # Converted up front, so texture naming and the written material both see
+    # the core slots rather than the deprecated extension.
+    materials = [
+        convert_specular_glossiness(material, args.roughness_floor)
+        for material in glb.doc["materials"]
+    ]
 
-    texture_files = extract_textures(glb, out_dir / "textures", asset_name)
+    texture_files = extract_textures(glb, out_dir / "textures", asset_name, materials)
 
     node_of_mesh = {}
     for node in glb.doc["nodes"]:
         if "mesh" in node and node["mesh"] not in node_of_mesh:
             node_of_mesh[node["mesh"]] = node
 
-    for output_index, mesh_index in enumerate(ordered_meshes(glb), start=1):
+    for offset, mesh_index in enumerate(ordered_meshes(glb)):
+        output_index = args.start_index + offset
+        directory = out_dir / f"{args.prefix}_{output_index}"
+        if directory.exists():
+            if not args.force:
+                print(
+                    f"error: {directory} exists; pass --force to overwrite",
+                    file=sys.stderr,
+                )
+                return 1
+            shutil.rmtree(directory)
+
         mesh = glb.doc["meshes"][mesh_index]
         primitive = mesh["primitives"][0]
-        material = glb.doc["materials"][primitive["material"]]
+        material = materials[primitive["material"]]
 
         position_accessor = primitive["attributes"]["POSITION"]
         bounds = {}
@@ -442,6 +547,32 @@ def main():
         # The output carries exactly one mesh, so the node must point at it.
         node["mesh"] = 0
 
+        # A texture this mesh has to itself goes back into its own buffer, the
+        # same way every other mesh.glb in the repository stores its images. A
+        # texture several meshes share is written to `textures/` instead,
+        # because embedding it would copy it once per mesh.
+        images = []
+        parts = [blob]
+        offset = len(blob)
+        for index in order:
+            source = glb.doc["textures"][index]["source"]
+            mime = glb.doc["images"][source]["mimeType"]
+            if index in texture_files:
+                images.append(
+                    {"uri": f"../textures/{texture_files[index]}", "mimeType": mime}
+                )
+                continue
+            payload = view_bytes(glb, glb.doc["images"][source]["bufferView"])
+            padding = (4 - len(payload) % 4) % 4
+            views.append(
+                {"buffer": 0, "byteOffset": offset, "byteLength": len(payload)}
+            )
+            parts.append(payload)
+            parts.append(b"\0" * padding)
+            offset += len(payload) + padding
+            images.append({"bufferView": len(views) - 1, "mimeType": mime})
+        blob = b"".join(parts)
+
         document = {
             "asset": glb.doc["asset"],
             "scene": 0,
@@ -456,13 +587,7 @@ def main():
                 }
                 for position, index in enumerate(order)
             ],
-            "images": [
-                {
-                    "uri": f"../textures/{texture_files[index]}",
-                    "mimeType": glb.doc["images"][glb.doc["textures"][index]["source"]]["mimeType"],
-                }
-                for index in order
-            ],
+            "images": images,
             "accessors": accessors,
             "bufferViews": views,
             "buffers": [{"byteLength": len(blob)}],
@@ -470,7 +595,6 @@ def main():
         if "samplers" in glb.doc:
             document["samplers"] = glb.doc["samplers"]
 
-        directory = out_dir / f"{args.prefix}_{output_index}"
         directory.mkdir(parents=True, exist_ok=True)
 
         template = build_template_json(centred_min, centred_max)
