@@ -1,9 +1,5 @@
 {
     "entity_type": "asteroid",
-    "mass": {
-        "value": 50000000,
-        "unit": "kg"
-    },
     "collision_shape": {
         "type": "sphere",
         "radius": {

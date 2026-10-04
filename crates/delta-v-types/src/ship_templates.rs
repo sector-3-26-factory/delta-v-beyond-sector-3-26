@@ -193,8 +193,6 @@ pub enum GaugeShape {
 /// the only source of defaults — no `#[serde(default)]` or `impl Default`.
 #[derive(Debug, Deserialize)]
 pub struct ShipTemplateJson {
-    /// Ship mass in kilograms.
-    pub mass: PhysicalQuantityJson,
     /// Dimensionless inertia multiplier (default 1.0 from schema).
     pub inertia_scale: f32,
     /// Propulsion system configuration.
@@ -223,8 +221,6 @@ pub struct ShipTemplateJson {
 /// Per ADR-0008, conversion happens at load time.
 #[derive(Debug, Clone)]
 pub struct ShipTemplate {
-    /// Ship mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Dimensionless inertia multiplier.
     pub inertia_scale: f32,
     /// Propulsion system configuration.
@@ -248,7 +244,6 @@ pub struct ShipTemplate {
 impl From<ShipTemplateJson> for ShipTemplate {
     fn from(json: ShipTemplateJson) -> Self {
         Self {
-            mass: json.mass.to_kilograms(),
             inertia_scale: json.inertia_scale,
             propulsion: json.propulsion,
             bounding_box: json.bounding_box.into(),
@@ -269,8 +264,6 @@ impl From<ShipTemplateJson> for ShipTemplate {
 /// and the referenced ship template at load time.
 #[derive(Debug, Deserialize)]
 pub struct PlayerShipTemplateJson {
-    /// Ship mass in kilograms (from merged ship template).
-    pub mass: PhysicalQuantityJson,
     /// Dimensionless inertia multiplier (from merged ship template).
     pub inertia_scale: f32,
     /// Propulsion system configuration (from merged ship template).
@@ -303,8 +296,6 @@ pub struct PlayerShipTemplateJson {
 /// Per ADR-0008, conversion happens at load time.
 #[derive(Debug, Clone)]
 pub struct PlayerShipTemplate {
-    /// Ship mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Dimensionless inertia multiplier.
     pub inertia_scale: f32,
     /// Propulsion system configuration.
@@ -332,7 +323,6 @@ pub struct PlayerShipTemplate {
 impl From<PlayerShipTemplateJson> for PlayerShipTemplate {
     fn from(json: PlayerShipTemplateJson) -> Self {
         Self {
-            mass: json.mass.to_kilograms(),
             inertia_scale: json.inertia_scale,
             propulsion: json.propulsion,
             cameras: json.cameras.into(),
@@ -357,8 +347,6 @@ impl From<PlayerShipTemplateJson> for PlayerShipTemplate {
 /// no `#[serde(default)]` or `impl Default`.
 #[derive(Debug, Deserialize)]
 pub struct AiShipTemplateJson {
-    /// Ship mass in kilograms.
-    pub mass: PhysicalQuantityJson,
     /// Dimensionless inertia multiplier (default 1.0 from schema).
     pub inertia_scale: f32,
     /// Ship health in hit points (default 100.0 from schema).
@@ -386,8 +374,6 @@ pub struct AiShipTemplateJson {
 /// Per ADR-0008, conversion happens at load time.
 #[derive(Debug, Clone)]
 pub struct AiShipTemplate {
-    /// Ship mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Dimensionless inertia multiplier.
     pub inertia_scale: f32,
     /// Ship health in hit points (SI base unit).
@@ -413,7 +399,6 @@ pub struct AiShipTemplate {
 impl From<AiShipTemplateJson> for AiShipTemplate {
     fn from(json: AiShipTemplateJson) -> Self {
         Self {
-            mass: json.mass.to_kilograms(),
             inertia_scale: json.inertia_scale,
             health: json.health.to_hit_points(),
             collision_shape: json.collision_shape.into(),
@@ -437,8 +422,6 @@ impl From<AiShipTemplateJson> for AiShipTemplate {
 /// no `#[serde(default)]` or `impl Default`.
 #[derive(Debug, Deserialize)]
 pub struct StaticShipTemplateJson {
-    /// Ship mass in kilograms.
-    pub mass: PhysicalQuantityJson,
     /// Dimensionless inertia multiplier (default 1.0 from schema).
     pub inertia_scale: f32,
     /// Ship health in hit points (default 100.0 from schema).
@@ -464,8 +447,6 @@ pub struct StaticShipTemplateJson {
 /// Per ADR-0008, conversion happens at load time.
 #[derive(Debug, Clone)]
 pub struct StaticShipTemplate {
-    /// Ship mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Dimensionless inertia multiplier.
     pub inertia_scale: f32,
     /// Ship health in hit points (SI base unit).
@@ -489,7 +470,6 @@ pub struct StaticShipTemplate {
 impl From<StaticShipTemplateJson> for StaticShipTemplate {
     fn from(json: StaticShipTemplateJson) -> Self {
         Self {
-            mass: json.mass.to_kilograms(),
             inertia_scale: json.inertia_scale,
             health: json.health.to_hit_points(),
             collision_shape: json.collision_shape.into(),
@@ -513,8 +493,6 @@ impl From<StaticShipTemplateJson> for StaticShipTemplate {
 /// Per ADR-0047, this trait is defined in `delta-v-types` where the runtime
 /// types live, avoiding orphan rule issues.
 pub trait ShipTemplateBase {
-    /// Returns the ship's mass in kilograms (SI base unit).
-    fn mass(&self) -> f32;
     /// Returns the dimensionless inertia multiplier.
     fn inertia_scale(&self) -> f32;
     /// Returns the axis-aligned bounding box in ship-local coordinates (metres).
@@ -538,9 +516,6 @@ pub trait ShipTemplateBase {
 }
 
 impl ShipTemplateBase for ShipTemplate {
-    fn mass(&self) -> f32 {
-        self.mass
-    }
     fn inertia_scale(&self) -> f32 {
         self.inertia_scale
     }
@@ -574,9 +549,6 @@ impl ShipTemplateBase for ShipTemplate {
 }
 
 impl ShipTemplateBase for PlayerShipTemplate {
-    fn mass(&self) -> f32 {
-        self.mass
-    }
     fn inertia_scale(&self) -> f32 {
         self.inertia_scale
     }
@@ -610,9 +582,6 @@ impl ShipTemplateBase for PlayerShipTemplate {
 }
 
 impl ShipTemplateBase for AiShipTemplate {
-    fn mass(&self) -> f32 {
-        self.mass
-    }
     fn inertia_scale(&self) -> f32 {
         self.inertia_scale
     }
@@ -646,9 +615,6 @@ impl ShipTemplateBase for AiShipTemplate {
 }
 
 impl ShipTemplateBase for StaticShipTemplate {
-    fn mass(&self) -> f32 {
-        self.mass
-    }
     fn inertia_scale(&self) -> f32 {
         self.inertia_scale
     }

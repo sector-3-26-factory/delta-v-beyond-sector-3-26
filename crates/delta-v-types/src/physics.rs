@@ -330,11 +330,25 @@ impl RigidBodyData {
     }
 }
 
-/// Resolves the final mass value, using override if present.
+/// Returns the mass a world entity declared, in kilograms.
 ///
-/// Mass is NOT scaled - it is used as-is from the template, or overridden if
-/// `mass_override` is specified.
+/// Per ADR-0058 mass lives on the world entity and not on the template, so there is
+/// no template value to fall back to. A body with no declared mass is a world
+/// authoring error and is a hard failure per ADR-0013, never a default.
+///
+/// # Panics
+///
+/// Panics when the entity declares no mass. `entity_id` names the offending entity so
+/// the message points at the line in the world file that has to be fixed.
+// INVARIANT: mass is absent only when a world file omits it, which is a content bug.
+// Failing loudly at spawn is the intended response (ADR-0013); there is no value that
+// could stand in for a declared mass without inventing one.
 #[must_use]
-pub fn resolve_mass(template_mass: f32, mass_override: Option<f32>) -> f32 {
-    mass_override.unwrap_or(template_mass)
+#[allow(clippy::expect_used)]
+pub fn require_mass(entity_id: &str, mass: Option<f32>) -> f32 {
+    let message = format!(
+        "world entity '{entity_id}' declares no mass. Per ADR-0058 mass belongs to the world \
+         entity and not to its template; add a \"mass\" to this entity in the world file."
+    );
+    mass.expect(&message)
 }

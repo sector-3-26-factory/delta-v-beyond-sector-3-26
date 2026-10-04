@@ -1,9 +1,5 @@
 {
     "entity_type": "ship",
-    "mass": {
-        "value": 18000,
-        "unit": "kg"
-    },
     "inertia_scale": 1.0,
     "bounding_box": {
         "min": {

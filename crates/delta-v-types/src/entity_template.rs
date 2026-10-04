@@ -85,25 +85,6 @@ impl EntityTemplate {
         )
     }
 
-    /// Returns the mass in kilograms for this template.
-    #[must_use]
-    pub const fn mass(&self) -> f32 {
-        match self {
-            Self::Sun(t) => t.mass,
-            Self::Planet(t) => t.mass,
-            Self::Moon(t) => t.mass,
-            Self::Asteroid(t) => t.mass,
-            Self::Ship(t) => t.mass,
-            Self::PlayerShip(t) => t.mass,
-            Self::AiShip(t) => t.mass,
-            Self::StaticShip(t) => t.mass,
-            Self::Weapon(_)
-            | Self::Projectile(_)
-            | Self::MainThruster(_)
-            | Self::ManeuveringThruster(_) => 0.0,
-        }
-    }
-
     /// Returns the collision shape data for this template.
     #[must_use]
     pub fn collision_shape(&self) -> &crate::collision::CollisionShapeData {
@@ -163,11 +144,13 @@ impl EntityTemplate {
             Self::PlayerShip(t) => t.health,
             Self::AiShip(t) => t.health,
             Self::StaticShip(t) => t.health,
-            Self::Sun(t) => t.mass,      // Suns use mass as health proxy
-            Self::Planet(t) => t.mass,   // Planets use mass as health proxy
-            Self::Moon(t) => t.mass,     // Moons use mass as health proxy
-            Self::Asteroid(t) => t.mass, // Asteroids use mass as health proxy
-            Self::Weapon(_)
+            // Celestial bodies carry no Health component (ADR-0058 removed the
+            // template mass this used to proxy for), and neither do components.
+            Self::Sun(_)
+            | Self::Planet(_)
+            | Self::Moon(_)
+            | Self::Asteroid(_)
+            | Self::Weapon(_)
             | Self::Projectile(_)
             | Self::MainThruster(_)
             | Self::ManeuveringThruster(_) => 0.0,

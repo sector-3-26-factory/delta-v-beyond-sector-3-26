@@ -35,8 +35,7 @@ pub use collision::scale_collision_shape;
 pub use mesh_attachment::{PendingMesh, attach_meshes};
 pub use ship_spawn::{PendingShipMesh, build_physical_ship};
 pub use template_extraction::{
-    compute_debug_axis_length, extract_bounding_box, extract_collision_shape, extract_mass,
-    resolve_mass, scale_bounding_box,
+    compute_debug_axis_length, extract_bounding_box, extract_collision_shape, scale_bounding_box,
 };
 
 #[cfg(test)]

@@ -5,6 +5,32 @@
 //! Tests for physical quantity conversion methods.
 
 use super::PhysicalQuantityJson;
+use super::require_mass;
+
+// ---------------------------------------------------------------------------
+// ADR-0058: mass is world data and is required
+// ---------------------------------------------------------------------------
+
+/// A body that declares a mass gets exactly that mass.
+#[test]
+fn test_require_mass_returns_declared_value() {
+    let mass = require_mass("ganymed", Some(1.4819e23));
+    assert!((mass - 1.4819e23).abs() < 1.0e15);
+}
+
+/// A body with no declared mass is a hard error naming the entity, never a default.
+#[test]
+#[should_panic(expected = "declares no mass")]
+fn test_require_mass_without_value_panics() {
+    let _ = require_mass("io", None);
+}
+
+/// The panic names the offending entity so the message points at the line to fix.
+#[test]
+#[should_panic(expected = "ganymed")]
+fn test_require_mass_panic_names_the_entity() {
+    let _ = require_mass("ganymed", None);
+}
 
 #[test]
 fn test_to_meters_from_meters() {

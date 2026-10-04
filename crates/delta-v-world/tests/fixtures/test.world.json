@@ -39,6 +39,10 @@
                     "value": 1.0,
                     "unit": "m"
                 }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
             }
         }
     ]

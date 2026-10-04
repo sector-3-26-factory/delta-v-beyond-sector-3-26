@@ -44,6 +44,10 @@
 
 pub mod resources;
 
+#[cfg(test)]
+#[path = "lib_tests.rs"]
+mod tests;
+
 pub use delta_v_core::SpawnEntity;
 pub use delta_v_types::{EntitySpawn, WorldDef};
 pub use resources::WorldDefResource;

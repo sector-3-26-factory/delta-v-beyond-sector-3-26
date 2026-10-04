@@ -7,7 +7,6 @@
     "additionalProperties": false,
     "required": [
         "entity_type",
-        "mass",
         "propulsion",
         "bounding_box",
         "collision_shape",
@@ -19,10 +18,6 @@
             "description": "Entity type discriminator. Must be 'ship'.",
             "type": "string",
             "const": "ship"
-        },
-        "mass": {
-            "description": "Ship mass in kilograms. Required per ADR-0009 (every rigid body MUST have mass) and ADR-0014 (gameplay values in JSON).",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         },
         "inertia_scale": {
             "description": "Dimensionless multiplier on the default spherical inertia tensor. 1.0 = sphere with radius 1m. Higher values simulate mass concentrated farther from center.",

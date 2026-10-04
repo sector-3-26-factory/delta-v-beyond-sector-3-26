@@ -30,7 +30,7 @@ use delta_v_core::{
     DebugAxesEligible, EntityType, RenderLayer, SpawnEntity, Targetable, WorldEntityId,
 };
 use delta_v_types::{
-    compute_debug_axis_length, resolve_mass, scale_bounding_box, scale_collision_shape,
+    compute_debug_axis_length, require_mass, scale_bounding_box, scale_collision_shape,
 };
 
 use crate::celestial::{ALWAYS_VISIBLE_SCREEN_RADIUS_PX, LazyLoadMesh, Moon};
@@ -68,9 +68,10 @@ pub fn spawn_sun(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(sun_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = sun_template.collision_shape;
@@ -197,9 +198,10 @@ pub fn spawn_planet(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(planet_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = planet_template.collision_shape;
@@ -335,9 +337,10 @@ pub fn spawn_asteroid(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(asteroid_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = asteroid_template.collision_shape;
@@ -462,9 +465,10 @@ pub fn spawn_moon(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(moon_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = moon_template.collision_shape;

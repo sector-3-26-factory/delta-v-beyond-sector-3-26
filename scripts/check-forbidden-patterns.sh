@@ -19,9 +19,9 @@
 #
 # check-forbidden-patterns.sh
 #
-# Scans Rust sources for patterns that are banned by ADR constraints.
-# Currently enforces ADR-0013 (no silent fallbacks) and ADR-0056 (benchmark
-# declarations, naming and tooling).
+# Scans sources for patterns that are banned by ADR constraints.
+# Currently enforces ADR-0013 (no silent fallbacks), ADR-0056 (benchmark
+# declarations, naming and tooling) and ADR-0059 (readable UTF-8 in JSON).
 # Called from .githooks/pre-commit and CI (adr-compliance.yml).
 # Run manually:
 #
@@ -248,6 +248,45 @@ check_benchmarks() {
 }
 
 check_benchmarks || ERRORS=$((ERRORS + 1))
+
+# ---------------------------------------------------------------------------
+# ADR-0059: JSON is written as readable UTF-8.
+#
+# A \uXXXX escape and the character it stands for parse to the same string,
+# so an escaped file behaves identically and no test catches it. That is the
+# problem: Python's json.dumps defaults to ensure_ascii=True, so any tool
+# that reads a JSON file and writes it back silently escapes every non-ASCII
+# character unless it remembers to pass ensure_ascii=False.
+#
+# This is a text scan of what is on disk, not a JSON parse. A parse would
+# normalise the escapes away before the check could see them, which is the
+# opposite of what this rule is for.
+# ---------------------------------------------------------------------------
+
+check_json_escapes() {
+    local found=0
+    local assets_dir="$REPO_ROOT/assets"
+
+    if [ ! -d "$assets_dir" ]; then
+        return 0
+    fi
+
+    while IFS= read -r -d '' file; do
+        if grep -n '\\u' "$file"; then
+            echo ""
+            echo "FORBIDDEN in ${file#"$REPO_ROOT"/}: \u escape in shipped JSON (violates ADR-0059)."
+            echo "Fix: write the character literally, and pass ensure_ascii=False to"
+            echo "     json.dumps (or the equivalent) when rewriting the file. Escaped"
+            echo "     JSON parses the same but is unreadable and no longer matches"
+            echo "     the literal spelling used in the schema that defines it."
+            found=1
+        fi
+    done < <(find "$assets_dir" -name '*.json' -print0)
+
+    return $found
+}
+
+check_json_escapes || ERRORS=$((ERRORS + 1))
 
 if [ "$ERRORS" -gt 0 ]; then
     echo ""
