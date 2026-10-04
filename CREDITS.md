@@ -54,6 +54,25 @@ The following technical transformations are applied to most or all `mesh.glb` fi
   285 minor moons in the solar system world; each moon is scaled to its own real radius
   via the `scale` factor in `assets/worlds/solar-system.world.json`.
 
+### Asteroids Pack (rocky version)
+
+- **Creator:** [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/asteroids-pack-rocky-version-adde1ecf129e4509be8af61b84bafa85)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/asteroids/shared/mesh_1/mesh.glb` … `assets/templates/asteroids/shared/mesh_10/mesh.glb`
+- **Textures:** `assets/templates/asteroids/shared/textures/asteroids-pack-rocky-version-basecolor.jpg`,
+  `assets/templates/asteroids/shared/textures/asteroids-pack-rocky-version-metallic-roughness.png`,
+  `assets/templates/asteroids/shared/textures/asteroids-pack-rocky-version-normal.png`
+- **Modifications:** The downloaded pack holds ten asteroids in one GLB. It was split with
+  `scripts/split_glb_asteroids.py` into ten single-mesh GLBs, one per template directory.
+  The three textures are used unmodified and are shared by relative URI rather than embedded
+  per mesh, so they are stored once and decoded once. The Sketchfab wrapper nodes were dropped,
+  leaving a single node per mesh.
+
+  This is one licence covering all thirteen files above: they are all derived from the same
+  source pack. The credit is intentionally recorded once rather than repeated per template.
+
 ### Archimedes (Meshy AI)
 
 - **Creator:** [Meshy AI](https://www.meshy.ai)
