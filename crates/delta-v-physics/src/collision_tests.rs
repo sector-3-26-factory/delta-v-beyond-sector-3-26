@@ -4,13 +4,6 @@
 
 //! Tests for collision detection and response.
 
-#![allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::float_cmp,
-    clippy::panic
-)]
-
 use bevy::prelude::*;
 use bevy::time::TimePlugin;
 
@@ -65,6 +58,28 @@ fn box_shape(half_extents: Vec3) -> CollisionShape {
     CollisionShape(CollisionShapeData::box_shape(half_extents, Vec3::ZERO))
 }
 
+/// Calls [`crate::check_collision`] with both bodies unrotated.
+///
+/// Every test below that predates oriented collision support spawns its bodies with
+/// `Transform::default()`, whose rotation is the identity, so identity is exactly
+/// the rotation those tests mean. The rotation tests further down pass a real
+/// rotation to [`crate::check_collision`] instead of using this helper.
+fn check_unrotated(
+    pos_a: Vec3,
+    shape_a: &CollisionShape,
+    pos_b: Vec3,
+    shape_b: &CollisionShape,
+) -> Option<(Vec3, f32)> {
+    crate::check_collision(
+        pos_a,
+        Quat::IDENTITY,
+        shape_a,
+        pos_b,
+        Quat::IDENTITY,
+        shape_b,
+    )
+}
+
 /// Builds an app that runs only the collision detection system, so a test can
 /// assert on the `CollisionDetected` messages it emits and nothing else.
 fn build_detection_app() -> App {
@@ -117,6 +132,7 @@ fn spawn_relevance_asteroid(app: &mut App, position: Vec3, screen_radius_px: f32
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_sphere_sphere_overlap() {
     let mut app = build_collision_app();
 
@@ -143,7 +159,7 @@ fn test_sphere_sphere_overlap() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some(), "spheres should collide");
     let (normal, penetration) = result.unwrap();
     assert!(
@@ -157,6 +173,7 @@ fn test_sphere_sphere_overlap() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_sphere_sphere_no_overlap() {
     let mut app = build_collision_app();
 
@@ -183,11 +200,12 @@ fn test_sphere_sphere_no_overlap() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_none(), "spheres should not collide");
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_sphere_sphere_touching_exactly() {
     let mut app = build_collision_app();
 
@@ -214,7 +232,7 @@ fn test_sphere_sphere_touching_exactly() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(
         result.is_none(),
         "exactly touching spheres should not collide"
@@ -222,6 +240,7 @@ fn test_sphere_sphere_touching_exactly() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_sphere_sphere_coincident_centers() {
     let mut app = build_collision_app();
 
@@ -248,7 +267,7 @@ fn test_sphere_sphere_coincident_centers() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some(), "coincident spheres should collide");
     let (normal, penetration) = result.unwrap();
     assert!(
@@ -266,6 +285,7 @@ fn test_sphere_sphere_coincident_centers() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_box_box_overlap() {
     let mut app = build_collision_app();
 
@@ -292,7 +312,7 @@ fn test_box_box_overlap() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some(), "boxes should collide");
     let (normal, penetration) = result.unwrap();
     assert!(
@@ -306,6 +326,7 @@ fn test_box_box_overlap() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_box_box_no_overlap() {
     let mut app = build_collision_app();
 
@@ -332,11 +353,12 @@ fn test_box_box_no_overlap() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_none(), "boxes should not collide");
 }
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_box_box_minimum_penetration_axis() {
     let mut app = build_collision_app();
 
@@ -363,7 +385,7 @@ fn test_box_box_minimum_penetration_axis() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some());
     let (normal, penetration) = result.unwrap();
     assert!(
@@ -381,6 +403,7 @@ fn test_box_box_minimum_penetration_axis() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_sphere_box_overlap() {
     let mut app = build_collision_app();
 
@@ -410,13 +433,14 @@ fn test_sphere_box_overlap() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some(), "sphere and box should collide");
     let (_normal, penetration) = result.unwrap();
     assert!(penetration > 0.0, "penetration should be positive");
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_sphere_box_no_overlap() {
     let mut app = build_collision_app();
 
@@ -443,11 +467,12 @@ fn test_sphere_box_no_overlap() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_none(), "sphere and box should not collide");
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_sphere_box_normal_direction() {
     let mut app = build_collision_app();
 
@@ -474,7 +499,7 @@ fn test_sphere_box_normal_direction() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some());
     let (normal, _penetration) = result.unwrap();
     assert!(
@@ -484,6 +509,7 @@ fn test_sphere_box_normal_direction() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_sphere_inside_box() {
     let mut app = build_collision_app();
 
@@ -510,7 +536,7 @@ fn test_sphere_inside_box() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some(), "sphere inside box should collide");
 }
 
@@ -519,6 +545,7 @@ fn test_sphere_inside_box() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_collision_normal_points_from_a_to_b() {
     let mut app = build_collision_app();
 
@@ -545,7 +572,7 @@ fn test_collision_normal_points_from_a_to_b() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some());
     let (normal, _penetration) = result.unwrap();
     assert!(
@@ -555,6 +582,7 @@ fn test_collision_normal_points_from_a_to_b() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_collision_normal_negative_direction() {
     let mut app = build_collision_app();
 
@@ -581,7 +609,7 @@ fn test_collision_normal_negative_direction() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some());
     let (normal, _penetration) = result.unwrap();
     assert!(
@@ -595,6 +623,7 @@ fn test_collision_normal_negative_direction() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_penetration_depth_sphere_sphere() {
     let mut app = build_collision_app();
 
@@ -621,7 +650,7 @@ fn test_penetration_depth_sphere_sphere() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some());
     let (_normal, penetration) = result.unwrap();
     assert!(
@@ -635,6 +664,7 @@ fn test_penetration_depth_sphere_sphere() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_collision_response_dynamic_static() {
     let mut app = build_collision_app();
 
@@ -655,7 +685,7 @@ fn test_collision_response_dynamic_static() {
             RigidBody::new(10.0, 1.0),
             Transform::from_translation(Vec3::ZERO),
             sphere_shape(2.0),
-            CollisionLayersComponent::new(layers::SHIP),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::SHIP),
             DynamicBody,
         ))
         .id();
@@ -686,6 +716,7 @@ fn test_collision_response_dynamic_static() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_collision_response_dynamic_dynamic() {
     let mut app = build_collision_app();
 
@@ -747,6 +778,7 @@ fn test_collision_response_dynamic_dynamic() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_collision_response_separating_velocities_no_impulse() {
     let mut app = build_collision_app();
 
@@ -807,6 +839,7 @@ fn test_collision_response_separating_velocities_no_impulse() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_collision_response_position_correction() {
     let mut app = build_collision_app();
 
@@ -852,6 +885,7 @@ fn test_collision_response_position_correction() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_collision_response_static_static_skipped() {
     let mut app = build_collision_app();
 
@@ -887,6 +921,7 @@ fn test_collision_response_static_static_skipped() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::float_cmp, clippy::panic)]
 fn test_collision_shape_sphere_constructor() {
     let shape = CollisionShape::sphere(5.0, Vec3::new(1.0, 2.0, 3.0));
     match shape.shape_type {
@@ -897,6 +932,7 @@ fn test_collision_shape_sphere_constructor() {
 }
 
 #[test]
+#[allow(clippy::panic)]
 fn test_collision_shape_box_constructor() {
     let he = Vec3::new(1.0, 2.0, 3.0);
     let offset = Vec3::new(0.5, 0.5, 0.5);
@@ -915,6 +951,7 @@ fn test_collision_shape_box_constructor() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_collision_with_offset() {
     let mut app = build_collision_app();
 
@@ -946,7 +983,7 @@ fn test_collision_with_offset() {
     let pos_b = transform_b.translation + shape_b.offset;
 
     // Effective positions: A at (2,0,0), B at (-2,0,0). Distance = 4, sum radii = 4 → touching
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(
         result.is_none(),
         "spheres with offset should be exactly touching, not overlapping"
@@ -954,6 +991,7 @@ fn test_collision_with_offset() {
 }
 
 #[test]
+#[allow(clippy::unwrap_used, clippy::float_cmp)]
 fn test_collision_with_offset_overlap() {
     let mut app = build_collision_app();
 
@@ -985,7 +1023,7 @@ fn test_collision_with_offset_overlap() {
     let pos_b = transform_b.translation + shape_b.offset;
 
     // Effective positions: A at (1.5,0,0), B at (-1.5,0,0). Distance = 3, sum radii = 4 → overlap = 1
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(result.is_some(), "spheres with offset should overlap");
     let (_normal, penetration) = result.unwrap();
     assert!(
@@ -999,6 +1037,7 @@ fn test_collision_with_offset_overlap() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_convex_hull_fallback_uses_sphere_approximation() {
     let mut app = build_collision_app();
 
@@ -1031,7 +1070,7 @@ fn test_convex_hull_fallback_uses_sphere_approximation() {
     let shape_a = app.world().get::<CollisionShape>(a).unwrap();
     let shape_b = app.world().get::<CollisionShape>(b).unwrap();
 
-    let result = crate::check_collision(pos_a, shape_a, pos_b, shape_b);
+    let result = check_unrotated(pos_a, shape_a, pos_b, shape_b);
     assert!(
         result.is_some(),
         "convex hull fallback should detect collision via sphere approx"
@@ -1043,6 +1082,7 @@ fn test_convex_hull_fallback_uses_sphere_approximation() {
 // ---------------------------------------------------------------------------
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_sphere_outside() {
     // Point at (10, 0, 0), sphere at origin with radius 3
     // Distance to surface = 10 - 3 = 7
@@ -1058,6 +1098,7 @@ fn test_distance_to_surface_sphere_outside() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_sphere_inside() {
     // Point at (1, 0, 0), sphere at origin with radius 3
     // Point is inside sphere, distance to surface = 0
@@ -1073,6 +1114,7 @@ fn test_distance_to_surface_sphere_inside() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_sphere_on_surface() {
     // Point at (3, 0, 0), sphere at origin with radius 3
     // Point is on surface, distance to surface = 0
@@ -1088,6 +1130,7 @@ fn test_distance_to_surface_sphere_on_surface() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_box_outside() {
     // Point at (5, 0, 0), box at origin with half_extents (2, 2, 2)
     // Closest point on box is (2, 0, 0), distance = 3
@@ -1103,6 +1146,7 @@ fn test_distance_to_surface_box_outside() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_box_inside() {
     // Point at (1, 1, 1), box at origin with half_extents (2, 2, 2)
     // Point is inside box, distance to surface = 0
@@ -1118,6 +1162,7 @@ fn test_distance_to_surface_box_inside() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_box_corner() {
     // Point at (5, 5, 5), box at origin with half_extents (2, 2, 2)
     // Closest point on box is (2, 2, 2), distance = sqrt(3^2 + 3^2 + 3^2) = sqrt(27) ≈ 5.196
@@ -1134,6 +1179,7 @@ fn test_distance_to_surface_box_corner() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_box_with_offset() {
     // Point at (10, 0, 0), box at (5, 0, 0) with half_extents (2, 2, 2) and offset (0, 0, 0)
     // Box center is at (5, 0, 0), closest point is (7, 0, 0), distance = 3
@@ -1149,6 +1195,7 @@ fn test_distance_to_surface_box_with_offset() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn test_distance_to_surface_convex_hull_placeholder() {
     // Convex hull returns center distance as placeholder
     // Point at (10, 0, 0), entity at origin
@@ -1231,7 +1278,7 @@ fn test_collision_body_without_lazy_mesh_is_always_tested() {
         RigidBody::new(10.0, 1.0),
         Transform::from_translation(Vec3::ZERO),
         sphere_shape(2.0),
-        CollisionLayersComponent::new(layers::SHIP),
+        CollisionLayersComponent::new(delta_v_types::collision::layers::SHIP),
         DynamicBody,
     ));
     spawn_relevance_asteroid(&mut app, Vec3::new(3.0, 0.0, 0.0), 0.1);
@@ -1246,6 +1293,7 @@ fn test_collision_body_without_lazy_mesh_is_always_tested() {
 
 /// The threshold itself is inclusive: a body exactly at the threshold is relevant.
 #[test]
+#[allow(clippy::unwrap_used)]
 fn test_collision_relevance_threshold_is_inclusive() {
     let mut app = build_detection_app();
     let threshold = crate::constants::COLLISION_RELEVANCE_PX;
@@ -1263,7 +1311,153 @@ fn test_collision_relevance_threshold_is_inclusive() {
 
 /// A mixed pair needs only one relevant side, so an asteroid that is relevant still
 /// collides with a ship that carries no relevance value at all.
+/// A ship and a moon must be tested against each other.
+///
+/// A moon once carried a `CollisionShape` but no `CollisionLayersComponent`.
+/// The detection query requires both, so the moon was in no bucket, nothing
+/// was ever compared against it, and a ship flew straight through.
 #[test]
+#[allow(clippy::unwrap_used)]
+fn test_ship_collides_with_a_celestial_body() {
+    let mut app = build_detection_app();
+    app.world_mut().spawn((
+        RigidBody::new(10_000.0, 1.0),
+        Transform::from_translation(Vec3::ZERO),
+        sphere_shape(5.0),
+        CollisionLayersComponent::new(delta_v_types::collision::layers::SHIP),
+        DynamicBody,
+    ));
+    app.world_mut().spawn((
+        RigidBody::new(1.5e23, 1.0),
+        Transform::from_translation(Vec3::Z * -8.0),
+        sphere_shape(6.0),
+        CollisionLayersComponent::new(layers::CELESTIAL),
+        StaticBody,
+    ));
+
+    let events = run_detection_and_collect(&mut app);
+    assert_eq!(
+        events.len(),
+        1,
+        "a ship and an overlapping moon must collide"
+    );
+}
+
+/// Two moons that touch must collide, like any other pair.
+///
+/// Nothing is excluded from collision. A pair of bodies is only skipped when
+/// their shapes do not overlap.
+#[test]
+#[allow(clippy::unwrap_used)]
+fn test_two_celestial_bodies_collide() {
+    let mut app = build_detection_app();
+    app.world_mut().spawn((
+        RigidBody::new(1.0e23, 1.0),
+        Transform::from_translation(Vec3::ZERO),
+        sphere_shape(1.0e6),
+        CollisionLayersComponent::new(layers::CELESTIAL),
+        StaticBody,
+    ));
+    app.world_mut().spawn((
+        RigidBody::new(1.0e22, 1.0),
+        Transform::from_translation(Vec3::Z * -1.5e6),
+        sphere_shape(1.0e6),
+        CollisionLayersComponent::new(layers::CELESTIAL),
+        StaticBody,
+    ));
+
+    assert_eq!(
+        run_detection_and_collect(&mut app).len(),
+        1,
+        "two overlapping moons must collide"
+    );
+}
+
+/// Every body collides with every other body.
+#[test]
+#[allow(clippy::unwrap_used)]
+fn test_every_layer_collides_with_every_other() {
+    let all = [
+        ("ship", layers::SHIP),
+        ("asteroid", layers::ASTEROID),
+        ("projectile", layers::PROJECTILE),
+        ("celestial", layers::CELESTIAL),
+    ];
+    for (name, body) in all {
+        assert_eq!(
+            body.mask,
+            layers::ALL_LAYERS,
+            "{name} excludes something from collision"
+        );
+        for (other_name, other) in all {
+            assert_ne!(
+                body.mask & other.layers,
+                0,
+                "{name} cannot collide with a {other_name}"
+            );
+        }
+    }
+}
+
+/// A moon must not be moved by the impact, and the ship must rebound.
+///
+/// Without `StaticBody` the response treats the body as dynamic and divides
+/// the impulse by 1.5e23 kg, which is no impulse at all.
+#[test]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+fn test_ship_bounces_off_a_static_moon() {
+    let mut app = build_collision_app();
+    app.add_systems(
+        FixedUpdate,
+        (
+            crate::collision_detection_system.in_set(PhysicsSet::AccumulateForces),
+            crate::collision_response_system.in_set(CollisionResponseSet),
+        ),
+    );
+    let ship = app
+        .world_mut()
+        .spawn((
+            RigidBody::new(10_000.0, 1.0),
+            Transform::from_translation(Vec3::ZERO),
+            sphere_shape(5.0),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::SHIP),
+            DynamicBody,
+        ))
+        .id();
+    let moon = app
+        .world_mut()
+        .spawn((
+            RigidBody::new(1.5e23, 1.0),
+            Transform::from_translation(Vec3::Z * -8.0),
+            sphere_shape(6.0),
+            CollisionLayersComponent::new(layers::CELESTIAL),
+            StaticBody,
+        ))
+        .id();
+
+    app.world_mut()
+        .get_mut::<RigidBody>(ship)
+        .expect("ship has a body")
+        .velocity = Vec3::Z * -60.0;
+
+    run_fixed_update(&mut app);
+
+    let ship_velocity = app.world().get::<RigidBody>(ship).expect("ship").velocity;
+    let moon_velocity = app.world().get::<RigidBody>(moon).expect("moon").velocity;
+    assert!(
+        ship_velocity.z > 0.0,
+        "the ship should rebound, its z velocity was {}",
+        ship_velocity.z
+    );
+    assert_eq!(moon_velocity, Vec3::ZERO, "the moon must not be moved");
+}
+
+// ---------------------------------------------------------------------------
+// Celestial bodies
+// ---------------------------------------------------------------------------
+
+#[test]
+#[allow(clippy::unwrap_used)]
 fn test_collision_mixed_pair_needs_only_one_relevant_side() {
     let mut app = build_detection_app();
 
@@ -1272,7 +1466,7 @@ fn test_collision_mixed_pair_needs_only_one_relevant_side() {
         RigidBody::new(10.0, 1.0),
         Transform::from_translation(Vec3::new(3.0, 0.0, 0.0)),
         sphere_shape(2.0),
-        CollisionLayersComponent::new(layers::SHIP),
+        CollisionLayersComponent::new(delta_v_types::collision::layers::SHIP),
         DynamicBody,
     ));
 
@@ -1281,6 +1475,239 @@ fn test_collision_mixed_pair_needs_only_one_relevant_side() {
         events.len(),
         1,
         "a mixed pair must be tested when either side is relevant"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Collision detection: oriented boxes
+// ---------------------------------------------------------------------------
+
+/// A ship-shaped box: 9.0 m wide, 3.6 m tall, 15.8 m long — the collision half
+/// extents from `assets/templates/ships/space-fighter-comrade1280/ship.json`.
+const SHIP_HALF_EXTENTS: Vec3 = Vec3::new(4.502, 1.781, 7.908);
+
+#[test]
+fn test_pitched_ship_box_hits_a_body_straight_past_its_nose() {
+    // The ship is pitched a quarter turn about X, so its long axis (local Z, the
+    // nose) points straight down and its thin axis (local Y) is still world Y.
+    let rotation = Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2);
+    let nose = rotation * Vec3::Z;
+
+    let ship = box_shape(SHIP_HALF_EXTENTS);
+    let moon = sphere_shape(0.5);
+
+    // 8.4 m out along the nose: inside the ship as drawn, and 8.4 - 7.908 = 0.49 m
+    // short of the nose tip so the 0.5 m sphere overlaps it.
+    let past_the_nose = crate::check_collision(
+        Vec3::ZERO,
+        rotation,
+        &ship,
+        nose * 8.4,
+        Quat::IDENTITY,
+        &moon,
+    );
+    assert!(
+        past_the_nose.is_some(),
+        "a body past the pitched nose must collide with the oriented box"
+    );
+
+    // The same distance along the thin axis is nowhere near the hull. An unrotated
+    // test would also miss this one, so it does not distinguish the two readings;
+    // it is here to pin down that the long axis is what gained reach.
+    let across_the_thin_axis = crate::check_collision(
+        Vec3::ZERO,
+        rotation,
+        &ship,
+        (rotation * Vec3::Y) * 8.4,
+        Quat::IDENTITY,
+        &moon,
+    );
+    assert!(
+        across_the_thin_axis.is_none(),
+        "the ship is only {} m across its thin axis, so nothing collides 8.4 m out that way",
+        SHIP_HALF_EXTENTS.y
+    );
+}
+
+#[test]
+#[allow(clippy::unwrap_used)]
+fn test_unrotated_reading_of_the_pitched_ship_misses_the_same_body() {
+    // The body the test above collides with is far outside the world-axis-aligned
+    // box the rotation-blind test used, which only reaches 1.781 m up. This is the
+    // regression that let a ship fly through bodies its drawn collision shape
+    // visibly overlapped.
+    let rotation = Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2);
+    let nose = rotation * Vec3::Z;
+
+    let ship = box_shape(SHIP_HALF_EXTENTS);
+    let moon = sphere_shape(0.5);
+
+    let world_aligned = crate::check_collision(
+        Vec3::ZERO,
+        Quat::IDENTITY,
+        &ship,
+        nose * 8.4,
+        Quat::IDENTITY,
+        &moon,
+    );
+    assert!(
+        world_aligned.is_none(),
+        "ignoring the rotation must lose the collision — that is the bug being fixed"
+    );
+}
+
+#[test]
+#[allow(clippy::unwrap_used)]
+fn test_rotated_boxes_collide_where_axis_aligned_boxes_would_not() {
+    // A unit box turned 45 degrees reaches sqrt(2) ≈ 1.414 along Z. A small box
+    // whose near face sits at z = 1.1 is inside that reach but 0.1 m clear of the
+    // unturned box, which stops at z = 1.0.
+    let rotation = Quat::from_rotation_y(std::f32::consts::FRAC_PI_4);
+    let turned = box_shape(Vec3::splat(1.0));
+    let small = box_shape(Vec3::splat(0.2));
+    let other_pos = Vec3::new(0.0, 0.0, 1.3);
+
+    let rotated = crate::check_collision(
+        Vec3::ZERO,
+        rotation,
+        &turned,
+        other_pos,
+        Quat::IDENTITY,
+        &small,
+    );
+    assert!(
+        rotated.is_some(),
+        "the turned box reaches z = 1.414, past the near face at 1.1"
+    );
+
+    let unrotated = crate::check_collision(
+        Vec3::ZERO,
+        Quat::IDENTITY,
+        &turned,
+        other_pos,
+        Quat::IDENTITY,
+        &small,
+    );
+    assert!(
+        unrotated.is_none(),
+        "an unturned box stops at z = 1.0 and leaves a gap"
+    );
+}
+
+#[test]
+#[allow(clippy::expect_used, clippy::float_cmp)]
+fn test_collision_normal_of_a_rotated_box_follows_the_rotated_face() {
+    // The sphere sits just off the box's local +X face, so the minimum-translation
+    // normal is that face's world direction, not the world X axis.
+    let rotation = Quat::from_rotation_z(std::f32::consts::FRAC_PI_4);
+    let face = rotation * Vec3::X;
+
+    let turned = box_shape(Vec3::splat(1.0));
+    let moon = sphere_shape(0.5);
+
+    let (normal, penetration) = crate::check_collision(
+        Vec3::ZERO,
+        rotation,
+        &turned,
+        face * 1.4,
+        Quat::IDENTITY,
+        &moon,
+    )
+    .expect("a sphere just off the rotated face collides");
+
+    assert!(
+        normal.dot(face) > 0.99,
+        "normal should follow the rotated face {face}, got {normal}"
+    );
+    assert!(
+        (penetration - 0.1).abs() < 0.01,
+        "penetration should be ~0.1, got {penetration}"
+    );
+}
+
+#[test]
+#[allow(clippy::unwrap_used)]
+fn test_collision_shape_offset_is_rotated_with_its_body() {
+    // The shape's offset is expressed in the body's local frame. Turned a quarter
+    // turn about X it points down instead of forward, so a body placed at the
+    // rotated offset is the one that collides.
+    let mut app = build_detection_app();
+
+    let rotation = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+    let local_offset = Vec3::Z * 3.0;
+    let rotated_offset = rotation * local_offset;
+
+    app.world_mut().spawn((
+        RigidBody::new(10.0, 1.0),
+        Transform::from_translation(Vec3::ZERO).with_rotation(rotation),
+        CollisionShape(CollisionShapeData::box_shape(
+            Vec3::splat(0.5),
+            local_offset,
+        )),
+        CollisionLayersComponent::new(layers::SHIP),
+    ));
+    app.world_mut().spawn((
+        RigidBody::new(10.0, 1.0),
+        Transform::from_translation(rotated_offset),
+        sphere_shape(0.2),
+        CollisionLayersComponent::new(layers::ASTEROID),
+    ));
+
+    let events = run_detection_and_collect(&mut app);
+    assert_eq!(
+        events.len(),
+        1,
+        "the collision shape offset must follow the body's rotation"
+    );
+}
+
+#[test]
+#[allow(clippy::unwrap_used)]
+fn test_pitched_ship_is_stopped_by_a_body_past_its_nose() {
+    // End to end through the detection and response systems: a pitched ship whose
+    // nose is inside a static body is pushed back out and keeps its velocity along
+    // the rotated axis.
+    let mut app = build_collision_app();
+
+    app.add_systems(
+        FixedUpdate,
+        (
+            crate::collision_detection_system.in_set(PhysicsSet::AccumulateForces),
+            crate::collision_response_system.in_set(CollisionResponseSet),
+        ),
+    );
+
+    let rotation = Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2);
+    let nose = rotation * Vec3::Z;
+
+    let ship = app
+        .world_mut()
+        .spawn((
+            RigidBody::new(1000.0, 1.0),
+            Transform::from_translation(Vec3::ZERO).with_rotation(rotation),
+            box_shape(SHIP_HALF_EXTENTS),
+            CollisionLayersComponent::new(layers::SHIP),
+            DynamicBody,
+        ))
+        .id();
+
+    // 8.2 m out along the nose: 7.908 + 0.5 - 8.2 = 0.208 m of penetration, well
+    // past the response system's 0.01 m slop.
+    app.world_mut().spawn((
+        RigidBody::new(1.0e12, 1.0),
+        Transform::from_translation(nose * 8.2),
+        sphere_shape(0.5),
+        CollisionLayersComponent::new(layers::CELESTIAL),
+        StaticBody,
+    ));
+
+    run_fixed_update(&mut app);
+
+    let transform = app.world().get::<Transform>(ship).unwrap();
+    let moved_along = transform.translation.dot(nose);
+    assert!(
+        moved_along < 0.0,
+        "the ship should be pushed back off the body, but it sits {moved_along} m along its nose"
     );
 }
 

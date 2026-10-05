@@ -419,13 +419,20 @@ fn test_pairs(
                 continue;
             }
 
-            // Apply collision shape offset to get the actual collision center
-            let pos_a = transform_a.translation + shape_a.offset;
-            let pos_b = transform_b.translation + shape_b.offset;
+            // Apply collision shape offset to get the actual collision center. The
+            // offset is expressed in the body's local frame, so it has to be rotated
+            // by the body's rotation before it is added to the translation.
+            let pos_a = transform_a.translation + transform_a.rotation * shape_a.offset;
+            let pos_b = transform_b.translation + transform_b.rotation * shape_b.offset;
 
-            if let Some((normal, penetration_depth)) =
-                check_collision(pos_a, shape_a, pos_b, shape_b)
-            {
+            if let Some((normal, penetration_depth)) = check_collision(
+                pos_a,
+                transform_a.rotation,
+                shape_a,
+                pos_b,
+                transform_b.rotation,
+                shape_b,
+            ) {
                 let relative_velocity = body_b.velocity - body_a.velocity;
 
                 let health_a = health_query.get(entity_a).map_or_else(
@@ -456,14 +463,23 @@ fn test_pairs(
 /// Checks if two collision shapes overlap.
 ///
 /// Returns `Some((normal, penetration_depth))` if colliding, `None` otherwise.
+/// The returned normal always points from body A towards body B.
 ///
 /// For sphere-sphere, uses the sum of radii.
-/// For box-box and sphere-box, computes overlap along each axis.
+/// For sphere-box, the sphere centre is taken into the box's local frame, where the
+/// clamp test is exact.
+/// For box-box, the 15-axis separating axis theorem is used.
+///
+/// Both rotations are REQUIRED. A box is an oriented shape: testing it against the
+/// world axes while ignoring `rotation_a` / `rotation_b` makes a pitched ship stop
+/// colliding with bodies that its drawn collision shape visibly overlaps.
 #[allow(clippy::too_many_lines)]
 fn check_collision(
     pos_a: Vec3,
+    rotation_a: Quat,
     shape_a: &CollisionShape,
     pos_b: Vec3,
+    rotation_b: Quat,
     shape_b: &CollisionShape,
 ) -> Option<(Vec3, f32)> {
     match (&shape_a.shape_type, &shape_b.shape_type) {
@@ -485,50 +501,28 @@ fn check_collision(
                 None
             }
         }
-        // Box-box: compute overlap along each axis
+        // Box-box: exact oriented test via the 15-axis separating axis theorem
         (
             CollisionShapeType::Box { half_extents: he_a },
             CollisionShapeType::Box { half_extents: he_b },
-        ) => {
-            // For each axis, compute the gap between the two boxes.
-            // If any gap is positive (no overlap), there's no collision.
-            let delta = pos_b - pos_a;
-
-            let overlap_x = (he_a.x + he_b.x) - delta.x.abs();
-            let overlap_y = (he_a.y + he_b.y) - delta.y.abs();
-            let overlap_z = (he_a.z + he_b.z) - delta.z.abs();
-
-            // If any overlap is negative, the boxes are separated along that axis
-            if overlap_x <= 0.0 || overlap_y <= 0.0 || overlap_z <= 0.0 {
-                return None;
-            }
-
-            // Find the axis of minimum penetration (the collision normal)
-            // This is the axis where the boxes are least overlapping
-            if overlap_x <= overlap_y && overlap_x <= overlap_z {
-                let normal = if delta.x > 0.0 { Vec3::X } else { Vec3::NEG_X };
-                Some((normal, overlap_x))
-            } else if overlap_y <= overlap_x && overlap_y <= overlap_z {
-                let normal = if delta.y > 0.0 { Vec3::Y } else { Vec3::NEG_Y };
-                Some((normal, overlap_y))
-            } else {
-                let normal = if delta.z > 0.0 { Vec3::Z } else { Vec3::NEG_Z };
-                Some((normal, overlap_z))
-            }
-        }
-        // Sphere-box: check if sphere center is within expanded box
+        ) => oriented_box_overlap(pos_a, rotation_a, *he_a, pos_b, rotation_b, *he_b),
+        // Sphere-box: exact test in the box's local frame
         (CollisionShapeType::Sphere { radius }, CollisionShapeType::Box { half_extents })
         | (CollisionShapeType::Box { half_extents }, CollisionShapeType::Sphere { radius }) => {
             // Ensure sphere is first for uniform handling
-            let (sphere_pos, box_pos, he, is_sphere_a) =
+            let (sphere_pos, box_pos, box_rotation, is_sphere_a) =
                 if matches!(shape_a.shape_type, CollisionShapeType::Sphere { .. }) {
-                    (pos_a, pos_b, *half_extents, true)
+                    (pos_a, pos_b, rotation_b, true)
                 } else {
-                    (pos_b, pos_a, *half_extents, false)
+                    (pos_b, pos_a, rotation_a, false)
                 };
 
-            // Find closest point on box surface to sphere center
-            let local = sphere_pos - box_pos;
+            let he = *half_extents;
+
+            // Rotate the sphere centre into the box's own frame. There the box is
+            // axis-aligned, so the clamp below measures the true distance from the
+            // sphere centre to the oriented box surface.
+            let local = box_rotation.inverse() * (sphere_pos - box_pos);
             let closest = Vec3::new(
                 local.x.clamp(-he.x, he.x),
                 local.y.clamp(-he.y, he.y),
@@ -538,59 +532,63 @@ fn check_collision(
             let diff = local - closest;
             let dist_sq = diff.length_squared();
 
-            if dist_sq < radius * radius {
-                let dist = dist_sq.sqrt();
+            if dist_sq >= radius * radius {
+                return None;
+            }
 
-                // Calculate penetration depth
-                let penetration = if dist > f32::EPSILON {
-                    // Sphere is outside the box
-                    *radius - dist
-                } else {
-                    // Sphere center is inside the box
-                    // Find the distance to the nearest face
-                    let dx = he.x - local.x.abs();
-                    let dy = he.y - local.y.abs();
-                    let dz = he.z - local.z.abs();
-                    let min_dist = dx.min(dy).min(dz);
-                    min_dist + *radius
-                };
+            let dist = dist_sq.sqrt();
 
-                // Calculate normal direction
-                let normal = if dist > f32::EPSILON {
-                    // Sphere is outside: normal points from box surface to sphere center
-                    diff / dist
-                } else {
-                    // Sphere center is inside the box
-                    // Find which face is closest and point outward
-                    let dx = he.x - local.x.abs();
-                    let dy = he.y - local.y.abs();
-                    let dz = he.z - local.z.abs();
-
-                    if dx <= dy && dx <= dz {
-                        // Closest to x face
-                        if local.x > 0.0 { Vec3::X } else { Vec3::NEG_X }
-                    } else if dy <= dz {
-                        // Closest to y face
-                        if local.y > 0.0 { Vec3::Y } else { Vec3::NEG_Y }
-                    } else {
-                        // Closest to z face
-                        if local.z > 0.0 { Vec3::Z } else { Vec3::NEG_Z }
-                    }
-                };
-
-                // Normal should point from target (A) to other (B)
-                // The calculated normal points from box to sphere
-                // If sphere is A and box is B: normal points from B to A (wrong direction)
-                // If box is A and sphere is B: normal points from A to B (correct direction)
-                if is_sphere_a {
-                    // Sphere is A, Box is B: negate to point from A to B
-                    Some((-normal, penetration))
-                } else {
-                    // Box is A, Sphere is B: keep as-is (already points from A to B)
-                    Some((normal, penetration))
-                }
+            // Calculate penetration depth
+            let penetration = if dist > f32::EPSILON {
+                // Sphere is outside the box
+                *radius - dist
             } else {
-                None
+                // Sphere center is inside the box
+                // Find the distance to the nearest face
+                let dx = he.x - local.x.abs();
+                let dy = he.y - local.y.abs();
+                let dz = he.z - local.z.abs();
+                let min_dist = dx.min(dy).min(dz);
+                min_dist + *radius
+            };
+
+            // Calculate normal direction, in the box's local frame
+            let local_normal = if dist > f32::EPSILON {
+                // Sphere is outside: normal points from box surface to sphere center
+                diff / dist
+            } else {
+                // Sphere center is inside the box
+                // Find which face is closest and point outward
+                let dx = he.x - local.x.abs();
+                let dy = he.y - local.y.abs();
+                let dz = he.z - local.z.abs();
+
+                if dx <= dy && dx <= dz {
+                    // Closest to x face
+                    if local.x > 0.0 { Vec3::X } else { Vec3::NEG_X }
+                } else if dy <= dz {
+                    // Closest to y face
+                    if local.y > 0.0 { Vec3::Y } else { Vec3::NEG_Y }
+                } else {
+                    // Closest to z face
+                    if local.z > 0.0 { Vec3::Z } else { Vec3::NEG_Z }
+                }
+            };
+
+            // Rotating the local normal back to world space preserves its meaning:
+            // it still points from the box surface towards the sphere centre.
+            let box_to_sphere = box_rotation * local_normal;
+
+            // Normal should point from target (A) to other (B)
+            // The calculated normal points from box to sphere
+            // If sphere is A and box is B: normal points from B to A (wrong direction)
+            // If box is A and sphere is B: normal points from A to B (correct direction)
+            if is_sphere_a {
+                // Sphere is A, Box is B: negate to point from A to B
+                Some((-box_to_sphere, penetration))
+            } else {
+                // Box is A, Sphere is B: keep as-is (already points from A to B)
+                Some((box_to_sphere, penetration))
             }
         }
         // ConvexHull not yet implemented; fall back to sphere approximation
@@ -609,6 +607,130 @@ fn check_collision(
             }
         }
     }
+}
+
+/// The three local axes of an oriented box, expressed in world space.
+struct BoxAxes {
+    /// World-space direction of the box's local X axis.
+    x: Vec3,
+    /// World-space direction of the box's local Y axis.
+    y: Vec3,
+    /// World-space direction of the box's local Z axis.
+    z: Vec3,
+}
+
+impl BoxAxes {
+    /// Builds the axis set from a body's rotation.
+    fn from_rotation(rotation: Quat) -> Self {
+        Self {
+            x: rotation * Vec3::X,
+            y: rotation * Vec3::Y,
+            z: rotation * Vec3::Z,
+        }
+    }
+
+    /// Radius of the box's shadow on a unit `axis`.
+    fn projection_radius(&self, half_extents: Vec3, axis: Vec3) -> f32 {
+        let along_y = half_extents.y * self.y.dot(axis).abs();
+        let along_x = half_extents.x.mul_add(self.x.dot(axis).abs(), along_y);
+        half_extents.z.mul_add(self.z.dot(axis).abs(), along_x)
+    }
+}
+
+/// Cross products of near-parallel edges collapse towards zero and say nothing
+/// about separation, so they are dropped instead of being normalised.
+const PARALLEL_EDGE_EPSILON: f32 = 1.0e-6;
+
+/// Exact oriented-box overlap test using the 15-axis separating axis theorem.
+///
+/// Six face normals (three per box) plus nine edge cross products are the complete
+/// candidate set for two convex boxes. The deepest overlap among them is the minimum
+/// translation distance, and its axis is the collision normal.
+///
+/// Returns `None` as soon as any candidate axis separates the boxes, which is the
+/// common case and ends the search early.
+fn oriented_box_overlap(
+    pos_a: Vec3,
+    rotation_a: Quat,
+    half_extents_a: Vec3,
+    pos_b: Vec3,
+    rotation_b: Quat,
+    half_extents_b: Vec3,
+) -> Option<(Vec3, f32)> {
+    let axes_a = BoxAxes::from_rotation(rotation_a);
+    let axes_b = BoxAxes::from_rotation(rotation_b);
+    let delta = pos_b - pos_a;
+
+    // Deepest overlap seen so far, as (depth, axis).
+    let mut deepest: Option<(f32, Vec3)> = None;
+
+    // Six face normals.
+    for axis in [axes_a.x, axes_a.y, axes_a.z, axes_b.x, axes_b.y, axes_b.z] {
+        if !consider_separating_axis(
+            axis,
+            &axes_a,
+            half_extents_a,
+            &axes_b,
+            half_extents_b,
+            delta,
+            &mut deepest,
+        ) {
+            return None;
+        }
+    }
+
+    // Nine edge cross products.
+    for edge_a in [axes_a.x, axes_a.y, axes_a.z] {
+        for edge_b in [axes_b.x, axes_b.y, axes_b.z] {
+            let edge_cross = edge_a.cross(edge_b);
+            if edge_cross.length_squared() <= PARALLEL_EDGE_EPSILON {
+                continue;
+            }
+            if !consider_separating_axis(
+                edge_cross.normalize(),
+                &axes_a,
+                half_extents_a,
+                &axes_b,
+                half_extents_b,
+                delta,
+                &mut deepest,
+            ) {
+                return None;
+            }
+        }
+    }
+
+    let (depth, axis) = deepest?;
+    // `delta` runs from A to B, so orient the axis the same way.
+    let normal = if delta.dot(axis) < 0.0 { -axis } else { axis };
+    Some((normal, depth))
+}
+
+/// Tests one candidate separating axis and records it when it is the deepest yet.
+///
+/// Returns `false` when the axis separates the boxes, which ends the search.
+fn consider_separating_axis(
+    axis: Vec3,
+    axes_a: &BoxAxes,
+    half_extents_a: Vec3,
+    axes_b: &BoxAxes,
+    half_extents_b: Vec3,
+    delta: Vec3,
+    deepest: &mut Option<(f32, Vec3)>,
+) -> bool {
+    let reach = axes_a.projection_radius(half_extents_a, axis)
+        + axes_b.projection_radius(half_extents_b, axis);
+    let overlap = reach - delta.dot(axis).abs();
+
+    if overlap <= 0.0 {
+        return false;
+    }
+
+    match *deepest {
+        Some((best, _)) if overlap >= best => {}
+        _ => *deepest = Some((overlap, axis)),
+    }
+    true
 }
 
 /// Collision response data collected from events.
@@ -730,19 +852,23 @@ fn collision_response_system(
                 && !response.target_is_static
                 && let Ok((_, mut transform_a)) = all_bodies.get_mut(response.target)
             {
-                let pos_a = transform_a.translation + shape_a.offset;
+                // The offset is local to the body: rotate it into world space before
+                // adding it to the translation, and rotate it back afterwards.
+                let local_offset = transform_a.rotation * shape_a.offset;
+                let pos_a = transform_a.translation + local_offset;
                 // Normal points from A to B, so move A in opposite direction (away from B)
                 let corrected_pos = pos_a - normal * correction_magnitude * inv_mass_a;
-                transform_a.translation = corrected_pos - shape_a.offset;
+                transform_a.translation = corrected_pos - local_offset;
             }
             if let Ok(shape_b) = shapes.get(response.other)
                 && !response.other_is_static
                 && let Ok((_, mut transform_b)) = all_bodies.get_mut(response.other)
             {
-                let pos_b = transform_b.translation + shape_b.offset;
+                let local_offset = transform_b.rotation * shape_b.offset;
+                let pos_b = transform_b.translation + local_offset;
                 // Move B in the direction of the normal (away from A)
                 let corrected_pos = pos_b + normal * correction_magnitude * inv_mass_b;
-                transform_b.translation = corrected_pos - shape_b.offset;
+                transform_b.translation = corrected_pos - local_offset;
             }
         }
 

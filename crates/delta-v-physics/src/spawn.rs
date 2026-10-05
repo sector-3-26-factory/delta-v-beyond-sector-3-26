@@ -37,7 +37,7 @@ use crate::celestial::{ALWAYS_VISIBLE_SCREEN_RADIUS_PX, LazyLoadMesh, Moon};
 use crate::constants::COLLISION_RELEVANCE_PX;
 use crate::{
     CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalBody, OrbitalParentId,
-    Planet, RigidBody, Sun,
+    Planet, RigidBody, StaticBody, Sun,
 };
 
 // ---------------------------------------------------------------------------
@@ -140,9 +140,13 @@ pub fn spawn_sun(
             scaled_collision_shape.offset
         );
 
-        commands
-            .entity(sun_entity)
-            .insert(CollisionShape(scaled_collision_shape));
+        // A sun is static: an impulse must never move it. `StaticBody` is what
+        // the collision response reads to zero the inverse mass.
+        commands.entity(sun_entity).insert((
+            CollisionShape(scaled_collision_shape),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::CELESTIAL),
+            StaticBody,
+        ));
 
         // Spawn a child entity with PointLight
         // The light follows the sun's transform automatically via ChildOf
@@ -303,7 +307,14 @@ pub fn spawn_planet(
             scaled_collision_shape.offset
         );
 
-        entity_commands.insert(CollisionShape(scaled_collision_shape));
+        // Planets are static for the same reason suns are: the collision
+        // response treats a body without `StaticBody` as dynamic and would
+        // apply the full impulse to it.
+        entity_commands.insert((
+            CollisionShape(scaled_collision_shape),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::CELESTIAL),
+            StaticBody,
+        ));
 
         tracing::info!(
             "spawned planet: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",
@@ -570,7 +581,14 @@ pub fn spawn_moon(
             scaled_collision_shape.offset
         );
 
-        entity_commands.insert(CollisionShape(scaled_collision_shape));
+        // Moons are static, and carry the celestial collision layer so a ship
+        // cannot fly through them. Without the layer the moon is not in the
+        // collision query at all and no test ever compares it to anything.
+        entity_commands.insert((
+            CollisionShape(scaled_collision_shape),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::CELESTIAL),
+            StaticBody,
+        ));
 
         tracing::info!(
             "spawned moon: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",
