@@ -98,6 +98,31 @@ The following technical transformations are applied to most or all `mesh.glb` fi
   This is one licence covering all three files above, which are all derived from the same
   source pack. The credit is intentionally recorded once.
 
+### Asteroid Pack 02
+
+- **Creator:** [Renzo Booker (@renzobooker70)](https://sketchfab.com/renzobooker70)
+- **Source:** [Sketchfab](https://sketchfab.com/3d-models/asteroid-pack-02-400594ba02ef4f75b8a8883f6e14a700)
+- **License:** CC Attribution 4.0 (CC BY 4.0)
+- **License URL:** https://creativecommons.org/licenses/by/4.0/
+- **File:** `assets/templates/moons/shared/mesh_2/mesh.glb` … `assets/templates/moons/shared/mesh_7/mesh.glb`
+- **Textures:** `assets/templates/moons/shared/textures/asteroid-pack-02-basecolor.png`,
+  `assets/templates/moons/shared/textures/asteroid-pack-02-metallic-roughness.png`,
+  `assets/templates/moons/shared/textures/asteroid-pack-02-normal.png`
+- **Modifications:** The downloaded pack ships six asteroids as one joined mesh of 36,000
+  triangles, named `uvlayout1`. Each asteroid was modelled as a cluster of separate shells
+  rather than one watertight body, so the mesh divides into 35 disconnected pieces that are
+  not six. The pieces were grouped by how close their centroids are, which recovers the six
+  bodies: every group comes to exactly 6,000 triangles, matching the "6k polys each" in the
+  asset's own description, and the result is stable for any grouping distance between 1.4
+  and 2.5. Each body is centred on its own origin and written as its own moon template.
+
+  The three textures are used unmodified. All six meshes share them, so they are written
+  once to `textures/` and referenced by relative URI; embedding them in each mesh would
+  repeat 37.9 MiB six times over.
+
+  This is one licence covering all nine files above: six meshes and three textures, all
+  derived from the same source pack. The credit is intentionally recorded once.
+
 ### Archimedes (Meshy AI)
 
 - **Creator:** [Meshy AI](https://www.meshy.ai)

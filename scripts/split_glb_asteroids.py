@@ -254,14 +254,161 @@ def ordered_meshes(glb):
     return sorted(range(len(glb.doc["meshes"])), key=key)
 
 
-def build_template_json(minimum, maximum):
-    """The asteroid template: a bounding sphere and the axis-aligned box.
+def split_mesh_into_groups(glb, mesh_index, radius):
+    """Expand one joined mesh into several, one per spatial cluster of shells.
 
-    No `mass` key: per ADR-0058 mass belongs to the world entity, and a
-    generated belt asteroid derives its mass from the region `density` and the
-    radius the generator drew. `is_gravity_source` is omitted because the
-    schema already defaults it to false (ADR-0039: defaults live in the
-    schema only).
+    A pack may ship several bodies as a single joined mesh. Its shells are
+    found through the triangle adjacency graph, because two triangles belong
+    to the same shell when they share a vertex, and the shells are then
+    grouped by how close their centroids are. An asteroid modelled as a
+    cluster of separate shells therefore comes back out as one body rather
+    than as its fragments.
+
+    Each group is appended to the document as its own mesh and node, so the
+    rest of the tool treats it like any other. Returns the new mesh indices.
+    """
+    primitive = glb.doc["meshes"][mesh_index]["primitives"][0]
+    positions = read_accessor(glb, primitive["attributes"]["POSITION"])
+
+    index_accessor = glb.doc["accessors"][primitive["indices"]]
+    start = (
+        index_accessor.get("byteOffset", 0)
+        + glb.doc["bufferViews"][index_accessor["bufferView"]].get("byteOffset", 0)
+    )
+    triangles = np.frombuffer(
+        glb.blob[start : start + index_accessor["count"] * 4], dtype=np.uint32
+    ).reshape(-1, 3)
+
+    # Shells: flood fill over triangles that share a vertex.
+    by_vertex = {}
+    for number, triangle in enumerate(triangles):
+        for vertex in triangle:
+            by_vertex.setdefault(int(vertex), []).append(number)
+
+    shells = []
+    visited = np.zeros(len(triangles), dtype=bool)
+    for seed in range(len(triangles)):
+        if visited[seed]:
+            continue
+        visited[seed] = True
+        stack, members = [seed], []
+        while stack:
+            number = stack.pop()
+            members.append(number)
+            for vertex in triangles[number]:
+                for neighbour in by_vertex[int(vertex)]:
+                    if not visited[neighbour]:
+                        visited[neighbour] = True
+                        stack.append(neighbour)
+        vertices = np.unique(triangles[members].ravel())
+        shell_positions = positions[vertices]
+        centroid = (shell_positions.max(axis=0) + shell_positions.min(axis=0)) / 2.0
+        shells.append((centroid, np.array(members), vertices))
+
+    # Group shells by centroid proximity: one group per shell to begin with,
+    # then repeatedly merge the closest pair while they sit within `radius`.
+    groups = [[index] for index in range(len(shells))]
+    while True:
+        closest = None
+        for i in range(len(groups)):
+            for j in range(i + 1, len(groups)):
+                a = np.mean([shells[k][0] for k in groups[i]], axis=0)
+                b = np.mean([shells[k][0] for k in groups[j]], axis=0)
+                distance = float(np.linalg.norm(a - b))
+                if distance < radius and (closest is None or distance < closest[0]):
+                    closest = (distance, i, j)
+        if closest is None:
+            break
+        _, i, j = closest
+        groups[i] = groups[i] + groups[j]
+        del groups[j]
+    groups.sort(key=lambda g: -sum(len(shells[k][1]) for k in g))
+
+    attributes = {}
+    for semantic, accessor_index in primitive["attributes"].items():
+        attributes[semantic] = read_accessor(glb, accessor_index)
+        attributes[semantic + "::type"] = glb.doc["accessors"][accessor_index]["type"]
+
+    created = []
+    for number, group in enumerate(groups, start=1):
+        members = np.concatenate([shells[k][1] for k in group])
+        vertices = np.unique(np.concatenate([shells[k][2] for k in group]))
+        # Only vertices in `vertices` are ever looked up, so a zero fill is
+        # enough and uint32 cannot hold the -1 that would read as a sentinel.
+        lookup = np.zeros(len(positions), dtype=np.uint32)
+        lookup[vertices] = np.arange(len(vertices), dtype=np.uint32)
+        indices = lookup[triangles[members].ravel()].reshape(-1, 3)
+
+        blob = glb.blob
+        offset = len(blob)
+
+        def append(values):
+            nonlocal blob, offset
+            payload = np.ascontiguousarray(values).tobytes()
+            view = {
+                "buffer": 0,
+                "byteOffset": offset,
+                "byteLength": len(payload),
+            }
+            glb.doc["bufferViews"].append(view)
+            glb.doc["accessors"].append(
+                {
+                    "bufferView": len(glb.doc["bufferViews"]) - 1,
+                    "componentType": 5126 if values.dtype == np.float32 else 5125,
+                    "count": int(values.shape[0]),
+                    "type": "VEC3" if values.ndim == 2 else "SCALAR",
+                }
+            )
+            blob = blob + payload + b"\0" * ((4 - len(payload) % 4) % 4)
+            offset = len(blob)
+            return len(glb.doc["accessors"]) - 1
+
+        index_accessor_index = append(indices.ravel().astype(np.uint32))
+        primitive_attributes = {"POSITION": append(positions[vertices].astype(np.float32))}
+        for semantic in primitive["attributes"]:
+            if semantic == "POSITION":
+                continue
+            values = attributes[semantic][vertices]
+            accessor_index = append(values.astype(np.float32))
+            glb.doc["accessors"][accessor_index]["type"] = attributes[semantic + "::type"]
+            primitive_attributes[semantic] = accessor_index
+
+        glb.doc["meshes"].append(
+            {
+                "name": f"{glb.doc['meshes'][mesh_index]['name']}_group_{number}",
+                "primitives": [
+                    {
+                        "attributes": primitive_attributes,
+                        "indices": index_accessor_index,
+                        "material": primitive.get("material"),
+                        "mode": primitive.get("mode", 4),
+                    }
+                ],
+            }
+        )
+        new_mesh = len(glb.doc["meshes"]) - 1
+        glb.doc["nodes"].append(
+            {"name": glb.doc["meshes"][new_mesh]["name"], "mesh": new_mesh}
+        )
+        glb.doc["buffers"][0]["byteLength"] = len(blob)
+        glb.blob = blob
+        created.append(new_mesh)
+
+    print(
+        f"mesh '{glb.doc['meshes'][mesh_index]['name']}': "
+        f"{len(shells)} shells -> {len(created)} bodies "
+        f"({[sum(len(shells[k][1]) for k in group) for group in groups]} triangles)"
+    )
+    return created
+
+
+def build_template_json(minimum, maximum, entity_type):
+    """The body template: a bounding sphere and the axis-aligned box.
+
+    No `mass` key: per ADR-0058 mass belongs to the world entity. Fields the
+    schema already defaults are omitted (ADR-0039: defaults live in the
+    schema only), so an asteroid leaves out `is_gravity_source` and a moon
+    leaves out both `is_gravity_source` and `animations_enabled`.
     """
 
     def quantity(value):
@@ -276,13 +423,13 @@ def build_template_json(minimum, maximum):
 
     half_extent = (np.asarray(maximum) - np.asarray(minimum)) / 2.0
     return {
-        "entity_type": "asteroid",
+        "entity_type": entity_type,
         "collision_shape": {"type": "sphere", "radius": quantity(float(half_extent.max()))},
         "bounding_box": {"min": corner(minimum), "max": corner(maximum)},
     }
 
 
-def extract_textures(glb, texture_dir, asset_name, materials):
+def extract_textures(glb, texture_dir, asset_name, materials, order):
     """Write the shared textures to disk once; return texture index -> file name.
 
     `materials` are the converted materials, so a texture belonging to
@@ -296,7 +443,6 @@ def extract_textures(glb, texture_dir, asset_name, materials):
     """
     images = glb.doc["images"]
     textures = glb.doc["textures"]
-    order = ordered_meshes(glb)
 
     owners = {}
     roles = {}
@@ -453,6 +599,19 @@ def main():
         "KHR_materials_pbrSpecularGlossiness (default: 0.0, a literal conversion)",
     )
     parser.add_argument(
+        "--template",
+        choices=("asteroid", "moon"),
+        default="asteroid",
+        help="Body type: writes asteroid.json or moon.json (default: asteroid)",
+    )
+    parser.add_argument(
+        "--cluster-radius",
+        type=float,
+        default=0.0,
+        help="Split a joined mesh into one body per cluster of shells whose "
+        "centroids lie within this distance. 0 (default) keeps each mesh whole.",
+    )
+    parser.add_argument(
         "--force", action="store_true", help="Overwrite output that already exists"
     )
     args = parser.parse_args()
@@ -474,14 +633,26 @@ def main():
         for material in glb.doc["materials"]
     ]
 
-    texture_files = extract_textures(glb, out_dir / "textures", asset_name, materials)
+    order = ordered_meshes(glb)
+    if args.cluster_radius > 0.0:
+        # Snapshot the mesh list first: splitting appends the new bodies to it.
+        order = []
+        for mesh_index in list(ordered_meshes(glb)):
+            order += split_mesh_into_groups(glb, mesh_index, args.cluster_radius)
+
+    # Texture ownership is decided over the meshes that will actually be
+    # written. Running this before the shell split would see one owner per
+    # texture and embed each copy into every body.
+    texture_files = extract_textures(
+        glb, out_dir / "textures", asset_name, materials, order
+    )
 
     node_of_mesh = {}
     for node in glb.doc["nodes"]:
         if "mesh" in node and node["mesh"] not in node_of_mesh:
             node_of_mesh[node["mesh"]] = node
 
-    for offset, mesh_index in enumerate(ordered_meshes(glb)):
+    for offset, mesh_index in enumerate(order):
         output_index = args.start_index + offset
         directory = out_dir / f"{args.prefix}_{output_index}"
         if directory.exists():
@@ -597,8 +768,9 @@ def main():
 
         directory.mkdir(parents=True, exist_ok=True)
 
-        template = build_template_json(centred_min, centred_max)
-        (directory / "asteroid.json").write_text(
+        template = build_template_json(centred_min, centred_max, args.template)
+        template_file = "moon.json" if args.template == "moon" else "asteroid.json"
+        (directory / template_file).write_text(
             json.dumps(template, indent=4, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         Glb(document, blob).write(directory / "mesh.glb")

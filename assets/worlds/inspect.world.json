@@ -1,6 +1,6 @@
 {
     "format_version": 1,
-    "name": "Inspect World — Wandering Asteroids Of Andromeda",
+    "name": "Inspect World — Asteroid Pack 02 (shared moons)",
     "entities": [
         {
             "template": "ships/space-fighter-comrade1280",
@@ -26,68 +26,134 @@
             }
         },
         {
-            "template": "asteroids/shared/mesh_11",
-            "id": "asteroid_11",
+            "template": "moons/shared/mesh_2",
+            "id": "moon_2",
             "position": {
                 "x": {
-                    "value": -32.0,
+                    "value": -6.0,
                     "unit": "m"
                 },
                 "y": {
-                    "value": 11.5,
+                    "value": 4.0,
                     "unit": "m"
                 },
                 "z": {
-                    "value": -86.0,
+                    "value": -26.0,
                     "unit": "m"
                 }
             },
             "mass": {
-                "value": 1257679.2,
+                "value": 1173.9,
                 "unit": "kg"
             }
         },
         {
-            "template": "asteroids/shared/mesh_12",
-            "id": "asteroid_12",
+            "template": "moons/shared/mesh_3",
+            "id": "moon_3",
             "position": {
                 "x": {
-                    "value": 55.0,
+                    "value": 0.0,
                     "unit": "m"
                 },
                 "y": {
-                    "value": -6.5,
+                    "value": 4.0,
                     "unit": "m"
                 },
                 "z": {
-                    "value": -146.0,
+                    "value": -26.0,
                     "unit": "m"
                 }
             },
             "mass": {
-                "value": 18031951.1,
+                "value": 1534.3,
                 "unit": "kg"
             }
         },
         {
-            "template": "asteroids/shared/mesh_13",
-            "id": "asteroid_13",
+            "template": "moons/shared/mesh_4",
+            "id": "moon_4",
             "position": {
                 "x": {
-                    "value": 20.0,
+                    "value": 6.0,
                     "unit": "m"
                 },
                 "y": {
-                    "value": 23.5,
+                    "value": 4.0,
                     "unit": "m"
                 },
                 "z": {
-                    "value": -106.0,
+                    "value": -26.0,
                     "unit": "m"
                 }
             },
             "mass": {
-                "value": 1060838.4,
+                "value": 2949.3,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "moons/shared/mesh_5",
+            "id": "moon_5",
+            "position": {
+                "x": {
+                    "value": -9.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": -1.5,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -34.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 1493.3,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "moons/shared/mesh_6",
+            "id": "moon_6",
+            "position": {
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": -1.5,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -34.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 4492.0,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "moons/shared/mesh_7",
+            "id": "moon_7",
+            "position": {
+                "x": {
+                    "value": 9.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": -1.5,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -34.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 1366.9,
                 "unit": "kg"
             }
         }

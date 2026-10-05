@@ -1,0 +1,40 @@
+{
+    "entity_type": "moon",
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 0.503157,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": {
+                "value": -0.47784,
+                "unit": "m"
+            },
+            "y": {
+                "value": -0.428595,
+                "unit": "m"
+            },
+            "z": {
+                "value": -0.503157,
+                "unit": "m"
+            }
+        },
+        "max": {
+            "x": {
+                "value": 0.47784,
+                "unit": "m"
+            },
+            "y": {
+                "value": 0.428595,
+                "unit": "m"
+            },
+            "z": {
+                "value": 0.503157,
+                "unit": "m"
+            }
+        }
+    }
+}
