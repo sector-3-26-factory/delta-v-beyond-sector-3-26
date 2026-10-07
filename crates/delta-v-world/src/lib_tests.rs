@@ -109,8 +109,14 @@ fn shipped_world_files() -> Vec<PathBuf> {
     let worlds = get_workspace_root().join("assets/worlds");
     let mut files: Vec<PathBuf> = std::fs::read_dir(&worlds)
         .unwrap_or_else(|e| panic!("assets/worlds must be readable: {e}"))
-        .map(|entry| entry.expect("dir entry must be readable").path())
-        .filter(|path| path.extension().and_then(std::ffi::OsStr::to_str) == Some("json"))
+        .filter_map(|entry| {
+            let dir = entry.expect("dir entry must be readable").path();
+            if !dir.is_dir() {
+                return None;
+            }
+            let path = dir.join("world.json");
+            if path.exists() { Some(path) } else { None }
+        })
         .collect();
     files.sort();
     files

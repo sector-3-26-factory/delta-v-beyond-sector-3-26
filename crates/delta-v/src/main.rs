@@ -83,12 +83,12 @@ fn main() {
 
     // Resolve the world path.
     // If the argument doesn't end with ".world.json", treat it as a short name
-    // and look for it in the worlds directory.
+    // and look for it in the worlds directory as a directory containing world.json.
     let world_path = if args.world.ends_with(".world.json") {
         WorldPath(PathBuf::from(args.world))
     } else {
         WorldPath(PathBuf::from(format!(
-            "assets/worlds/{}.world.json",
+            "assets/worlds/{}/world.json",
             args.world
         )))
     };

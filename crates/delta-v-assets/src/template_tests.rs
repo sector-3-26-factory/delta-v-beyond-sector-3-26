@@ -306,7 +306,7 @@ fn fixtures_path() -> std::path::PathBuf {
 fn test_loads_default_world_ok() {
     let root = crate::paths::get_workspace_root();
     let world = crate::template::load_test_world_from_paths(
-        &root.join("assets/worlds/default.world.json"),
+        &root.join("assets/worlds/default/world.json"),
         &root.join("assets/json/schema/world.schema.json"),
     )
     .expect("default world should load without error");
@@ -319,7 +319,7 @@ fn test_loads_default_world_ok() {
 fn test_entities_present() {
     let root = crate::paths::get_workspace_root();
     let world = crate::template::load_test_world_from_paths(
-        &root.join("assets/worlds/default.world.json"),
+        &root.join("assets/worlds/default/world.json"),
         &root.join("assets/json/schema/world.schema.json"),
     )
     .expect("load");
@@ -480,9 +480,13 @@ fn test_every_shipped_world_body_declares_a_mass() {
     let worlds = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/worlds");
     let mut checked = 0usize;
 
-    for file in std::fs::read_dir(&worlds).expect("assets/worlds must exist") {
-        let path = file.expect("dir entry").path();
-        if path.extension().and_then(std::ffi::OsStr::to_str) != Some("json") {
+    for dir_entry in std::fs::read_dir(&worlds).expect("assets/worlds must exist") {
+        let dir = dir_entry.expect("dir entry").path();
+        if !dir.is_dir() {
+            continue;
+        }
+        let path = dir.join("world.json");
+        if !path.exists() {
             continue;
         }
         // Loaded through delta-v-json like the game does (ADR-0040), so the
