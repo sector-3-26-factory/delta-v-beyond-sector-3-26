@@ -33,6 +33,7 @@ bevy = { version = "0.19", default-features = true, features = [
     "mp3",
     "flac",
     "jpeg",
+    "debug",
 ] }
 bevy_math = "0.19"
 bevy_mesh = "0.19"

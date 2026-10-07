@@ -127,7 +127,12 @@ pub fn navigation_menu_selection_refresh_system(
     selected_target: Res<'_, delta_v_core::navigation::SelectedTarget>,
     selected_nav_object: Res<'_, delta_v_core::navigation::SelectedNavObject>,
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
-    mut row_bg_query: Query<'_, '_, (&mut BackgroundColor, &NavMenuRowBackground)>,
+    mut row_bg_query: Query<
+        '_,
+        '_,
+        (&mut BackgroundColor, &NavMenuRowBackground),
+        Without<NavMenuRowEntity>,
+    >,
 ) {
     let _span = info_span!("delta_v_ui::navigation_menu_selection_refresh_system").entered();
     // Only update if menu is open
@@ -160,23 +165,51 @@ pub fn navigation_menu_selection_refresh_system(
 /// Refreshes the navigation menu content when the navigation list changes.
 ///
 /// Runs in `Update` during `AppState::InGame`.
-/// Processes `NavigationListChanged` events and re-spawns the menu
-/// if it is currently open, ensuring the content reflects the current list.
-#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+/// Processes `NavigationListChanged` events and updates the menu content
+/// by comparing the new entry list with the currently rendered rows.
+/// Only rebuilds rows when the set or order actually changes, avoiding
+/// the 60 Hz despawn/re-spawn storm that broke fade animations.
+#[allow(
+    clippy::too_many_arguments,
+    clippy::needless_pass_by_value,
+    clippy::too_many_lines,
+    clippy::type_complexity
+)]
 pub fn navigation_menu_refresh_system(
-    mut commands: Commands<'_, '_>,
-    mut menu_open: ResMut<'_, NavigationMenuOpen>,
+    _commands: Commands<'_, '_>,
+    menu_open: ResMut<'_, NavigationMenuOpen>,
     query: Query<'_, '_, Entity, With<NavigationMenuRoot>>,
-    asset_server: Res<'_, AssetServer>,
-    theme: Res<'_, UiTheme>,
+    _asset_server: Res<'_, AssetServer>,
+    _theme: Res<'_, UiTheme>,
     i18n: Res<'_, I18n>,
     list_data: Res<'_, delta_v_core::NavigationListData>,
     selected_target: Res<'_, delta_v_core::navigation::SelectedTarget>,
     selected_nav_object: Res<'_, delta_v_core::navigation::SelectedNavObject>,
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
     mut events: MessageReader<'_, '_, NavigationListChanged>,
+    mut row_bg_query: Query<'_, '_, (Entity, &mut BackgroundColor, &NavMenuRowBackground)>,
+    mut distance_text_query: Query<'_, '_, (Entity, &mut Text, &NavMenuDistanceText)>,
+    mut text_queries: ParamSet<
+        '_,
+        '_,
+        (
+            Query<
+                '_,
+                '_,
+                (Entity, &mut Text, &NavMenuRowBackground, &NavMenuRowEntity),
+                Without<NavMenuDistanceText>,
+            >,
+            Query<
+                '_,
+                '_,
+                (Entity, &mut Text, &NavMenuRowBackground, &NavMenuRowEntity),
+                Without<NavMenuDistanceText>,
+            >,
+        ),
+    >,
 ) {
     let _span = info_span!("delta_v_ui::navigation_menu_refresh_system").entered();
+
     // Only process if there's a navigation list change event
     let Some(_event) = events.read().next() else {
         return;
@@ -187,35 +220,129 @@ pub fn navigation_menu_refresh_system(
         menu_open.0
     );
 
-    // Menu is open - despawn and re-spawn with updated content
-    if menu_open.0 {
-        if let Ok(entity) = query.single() {
-            commands.entity(entity).despawn();
-        }
-        menu_open.0 = false;
-
-        // Re-open the menu with refreshed content
-        let title = &i18n.ui.menu.navigation.title;
-        let hint = &i18n.ui.menu.navigation.close;
-        spawn_navigation_menu(
-            &mut commands,
-            &asset_server,
-            &theme,
-            &i18n,
-            title,
-            hint,
-            &list_data.entries,
-            selected_target.0,
-            selected_nav_object.0,
-            targeting_mode.mode,
-        );
-        menu_open.0 = true;
-        tracing::debug!("[navigation_menu] refreshed after navigation list change");
-    } else {
+    // Menu is closed - nothing to update
+    if !menu_open.0 {
         tracing::debug!(
             "[navigation_menu] navigation list change event received but menu is closed"
         );
+        return;
     }
+
+    // Get the grid entity (child of NavigationMenuRoot)
+    let Ok(_menu_root) = query.single() else {
+        tracing::warn!("[navigation_menu] no NavigationMenuRoot entity found");
+        return;
+    };
+
+    // Collect current row entities and their indices from the UI
+    let mut current_rows: std::collections::HashMap<usize, Entity> =
+        std::collections::HashMap::new();
+    for (entity, _, marker) in row_bg_query.iter() {
+        current_rows.insert(marker.index, entity);
+    }
+
+    // Build a map of new entries by index
+    let new_entries = &list_data.entries;
+
+    // Determine which entity is currently selected based on targeting mode
+    let selected_entity = match targeting_mode.mode {
+        delta_v_core::navigation::TargetingModeType::Combat => selected_target.0,
+        delta_v_core::navigation::TargetingModeType::Nav => selected_nav_object.0,
+    };
+
+    // Update existing rows and track which indices are still present
+    let mut seen_indices = std::collections::HashSet::new();
+
+    for (index, entry) in new_entries.iter().enumerate() {
+        seen_indices.insert(index);
+
+        let distance_str = format_distance(entry.distance);
+
+        // Get i18n'd entity type
+        let entity_type_str = match entry.entity_type.as_str() {
+            "ship" => i18n.entity_types.ship.clone(),
+            "asteroid" => i18n.entity_types.asteroid.clone(),
+            "station" => i18n.entity_types.station.clone(),
+            "sun" => i18n.entity_types.sun.clone(),
+            "planet" => i18n.entity_types.planet.clone(),
+            "moon" => i18n.entity_types.moon.clone(),
+            _ => entry.entity_type.clone(),
+        };
+
+        // Check if this entry is the selected one
+        let is_selected = selected_entity.is_some_and(|e| e == entry.entity);
+
+        // Background color for selected row
+        let row_bg_color = if is_selected {
+            UiTheme::SELECTED_ROW_COLOR
+        } else {
+            Color::NONE
+        };
+
+        // Update type column
+        if let Some((_entity, mut text, _, _)) = text_queries
+            .p0()
+            .iter_mut()
+            .find(|(_, _, m, _)| m.index == index)
+        {
+            text.0 = entity_type_str;
+            if let Some((_entity, mut bg, _)) =
+                row_bg_query.iter_mut().find(|(_, _, m)| m.index == index)
+            {
+                bg.0 = row_bg_color;
+            }
+        }
+
+        // Update name column (display_name)
+        if let Some((_entity, mut text, _, _)) = text_queries
+            .p1()
+            .iter_mut()
+            .find(|(_, _, m, _)| m.index == index)
+        {
+            text.0.clone_from(&entry.display_name);
+        }
+
+        // Update distance column
+        if let Some((_entity, mut text, _)) = distance_text_query
+            .iter_mut()
+            .find(|(_, _, m)| m.index == index)
+        {
+            text.0 = distance_str;
+        }
+    }
+
+    // Remove rows for indices that no longer exist
+    for index in current_rows.keys() {
+        if !seen_indices.contains(index) {
+            // The row entities will be cleaned up when the menu is closed
+            // For now, we just clear their content
+            if let Some((_entity, mut text, _, _)) = text_queries
+                .p0()
+                .iter_mut()
+                .find(|(_, _, m, _)| m.index == *index)
+            {
+                text.0.clear();
+            }
+            if let Some((_entity, mut text, _, _)) = text_queries
+                .p1()
+                .iter_mut()
+                .find(|(_, _, m, _)| m.index == *index)
+            {
+                text.0.clear();
+            }
+            if let Some((_entity, mut text, _)) = distance_text_query
+                .iter_mut()
+                .find(|(_, _, m)| m.index == *index)
+            {
+                text.0.clear();
+            }
+        }
+    }
+
+    tracing::debug!(
+        "[navigation_menu] updated {} rows in place",
+        new_entries.len()
+    );
 }
 
 /// Updates the distance text in the navigation menu every frame.

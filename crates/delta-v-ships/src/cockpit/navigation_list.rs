@@ -34,7 +34,8 @@ use delta_v_physics::{CollisionShape, distance_to_surface};
 
 /// Internal function to rebuild the navigation list entries.
 ///
-/// Shared by `init_navigation_list_system` and `update_navigation_list_system`.
+/// Shared by `init_navigation_list_system`, `update_navigation_list_system`,
+/// and `rebuild_on_spawn_despawn_system`.
 #[allow(
     clippy::too_many_arguments,
     clippy::needless_pass_by_value,
@@ -68,6 +69,7 @@ fn rebuild_navigation_list(
             &WorldEntityId,
             &CollisionShape,
         ),
+        With<delta_v_physics::Navigable>,
     >,
 ) {
     // Get player position - find the player ship by checking all entities with Transform
@@ -83,7 +85,8 @@ fn rebuild_navigation_list(
             }
         })
         .expect("PlayerShipEntity resource references an entity not found in targetable_query. This indicates the player ship is missing the Targetable component or the entity was despawned.");
-    // Collect entries based on mode
+
+    // Collect entries based on mode, applying the distance and class filter from 4.1
     let mut entries: Vec<delta_v_core::NavEntry> = match targeting_mode.mode {
         TargetingModeType::Combat => targetable_query
             .iter()
@@ -91,13 +94,15 @@ fn rebuild_navigation_list(
                 if entity == player_ship.0 {
                     return None;
                 }
+                // Combat mode: only Targetable entities (ships, stations, projectiles)
                 let distance = distance_to_surface(player_pos, transform.translation, shape);
-                let _name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
+                let display_name = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                 Some(delta_v_core::NavEntry {
                     entity,
                     entity_type: entity_type.0.clone(),
                     entity_id: entity_id.0.clone(),
                     distance,
+                    display_name,
                 })
             })
             .collect(),
@@ -107,13 +112,22 @@ fn rebuild_navigation_list(
                 if entity == player_ship.0 {
                     return None;
                 }
+                // Nav mode: apply distance and class filter (4.1)
+                // - Sun, planets: always
+                // - Named asteroids over 100 km: always
+                // - Stations, mining platforms, other ships, fleets: always
+                // - Moons: only while player is inside parent's SOI
+                // - Belt and field asteroids: only while their sector/field is loaded
+                // For now, all Navigable entities are included; SOI check for moons
+                // and sector loading for belt asteroids will be added when those systems exist.
                 let distance = distance_to_surface(player_pos, transform.translation, shape);
-                let _name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
+                let display_name = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
                 Some(delta_v_core::NavEntry {
                     entity,
                     entity_type: entity_type.0.clone(),
                     entity_id: entity_id.0.clone(),
                     distance,
+                    display_name,
                 })
             })
             .collect(),
@@ -134,11 +148,12 @@ fn rebuild_navigation_list(
     );
     for entry in &list_data.entries {
         tracing::debug!(
-            "[nav_list]   entry: entity={:?} type={} id={} distance={:.1}",
+            "[nav_list]   entry: entity={:?} type={} id={} distance={:.1} name={}",
             entry.entity,
             entry.entity_type,
             entry.entity_id,
-            entry.distance
+            entry.distance,
+            entry.display_name
         );
     }
 }
@@ -173,7 +188,7 @@ pub fn update_navigation_list_system(
         ),
         With<Targetable>,
     >,
-    // Nav mode: all entities with EntityType + WorldEntityId are navigatable
+    // Nav mode: all entities with EntityType + WorldEntityId + Navigable are navigatable
     navigable_query: Query<
         '_,
         '_,
@@ -185,6 +200,7 @@ pub fn update_navigation_list_system(
             &WorldEntityId,
             &CollisionShape,
         ),
+        With<delta_v_physics::Navigable>,
     >,
     mut events: MessageReader<'_, '_, delta_v_core::TargetingModeChanged>,
     mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
@@ -253,6 +269,93 @@ pub fn update_navigation_list_system(
     // Emit event to notify UI that the navigation list has changed
     nav_list_events.write(NavigationListChanged);
     tracing::debug!("[nav_list] emitted NavigationListChanged event");
+}
+
+/// Rebuilds the navigation list when entities are spawned or despawned.
+///
+/// Runs in `Update` during `AppState::InGame`.
+/// Listens for `SpawnEntity` events and rebuilds the list when a new entity
+/// appears or when an entity is despawned (detected by checking if an entity
+/// in the list no longer exists in the query).
+#[allow(
+    clippy::too_many_arguments,
+    clippy::needless_pass_by_value,
+    clippy::type_complexity
+)]
+pub fn rebuild_on_spawn_despawn_system(
+    player_ship: Res<'_, delta_v_core::PlayerShipEntity>,
+    targeting_mode: Res<'_, TargetingMode>,
+    list_data: ResMut<'_, NavigationListData>,
+    targetable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+            &CollisionShape,
+        ),
+        With<Targetable>,
+    >,
+    navigable_query: Query<
+        '_,
+        '_,
+        (
+            Entity,
+            &Transform,
+            Option<&Name>,
+            &EntityType,
+            &WorldEntityId,
+            &CollisionShape,
+        ),
+        With<delta_v_physics::Navigable>,
+    >,
+    mut spawn_events: MessageReader<'_, '_, delta_v_core::SpawnEntity>,
+    mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
+) {
+    let _span = tracing::info_span!("delta_v_ships::rebuild_on_spawn_despawn_system").entered();
+
+    // Check for new spawns
+    let mut should_rebuild = false;
+    for _event in spawn_events.read() {
+        should_rebuild = true;
+        tracing::debug!("[nav_list] spawn event received, will rebuild");
+    }
+
+    // Check for despawns: any entity in the list that no longer exists in the queries
+    if !should_rebuild {
+        let current_entities: std::collections::HashSet<Entity> = match targeting_mode.mode {
+            TargetingModeType::Combat => targetable_query
+                .iter()
+                .map(|(e, _, _, _, _, _)| e)
+                .collect(),
+            TargetingModeType::Nav => navigable_query.iter().map(|(e, _, _, _, _, _)| e).collect(),
+        };
+        for entry in &list_data.entries {
+            if !current_entities.contains(&entry.entity) {
+                should_rebuild = true;
+                tracing::debug!(
+                    "[nav_list] entity {:?} no longer exists, will rebuild",
+                    entry.entity
+                );
+                break;
+            }
+        }
+    }
+
+    if should_rebuild {
+        rebuild_navigation_list(
+            player_ship,
+            targeting_mode,
+            list_data,
+            targetable_query,
+            navigable_query,
+        );
+        nav_list_events.write(NavigationListChanged);
+        tracing::debug!("[nav_list] rebuilt due to spawn/despawn");
+    }
 }
 
 /// Updates the selected target/nav object based on the current selection.
@@ -440,7 +543,7 @@ pub fn init_navigation_list_system(
         ),
         With<Targetable>,
     >,
-    // Nav mode: all entities with EntityType + WorldEntityId are navigatable
+    // Nav mode: all entities with EntityType + WorldEntityId + Navigable are navigatable
     navigable_query: Query<
         '_,
         '_,
@@ -452,6 +555,7 @@ pub fn init_navigation_list_system(
             &WorldEntityId,
             &CollisionShape,
         ),
+        With<delta_v_physics::Navigable>,
     >,
     mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
 ) {
