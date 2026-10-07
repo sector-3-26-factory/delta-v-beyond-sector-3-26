@@ -130,8 +130,11 @@ pub fn navigation_menu_selection_refresh_system(
     mut row_bg_query: Query<
         '_,
         '_,
-        (&mut BackgroundColor, &NavMenuRowBackground),
-        Without<NavMenuRowEntity>,
+        (
+            &mut BackgroundColor,
+            &NavMenuRowBackground,
+            &NavMenuRowEntity,
+        ),
     >,
 ) {
     let _span = info_span!("delta_v_ui::navigation_menu_selection_refresh_system").entered();
@@ -147,7 +150,7 @@ pub fn navigation_menu_selection_refresh_system(
     };
 
     // Update background color for all row background entities
-    for (mut bg_color, marker) in &mut row_bg_query {
+    for (mut bg_color, marker, _row_entity) in &mut row_bg_query {
         let is_selected = selected_entity.is_some_and(|e| {
             list_data
                 .entries
