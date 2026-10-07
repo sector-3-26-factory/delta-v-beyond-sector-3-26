@@ -103,7 +103,7 @@ impl Plugin for CockpitPlugin {
                     .run_if(in_state(AppState::InGame)),
             )
             .add_systems(
-                PreUpdate,
+                Update,
                 (
                     systems::targeting_mode_toggle_system,
                     systems::cycle_target_system,
