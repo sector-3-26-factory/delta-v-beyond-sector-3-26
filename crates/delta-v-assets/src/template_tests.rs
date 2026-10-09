@@ -305,11 +305,8 @@ fn fixtures_path() -> std::path::PathBuf {
 #[test]
 fn test_loads_default_world_ok() {
     let root = crate::paths::get_workspace_root();
-    let world = crate::template::load_test_world_from_paths(
-        &root.join("assets/worlds/default/world.json"),
-        &root.join("assets/json/schema/world.schema.json"),
-    )
-    .expect("default world should load without error");
+    let world = crate::template::load_world(&root.join("assets/worlds/default/world.json"))
+        .expect("default world should load without error");
     assert_eq!(world.format_version, 1);
     assert!(!world.name.is_empty(), "world name must not be empty");
 }
@@ -318,11 +315,8 @@ fn test_loads_default_world_ok() {
 #[test]
 fn test_entities_present() {
     let root = crate::paths::get_workspace_root();
-    let world = crate::template::load_test_world_from_paths(
-        &root.join("assets/worlds/default/world.json"),
-        &root.join("assets/json/schema/world.schema.json"),
-    )
-    .expect("load");
+    let world =
+        crate::template::load_world(&root.join("assets/worlds/default/world.json")).expect("load");
     assert!(
         !world.entities.is_empty(),
         "world must have at least one entity"
@@ -339,11 +333,8 @@ fn test_entities_present() {
 /// Pointing the loader at a nonexistent path must produce [`AssetError::Io`].
 #[test]
 fn test_missing_file_errors() {
-    let root = crate::paths::get_workspace_root();
-    let result = crate::template::load_test_world_from_paths(
-        std::path::Path::new("/nonexistent/world.json"),
-        &root.join("assets/json/schema/world.schema.json"),
-    );
+    let _root = crate::paths::get_workspace_root();
+    let result = crate::template::load_world(std::path::Path::new("/nonexistent/world.json"));
     assert!(
         matches!(result, Err(crate::error::AssetError::Io { .. })),
         "expected AssetError::Io, got: {result:?}"
@@ -354,14 +345,11 @@ fn test_missing_file_errors() {
 /// produce [`AssetError::Validation`].
 #[test]
 fn test_schema_violation_errors() {
-    let root = crate::paths::get_workspace_root();
-    let schema_path = root.join("assets/json/schema/world.schema.json");
-
     let bad_json = r#"{"unknown_key": true}"#;
     let mut tmp = tempfile::NamedTempFile::new().expect("tempfile");
     std::io::Write::write_all(&mut tmp, bad_json.as_bytes()).expect("write");
 
-    let result = crate::template::load_test_world_from_paths(tmp.path(), &schema_path);
+    let result = crate::template::load_world(tmp.path());
     assert!(
         matches!(result, Err(crate::error::AssetError::Validation(_))),
         "expected AssetError::Validation, got: {result:?}"
@@ -372,11 +360,8 @@ fn test_schema_violation_errors() {
 #[test]
 fn test_loads_test_world_ok() {
     let fixtures = fixtures_path();
-    let world = crate::template::load_test_world_from_paths(
-        &fixtures.join("test.world.json"),
-        &fixtures.join("world.schema.json"),
-    )
-    .expect("test world should load without error");
+    let world = crate::template::load_world(&fixtures.join("test.world.json"))
+        .expect("test world should load without error");
     assert_eq!(world.format_version, 1);
     assert_eq!(world.name, "Test World");
     assert_eq!(world.entities.len(), 1);

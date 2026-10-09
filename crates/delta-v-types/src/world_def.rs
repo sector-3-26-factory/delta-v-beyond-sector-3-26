@@ -82,12 +82,12 @@ pub struct EntitySpawnJson {
 /// Orbital parameters for an entity (JSON deserialization type).
 #[derive(Debug, Deserialize)]
 pub struct OrbitalParametersJson {
-    /// ID of the parent body this entity orbits.
-    pub orbital_parent: String,
+    /// ID of the parent body this entity orbits. If absent, the entity does not orbit.
+    pub orbital_parent: Option<String>,
     /// Orbital distance (semi-major axis) in metres.
-    pub orbital_distance: PhysicalQuantityJson,
+    pub orbital_distance: Option<PhysicalQuantityJson>,
     /// Orbital period in seconds.
-    pub orbital_period: PhysicalQuantityJson,
+    pub orbital_period: Option<PhysicalQuantityJson>,
     /// Orbital eccentricity (0 = circular, 0.1-0.9 = increasingly elliptical). Default: 0 (circular).
     pub orbital_eccentricity: f32,
     /// Orbital inclination in degrees.
@@ -197,9 +197,9 @@ impl From<EntitySpawnJson> for EntitySpawn {
             mass: json.mass.map(|m| m.to_kilograms()),
             template: None, // Populated by loader
             orbital_parameters: json.orbital_parameters.map(|op| OrbitalParameters {
-                orbital_parent: op.orbital_parent,
-                orbital_distance: op.orbital_distance.to_meters(),
-                orbital_period: op.orbital_period.to_seconds(),
+                orbital_parent: op.orbital_parent.unwrap_or_default(),
+                orbital_distance: op.orbital_distance.map_or(0.0, |d| d.to_meters()),
+                orbital_period: op.orbital_period.map_or(0.0, |p| p.to_seconds()),
                 orbital_eccentricity: op.orbital_eccentricity,
                 orbital_inclination: op.orbital_inclination.to_radians(),
                 initial_orbital_angle: op.initial_orbital_angle.to_radians(),

@@ -61,14 +61,10 @@
             }
         },
         "orbital_parameters": {
-            "description": "Orbital movement parameters for celestial bodies. All values in SI units (metres, seconds, radians) after conversion. These are world-specific, not template-specific.",
+            "description": "Orbital movement parameters for celestial bodies and belt/field entities. All values in SI units (metres, seconds, radians) after conversion. These are world-specific, not template-specific. For belt/field entities, rotation_period and axial_tilt are not used. orbital_parent, orbital_distance, and orbital_period are only required when the entity orbits a parent body.",
             "type": "object",
             "additionalProperties": false,
-            "required": [
-                "orbital_parent",
-                "orbital_distance",
-                "orbital_period"
-            ],
+            "required": [],
             "properties": {
                 "orbital_parent": {
                     "description": "ID of the parent body this entity orbits. If absent, the entity does not orbit (e.g., sun, free-floating body).",
@@ -79,7 +75,7 @@
                     "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
                 },
                 "orbital_period": {
-                    "description": "Orbital period in seconds.",
+                    "description": "Orbital period in seconds. Required for celestial bodies, not used for belt/field entities.",
                     "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/time"
                 },
                 "orbital_eccentricity": {
@@ -116,6 +112,150 @@
                         "value": 0.0,
                         "unit": "deg"
                     }
+                }
+            }
+        },
+        "asteroid_belt_parameters": {
+            "description": "Additional parameters specific to asteroid belt entities. Extends orbital_parameters with belt-specific fields.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "radial_extent",
+                "thickness",
+                "mean_spacing",
+                "seed",
+                "size_distribution",
+                "density",
+                "sector_size"
+            ],
+            "properties": {
+                "radial_extent": {
+                    "description": "Radial extent of a belt in metres (how far the ring reaches inward and outward from the orbital distance).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "thickness": {
+                    "description": "Thickness of a belt in metres (how far it reaches above and below the orbital plane).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "mean_spacing": {
+                    "description": "Mean spacing between asteroids in metres (density of the fill).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "excluded_radii": {
+                    "description": "Radii where nothing is placed (e.g., Kirkwood gaps). Array of objects with orbital_distance and gap_radius.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                            "orbital_distance",
+                            "gap_radius"
+                        ],
+                        "properties": {
+                            "orbital_distance": {
+                                "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                            },
+                            "gap_radius": {
+                                "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                            }
+                        }
+                    }
+                },
+                "seed": {
+                    "description": "Seed for deterministic procedural generation. Required for belt/field entities.",
+                    "type": "integer"
+                },
+                "sector_size": {
+                    "description": "Cache granularity for belt sectors in metres (engine detail, not content).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "size_distribution": {
+                    "description": "Which asteroid sizes are placed and how often. Array of objects with radius and weight.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                            "radius",
+                            "weight"
+                        ],
+                        "properties": {
+                            "radius": {
+                                "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                            },
+                            "weight": {
+                                "type": "number",
+                                "minimum": 0.0
+                            }
+                        }
+                    }
+                },
+                "density": {
+                    "description": "Material density in kg/m³ for generated asteroids (used to compute mass from radius).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/density"
+                }
+            }
+        },
+        "asteroid_field_parameters": {
+            "description": "Additional parameters specific to asteroid field entities. Extends orbital_parameters with field-specific fields.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "extent",
+                "shape",
+                "mean_spacing",
+                "seed",
+                "size_distribution",
+                "density"
+            ],
+            "properties": {
+                "extent": {
+                    "description": "Extent of a field region in metres (how large the region is).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "shape": {
+                    "description": "Shape of a field region (e.g., 'box').",
+                    "type": "string",
+                    "enum": [
+                        "box"
+                    ]
+                },
+                "mean_spacing": {
+                    "description": "Mean spacing between asteroids in metres (density of the fill).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "seed": {
+                    "description": "Seed for deterministic procedural generation. Required for belt/field entities.",
+                    "type": "integer"
+                },
+                "sector_size": {
+                    "description": "Cache granularity for field sectors in metres (engine detail, not content).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                },
+                "size_distribution": {
+                    "description": "Which asteroid sizes are placed and how often. Array of objects with radius and weight.",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                            "radius",
+                            "weight"
+                        ],
+                        "properties": {
+                            "radius": {
+                                "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
+                            },
+                            "weight": {
+                                "type": "number",
+                                "minimum": 0.0
+                            }
+                        }
+                    }
+                },
+                "density": {
+                    "description": "Material density in kg/m³ for generated asteroids (used to compute mass from radius).",
+                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/density"
                 }
             }
         }

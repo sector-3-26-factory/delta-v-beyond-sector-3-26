@@ -58,8 +58,10 @@ pub mod world_def;
 
 pub use ai::{AiConfig, AiConfigJson, AiTask, AiTaskJson};
 pub use celestial::{
-    AsteroidTemplate, AsteroidTemplateJson, LightColorJson, MoonTemplate, MoonTemplateJson,
-    PlanetTemplate, PlanetTemplateJson, SunTemplate, SunTemplateJson,
+    AsteroidBeltTemplate, AsteroidBeltTemplateJson, AsteroidFieldTemplate,
+    AsteroidFieldTemplateJson, AsteroidTemplate, AsteroidTemplateJson, LightColorJson,
+    MoonTemplate, MoonTemplateJson, PlanetTemplate, PlanetTemplateJson, SunTemplate,
+    SunTemplateJson,
 };
 pub use collision::layers::PROJECTILE;
 pub use collision::{

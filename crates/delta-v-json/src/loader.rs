@@ -512,6 +512,9 @@ fn validate_units_recursive(
 ///
 /// `root` is the main schema document for local `$defs` resolution.
 /// `schema_map` is used for cross-schema `$ref` resolution.
+///
+/// Fills defaults for all missing properties, including objects.
+/// Only applies defaults that are complete (not partial objects).
 fn fill_defaults_recursive(
     value: &mut Value,
     schema: &Value,
@@ -526,21 +529,36 @@ fn fill_defaults_recursive(
             let Some(properties) = resolved.get("properties").and_then(Value::as_object) else {
                 return;
             };
+            // First, recurse into existing properties only.
+            for (key, child) in obj.iter_mut() {
+                if let Some(prop_schema) = properties.get(key) {
+                    fill_defaults_recursive(child, prop_schema, root, schema_map);
+                }
+            }
+            // Then apply top-level defaults for missing properties.
+            // Apply defaults for all missing properties, including objects.
+            // The schema default should be a complete object.
             for (key, prop_schema) in properties {
                 if !obj.contains_key(key) {
-                    // First check for a top-level default on the property schema.
+                    // First check for a top-level default on the property schema
                     if let Some(default) = prop_schema.get("default") {
                         obj.insert(key.clone(), default.clone());
                     } else {
                         // If no top-level default, check if the property schema has a $ref
-                        // that points to a definition with property-level defaults.
+                        // that points to a definition with a default.
                         let resolved_prop = resolve_ref(prop_schema, root, schema_map);
-                        if let Some(prop_defaults) = get_property_defaults(resolved_prop) {
-                            obj.insert(key.clone(), Value::Object(prop_defaults));
+                        if let Some(default) = resolved_prop.get("default") {
+                            obj.insert(key.clone(), default.clone());
+                        } else {
+                            // Also check if the resolved schema has property-level defaults
+                            // that should be applied as a complete object.
+                            if let Some(prop_defaults) =
+                                get_property_defaults_recursive(resolved_prop, root, schema_map)
+                            {
+                                obj.insert(key.clone(), Value::Object(prop_defaults));
+                            }
                         }
                     }
-                } else if let Some(child) = obj.get_mut(key) {
-                    fill_defaults_recursive(child, prop_schema, root, schema_map);
                 }
             }
         }
@@ -560,8 +578,48 @@ fn fill_defaults_recursive(
 ///
 /// Returns a `Map` of property names to their default values,
 /// or `None` if the schema has no properties with defaults.
-fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value>> {
+/// Handles cross-schema `$ref` by resolving them via the schema map.
+#[allow(dead_code)] // Used for extracting defaults from schema definitions
+fn get_property_defaults(
+    schema: &Value,
+    root: &Value,
+    schema_map: &HashMap<String, Value>,
+) -> Option<serde_json::Map<String, Value>> {
     let properties = schema.get("properties")?.as_object()?;
+    let mut defaults = serde_json::Map::new();
+    let mut has_defaults = false;
+
+    for (prop_name, prop_def) in properties {
+        // First check for a top-level default on the property schema
+        if let Some(default) = prop_def.get("default") {
+            defaults.insert(prop_name.clone(), default.clone());
+            has_defaults = true;
+        } else {
+            // If no top-level default, check if the property schema has a $ref
+            // that points to a definition with property-level defaults.
+            let resolved_prop = resolve_ref(prop_def, root, schema_map);
+            if let Some(prop_defaults) =
+                get_property_defaults_recursive(resolved_prop, root, schema_map)
+            {
+                for (k, v) in prop_defaults {
+                    defaults.insert(k, v);
+                    has_defaults = true;
+                }
+            }
+        }
+    }
+
+    if has_defaults { Some(defaults) } else { None }
+}
+
+/// Recursive helper for `get_property_defaults` that handles cross-schema $ref.
+fn get_property_defaults_recursive(
+    schema: &Value,
+    root: &Value,
+    schema_map: &HashMap<String, Value>,
+) -> Option<serde_json::Map<String, Value>> {
+    let resolved = resolve_ref(schema, root, schema_map);
+    let properties = resolved.get("properties")?.as_object()?;
     let mut defaults = serde_json::Map::new();
     let mut has_defaults = false;
 
@@ -569,6 +627,17 @@ fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value
         if let Some(default) = prop_def.get("default") {
             defaults.insert(prop_name.clone(), default.clone());
             has_defaults = true;
+        } else {
+            // Recursively check nested $ref
+            let resolved_prop = resolve_ref(prop_def, root, schema_map);
+            if let Some(prop_defaults) =
+                get_property_defaults_recursive(resolved_prop, root, schema_map)
+            {
+                for (k, v) in prop_defaults {
+                    defaults.insert(k, v);
+                    has_defaults = true;
+                }
+            }
         }
     }
 
@@ -578,8 +647,8 @@ fn get_property_defaults(schema: &Value) -> Option<serde_json::Map<String, Value
 /// Resolves a `$ref`, supporting both local and cross-schema references.
 ///
 /// Local refs (`"#/$defs/<name>"`) are resolved from the root schema.
-/// Cross-schema refs (URIs like `"https://delta-v-beyond-sector-3-26/schema/cockpit"`)
-/// are resolved from the schema map.
+/// Cross-schema refs (URIs like `"https://delta-v-beyond-sector-3-26/schema/common#/$defs/orbital_parameters"`)
+/// are resolved from the schema map by splitting the URI and fragment.
 fn resolve_ref<'a>(
     schema: &'a Value,
     root: &'a Value,
@@ -598,5 +667,17 @@ fn resolve_ref<'a>(
     }
 
     // Try cross-schema ref via schema map
+    // Split URI and fragment (e.g., "https://.../common#/$defs/orbital_parameters")
+    if let Some((base_uri, fragment)) = ref_str.split_once('#')
+        && let Some(referenced_schema) = schema_map.get(base_uri)
+        && let Some(def_name) = fragment.strip_prefix("/$defs/")
+    {
+        return referenced_schema
+            .get("$defs")
+            .and_then(|defs| defs.get(def_name))
+            .unwrap_or(schema);
+    }
+
+    // Try cross-schema ref without fragment (whole schema)
     schema_map.get(ref_str).unwrap_or(schema)
 }

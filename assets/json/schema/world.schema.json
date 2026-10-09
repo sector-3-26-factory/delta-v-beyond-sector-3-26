@@ -96,8 +96,16 @@
           "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         },
         "orbital_parameters": {
-          "description": "Optional orbital movement parameters for this entity. If present, the entity will orbit the specified parent body. These parameters are world-specific and override any template defaults.",
+          "description": "Optional orbital movement parameters for this entity. If present, the entity will orbit the specified parent body. These parameters are world-specific and override any template defaults. For belt/field entities, orbital_period, rotation_period, and axial_tilt are not used.",
           "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/orbital_parameters"
+        },
+        "asteroid_belt_parameters": {
+          "description": "Additional parameters specific to asteroid belt entities. Extends orbital_parameters with belt-specific fields.",
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/asteroid_belt_parameters"
+        },
+        "asteroid_field_parameters": {
+          "description": "Additional parameters specific to asteroid field entities. Extends orbital_parameters with field-specific fields.",
+          "$ref": "https://delta-v-beyond-sector-3-26/schema/common#/$defs/asteroid_field_parameters"
         }
       }
     }

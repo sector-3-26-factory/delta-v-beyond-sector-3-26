@@ -1,0 +1,15 @@
+{
+    "entity_type": "asteroid_belt",
+    "meshes": [
+        "asteroids/shared/mesh_1",
+        "asteroids/shared/mesh_2",
+        "asteroids/shared/mesh_3",
+        "asteroids/shared/mesh_4",
+        "asteroids/shared/mesh_5",
+        "asteroids/shared/mesh_6"
+    ],
+    "density": {
+        "value": 1.5e-29,
+        "unit": "kg/m³"
+    }
+}

@@ -136,7 +136,7 @@ informational and must be aligned with.
 - ❌ No `#[serde(default)]` or `fn default_X()` on JSON-backed structs
 - ❌ No `Option<T>` for fields that always exist after schema validation
 - ❌ No `unwrap()`/`expect()` without `// SAFETY:` or `// INVARIANT:` comment (outside tests)
-- ❌ No `oneOf`/`anyOf`/`if-then-else` in schemas when branches differ in defaults/required fields
+- ❌ No `allOf`/`oneOf`/`anyOf`/`if-then-else` in schemas (composition patterns forbidden)
 - ❌ No raw wall-clock time in simulation systems
 - ❌ No bare physical numbers in JSON (must use `{"value": x, "unit": "y"}`)
 - ❌ No silent fallbacks for missing/invalid config or content

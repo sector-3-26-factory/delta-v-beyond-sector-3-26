@@ -170,6 +170,12 @@ fn every_shipped_world_body_spawns_with_its_declared_mass() {
 
         let mut app = spawn_app();
         for entity_spawn in &mut world.entities {
+            // Skip belt and field entities - they are definitions, not bodies
+            if entity_spawn.template_short.starts_with("asteroid-belts/")
+                || entity_spawn.template_short.starts_with("asteroid-fields/")
+            {
+                continue;
+            }
             app.world_mut()
                 .write_message(build_spawn_event(entity_spawn));
         }
@@ -177,14 +183,30 @@ fn every_shipped_world_body_spawns_with_its_declared_mass() {
 
         let masses = spawned_masses(app.world_mut());
 
+        // Count only body entities (skip belt/field definitions)
+        let expected_body_count = world
+            .entities
+            .iter()
+            .filter(|e| {
+                !e.template_short.starts_with("asteroid-belts/")
+                    && !e.template_short.starts_with("asteroid-fields/")
+            })
+            .count();
+
         assert_eq!(
             masses.len(),
-            world.entities.len(),
-            "every entity of {} must spawn exactly one body",
+            expected_body_count,
+            "every body entity of {} must spawn exactly one body",
             world_file.display()
         );
 
         for entity_spawn in &world.entities {
+            // Skip belt/field entities - they are definitions, not bodies
+            if entity_spawn.template_short.starts_with("asteroid-belts/")
+                || entity_spawn.template_short.starts_with("asteroid-fields/")
+            {
+                continue;
+            }
             let declared = entity_spawn.mass.unwrap_or_else(|| {
                 panic!(
                     "{} entity '{}' declares no mass; a body spawned without one is a hard error \

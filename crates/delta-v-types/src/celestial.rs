@@ -264,3 +264,83 @@ impl From<MoonTemplateJson> for MoonTemplate {
         }
     }
 }
+
+/// JSON schema type for asteroid belt templates.
+///
+/// Deserialized from `assets/templates/asteroid-belts/*/asteroid_belt.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AsteroidBeltTemplateJson {
+    /// Entity type discriminator. Must be "`asteroid_belt`".
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: PhysicalQuantityJson,
+}
+
+/// Runtime asteroid belt template with SI units.
+///
+/// This is the converted version of [`AsteroidBeltTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct AsteroidBeltTemplate {
+    /// Entity type discriminator ("`asteroid_belt`").
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: f32,
+}
+
+impl From<AsteroidBeltTemplateJson> for AsteroidBeltTemplate {
+    fn from(json: AsteroidBeltTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            meshes: json.meshes,
+            density: json.density.to_kilograms_per_cubic_meter(),
+        }
+    }
+}
+
+/// JSON schema type for asteroid field templates.
+///
+/// Deserialized from `assets/templates/asteroid-fields/*/asteroid_field.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AsteroidFieldTemplateJson {
+    /// Entity type discriminator. Must be "`asteroid_field`".
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: PhysicalQuantityJson,
+}
+
+/// Runtime asteroid field template with SI units.
+///
+/// This is the converted version of [`AsteroidFieldTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct AsteroidFieldTemplate {
+    /// Entity type discriminator ("`asteroid_field`").
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: f32,
+}
+
+impl From<AsteroidFieldTemplateJson> for AsteroidFieldTemplate {
+    fn from(json: AsteroidFieldTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            meshes: json.meshes,
+            density: json.density.to_kilograms_per_cubic_meter(),
+        }
+    }
+}

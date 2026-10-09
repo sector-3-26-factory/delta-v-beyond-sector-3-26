@@ -217,6 +217,22 @@ impl PhysicalQuantityJson {
             _ => panic!("Invalid dimensionless unit: {}", self.unit),
         }
     }
+
+    /// Converts a density quantity to kg/m³ (SI base unit).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the unit is not a valid density unit (kg/m³).
+    #[allow(clippy::panic)] // INVARIANT: unit is validated by JSON schema (ADR-0008, ADR-0013)
+    #[must_use]
+    pub fn to_kilograms_per_cubic_meter(&self) -> f32 {
+        // Density is always in kg/m³ per the schema - no conversion needed
+        // but we validate the unit for consistency
+        match self.unit.as_str() {
+            "kg/m³" => self.value,
+            _ => panic!("Invalid density unit: {}", self.unit),
+        }
+    }
 }
 
 /// Plain data for a rigid body (no Bevy `Component` derive).

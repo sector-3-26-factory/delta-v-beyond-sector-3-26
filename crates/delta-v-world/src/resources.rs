@@ -19,7 +19,7 @@ pub struct WorldPath(pub PathBuf);
 
 impl Default for WorldPath {
     fn default() -> Self {
-        Self(PathBuf::from("assets/worlds/default.world.json"))
+        Self(PathBuf::from("assets/worlds/default/world.json"))
     }
 }
 

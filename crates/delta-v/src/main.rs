@@ -66,14 +66,15 @@ struct Args {
     /// World name or path to load.
     ///
     /// If the value ends with `.world.json`, it's treated as a full path.
-    /// Otherwise, it's treated as a short name and looked up in `assets/worlds/`.
+    /// Otherwise, it's treated as a short name and looked up in `assets/worlds/`
+    /// as a directory containing `world.json`.
     ///
     /// Examples:
-    ///   - `inspect` → `assets/worlds/inspect.world.json`
-    ///   - `default` → `assets/worlds/default.world.json`
-    ///   - `custom` → `assets/worlds/custom.world.json`
+    ///   - `inspect` → `assets/worlds/inspect/world.json`
+    ///   - `default` → `assets/worlds/default/world.json`
+    ///   - `custom` → `assets/worlds/custom/world.json`
     ///   - `path/to/my.world.json` → `path/to/my.world.json`
-    #[arg(short, long, default_value = "assets/worlds/default.world.json")]
+    #[arg(short, long, default_value = "default")]
     world: String,
 }
 
