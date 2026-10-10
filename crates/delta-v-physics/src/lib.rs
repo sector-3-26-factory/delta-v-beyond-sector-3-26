@@ -35,6 +35,9 @@
 )]
 #![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
+pub mod belt_field_generation;
+pub mod belt_field_spawn;
+pub mod belt_field_streaming;
 pub mod celestial;
 pub mod collision;
 pub mod collision_debug;
@@ -44,6 +47,14 @@ pub mod rigid_body;
 pub mod spawn;
 pub mod systems;
 
+pub use belt_field_generation::{
+    AsteroidDelta, AsteroidDeltaStore, BeltSectorParams, FieldParams, GeneratedAsteroid,
+    OrbitalParams, SizeDistributionEntry, StableBodyId, generate_belt_sector, generate_field,
+    propagate_displaced_asteroid, separate_overlaps,
+};
+pub use belt_field_spawn::{
+    AsteroidBelt, AsteroidField, spawn_asteroid_belt, spawn_asteroid_field,
+};
 pub use celestial::{
     LazyLoadMesh, Navigable, OrbitalBody, OrbitalParentId, PendingCelestialMesh, Planet, Sun,
     SunFallbackVfx,
@@ -229,6 +240,18 @@ impl Plugin for PhysicsPlugin {
         app.add_systems(
             Update,
             spawn_asteroid
+                .in_set(WorldSpawnSet::SpawnAsteroids)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+        app.add_systems(
+            Update,
+            spawn_asteroid_belt
+                .in_set(WorldSpawnSet::SpawnAsteroids)
+                .run_if(in_state(AppState::SpawningEntities)),
+        );
+        app.add_systems(
+            Update,
+            spawn_asteroid_field
                 .in_set(WorldSpawnSet::SpawnAsteroids)
                 .run_if(in_state(AppState::SpawningEntities)),
         );

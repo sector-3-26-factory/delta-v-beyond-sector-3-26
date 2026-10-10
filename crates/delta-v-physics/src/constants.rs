@@ -79,3 +79,13 @@ pub const GRAVITY_CUTOFF_RADIUS_M: f32 = 1_000_000.0;
 /// would begin to drop collisions the player can see, so any change to it is a
 /// gameplay change.
 pub const COLLISION_RELEVANCE_PX: f32 = 8.0;
+
+/// Distance from the player at which belt sectors and fields are streamed in/out.
+///
+/// This is an engine constant, not a gameplay knob. It determines how far from the
+/// player procedural asteroid regions are generated. The value should be large enough
+/// to give the player time to see asteroids before they're loaded, but small enough
+/// to keep the loaded entity count manageable.
+///
+/// Initial value: 100,000 km (1e8 m).
+pub const STREAMING_DISTANCE_M: f32 = 100_000_000.0;

@@ -248,5 +248,15 @@ fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
         spawn_event = spawn_event.with_mass(mass);
     }
 
+    // Pass through asteroid belt parameters if present.
+    if let Some(belt_params) = entity_spawn.asteroid_belt_parameters.clone() {
+        spawn_event.asteroid_belt_parameters = Some(belt_params);
+    }
+
+    // Pass through asteroid field parameters if present.
+    if let Some(field_params) = entity_spawn.asteroid_field_parameters.clone() {
+        spawn_event.asteroid_field_parameters = Some(field_params);
+    }
+
     spawn_event
 }
