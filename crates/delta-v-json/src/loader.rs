@@ -337,11 +337,14 @@ impl JsonLoader {
         // Step 1: Read the JSON file
         let mut value = read_json(&self.json_path)?;
 
-        // Step 2: Validate with registry to resolve cross-schema $refs
-        validate_with_registry(&value, &self.schema_path, &self.json_path, schema_dir)?;
-
-        // Step 3: Fill defaults with schema map to resolve cross-schema $refs
+        // Step 2: Fill defaults with schema map to resolve cross-schema $refs
+        // This must happen BEFORE validation so that required fields with
+        // default values are populated before the schema validator checks them.
         fill_defaults(&mut value, &self.schema_path)?;
+
+        // Step 3: Validate with registry to resolve cross-schema $refs
+        // Now required fields that have defaults will pass validation.
+        validate_with_registry(&value, &self.schema_path, &self.json_path, schema_dir)?;
 
         // Step 4: Apply user override if provided
         if let Some(user_path) = &self.user_override_path {
