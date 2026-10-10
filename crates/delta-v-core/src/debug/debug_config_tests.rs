@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Unit tests for debug configuration.
 //!
 //! Tests verify that `DebugConfig::should_show_axes_for()` correctly respects

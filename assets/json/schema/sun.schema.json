@@ -7,7 +7,6 @@
     "additionalProperties": false,
     "required": [
         "entity_type",
-        "mass",
         "collision_shape",
         "bounding_box"
     ],
@@ -16,9 +15,6 @@
             "description": "Entity type discriminator. Must be 'sun'.",
             "type": "string",
             "const": "sun"
-        },
-        "mass": {
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         },
         "collision_shape": {
             "description": "Collision shape for the sun. Defines how it interacts with other objects.",
@@ -122,7 +118,7 @@
             "description": "Light range in metres. Default: 6e12 (reaches Pluto's aphelion at ~5.9e12 m).",
             "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length",
             "default": {
-                "value": 6e12,
+                "value": 6000000000000.0,
                 "unit": "m"
             }
         }

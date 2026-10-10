@@ -1,70 +1,25 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Tests for template field extraction helpers.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]
 
 use crate::template_extraction::{
-    compute_debug_axis_length, extract_bounding_box, extract_mass, resolve_mass, scale_bounding_box,
+    compute_debug_axis_length, extract_bounding_box, scale_bounding_box,
 };
 use delta_v_types::{
     AsteroidTemplate, BoundingBox, CollisionShapeData, CollisionShapeType, EntityTemplate,
 };
 
 // ---------------------------------------------------------------------------
-// extract_mass
-// ---------------------------------------------------------------------------
-
-#[test]
-fn test_extract_mass_basic() {
-    let template = EntityTemplate::Asteroid(AsteroidTemplate {
-        entity_type: "asteroid".to_string(),
-        mass: 10_000.0,
-        bounding_box: BoundingBox {
-            min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
-            max: bevy::prelude::Vec3::new(1.0, 1.0, 1.0),
-        },
-        collision_shape: CollisionShapeData {
-            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
-            offset: bevy::prelude::Vec3::ZERO,
-        },
-        is_gravity_source: false,
-    });
-    let mass = extract_mass(&template);
-    assert!(
-        (mass - 10_000.0).abs() < 0.01,
-        "mass should be 10000, got {mass}"
-    );
-}
-
-#[test]
-fn test_extract_mass_small_value() {
-    let template = EntityTemplate::Asteroid(AsteroidTemplate {
-        entity_type: "asteroid".to_string(),
-        mass: 0.5,
-        bounding_box: BoundingBox {
-            min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
-            max: bevy::prelude::Vec3::new(1.0, 1.0, 1.0),
-        },
-        collision_shape: CollisionShapeData {
-            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
-            offset: bevy::prelude::Vec3::ZERO,
-        },
-        is_gravity_source: false,
-    });
-    let mass = extract_mass(&template);
-    assert!((mass - 0.5).abs() < 0.01, "mass should be 0.5, got {mass}");
-}
-
-// ---------------------------------------------------------------------------
 // extract_bounding_box
 // ---------------------------------------------------------------------------
-
 #[test]
 fn test_extract_bounding_box_basic() {
     let template = EntityTemplate::Asteroid(AsteroidTemplate {
         entity_type: "asteroid".to_string(),
-        mass: 1000.0,
         bounding_box: BoundingBox {
             min: bevy::prelude::Vec3::new(-1.0, -2.0, -3.0),
             max: bevy::prelude::Vec3::new(1.0, 2.0, 3.0),
@@ -89,7 +44,6 @@ fn test_extract_bounding_box_basic() {
 fn test_extract_bounding_box_asymmetric() {
     let template = EntityTemplate::Asteroid(AsteroidTemplate {
         entity_type: "asteroid".to_string(),
-        mass: 1000.0,
         bounding_box: BoundingBox {
             min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
             max: bevy::prelude::Vec3::new(10.0, 5.0, 2.0),
@@ -190,27 +144,4 @@ fn test_scale_bounding_box_fractional() {
     assert_eq!(scaled.max.x, 10.0);
     assert_eq!(scaled.max.y, 10.0);
     assert_eq!(scaled.max.z, 10.0);
-}
-
-// ---------------------------------------------------------------------------
-// resolve_mass
-// ---------------------------------------------------------------------------
-
-#[test]
-fn test_resolve_mass_with_override() {
-    let result = resolve_mass(1000.0, Some(5000.0));
-    assert_eq!(result, 5000.0, "should use override value");
-}
-
-#[test]
-fn test_resolve_mass_without_override() {
-    let result = resolve_mass(1000.0, None);
-    assert_eq!(result, 1000.0, "should use template mass when no override");
-}
-
-#[test]
-fn test_resolve_mass_zero_override() {
-    // Note: zero override is technically valid (though may be invalid for physics)
-    let result = resolve_mass(1000.0, Some(0.0));
-    assert_eq!(result, 0.0, "should use override value even if zero");
 }

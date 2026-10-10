@@ -7,17 +7,6 @@
 
 use delta_v_types::{BoundingBox, EntityTemplate};
 
-/// Extracts a mass value from an `EntityTemplate`.
-///
-/// # Panics
-///
-/// Panics if the template is not a ship type. This should never happen because
-/// only ships have mass values that need extraction.
-#[must_use]
-pub const fn extract_mass(template: &EntityTemplate) -> f32 {
-    template.mass()
-}
-
 /// Extracts a `BoundingBox` from an `EntityTemplate`.
 ///
 /// # Panics
@@ -55,15 +44,6 @@ pub fn scale_bounding_box(bbox: &BoundingBox, scale: f32) -> BoundingBox {
         min: bbox.min * scale,
         max: bbox.max * scale,
     }
-}
-
-/// Resolves the final mass value, using override if present.
-///
-/// Mass is NOT scaled - it is used as-is from the template, or overridden if
-/// `mass_override` is specified.
-#[must_use]
-pub fn resolve_mass(template_mass: f32, mass_override: Option<f32>) -> f32 {
-    mass_override.unwrap_or(template_mass)
 }
 
 /// Reads the dimensions of a PNG file from its IHDR chunk.

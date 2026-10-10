@@ -1,0 +1,214 @@
+{
+    "format_version": 1,
+    "name": "Belt Field Test World",
+    "entities": [
+        {
+            "template": "ships/debug-ship-cube",
+            "id": "test_ship",
+            "player_controlled": true,
+            "position": {
+                "x": {
+                    "value": 404000000000.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "rotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "asteroid-belts/main",
+            "id": "test_belt",
+            "position": {
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "rotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 404000000000.0,
+                    "unit": "m"
+                },
+                "orbital_period": {
+                    "value": 140000000.0,
+                    "unit": "s"
+                },
+                "orbital_eccentricity": 0.12,
+                "orbital_inclination": {
+                    "value": 10.0,
+                    "unit": "deg"
+                },
+                "initial_orbital_angle": {
+                    "value": 0.0,
+                    "unit": "deg"
+                }
+            },
+            "asteroid_belt_parameters": {
+                "radial_extent": {
+                    "value": 44900000000.0,
+                    "unit": "m"
+                },
+                "thickness": {
+                    "value": 15000000000.0,
+                    "unit": "m"
+                },
+                "mean_spacing": {
+                    "value": 23000.0,
+                    "unit": "m"
+                },
+                "excluded_radii": [],
+                "seed": 20260930,
+                "sector_size": {
+                    "value": 50000000.0,
+                    "unit": "m"
+                },
+                "size_distribution": [
+                    {
+                        "radius": {
+                            "value": 1000.0,
+                            "unit": "m"
+                        },
+                        "weight": 1.0
+                    }
+                ],
+                "density": {
+                    "value": 2.8e-29,
+                    "unit": "kg/m³"
+                }
+            }
+        },
+        {
+            "template": "asteroid-fields/minable-pocket",
+            "id": "test_field",
+            "position": {
+                "x": {
+                    "value": 350000000000.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "rotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
+            },
+            "orbital_parameters": {
+                "orbital_parent": "sun",
+                "orbital_distance": {
+                    "value": 350000000000.0,
+                    "unit": "m"
+                },
+                "orbital_period": {
+                    "value": 100000000.0,
+                    "unit": "s"
+                }
+            },
+            "asteroid_field_parameters": {
+                "extent": {
+                    "value": 5000000.0,
+                    "unit": "m"
+                },
+                "shape": "box",
+                "mean_spacing": {
+                    "value": 1000.0,
+                    "unit": "m"
+                },
+                "seed": 20260940,
+                "size_distribution": [
+                    {
+                        "radius": {
+                            "value": 500.0,
+                            "unit": "m"
+                        },
+                        "weight": 1.0
+                    }
+                ],
+                "density": {
+                    "value": 3e-27,
+                    "unit": "kg/m³"
+                }
+            }
+        }
+    ]
+}

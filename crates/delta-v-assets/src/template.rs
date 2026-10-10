@@ -268,6 +268,80 @@ pub fn load_asteroid(name: &str) -> Result<(String, EntityTemplate), AssetError>
     Ok((template_path, runtime_template))
 }
 
+/// Loads an asteroid belt template.
+///
+/// Returns a tuple of (`template_path`, `template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_asteroid_belt(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+    // INVARIANT: The name may or may not have the "asteroid-belts/" prefix.
+    // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
+    // The `unwrap_or` is intentional: callers may pass either "asteroid-belts/my-belt" or "my-belt".
+    // Both are valid and result in the same template being loaded.
+    let template_name = name.strip_prefix("asteroid-belts/").unwrap_or(name);
+    let template_path = format!("templates/asteroid-belts/{template_name}/asteroid_belt.json");
+    let template = load_template(
+        "asteroid-belts",
+        name,
+        "asteroid_belt.json",
+        "asteroid_belt.schema.json",
+    )?;
+
+    // Convert to runtime type
+    let template_json: delta_v_types::AsteroidBeltTemplateJson =
+        serde_json::from_value(template).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::AsteroidBelt(template_json.into());
+
+    Ok((template_path, runtime_template))
+}
+
+/// Loads an asteroid field template.
+///
+/// Returns a tuple of (`template_path`, `template`).
+/// The entity type is derived from the `EntityTemplate` variant.
+///
+/// # Errors
+///
+/// Returns [`AssetError::TemplateNotFound`] if the template file does not exist.
+/// Returns [`AssetError::Validation`] if the template fails schema validation.
+///
+/// # Panics
+///
+/// Panics if the JSON fails to deserialize. This should never happen because
+/// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
+#[allow(clippy::expect_used, clippy::missing_panics_doc)]
+pub fn load_asteroid_field(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+    // INVARIANT: The name may or may not have the "asteroid-fields/" prefix.
+    // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
+    // The `unwrap_or` is intentional: callers may pass either "asteroid-fields/my-field" or "my-field".
+    // Both are valid and result in the same template being loaded.
+    let template_name = name.strip_prefix("asteroid-fields/").unwrap_or(name);
+    let template_path = format!("templates/asteroid-fields/{template_name}/asteroid_field.json");
+    let template = load_template(
+        "asteroid-fields",
+        name,
+        "asteroid_field.json",
+        "asteroid_field.schema.json",
+    )?;
+
+    // Convert to runtime type
+    let template_json: delta_v_types::AsteroidFieldTemplateJson =
+        serde_json::from_value(template).expect("validated JSON should deserialize");
+    let runtime_template = EntityTemplate::AsteroidField(template_json.into());
+
+    Ok((template_path, runtime_template))
+}
+
 /// Loads a ship template.
 ///
 /// Returns a tuple of (`template_path`, `template`).

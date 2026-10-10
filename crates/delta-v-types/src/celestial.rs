@@ -51,8 +51,6 @@ pub struct LightColorJson {
 pub struct SunTemplateJson {
     /// Entity type discriminator. Must be "sun".
     pub entity_type: String,
-    /// Mass in kilograms.
-    pub mass: PhysicalQuantityJson,
     /// Collision shape for the sun.
     pub collision_shape: super::CollisionShapeJson,
     /// Axis-aligned bounding box of the mesh in sun-local coordinates (metres).
@@ -83,8 +81,6 @@ pub struct SunTemplateJson {
 pub struct PlanetTemplateJson {
     /// Entity type discriminator. Must be "planet".
     pub entity_type: String,
-    /// Mass in kilograms.
-    pub mass: PhysicalQuantityJson,
     /// Collision shape for the planet.
     pub collision_shape: super::CollisionShapeJson,
     /// Axis-aligned bounding box of the mesh in planet-local coordinates (metres).
@@ -107,8 +103,6 @@ pub struct PlanetTemplateJson {
 pub struct AsteroidTemplateJson {
     /// Entity type discriminator. Must be "asteroid".
     pub entity_type: String,
-    /// Mass in kilograms.
-    pub mass: PhysicalQuantityJson,
     /// Collision shape for the asteroid.
     pub collision_shape: super::CollisionShapeJson,
     /// Axis-aligned bounding box of the mesh in asteroid-local coordinates (metres).
@@ -128,8 +122,6 @@ pub struct AsteroidTemplateJson {
 pub struct MoonTemplateJson {
     /// Entity type discriminator. Must be "moon".
     pub entity_type: String,
-    /// Mass in kilograms.
-    pub mass: PhysicalQuantityJson,
     /// Collision shape for the moon.
     pub collision_shape: super::CollisionShapeJson,
     /// Axis-aligned bounding box of the mesh in moon-local coordinates (metres).
@@ -152,8 +144,6 @@ pub struct MoonTemplateJson {
 pub struct SunTemplate {
     /// Entity type discriminator ("sun").
     pub entity_type: String,
-    /// Mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Collision shape data for the sun.
     pub collision_shape: CollisionShapeData,
     /// Axis-aligned bounding box of the mesh in sun-local coordinates (metres).
@@ -174,7 +164,6 @@ impl From<SunTemplateJson> for SunTemplate {
     fn from(json: SunTemplateJson) -> Self {
         Self {
             entity_type: json.entity_type,
-            mass: json.mass.to_kilograms(),
             collision_shape: json.collision_shape.into(),
             bounding_box: json.bounding_box.into(),
             is_gravity_source: json.is_gravity_source,
@@ -195,8 +184,6 @@ impl From<SunTemplateJson> for SunTemplate {
 pub struct PlanetTemplate {
     /// Entity type discriminator ("planet").
     pub entity_type: String,
-    /// Mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Collision shape data for the planet.
     pub collision_shape: CollisionShapeData,
     /// Axis-aligned bounding box of the mesh in planet-local coordinates (metres).
@@ -211,7 +198,6 @@ impl From<PlanetTemplateJson> for PlanetTemplate {
     fn from(json: PlanetTemplateJson) -> Self {
         Self {
             entity_type: json.entity_type,
-            mass: json.mass.to_kilograms(),
             collision_shape: json.collision_shape.into(),
             bounding_box: json.bounding_box.into(),
             is_gravity_source: json.is_gravity_source,
@@ -229,8 +215,6 @@ impl From<PlanetTemplateJson> for PlanetTemplate {
 pub struct AsteroidTemplate {
     /// Entity type discriminator ("asteroid").
     pub entity_type: String,
-    /// Mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Collision shape data for the asteroid.
     pub collision_shape: CollisionShapeData,
     /// Axis-aligned bounding box of the mesh in asteroid-local coordinates (metres).
@@ -243,7 +227,6 @@ impl From<AsteroidTemplateJson> for AsteroidTemplate {
     fn from(json: AsteroidTemplateJson) -> Self {
         Self {
             entity_type: json.entity_type,
-            mass: json.mass.to_kilograms(),
             collision_shape: json.collision_shape.into(),
             bounding_box: json.bounding_box.into(),
             is_gravity_source: json.is_gravity_source,
@@ -260,8 +243,6 @@ impl From<AsteroidTemplateJson> for AsteroidTemplate {
 pub struct MoonTemplate {
     /// Entity type discriminator ("moon").
     pub entity_type: String,
-    /// Mass in kilograms (SI base unit).
-    pub mass: f32,
     /// Collision shape data for the moon.
     pub collision_shape: CollisionShapeData,
     /// Axis-aligned bounding box of the mesh in moon-local coordinates (metres).
@@ -276,11 +257,90 @@ impl From<MoonTemplateJson> for MoonTemplate {
     fn from(json: MoonTemplateJson) -> Self {
         Self {
             entity_type: json.entity_type,
-            mass: json.mass.to_kilograms(),
             collision_shape: json.collision_shape.into(),
             bounding_box: json.bounding_box.into(),
             is_gravity_source: json.is_gravity_source,
             animations_enabled: json.animations_enabled,
+        }
+    }
+}
+
+/// JSON schema type for asteroid belt templates.
+///
+/// Deserialized from `assets/templates/asteroid-belts/*/asteroid_belt.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AsteroidBeltTemplateJson {
+    /// Entity type discriminator. Must be "`asteroid_belt`".
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: PhysicalQuantityJson,
+}
+
+/// Runtime asteroid belt template with SI units.
+///
+/// This is the converted version of [`AsteroidBeltTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct AsteroidBeltTemplate {
+    /// Entity type discriminator ("`asteroid_belt`").
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: f32,
+}
+
+impl From<AsteroidBeltTemplateJson> for AsteroidBeltTemplate {
+    fn from(json: AsteroidBeltTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            meshes: json.meshes,
+            density: json.density.to_kilograms_per_cubic_meter(),
+        }
+    }
+}
+
+/// JSON schema type for asteroid field templates.
+///
+/// Deserialized from `assets/templates/asteroid-fields/*/asteroid_field.json`.
+/// Per ADR-0008, physical quantities use value+unit format.
+/// Per ADR-0039, all defaults are in the schema, not in Rust code.
+#[derive(Debug, Deserialize, Clone)]
+pub struct AsteroidFieldTemplateJson {
+    /// Entity type discriminator. Must be "`asteroid_field`".
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: PhysicalQuantityJson,
+}
+
+/// Runtime asteroid field template with SI units.
+///
+/// This is the converted version of [`AsteroidFieldTemplateJson`] with all
+/// physical quantities converted to SI base units.
+/// Per ADR-0008, conversion happens at load time.
+#[derive(Debug, Clone)]
+pub struct AsteroidFieldTemplate {
+    /// Entity type discriminator ("`asteroid_field`").
+    pub entity_type: String,
+    /// List of asteroid mesh template names to draw from.
+    pub meshes: Vec<String>,
+    /// Material density in kg/m³ for generated asteroids (used to compute mass from radius).
+    pub density: f32,
+}
+
+impl From<AsteroidFieldTemplateJson> for AsteroidFieldTemplate {
+    fn from(json: AsteroidFieldTemplateJson) -> Self {
+        Self {
+            entity_type: json.entity_type,
+            meshes: json.meshes,
+            density: json.density.to_kilograms_per_cubic_meter(),
         }
     }
 }

@@ -55,17 +55,17 @@ Rules:
    startup too. A defaults file that violates its own schema is a
    release-blocking bug.
 8. **Schemas do not use combinator keywords whose chosen branch
-   would change which defaults apply.** Concretely:
-   `oneOf`, `anyOf`, `if`/`then`/`else` and conditional
-   `dependentSchemas` are **forbidden** when their branches
-   declare different `default` values, different required fields,
-   or different property sets. Reason: our default-filling pass
-   (see [ADR-0013](0013-no-silent-fallbacks.md)) is intentionally
-   a simple structural walk; it does not evaluate JSON-Schema
-   combinators to decide which branch applies. Allowing such
-   combinators would force the loader to re-implement a sizeable
-   part of the JSON-Schema engine, with all the corner cases that
-   come with it.
+    would change which defaults apply.** Concretely:
+    `oneOf`, `anyOf`, `if`/`then`/`else` and conditional
+    `dependentSchemas` are **forbidden** because their branches
+    can declare different `default` values, different required fields,
+    or different property sets. Reason: our default-filling pass
+    (see [ADR-0013](0013-no-silent-fallbacks.md)) is intentionally
+    a simple structural walk; it does not evaluate JSON-Schema
+    combinators to decide which branch applies. Allowing such
+    combinators would force the loader to re-implement a sizeable
+    part of the JSON-Schema engine, with all the corner cases that
+    come with it.
 
    The supported way to model "a thing that can be one of several
    variants" is **a separate schema file per variant**, with an

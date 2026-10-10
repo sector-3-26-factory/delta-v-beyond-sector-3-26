@@ -24,10 +24,10 @@ use rand::Rng;
 
 use delta_v_core::input::ActionState;
 use delta_v_core::{
-    ActiveCameraName, CameraName, CameraSwitched, EntityType, FireWeapon, Health, I18n,
-    PlayerShipEntity, ProjectileHit, RenderLayer, TargetSelected, Weapon, WorldEntityId,
+    ActiveCameraName, CameraName, CameraSwitched, FireWeapon, Health, I18n, PlayerShipEntity,
+    ProjectileHit, RenderLayer, TargetSelected, Weapon,
 };
-use delta_v_physics::{CollisionDetected, CollisionShape, RigidBody, distance_to_surface};
+use delta_v_physics::{CollisionDetected, RigidBody};
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
@@ -44,7 +44,6 @@ use super::components::TargetingMode;
 use super::components::VelocityVectorIndicator;
 use super::velocity_indicator::create_thrust_arrow_presets;
 use super::velocity_indicator::format_speed;
-use delta_v_core::Targetable;
 
 use super::spawn::CockpitOverlayResource;
 
@@ -850,6 +849,8 @@ pub fn targeting_mode_toggle_system(
 /// Runs in `Update` during `AppState::InGame`.
 /// `T` key: selects next target (closest to the right in sorted list).
 /// `ShiftLeft + T` key: selects previous target.
+/// Reads the sorted list from `NavigationListData` instead of building its own,
+/// so the key and the menu always show the same sequence.
 #[allow(
     clippy::needless_pass_by_value,
     clippy::too_many_arguments,
@@ -857,37 +858,12 @@ pub fn targeting_mode_toggle_system(
     clippy::manual_let_else
 )]
 pub fn cycle_target_system(
-    player_ship: Res<'_, PlayerShipEntity>,
+    _player_ship: Res<'_, PlayerShipEntity>,
     mut selected_target: ResMut<'_, SelectedTarget>,
     mut selected_nav_object: ResMut<'_, SelectedNavObject>,
     targeting_mode: Res<'_, super::components::TargetingMode>,
     action_state: Single<'_, '_, &ActionState<LogicalAction>>,
-    targetable_query: Query<
-        '_,
-        '_,
-        (
-            Entity,
-            &Transform,
-            Option<&Name>,
-            &EntityType,
-            &WorldEntityId,
-            &CollisionShape,
-        ),
-        With<Targetable>,
-    >,
-    navigable_query: Query<
-        '_,
-        '_,
-        (
-            Entity,
-            &Transform,
-            Option<&Name>,
-            &EntityType,
-            &WorldEntityId,
-            &CollisionShape,
-        ),
-        With<delta_v_physics::Navigable>,
-    >,
+    list_data: Res<'_, delta_v_core::NavigationListData>,
     mut events: MessageWriter<'_, TargetSelected>,
 ) {
     let is_next = action_state.just_pressed(&LogicalAction::CycleTargetNext);
@@ -897,83 +873,41 @@ pub fn cycle_target_system(
         return;
     }
 
-    // Get player position
-    let Some(player_pos) = targetable_query
-        .iter()
-        .find_map(|(entity, transform, _, _, _, _)| {
-            if entity == player_ship.0 {
-                Some(transform.translation)
-            } else {
-                None
-            }
-        })
-    else {
-        return;
-    };
-
-    // Determine which query to use based on targeting mode
-    let (targets, selected_resource, mode) = match targeting_mode.mode {
-        super::components::TargetingModeType::Combat => {
-            let mut targets: Vec<(Entity, f32, String, String)> = targetable_query
-                .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
-                    if entity == player_ship.0 {
-                        return None;
-                    }
-                    let distance = distance_to_surface(player_pos, transform.translation, shape);
-                    let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
-                    Some((entity, distance, name_str, entity_type.0.clone()))
-                })
-                .collect();
-            targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
-            (
-                targets,
-                &mut selected_target.0,
-                super::components::TargetingModeType::Combat,
-            )
-        }
-        super::components::TargetingModeType::Nav => {
-            let mut targets: Vec<(Entity, f32, String, String)> = navigable_query
-                .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
-                    if entity == player_ship.0 {
-                        return None;
-                    }
-                    let distance = distance_to_surface(player_pos, transform.translation, shape);
-                    let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
-                    Some((entity, distance, name_str, entity_type.0.clone()))
-                })
-                .collect();
-            targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
-            (
-                targets,
-                &mut selected_nav_object.0,
-                super::components::TargetingModeType::Nav,
-            )
-        }
-    };
-
-    if targets.is_empty() {
+    // Read the pre-sorted list from NavigationListData
+    let entries = &list_data.entries;
+    if entries.is_empty() {
         return;
     }
+
+    // Determine which resource to update based on targeting mode
+    let (selected_resource, mode) = match targeting_mode.mode {
+        super::components::TargetingModeType::Combat => (
+            &mut selected_target.0,
+            super::components::TargetingModeType::Combat,
+        ),
+        super::components::TargetingModeType::Nav => (
+            &mut selected_nav_object.0,
+            super::components::TargetingModeType::Nav,
+        ),
+    };
 
     // Find current selection index
     let current_idx = selected_resource
         .as_ref()
-        .and_then(|current| targets.iter().position(|(e, _, _, _)| e == current))
+        .and_then(|current| entries.iter().position(|e| e.entity == *current))
         .unwrap_or(0);
 
     // Select next or previous
     let new_idx = if is_next {
-        (current_idx + 1) % targets.len()
+        (current_idx + 1) % entries.len()
     } else {
-        (current_idx + targets.len() - 1) % targets.len()
+        (current_idx + entries.len() - 1) % entries.len()
     };
 
-    let Some((new_target, distance, name_str, entity_type_str)) = targets.get(new_idx) else {
+    let Some(entry) = entries.get(new_idx) else {
         return;
     };
-    let new_target = *new_target;
+    let new_target = entry.entity;
     *selected_resource = Some(new_target);
 
     // Emit TargetSelected event for notification
@@ -998,9 +932,9 @@ pub fn cycle_target_system(
     tracing::debug!(
         "[targeting] selected target {:?} '{}' ({}) (distance: {:.1}m)",
         new_target,
-        name_str,
-        entity_type_str,
-        distance
+        entry.display_name,
+        entry.entity_type,
+        entry.distance
     );
 }
 

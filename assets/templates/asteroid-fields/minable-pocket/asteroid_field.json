@@ -1,0 +1,13 @@
+{
+    "entity_type": "asteroid_field",
+    "meshes": [
+        "asteroids/shared/mesh_1",
+        "asteroids/shared/mesh_2",
+        "asteroids/shared/mesh_3",
+        "asteroids/shared/mesh_4"
+    ],
+    "density": {
+        "value": 3.0e-27,
+        "unit": "kg/m³"
+    }
+}

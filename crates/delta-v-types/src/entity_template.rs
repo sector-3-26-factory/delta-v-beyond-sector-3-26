@@ -8,7 +8,10 @@
 //!
 //! See ADR-0038 (entity template system) and ADR-0046 (shared types crate).
 
-use crate::celestial::{AsteroidTemplate, MoonTemplate, PlanetTemplate, SunTemplate};
+use crate::celestial::{
+    AsteroidBeltTemplate, AsteroidFieldTemplate, AsteroidTemplate, MoonTemplate, PlanetTemplate,
+    SunTemplate,
+};
 use crate::main_thruster::MainThrusterDefinition;
 use crate::maneuvering_thruster::ManeuveringThrusterDefinition;
 use crate::ship_templates::{AiShipTemplate, PlayerShipTemplate, ShipTemplate, StaticShipTemplate};
@@ -30,6 +33,10 @@ pub enum EntityTemplate {
     Moon(MoonTemplate),
     /// Asteroid template with SI units.
     Asteroid(AsteroidTemplate),
+    /// Asteroid belt template with SI units.
+    AsteroidBelt(AsteroidBeltTemplate),
+    /// Asteroid field template with SI units.
+    AsteroidField(AsteroidFieldTemplate),
     /// Base ship template with SI units.
     Ship(ShipTemplate),
     /// Player-controlled ship template with SI units.
@@ -57,6 +64,8 @@ impl EntityTemplate {
             Self::Planet(_) => "planet",
             Self::Moon(_) => "moon",
             Self::Asteroid(_) => "asteroid",
+            Self::AsteroidBelt(_) => "asteroid_belt",
+            Self::AsteroidField(_) => "asteroid_field",
             Self::Ship(_) | Self::StaticShip(_) => "ship",
             Self::PlayerShip(_) => "player_controlled_ship",
             Self::AiShip(_) => "ai_controlled_ship",
@@ -85,25 +94,6 @@ impl EntityTemplate {
         )
     }
 
-    /// Returns the mass in kilograms for this template.
-    #[must_use]
-    pub const fn mass(&self) -> f32 {
-        match self {
-            Self::Sun(t) => t.mass,
-            Self::Planet(t) => t.mass,
-            Self::Moon(t) => t.mass,
-            Self::Asteroid(t) => t.mass,
-            Self::Ship(t) => t.mass,
-            Self::PlayerShip(t) => t.mass,
-            Self::AiShip(t) => t.mass,
-            Self::StaticShip(t) => t.mass,
-            Self::Weapon(_)
-            | Self::Projectile(_)
-            | Self::MainThruster(_)
-            | Self::ManeuveringThruster(_) => 0.0,
-        }
-    }
-
     /// Returns the collision shape data for this template.
     #[must_use]
     pub fn collision_shape(&self) -> &crate::collision::CollisionShapeData {
@@ -112,11 +102,9 @@ impl EntityTemplate {
             Self::Planet(t) => &t.collision_shape,
             Self::Moon(t) => &t.collision_shape,
             Self::Asteroid(t) => &t.collision_shape,
-            Self::Ship(t) => &t.collision_shape,
-            Self::PlayerShip(t) => &t.collision_shape,
-            Self::AiShip(t) => &t.collision_shape,
-            Self::StaticShip(t) => &t.collision_shape,
-            Self::Weapon(_)
+            Self::AsteroidBelt(_)
+            | Self::AsteroidField(_)
+            | Self::Weapon(_)
             | Self::Projectile(_)
             | Self::MainThruster(_)
             | Self::ManeuveringThruster(_) => {
@@ -127,6 +115,10 @@ impl EntityTemplate {
                     };
                 &EMPTY
             }
+            Self::Ship(t) => &t.collision_shape,
+            Self::PlayerShip(t) => &t.collision_shape,
+            Self::AiShip(t) => &t.collision_shape,
+            Self::StaticShip(t) => &t.collision_shape,
         }
     }
 
@@ -138,11 +130,9 @@ impl EntityTemplate {
             Self::Planet(t) => &t.bounding_box,
             Self::Moon(t) => &t.bounding_box,
             Self::Asteroid(t) => &t.bounding_box,
-            Self::Ship(t) => &t.bounding_box,
-            Self::PlayerShip(t) => &t.bounding_box,
-            Self::AiShip(t) => &t.bounding_box,
-            Self::StaticShip(t) => &t.bounding_box,
-            Self::Weapon(_)
+            Self::AsteroidBelt(_)
+            | Self::AsteroidField(_)
+            | Self::Weapon(_)
             | Self::Projectile(_)
             | Self::MainThruster(_)
             | Self::ManeuveringThruster(_) => {
@@ -152,6 +142,10 @@ impl EntityTemplate {
                 };
                 &EMPTY
             }
+            Self::Ship(t) => &t.bounding_box,
+            Self::PlayerShip(t) => &t.bounding_box,
+            Self::AiShip(t) => &t.bounding_box,
+            Self::StaticShip(t) => &t.bounding_box,
         }
     }
 
@@ -163,11 +157,15 @@ impl EntityTemplate {
             Self::PlayerShip(t) => t.health,
             Self::AiShip(t) => t.health,
             Self::StaticShip(t) => t.health,
-            Self::Sun(t) => t.mass,      // Suns use mass as health proxy
-            Self::Planet(t) => t.mass,   // Planets use mass as health proxy
-            Self::Moon(t) => t.mass,     // Moons use mass as health proxy
-            Self::Asteroid(t) => t.mass, // Asteroids use mass as health proxy
-            Self::Weapon(_)
+            // Celestial bodies carry no Health component (ADR-0058 removed the
+            // template mass this used to proxy for), and neither do components.
+            Self::Sun(_)
+            | Self::Planet(_)
+            | Self::Moon(_)
+            | Self::Asteroid(_)
+            | Self::AsteroidBelt(_)
+            | Self::AsteroidField(_)
+            | Self::Weapon(_)
             | Self::Projectile(_)
             | Self::MainThruster(_)
             | Self::ManeuveringThruster(_) => 0.0,
@@ -187,6 +185,8 @@ impl EntityTemplate {
             | Self::Planet(_)
             | Self::Moon(_)
             | Self::Asteroid(_)
+            | Self::AsteroidBelt(_)
+            | Self::AsteroidField(_)
             | Self::Weapon(_)
             | Self::Projectile(_)
             | Self::MainThruster(_)
@@ -206,6 +206,8 @@ impl EntityTemplate {
             | Self::Planet(_)
             | Self::Moon(_)
             | Self::Asteroid(_)
+            | Self::AsteroidBelt(_)
+            | Self::AsteroidField(_)
             | Self::Weapon(_)
             | Self::Projectile(_)
             | Self::MainThruster(_)
@@ -226,6 +228,8 @@ impl EntityTemplate {
             | Self::Planet(_)
             | Self::Moon(_)
             | Self::Asteroid(_)
+            | Self::AsteroidBelt(_)
+            | Self::AsteroidField(_)
             | Self::Weapon(_)
             | Self::Projectile(_)
             | Self::MainThruster(_)

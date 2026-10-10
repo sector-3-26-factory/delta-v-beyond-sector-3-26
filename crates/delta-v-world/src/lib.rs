@@ -44,6 +44,10 @@
 
 pub mod resources;
 
+#[cfg(test)]
+#[path = "lib_tests.rs"]
+mod tests;
+
 pub use delta_v_core::SpawnEntity;
 pub use delta_v_types::{EntitySpawn, WorldDef};
 pub use resources::WorldDefResource;
@@ -51,8 +55,8 @@ pub use resources::WorldPath;
 
 use bevy::prelude::*;
 use delta_v_assets::template::{
-    load_ai_controlled_ship, load_asteroid, load_moon, load_planet, load_player_controlled_ship,
-    load_ship, load_sun, load_world,
+    load_ai_controlled_ship, load_asteroid, load_asteroid_belt, load_asteroid_field, load_moon,
+    load_planet, load_player_controlled_ship, load_ship, load_sun, load_world,
 };
 use delta_v_core::AppState;
 
@@ -185,6 +189,12 @@ fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
     } else if template_short.starts_with("asteroids/") {
         // INVARIANT: asteroid template is required by schema (ADR-0013)
         load_asteroid(template_short).expect("asteroid template must load successfully")
+    } else if template_short.starts_with("asteroid-belts/") {
+        // INVARIANT: asteroid belt template is required by schema (ADR-0013)
+        load_asteroid_belt(template_short).expect("asteroid belt template must load successfully")
+    } else if template_short.starts_with("asteroid-fields/") {
+        // INVARIANT: asteroid field template is required by schema (ADR-0013)
+        load_asteroid_field(template_short).expect("asteroid field template must load successfully")
     } else if template_short.starts_with("suns/") {
         // INVARIANT: sun template is required by schema (ADR-0013)
         load_sun(template_short).expect("sun template must load successfully")
@@ -236,6 +246,16 @@ fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
     // Mass is NOT scaled - it is used as-is or overridden.
     if let Some(mass) = entity_spawn.mass {
         spawn_event = spawn_event.with_mass(mass);
+    }
+
+    // Pass through asteroid belt parameters if present.
+    if let Some(belt_params) = entity_spawn.asteroid_belt_parameters.clone() {
+        spawn_event.asteroid_belt_parameters = Some(belt_params);
+    }
+
+    // Pass through asteroid field parameters if present.
+    if let Some(field_params) = entity_spawn.asteroid_field_parameters.clone() {
+        spawn_event.asteroid_field_parameters = Some(field_params);
     }
 
     spawn_event

@@ -191,7 +191,9 @@ fn spawn_player_ship(
         event.position.y,
         event.position.z,
         event.template_path,
-        template.mass,
+        event
+            .mass
+            .map_or_else(|| "unset".to_string(), |m| format!("{m}")),
     );
 }
 
@@ -231,7 +233,9 @@ fn spawn_static_ship(
         event.position.y,
         event.position.z,
         event.template_path,
-        template.mass,
+        event
+            .mass
+            .map_or_else(|| "unset".to_string(), |m| format!("{m}")),
     );
 }
 

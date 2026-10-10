@@ -58,8 +58,10 @@ pub mod world_def;
 
 pub use ai::{AiConfig, AiConfigJson, AiTask, AiTaskJson};
 pub use celestial::{
-    AsteroidTemplate, AsteroidTemplateJson, LightColorJson, MoonTemplate, MoonTemplateJson,
-    PlanetTemplate, PlanetTemplateJson, SunTemplate, SunTemplateJson,
+    AsteroidBeltTemplate, AsteroidBeltTemplateJson, AsteroidFieldTemplate,
+    AsteroidFieldTemplateJson, AsteroidTemplate, AsteroidTemplateJson, LightColorJson,
+    MoonTemplate, MoonTemplateJson, PlanetTemplate, PlanetTemplateJson, SunTemplate,
+    SunTemplateJson,
 };
 pub use collision::layers::PROJECTILE;
 pub use collision::{
@@ -74,7 +76,7 @@ pub use logical_action::LogicalAction;
 pub use main_thruster::{MainThrusterDefinition, MainThrusterDefinitionJson};
 pub use maneuvering_thruster::{ManeuveringThrusterDefinition, ManeuveringThrusterDefinitionJson};
 pub use navigation::{EntityType, WorldEntityId};
-pub use physics::{PhysicalQuantityJson, RigidBodyData, resolve_mass};
+pub use physics::{PhysicalQuantityJson, RigidBodyData, require_mass};
 pub use player_settings::PlayerSettings;
 pub use propulsion::{PropulsionConfig, ShipPropulsionTemplate};
 pub use ship_templates::{

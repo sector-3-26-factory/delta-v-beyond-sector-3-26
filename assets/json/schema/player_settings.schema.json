@@ -6,13 +6,21 @@
     "type": "object",
     "additionalProperties": false,
     "required": [
-        "language"
+        "language",
+        "detail_level"
     ],
     "properties": {
         "language": {
             "description": "ISO 639-1 language code for UI translations (e.g. 'en', 'de'). The game loads assets/i18n/<language>.json at startup.",
             "type": "string",
             "default": "en"
+        },
+        "detail_level": {
+            "description": "Procedural generation detail level for asteroid belts and fields. A unitless factor in (0, 1] that deterministically filters generated bodies. 1.0 = all bodies, 0.5 = half the bodies. Per ADR-0012, default is in schema only.",
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 1.0
         }
     }
 }

@@ -1,9 +1,5 @@
 {
     "entity_type": "ship",
-    "mass": {
-        "value": 1000.0,
-        "unit": "kg"
-    },
     "bounding_box": {
         "min": {
             "x": -1.0,

@@ -152,15 +152,15 @@ fn navigation_menu_content(
                 Interaction::default(),
             ));
 
-            // ID column
+            // Name column (display name from Name component or entity_id fallback)
             grid.spawn((
-                Name::new(format!("Id_{index}")),
+                Name::new(format!("Name_{index}")),
                 Node {
                     grid_column: GridPlacement::start(2),
                     ..default()
                 },
                 BackgroundColor(row_bg_color),
-                Text::new(&entry.entity_id),
+                Text::new(&entry.display_name),
                 TextFont {
                     font: bevy::prelude::FontSource::Handle(theme.font.clone()),
                     font_size: UiTheme::TEXT_FONT_SIZE,

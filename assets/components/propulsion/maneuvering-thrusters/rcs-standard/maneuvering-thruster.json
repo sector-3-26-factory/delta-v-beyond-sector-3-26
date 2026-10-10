@@ -2,7 +2,7 @@
     "type": "rcs",
     "max_torque": {
         "value": 50000,
-        "unit": "N\u22c5m"
+        "unit": "N⋅m"
     },
     "max_strafe_thrust": {
         "value": 50000,

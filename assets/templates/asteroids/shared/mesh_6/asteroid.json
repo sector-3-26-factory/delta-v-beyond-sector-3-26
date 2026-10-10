@@ -1,0 +1,40 @@
+{
+    "entity_type": "asteroid",
+    "collision_shape": {
+        "type": "sphere",
+        "radius": {
+            "value": 3.988297,
+            "unit": "m"
+        }
+    },
+    "bounding_box": {
+        "min": {
+            "x": {
+                "value": -3.605635,
+                "unit": "m"
+            },
+            "y": {
+                "value": -3.988297,
+                "unit": "m"
+            },
+            "z": {
+                "value": -3.192271,
+                "unit": "m"
+            }
+        },
+        "max": {
+            "x": {
+                "value": 3.605635,
+                "unit": "m"
+            },
+            "y": {
+                "value": 3.988297,
+                "unit": "m"
+            },
+            "z": {
+                "value": 3.192271,
+                "unit": "m"
+            }
+        }
+    }
+}

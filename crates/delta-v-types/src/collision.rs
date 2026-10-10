@@ -38,32 +38,39 @@ pub mod layers {
     //! Collision layer constants.
 
     /// Layer for ships (player and NPCs).
-    ///
-    /// Ships are on layer 1 and can collide with ships and asteroids.
     pub const SHIP_LAYER: u32 = 1;
 
-    /// Layer for asteroids (static obstacles).
-    ///
-    /// Asteroids are on layer 2 and can collide with ships (`SHIP_LAYER`).
+    /// Layer for asteroids.
     pub const ASTEROID_LAYER: u32 = 2;
 
-    /// Collision layers for ships: on `SHIP_LAYER`, can collide with `SHIP_LAYER` and `ASTEROID_LAYER`.
-    pub const SHIP: super::CollisionLayers =
-        super::CollisionLayers::new(SHIP_LAYER, SHIP_LAYER | ASTEROID_LAYER);
-
-    /// Collision layers for asteroids: on `ASTEROID_LAYER`, can collide with `SHIP_LAYER`.
-    pub const ASTEROID: super::CollisionLayers =
-        super::CollisionLayers::new(ASTEROID_LAYER, SHIP_LAYER);
-
     /// Layer for projectiles (weapons fire).
-    ///
-    /// Projectiles are on layer 3 and can collide with ships (`SHIP_LAYER`)
-    /// and asteroids (`ASTEROID_LAYER`).
     pub const PROJECTILE_LAYER: u32 = 3;
 
-    /// Collision layers for projectiles: on `PROJECTILE_LAYER`, can collide with `SHIP_LAYER` and `ASTEROID_LAYER`.
+    /// Layer for celestial bodies: suns, planets and moons.
+    pub const CELESTIAL_LAYER: u32 = 4;
+
+    /// Every layer, and what every body collides with.
+    ///
+    /// Nothing is excluded from collision: a ship hits a moon, a shot hits a
+    /// planet, and two moons on crossing paths register a collision. The layers
+    /// name the kinds of body; they do not partition them.
+    pub const ALL_LAYERS: u32 = SHIP_LAYER | ASTEROID_LAYER | PROJECTILE_LAYER | CELESTIAL_LAYER;
+
+    /// Collision layers for ships: on `SHIP_LAYER`, colliding with everything.
+    pub const SHIP: super::CollisionLayers = super::CollisionLayers::new(SHIP_LAYER, ALL_LAYERS);
+
+    /// Collision layers for asteroids: on `ASTEROID_LAYER`, colliding with everything.
+    pub const ASTEROID: super::CollisionLayers =
+        super::CollisionLayers::new(ASTEROID_LAYER, ALL_LAYERS);
+
+    /// Collision layers for projectiles: on `PROJECTILE_LAYER`, colliding with everything.
     pub const PROJECTILE: super::CollisionLayers =
-        super::CollisionLayers::new(PROJECTILE_LAYER, SHIP_LAYER | ASTEROID_LAYER);
+        super::CollisionLayers::new(PROJECTILE_LAYER, ALL_LAYERS);
+
+    /// Collision layers for celestial bodies: on `CELESTIAL_LAYER`, colliding with
+    /// everything.
+    pub const CELESTIAL: super::CollisionLayers =
+        super::CollisionLayers::new(CELESTIAL_LAYER, ALL_LAYERS);
 }
 
 /// Supported collision shape types.

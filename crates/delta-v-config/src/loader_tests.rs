@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Unit tests for the configuration loader.
 //!
 //! See ADR-0021 (Testing strategy).
