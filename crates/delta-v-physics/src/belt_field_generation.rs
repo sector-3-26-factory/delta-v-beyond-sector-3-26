@@ -57,6 +57,8 @@ pub struct GeneratedAsteroid {
     pub bounding_box: delta_v_types::BoundingBox,
     /// Orbital parameters for Keplerian motion.
     pub orbital_params: Option<OrbitalParams>,
+    /// Current velocity in world space (for displaced asteroids).
+    pub velocity: Vec3,
 }
 
 /// Orbital parameters for a generated asteroid.
@@ -309,22 +311,41 @@ fn stable_hash_field(seed: u64, field_id: &str, body_index: u64, stream: &str) -
 }
 
 /// Picks a mesh from the template's mesh list using a hash.
+///
+/// # Panics
+/// Panics if `meshes` is empty - this indicates an invalid template that should
+/// have been caught by schema validation (ADR-0013: no silent fallbacks).
+#[allow(
+    clippy::expect_used,
+    reason = "ADR-0013: invalid template is a hard error, not a silent fallback"
+)]
 fn pick_mesh(meshes: &[String], hash: u64) -> String {
-    if meshes.is_empty() {
-        return "asteroids/shared/mesh_1".to_string();
-    }
-    let index = usize::try_from(hash).unwrap_or(0) % meshes.len();
+    assert!(
+        !meshes.is_empty(),
+        "Template must have at least one mesh (schema validation should prevent this)"
+    );
+    // INVARIANT: hash is u64 and we target 64-bit only (usize = u64), so conversion never fails.
+    let index = usize::try_from(hash).expect("hash fits in usize on 64-bit targets") % meshes.len();
     meshes
         .get(index)
         .cloned()
-        .unwrap_or_else(|| "asteroids/shared/mesh_1".to_string())
+        .expect("Index within bounds due to modulo operation")
 }
 
 /// Picks a radius from the size distribution using a hash.
+///
+/// # Panics
+/// Panics if `distribution` is empty - this indicates an invalid template that should
+/// have been caught by schema validation (ADR-0013: no silent fallbacks).
+#[allow(
+    clippy::panic,
+    reason = "ADR-0013: invalid template is a hard error, not a silent fallback; this is a logic error if reached"
+)]
 fn pick_radius(distribution: &[SizeDistributionEntry], hash: u64) -> f32 {
-    if distribution.is_empty() {
-        return 1000.0; // Default 1km
-    }
+    assert!(
+        !distribution.is_empty(),
+        "Template must have at least one size distribution entry (schema validation should prevent this)"
+    );
 
     let total_weight: f32 = distribution.iter().map(|e| e.weight).sum();
     // Use f64 for intermediate calculation to avoid precision loss
@@ -340,8 +361,11 @@ fn pick_radius(distribution: &[SizeDistributionEntry], hash: u64) -> f32 {
         }
     }
 
-    // Fallback to last entry (distribution is non-empty, so this is safe)
-    distribution.last().map_or(1000.0, |e| e.radius)
+    // This should never be reached if total_weight > 0 and hash is valid,
+    // but we include a fallback with a clear panic message for safety.
+    panic!(
+        "pick_radius: failed to select radius from distribution (total_weight={total_weight}, hash={hash}) - this indicates a logic error"
+    );
 }
 
 /// Generates a random rotation from a hash.
@@ -591,6 +615,7 @@ pub fn generate_belt_sector(params: &BeltSectorParams) -> Vec<GeneratedAsteroid>
                 orbital_inclination,
                 initial_orbital_angle,
             }),
+            velocity: Vec3::ZERO,
         });
     }
 
@@ -703,6 +728,7 @@ pub fn generate_field(params: &FieldParams) -> Vec<GeneratedAsteroid> {
             collision_shape,
             bounding_box,
             orbital_params,
+            velocity: Vec3::ZERO,
         });
     }
 

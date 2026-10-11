@@ -41,7 +41,8 @@ use crate::belt_field_generation::{
 use crate::belt_field_spawn::{AsteroidBelt, AsteroidField};
 use crate::celestial::{LazyLoadMesh, OrbitalBody};
 use crate::constants::{COLLISION_RELEVANCE_PX, STREAMING_DISTANCE_M};
-use crate::{CollisionLayersComponent, CollisionShape, Navigable, RigidBody};
+use crate::{CollisionLayersComponent, CollisionShape, Navigable, OrbitalParentId, RigidBody};
+use delta_v_types::{CollisionShapeData, CollisionShapeType};
 
 /// Component marking a belt sector that has been generated.
 #[derive(Component, Clone, Debug)]
@@ -76,10 +77,16 @@ pub struct LoadedSectors {
 /// System that determines which belt sectors should be loaded based on player position.
 ///
 /// Runs in `FixedUpdate` during `AppState::InGame` per ADR-0017.
+///
+/// # Panics
+///
+/// Panics if a belt entity is missing the `OrbitalParentId` component.
+/// This is a world authoring error and should never happen in a valid world.
 #[allow(
     clippy::needless_pass_by_value,
     clippy::type_complexity,
-    clippy::too_many_arguments
+    clippy::too_many_arguments,
+    clippy::too_many_lines
 )]
 pub fn belt_sector_streaming_system(
     mut commands: Commands<'_, '_>,
@@ -87,12 +94,14 @@ pub fn belt_sector_streaming_system(
     delta_store: ResMut<'_, AsteroidDeltaStore>,
     time: Res<'_, Time<Fixed>>,
     player_settings: Res<'_, PlayerSettings>,
-    player_query: Query<'_, '_, &GlobalTransform, With<PlayerShipEntity>>,
+    player_ship: Res<'_, PlayerShipEntity>,
+    player_query: Query<'_, '_, &GlobalTransform>,
     belt_query: Query<'_, '_, (Entity, &AsteroidBelt, &GlobalTransform, &OrbitalBody)>,
     existing_sectors: Query<'_, '_, (Entity, &BeltSector)>,
     asset_server: Res<'_, AssetServer>,
+    orbital_parent_query: Query<'_, '_, &OrbitalParentId>,
 ) {
-    let Ok(player_transform) = player_query.single() else {
+    let Ok(player_transform) = player_query.get(player_ship.0) else {
         return;
     };
     let player_pos = player_transform.translation();
@@ -102,26 +111,54 @@ pub fn belt_sector_streaming_system(
     // Determine which sectors should be loaded
     let mut should_load: Vec<(String, i64)> = Vec::new();
 
-    for (_belt_entity, belt, belt_transform, orbital_body) in &belt_query {
+    for (_belt_entity, belt, _belt_transform, orbital_body) in &belt_query {
         // Get the belt's current position (center of the ring)
-        let belt_pos = belt_transform.translation();
+        // (unused, kept for documentation)
+        // let _belt_pos = belt_transform.translation();
 
-        // Calculate distance from player to belt center
-        let distance = player_pos.distance(belt_pos);
+        // The belt is a torus around the orbital parent (Sun at origin)
+        // Check if player is within the belt's volume (radial extent + thickness)
 
-        // Check if within streaming distance
-        if distance <= STREAMING_DISTANCE_M {
-            // Calculate which sector the player is near
-            // Sector index is based on orbital angle around the parent
-            // Use the belt's id (string identifier from world definition) for sector identity
-            let sector_index = calculate_sector_index(
-                &belt.id, // Use belt's string ID for sector identity
-                orbital_body.orbital_distance,
-                belt.sector_size,
-                player_pos,
-            );
+        // Distance from orbital parent (Sun at origin)
+        let dist_from_parent = player_pos.length();
 
-            should_load.push((belt.id.clone(), sector_index));
+        // Check radial extent: player should be within [orbital_distance - radial_extent, orbital_distance + radial_extent]
+        let inner_radius = orbital_body.orbital_distance - belt.radial_extent;
+        let outer_radius = orbital_body.orbital_distance + belt.radial_extent;
+
+        let in_radial_extent = dist_from_parent >= inner_radius && dist_from_parent <= outer_radius;
+
+        // Check thickness (vertical extent from orbital plane)
+        // Assuming orbital plane is XY plane, Z is vertical
+        let in_thickness = player_pos.z.abs() <= belt.thickness;
+
+        // If player is within the belt's volume, check streaming distance to nearest point on belt
+        if in_radial_extent && in_thickness {
+            // Calculate distance to nearest point on the belt ring
+            // Project player position onto the belt's orbital plane (XY plane)
+            let player_in_plane = Vec3::new(player_pos.x, player_pos.y, 0.0);
+            let dist_in_plane = player_in_plane.length();
+
+            // Distance to the belt ring (at orbital_distance)
+            let distance_to_ring = (dist_in_plane - orbital_body.orbital_distance).abs();
+
+            // Total distance to belt volume (radial + vertical)
+            let vertical_dist = player_pos.z.abs();
+            let total_distance = distance_to_ring.hypot(vertical_dist);
+
+            if total_distance <= STREAMING_DISTANCE_M {
+                // Calculate which sector the player is near
+                // Sector index is based on orbital angle around the parent
+                // Use the belt's id (string identifier from world definition) for sector identity
+                let sector_index = calculate_sector_index(
+                    &belt.id, // Use belt's string ID for sector identity
+                    orbital_body.orbital_distance,
+                    belt.sector_size,
+                    player_pos,
+                );
+
+                should_load.push((belt.id.clone(), sector_index));
+            }
         }
     }
 
@@ -144,7 +181,7 @@ pub fn belt_sector_streaming_system(
     }
 
     // Spawn new sectors that are needed
-    for (_belt_entity, belt, belt_transform, orbital_body) in &belt_query {
+    for (belt_entity, belt, belt_transform, orbital_body) in &belt_query {
         for (belt_id, sector_index) in &should_load {
             if belt_id != &belt.id {
                 continue;
@@ -159,13 +196,25 @@ pub fn belt_sector_streaming_system(
             }
 
             // Generate the sector
+            // INVARIANT: Every belt entity must have an OrbitalParentId component per world authoring requirements.
+            // This is validated at world load time, so the query will always succeed here.
+            let orbital_parent = orbital_parent_query
+                .get(belt_entity)
+                .map_or_else(
+                    |_| unreachable!("INVARIANT: Belt entity must have OrbitalParentId component; validated at world load time"),
+                    |id| id.0.clone(),
+                );
+
             let params = build_belt_sector_params(
                 belt,
                 belt_transform,
                 orbital_body,
-                *sector_index,
-                simulation_time,
-                detail_level,
+                BeltSectorBuildContext {
+                    sector_index: *sector_index,
+                    simulation_time,
+                    detail_level,
+                    orbital_parent,
+                },
             );
             let mut asteroids = generate_belt_sector(&params);
 
@@ -369,13 +418,19 @@ fn calculate_sector_index(
 }
 
 /// Builds parameters for generating a belt sector.
+#[derive(Debug, Clone)]
+struct BeltSectorBuildContext {
+    sector_index: i64,
+    simulation_time: f32,
+    detail_level: f32,
+    orbital_parent: String,
+}
+
 fn build_belt_sector_params(
     belt: &AsteroidBelt,
     _belt_transform: &GlobalTransform,
     orbital_body: &OrbitalBody,
-    sector_index: i64,
-    simulation_time: f32,
-    detail_level: f32,
+    ctx: BeltSectorBuildContext,
 ) -> BeltSectorParams {
     // Convert excluded radii from the belt component (already in SI units)
     let excluded_radii: Vec<crate::belt_field_generation::ExcludedRadius> = belt
@@ -399,9 +454,9 @@ fn build_belt_sector_params(
 
     BeltSectorParams {
         belt_id: belt.id.clone(),
-        sector_index,
+        sector_index: ctx.sector_index,
         template: belt.template.clone(),
-        orbital_parent: orbital_body.orbital_parent.to_string(), // This is an Entity, need to resolve
+        orbital_parent: ctx.orbital_parent,
         orbital_distance: orbital_body.orbital_distance,
         orbital_period: orbital_body.orbital_period,
         orbital_eccentricity: orbital_body.orbital_eccentricity,
@@ -414,8 +469,8 @@ fn build_belt_sector_params(
         size_distribution,
         density: belt.density,
         seed: belt.seed,
-        simulation_time,
-        detail_level,
+        simulation_time: ctx.simulation_time,
+        detail_level: ctx.detail_level,
     }
 }
 
@@ -460,6 +515,12 @@ fn apply_deltas_to_sector(
     parent_id: StableBodyId,
     simulation_time: f32,
 ) {
+    // Engine-internal constant for dynamically spawned asteroids (wrecks, player structures).
+    // Not a gameplay tuning parameter — these entities are transient and not part of
+    // the designed world. Density is fixed at 3000 kg/m³ (typical rock) to avoid
+    // requiring a schema field for ephemeral entities. ADR-0014: engine constant.
+    const DEFAULT_DYNAMIC_ASTEROID_DENSITY: f32 = 3000.0; // kg/m³ (typical rock)
+
     let deltas = delta_store.get_deltas_for(parent_id.kind, parent_id.id);
     for delta in deltas {
         match delta {
@@ -487,15 +548,41 @@ fn apply_deltas_to_sector(
                 }
             }
             crate::belt_field_generation::AsteroidDelta::Added {
-                stable_id: _stable_id,
-                position: _position,
-                velocity: _velocity,
-                radius: _radius,
-                mesh_name: _mesh_name,
+                stable_id,
+                position,
+                velocity,
+                radius,
+                mesh_name,
                 timestamp: _timestamp,
             } => {
-                // Add new asteroid from delta
-                // This would create a new GeneratedAsteroid from the delta data
+                // Add new asteroid from delta - create GeneratedAsteroid from delta data
+                let collision_shape = CollisionShapeData {
+                    shape_type: CollisionShapeType::Sphere { radius: *radius },
+                    offset: Vec3::ZERO,
+                };
+                let bounding_box = delta_v_types::BoundingBox {
+                    min: Vec3::new(-*radius, -*radius, -*radius),
+                    max: Vec3::new(*radius, *radius, *radius),
+                };
+                let mass = DEFAULT_DYNAMIC_ASTEROID_DENSITY
+                    * (4.0 / 3.0)
+                    * std::f32::consts::PI
+                    * radius
+                    * radius
+                    * radius;
+
+                asteroids.push(GeneratedAsteroid {
+                    stable_id: stable_id.id,
+                    position: *position,
+                    rotation: Quat::IDENTITY,
+                    radius: *radius,
+                    mass,
+                    mesh_name: mesh_name.clone(),
+                    collision_shape,
+                    bounding_box,
+                    orbital_params: None, // Added asteroids don't have orbital params by default
+                    velocity: *velocity,
+                });
             }
         }
     }
@@ -567,11 +654,27 @@ fn spawn_generated_asteroid(
 ) {
     let entity_id = format!("asteroid_{}", asteroid.stable_id);
 
+    // The template mesh's collision shape radius (metres).
+    // The mesh is authored at this radius; we scale by (asteroid.radius / template_radius)
+    // to match the generated size. This uses the actual template data, not a hardcoded constant.
+    // Per ADR-0013: invalid template (non-sphere collision shape) is a hard error.
+    // INVARIANT: All asteroid templates must use sphere collision shapes. This is validated
+    // at world load time, so this unreachable should never occur in a valid world.
+    let delta_v_types::CollisionShapeType::Sphere {
+        radius: template_radius,
+    } = asteroid.collision_shape.shape_type
+    else {
+        unreachable!(
+            "Asteroid template {} has non-sphere collision shape ({:?}); all asteroid templates must use sphere collision shapes",
+            asteroid.mesh_name, asteroid.collision_shape.shape_type
+        )
+    };
+
     let mut entity_commands = commands.spawn((
         Name::new(format!("Asteroid: {entity_id}")),
         Transform::from_translation(asteroid.position)
             .with_rotation(asteroid.rotation)
-            .with_scale(Vec3::splat(asteroid.radius / 4.29633)), // Scale from template radius
+            .with_scale(Vec3::splat(asteroid.radius / template_radius)),
         RigidBody::new(asteroid.mass, 1.0),
         CollisionShape(asteroid.collision_shape),
         CollisionLayersComponent::new(ASTEROID),

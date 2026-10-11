@@ -8,11 +8,11 @@
       "player_controlled": true,
       "position": {
         "x": {
-          "value": 778600000000.0,
+          "value": 380500000000.0,
           "unit": "m"
         },
         "y": {
-          "value": 0.0,
+          "value": 500000000.0,
           "unit": "m"
         },
         "z": {
@@ -19161,6 +19161,16 @@
           },
           {
             "orbital_distance": {
+              "value": 380000000000.0,
+              "unit": "m"
+            },
+            "gap_radius": {
+              "value": 500000000.0,
+              "unit": "m"
+            }
+          },
+          {
+            "orbital_distance": {
               "value": 422000000000.0,
               "unit": "m"
             },
@@ -19219,6 +19229,48 @@
           "value": 2.8e-29,
           "unit": "kg/m³"
         }
+      }
+    },
+    {
+      "template": "asteroids/daphne-planetoid-sebastiansosnowski",
+      "id": "daphne",
+      "position": {
+        "x": {
+          "value": 380000000000.0,
+          "unit": "m"
+        },
+        "y": {
+          "value": 0,
+          "unit": "m"
+        },
+        "z": {
+          "value": 0,
+          "unit": "m"
+        }
+      },
+      "orbital_parameters": {
+        "orbital_parent": "sun",
+        "orbital_distance": {
+          "value": 380000000000.0,
+          "unit": "m"
+        },
+        "orbital_period": {
+          "value": 120000000.0,
+          "unit": "s"
+        },
+        "orbital_eccentricity": 0.18,
+        "orbital_inclination": {
+          "value": 15.0,
+          "unit": "deg"
+        },
+        "initial_orbital_angle": {
+          "value": 0.0,
+          "unit": "deg"
+        }
+      },
+      "mass": {
+        "value": 2.5e19,
+        "unit": "kg"
       }
     },
     {
