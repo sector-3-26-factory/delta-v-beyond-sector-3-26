@@ -301,6 +301,9 @@ impl Plugin for PhysicsPlugin {
             (sun_fallback_vfx_system, update_sun_fallback_vfx_system)
                 .run_if(in_state(AppState::InGame)),
         );
+
+        // Belt and field streaming plugin
+        app.add_plugins(crate::belt_field_streaming::BeltFieldStreamingPlugin);
     }
 }
 

@@ -28,7 +28,7 @@
 //! - Moons are NOT streamed (they exist from world load)
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, PlayerShipEntity, Targetable, WorldEntityId};
+use delta_v_core::{AppState, FloatingOrigin, PlayerShipEntity, Targetable, WorldEntityId};
 use delta_v_types::PlayerSettings;
 use delta_v_types::collision::layers::ASTEROID;
 use std::hash::{Hash, Hasher};
@@ -99,7 +99,12 @@ pub fn belt_sector_streaming_system(
     belt_query: Query<'_, '_, (Entity, &AsteroidBelt, &GlobalTransform, &OrbitalBody)>,
     existing_sectors: Query<'_, '_, (Entity, &BeltSector)>,
     asset_server: Res<'_, AssetServer>,
-    orbital_parent_query: Query<'_, '_, &OrbitalParentId>,
+    _orbital_parent_query: Query<'_, '_, &OrbitalParentId>,
+    floating_origin: Res<'_, FloatingOrigin>,
+    // Need to query parent transforms for orbital bodies
+    parent_query: Query<'_, '_, &GlobalTransform>,
+    // Need to get WorldEntityId of orbital parent
+    world_entity_query: Query<'_, '_, &WorldEntityId>,
 ) {
     let Ok(player_transform) = player_query.get(player_ship.0) else {
         return;
@@ -111,54 +116,95 @@ pub fn belt_sector_streaming_system(
     // Determine which sectors should be loaded
     let mut should_load: Vec<(String, i64)> = Vec::new();
 
+    let player_local_pos = player_pos;
+    let player_abs_pos = floating_origin.to_absolute(player_local_pos);
+
     for (_belt_entity, belt, _belt_transform, orbital_body) in &belt_query {
-        // Get the belt's current position (center of the ring)
-        // (unused, kept for documentation)
-        // let _belt_pos = belt_transform.translation();
+        // Get the orbital parent's absolute position
+        let Ok(parent_transform) = parent_query.get(orbital_body.orbital_parent) else {
+            tracing::warn!(
+                "[belt_streaming] Orbital parent not found for belt {:?} (parent_entity={:?})",
+                belt.id,
+                orbital_body.orbital_parent
+            );
+            continue;
+        };
+        let parent_abs_pos = parent_transform.translation();
 
-        // The belt is a torus around the orbital parent (Sun at origin)
-        // Check if player is within the belt's volume (radial extent + thickness)
+        // Player position relative to orbital parent (in absolute coordinates)
+        let player_rel_parent = player_abs_pos - parent_abs_pos;
 
-        // Distance from orbital parent (Sun at origin)
-        let dist_from_parent = player_pos.length();
+        // Find nearest sector index using player's position relative to parent
+        let sector_index = find_nearest_sector_index(
+            &belt.id,
+            orbital_body.orbital_distance,
+            belt.sector_size,
+            player_rel_parent,
+        );
 
-        // Check radial extent: player should be within [orbital_distance - radial_extent, orbital_distance + radial_extent]
-        let inner_radius = orbital_body.orbital_distance - belt.radial_extent;
-        let outer_radius = orbital_body.orbital_distance + belt.radial_extent;
+        tracing::debug!(
+            "[belt_streaming] Belt '{}': parent_abs_pos = {:?}, player_rel_parent = {:?}, sector_index = {}",
+            belt.id,
+            parent_abs_pos,
+            player_rel_parent,
+            sector_index
+        );
 
-        let in_radial_extent = dist_from_parent >= inner_radius && dist_from_parent <= outer_radius;
+        // Calculate player's distance from orbital parent (radial distance)
+        let player_dist_from_parent = player_rel_parent.length();
+        let player_z = player_rel_parent.z.abs();
 
-        // Check thickness (vertical extent from orbital plane)
-        // Assuming orbital plane is XY plane, Z is vertical
-        let in_thickness = player_pos.z.abs() <= belt.thickness;
+        // Belt volume: torus from (orbital_distance - radial_extent/2) to (orbital_distance + radial_extent/2)
+        // with vertical thickness of ±thickness/2
+        let belt_inner_radius = orbital_body.orbital_distance - belt.radial_extent / 2.0;
+        let belt_outer_radius = orbital_body.orbital_distance + belt.radial_extent / 2.0;
+        let belt_half_thickness = belt.thickness / 2.0;
 
-        // If player is within the belt's volume, check streaming distance to nearest point on belt
-        if in_radial_extent && in_thickness {
-            // Calculate distance to nearest point on the belt ring
-            // Project player position onto the belt's orbital plane (XY plane)
-            let player_in_plane = Vec3::new(player_pos.x, player_pos.y, 0.0);
-            let dist_in_plane = player_in_plane.length();
+        // Distance from player to belt volume
+        let radial_distance = if player_dist_from_parent < belt_inner_radius {
+            belt_inner_radius - player_dist_from_parent
+        } else if player_dist_from_parent > belt_outer_radius {
+            player_dist_from_parent - belt_outer_radius
+        } else {
+            0.0 // Inside radial extent
+        };
 
-            // Distance to the belt ring (at orbital_distance)
-            let distance_to_ring = (dist_in_plane - orbital_body.orbital_distance).abs();
+        let vertical_distance = if player_z > belt_half_thickness {
+            player_z - belt_half_thickness
+        } else {
+            0.0 // Inside thickness
+        };
 
-            // Total distance to belt volume (radial + vertical)
-            let vertical_dist = player_pos.z.abs();
-            let total_distance = distance_to_ring.hypot(vertical_dist);
+        let distance_to_belt = radial_distance.hypot(vertical_distance);
 
-            if total_distance <= STREAMING_DISTANCE_M {
-                // Calculate which sector the player is near
-                // Sector index is based on orbital angle around the parent
-                // Use the belt's id (string identifier from world definition) for sector identity
-                let sector_index = calculate_sector_index(
-                    &belt.id, // Use belt's string ID for sector identity
-                    orbital_body.orbital_distance,
-                    belt.sector_size,
-                    player_pos,
-                );
+        tracing::debug!(
+            "[belt_streaming] Belt '{}': player_dist_from_parent={:.2}m, player_z={:.2}m, belt_inner={:.2}m, belt_outer={:.2}m, belt_half_thickness={:.2}m, radial_dist={:.2}m, vertical_dist={:.2}m, distance_to_belt={:.2}m (streaming_dist={:.2}m)",
+            belt.id,
+            player_dist_from_parent,
+            player_z,
+            belt_inner_radius,
+            belt_outer_radius,
+            belt_half_thickness,
+            radial_distance,
+            vertical_distance,
+            distance_to_belt,
+            STREAMING_DISTANCE_M
+        );
 
-                should_load.push((belt.id.clone(), sector_index));
-            }
+        // Check if player is within streaming distance of the belt volume
+        if distance_to_belt <= STREAMING_DISTANCE_M {
+            // Load only the nearest sector (not neighbors) to reduce asteroid count
+            tracing::debug!(
+                "[belt_streaming] Belt '{}' sector {}: LOADING (within streaming distance of belt volume)",
+                belt.id,
+                sector_index
+            );
+            should_load.push((belt.id.clone(), sector_index));
+        } else {
+            tracing::debug!(
+                "[belt_streaming] Belt '{}': OUTSIDE streaming distance of belt volume, skipping",
+                belt.id
+            );
         }
     }
 
@@ -181,7 +227,7 @@ pub fn belt_sector_streaming_system(
     }
 
     // Spawn new sectors that are needed
-    for (belt_entity, belt, belt_transform, orbital_body) in &belt_query {
+    for (_belt_entity, belt, belt_transform, orbital_body) in &belt_query {
         for (belt_id, sector_index) in &should_load {
             if belt_id != &belt.id {
                 continue;
@@ -195,15 +241,29 @@ pub fn belt_sector_streaming_system(
                 continue;
             }
 
-            // Generate the sector
-            // INVARIANT: Every belt entity must have an OrbitalParentId component per world authoring requirements.
-            // This is validated at world load time, so the query will always succeed here.
-            let orbital_parent = orbital_parent_query
-                .get(belt_entity)
-                .map_or_else(
-                    |_| unreachable!("INVARIANT: Belt entity must have OrbitalParentId component; validated at world load time"),
-                    |id| id.0.clone(),
+            // Get the orbital parent's absolute position
+            let Ok(parent_transform) = parent_query.get(orbital_body.orbital_parent) else {
+                tracing::warn!(
+                    "[belt_streaming] Orbital parent not found for belt {:?} (parent_entity={:?})",
+                    belt.id,
+                    orbital_body.orbital_parent
                 );
+                continue;
+            };
+            let parent_abs_pos = parent_transform.translation();
+
+            // Generate the sector
+            // The OrbitalBody component already has the resolved orbital_parent entity.
+            // We need to get the WorldEntityId of that parent entity.
+            let orbital_parent_entity = orbital_body.orbital_parent;
+            let orbital_parent = world_entity_query.get(orbital_parent_entity).map_or_else(
+                |_| {
+                    unreachable!(
+                        "INVARIANT: Orbital parent entity must have WorldEntityId component"
+                    )
+                },
+                |id| id.0.clone(),
+            );
 
             let params = build_belt_sector_params(
                 belt,
@@ -235,10 +295,28 @@ pub fn belt_sector_streaming_system(
             // Separate overlaps
             separate_overlaps(&mut asteroids);
 
-            // Spawn the asteroids
+            let asteroid_count = asteroids.len();
+            tracing::debug!(
+                "[belt_streaming] Belt '{}' sector {}: spawning {} asteroids",
+                belt.id,
+                sector_index,
+                asteroid_count
+            );
+
+            // Calculate sector's absolute position (sector center in absolute coordinates)
+            let sector_world = sector_world_position(
+                &belt.id,
+                *sector_index,
+                orbital_body.orbital_distance,
+                belt.sector_size,
+            );
+            let sector_abs_pos = parent_abs_pos + sector_world;
+
+            // Spawn the sector entity at its absolute position
             let sector_entity = commands
                 .spawn((
                     Name::new(format!("BeltSector: {belt_id} sector {sector_index}")),
+                    Transform::from_translation(sector_abs_pos),
                     BeltSector {
                         belt_id: belt_id.clone(),
                         sector_index: *sector_index,
@@ -249,7 +327,13 @@ pub fn belt_sector_streaming_system(
 
             // Spawn each asteroid as a child entity
             for asteroid in asteroids {
-                spawn_generated_asteroid(&mut commands, &asset_server, asteroid, sector_entity);
+                spawn_generated_asteroid(
+                    &mut commands,
+                    &asset_server,
+                    asteroid,
+                    sector_entity,
+                    sector_abs_pos,
+                );
             }
 
             // Track as loaded
@@ -365,9 +449,11 @@ pub fn field_streaming_system(
             separate_overlaps(&mut asteroids);
 
             // Spawn the asteroids
+            let field_abs_pos = field_transform.translation();
             let field_gen_entity = commands
                 .spawn((
                     Name::new(format!("GeneratedField: {field_id}")),
+                    Transform::from_translation(field_abs_pos),
                     GeneratedField {
                         field_id: field_id.clone(),
                         generated_asteroids: asteroids.clone(),
@@ -377,7 +463,13 @@ pub fn field_streaming_system(
 
             // Spawn each asteroid as a child entity
             for asteroid in asteroids {
-                spawn_generated_asteroid(&mut commands, &asset_server, asteroid, field_gen_entity);
+                spawn_generated_asteroid(
+                    &mut commands,
+                    &asset_server,
+                    asteroid,
+                    field_gen_entity,
+                    field_abs_pos,
+                );
             }
 
             // Track as loaded
@@ -386,10 +478,9 @@ pub fn field_streaming_system(
     }
 }
 
-/// Calculates the sector index for a belt based on player position.
-///
 /// Sector identity comes from orbital position, not a running counter.
-fn calculate_sector_index(
+/// Finds the nearest sector index for a belt based on player's absolute position.
+fn find_nearest_sector_index(
     _orbital_parent: &str,
     orbital_distance: f32,
     sector_size: f32,
@@ -634,6 +725,27 @@ fn apply_deltas_to_field(
     }
 }
 
+/// Calculates the world position of a belt sector center.
+/// The sector is positioned on the orbital ring at the given angle.
+fn sector_world_position(
+    _belt_id: &str,
+    sector_index: i64,
+    orbital_distance: f32,
+    sector_size: f32,
+) -> Vec3 {
+    let circumference = 2.0 * std::f32::consts::PI * orbital_distance;
+    #[allow(clippy::cast_possible_truncation)]
+    let num_sectors = (circumference / sector_size).ceil() as i64;
+    #[allow(clippy::cast_precision_loss)]
+    let angle = (sector_index as f64 / num_sectors as f64) * 2.0 * std::f64::consts::PI;
+    #[allow(clippy::cast_possible_truncation)]
+    Vec3::new(
+        orbital_distance * angle.cos() as f32,
+        orbital_distance * angle.sin() as f32,
+        0.0,
+    )
+}
+
 /// Computes orbital position for a body at a given time.
 fn compute_orbital_position(orbital: &OrbitalBody, time: f32) -> Vec3 {
     // Simplified - would use proper Keplerian propagation
@@ -651,6 +763,7 @@ fn spawn_generated_asteroid(
     _asset_server: &Res<'_, AssetServer>,
     asteroid: GeneratedAsteroid,
     parent: Entity,
+    sector_abs_pos: Vec3,
 ) {
     let entity_id = format!("asteroid_{}", asteroid.stable_id);
 
@@ -670,9 +783,14 @@ fn spawn_generated_asteroid(
         )
     };
 
+    // Asteroid positions are in absolute coordinates (relative to orbital parent/sun).
+    // The sector entity is at its absolute position, so we need to make asteroid positions
+    // relative to the sector entity.
+    let relative_position = asteroid.position - sector_abs_pos;
+
     let mut entity_commands = commands.spawn((
         Name::new(format!("Asteroid: {entity_id}")),
-        Transform::from_translation(asteroid.position)
+        Transform::from_translation(relative_position)
             .with_rotation(asteroid.rotation)
             .with_scale(Vec3::splat(asteroid.radius / template_radius)),
         RigidBody::new(asteroid.mass, 1.0),

@@ -286,7 +286,7 @@ pub fn make_sun_emissive(
     mesh_query: Query<'_, '_, &MeshMaterial3d<StandardMaterial>>,
     children_query: Query<'_, '_, &Children>,
 ) {
-    for (sun_entity, children, _sun) in &suns {
+    for (_sun_entity, children, _sun) in &suns {
         // Recursively check all descendants for meshes with materials
         let mut stack: Vec<Entity> = Vec::new();
         for child in children.iter() {
@@ -299,7 +299,6 @@ pub fn make_sun_emissive(
                 // Make the material emissive with a bright yellow-white color
                 // matching the light color (warm white: 1.0, 0.95, 0.8)
                 material.emissive = LinearRgba::new(1.0, 0.95, 0.8, 1.0);
-                tracing::debug!("Made sun descendant {entity:?} emissive (sun: {sun_entity:?})");
             }
             // Add children to stack for depth-first traversal
             if let Ok(entity_children) = children_query.get(entity) {

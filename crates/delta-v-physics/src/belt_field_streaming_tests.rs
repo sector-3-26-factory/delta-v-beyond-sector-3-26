@@ -24,7 +24,7 @@
 use crate::belt_field_generation::SizeDistributionEntry;
 use crate::belt_field_spawn::AsteroidBelt;
 use crate::belt_field_streaming::{
-    LoadedSectors, belt_sector_streaming_system, calculate_sector_index,
+    LoadedSectors, belt_sector_streaming_system, find_nearest_sector_index,
 };
 use crate::celestial::OrbitalBody;
 use crate::constants::FIXED_TIMESTEP_HZ;
@@ -48,6 +48,7 @@ fn build_streaming_app() -> App {
             language: "en".to_string(),
             detail_level: 1.0,
         })
+        .insert_resource(delta_v_core::FloatingOrigin::default())
         .init_state::<AppState>()
         .add_systems(FixedUpdate, belt_sector_streaming_system);
     // Set state to InGame so the streaming system runs
@@ -96,7 +97,14 @@ fn spawn_test_belt(
     };
 
     // Create a dummy parent entity for the orbital parent
-    let sun_entity = app.world_mut().spawn_empty().id();
+    let sun_entity = app
+        .world_mut()
+        .spawn((
+            delta_v_core::navigation::navigation_list::WorldEntityId("sun".to_string()),
+            GlobalTransform::default(),
+            Transform::default(),
+        ))
+        .id();
 
     let orbital_body = OrbitalBody {
         orbital_parent: sun_entity,
@@ -135,11 +143,11 @@ fn spawn_test_player(app: &mut App, position: Vec3) -> Entity {
 }
 
 #[test]
-fn test_calculate_sector_index() {
-    let idx = calculate_sector_index("sun", 4.04e11, 5.0e7, Vec3::new(4.04e11, 0.0, 0.0));
+fn test_find_nearest_sector_index() {
+    let idx = find_nearest_sector_index("sun", 4.04e11, 5.0e7, Vec3::new(4.04e11, 0.0, 0.0));
     assert_eq!(idx, 0);
 
-    let idx = calculate_sector_index("sun", 4.04e11, 5.0e7, Vec3::new(0.0, 4.04e11, 0.0));
+    let idx = find_nearest_sector_index("sun", 4.04e11, 5.0e7, Vec3::new(0.0, 4.04e11, 0.0));
     assert!(idx > 0);
 }
 
