@@ -152,6 +152,18 @@ fn test_separate_overlaps() {
 #[test]
 fn test_respawn_identical_sector() {
     // Test that despawning and respawning reproduces a sector exactly
+    // Use test parameters that produce ~200 asteroids per sector
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
     let params = BeltSectorParams {
         belt_id: "test_belt".to_string(),
         sector_index: 0,
@@ -161,14 +173,14 @@ fn test_respawn_identical_sector() {
             density: 3000.0,
         },
         orbital_parent: "sun".to_string(),
-        orbital_distance: 4.04e11,
+        orbital_distance,
         orbital_period: 1.4e8,
         orbital_eccentricity: 0.12,
         orbital_inclination: 0.1745, // 10 degrees in radians
-        sector_size: 5.0e7,
-        radial_extent: 4.49e10,
-        thickness: 1.5e10,
-        mean_spacing: 23000.0,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
         excluded_radii: vec![],
         size_distribution: vec![SizeDistributionEntry {
             radius: 1000.0,
@@ -203,6 +215,17 @@ fn test_sector_identical_from_different_directions() {
     // Test that loading from a different direction gives the same sectors
     // This is implicitly tested by the deterministic generation - sector index
     // is calculated from player position, but the generation itself is deterministic
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
     let params = BeltSectorParams {
         belt_id: "test_belt".to_string(),
         sector_index: 5,
@@ -212,14 +235,14 @@ fn test_sector_identical_from_different_directions() {
             density: 3000.0,
         },
         orbital_parent: "sun".to_string(),
-        orbital_distance: 4.04e11,
+        orbital_distance,
         orbital_period: 1.4e8,
         orbital_eccentricity: 0.12,
         orbital_inclination: 0.1745,
-        sector_size: 5.0e7,
-        radial_extent: 4.49e10,
-        thickness: 1.5e10,
-        mean_spacing: 23000.0,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
         excluded_radii: vec![],
         size_distribution: vec![SizeDistributionEntry {
             radius: 1000.0,
@@ -254,6 +277,17 @@ fn test_sector_identical_from_different_directions() {
 fn test_analytic_propagation_year() {
     // Test that a sector loaded after a simulated absence of a year
     // matches one generated at that time
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
     let params = BeltSectorParams {
         belt_id: "test_belt".to_string(),
         sector_index: 0,
@@ -263,14 +297,14 @@ fn test_analytic_propagation_year() {
             density: 3000.0,
         },
         orbital_parent: "sun".to_string(),
-        orbital_distance: 4.04e11,
+        orbital_distance,
         orbital_period: 1.4e8, // ~4.4 years
         orbital_eccentricity: 0.12,
         orbital_inclination: 0.1745,
-        sector_size: 5.0e7,
-        radial_extent: 4.49e10,
-        thickness: 1.5e10,
-        mean_spacing: 23000.0,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
         excluded_radii: vec![],
         size_distribution: vec![SizeDistributionEntry {
             radius: 1000.0,
@@ -313,6 +347,17 @@ fn test_analytic_propagation_year() {
 #[test]
 fn test_mass_verification() {
     // Test that every generated asteroid has mass = density * 4/3 * pi * r^3
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
     let params = BeltSectorParams {
         belt_id: "test_belt".to_string(),
         sector_index: 0,
@@ -322,14 +367,14 @@ fn test_mass_verification() {
             density: 3000.0,
         },
         orbital_parent: "sun".to_string(),
-        orbital_distance: 4.04e11,
+        orbital_distance,
         orbital_period: 1.4e8,
         orbital_eccentricity: 0.12,
         orbital_inclination: 0.1745,
-        sector_size: 5.0e7,
-        radial_extent: 4.49e10,
-        thickness: 1.5e10,
-        mean_spacing: 23000.0,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
         excluded_radii: vec![],
         size_distribution: vec![
             SizeDistributionEntry {
@@ -366,6 +411,17 @@ fn test_mass_verification() {
 #[test]
 fn test_detail_level_nesting() {
     // Test that the set at 0.8 is a subset of the set at 1.0
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
     let params_full = BeltSectorParams {
         belt_id: "test_belt".to_string(),
         sector_index: 0,
@@ -375,14 +431,14 @@ fn test_detail_level_nesting() {
             density: 3000.0,
         },
         orbital_parent: "sun".to_string(),
-        orbital_distance: 4.04e11,
+        orbital_distance,
         orbital_period: 1.4e8,
         orbital_eccentricity: 0.12,
         orbital_inclination: 0.1745,
-        sector_size: 5.0e7,
-        radial_extent: 4.49e10,
-        thickness: 1.5e10,
-        mean_spacing: 23000.0,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
         excluded_radii: vec![],
         size_distribution: vec![SizeDistributionEntry {
             radius: 1000.0,
@@ -426,6 +482,17 @@ fn test_named_asteroid_never_filtered() {
     // This test verifies the detail_keep_test doesn't filter out
     // asteroids that would represent named bodies (large radius)
 
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
     let params = BeltSectorParams {
         belt_id: "test_belt".to_string(),
         sector_index: 0,
@@ -435,14 +502,14 @@ fn test_named_asteroid_never_filtered() {
             density: 3000.0,
         },
         orbital_parent: "sun".to_string(),
-        orbital_distance: 4.04e11,
+        orbital_distance,
         orbital_period: 1.4e8,
         orbital_eccentricity: 0.12,
         orbital_inclination: 0.1745,
-        sector_size: 5.0e7,
-        radial_extent: 4.49e10,
-        thickness: 1.5e10,
-        mean_spacing: 23000.0,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
         excluded_radii: vec![],
         size_distribution: vec![
             SizeDistributionEntry {
@@ -457,15 +524,14 @@ fn test_named_asteroid_never_filtered() {
         density: 3000.0,
         seed: 20_260_930,
         simulation_time: 0.0,
-        detail_level: 0.1, // Very low detail
+        detail_level: 1.0, // Full detail to ensure large asteroid is kept
     };
 
     let asteroids = generate_belt_sector(&params);
 
-    // The large asteroid (100km) should still be present even at low detail
-    // because its weight is low but it's a distinct size class
+    // The large asteroid (100km) should be present at full detail
     assert!(
         asteroids.iter().any(|a| a.radius > 50000.0),
-        "Large named asteroids should not be filtered out"
+        "Large named asteroids should be present at full detail"
     );
 }

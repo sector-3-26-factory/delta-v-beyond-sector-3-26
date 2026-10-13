@@ -117,10 +117,6 @@
                 },
                 "excluded_radii": [],
                 "seed": 20260930,
-                "sector_size": {
-                    "value": 50000000.0,
-                    "unit": "m"
-                },
                 "size_distribution": [
                     {
                         "radius": {

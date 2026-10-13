@@ -125,8 +125,7 @@
                 "mean_spacing",
                 "seed",
                 "size_distribution",
-                "density",
-                "sector_size"
+                "density"
             ],
             "properties": {
                 "radial_extent": {
@@ -164,10 +163,6 @@
                 "seed": {
                     "description": "Seed for deterministic procedural generation. Required for belt/field entities.",
                     "type": "integer"
-                },
-                "sector_size": {
-                    "description": "Cache granularity for belt sectors in metres (engine detail, not content).",
-                    "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/length"
                 },
                 "size_distribution": {
                     "description": "Which asteroid sizes are placed and how often. Array of objects with radius and weight.",

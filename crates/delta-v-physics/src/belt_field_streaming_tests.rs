@@ -68,14 +68,22 @@ fn run_fixed_update(app: &mut App) {
 }
 
 /// Creates a test belt entity with the given parameters.
+/// `sector_size` is now calculated automatically based on belt parameters.
 fn spawn_test_belt(
     app: &mut App,
     id: &str,
     orbital_distance: f32,
     radial_extent: f32,
     thickness: f32,
-    sector_size: f32,
 ) -> Entity {
+    // Calculate sector_size using the same formula as the real system
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        23000.0, // mean_spacing
+    );
+
     let belt = AsteroidBelt {
         template: AsteroidBeltTemplate {
             entity_type: "asteroid_belt".to_string(),
@@ -93,7 +101,7 @@ fn spawn_test_belt(
             radius: 1000.0,
             weight: 1.0,
         }],
-        density: 2.8e-29,
+        density: 2800.0,
     };
 
     // Create a dummy parent entity for the orbital parent
@@ -151,7 +159,8 @@ fn test_find_nearest_sector_index() {
     assert!(idx > 0);
 }
 
-/// Test that a sector loads when the player is within the belt's volume (in sector)
+/// Test that sectors load when the player is within the belt's volume (in sector)
+/// Now loads 3 sectors: index-1, index, index+1
 #[test]
 fn test_belt_sector_loads_when_player_in_sector() {
     let mut app = build_streaming_app();
@@ -160,7 +169,6 @@ fn test_belt_sector_loads_when_player_in_sector() {
     let orbital_distance = 4.04e11;
     let radial_extent = 4.49e10;
     let thickness = 1.5e10;
-    let sector_size = 5.0e7;
 
     spawn_test_belt(
         &mut app,
@@ -168,7 +176,6 @@ fn test_belt_sector_loads_when_player_in_sector() {
         orbital_distance,
         radial_extent,
         thickness,
-        sector_size,
     );
 
     // Player at 404M km (in the belt, on the ring)
@@ -178,20 +185,16 @@ fn test_belt_sector_loads_when_player_in_sector() {
     // Run the streaming system (FixedUpdate)
     run_fixed_update(&mut app);
 
-    // Check that a sector was loaded
+    // Check that 3 sectors were loaded (index-1, index, index+1)
     let loaded_sectors = app.world().resource::<LoadedSectors>();
     assert!(
         !loaded_sectors.belt_sectors.is_empty(),
-        "belt sector should be loaded when player is in belt volume"
+        "belt sectors should be loaded when player is in belt volume"
     );
-    assert_eq!(loaded_sectors.belt_sectors.len(), 1);
-    assert_eq!(
-        loaded_sectors
-            .belt_sectors
-            .first()
-            .map(|(id, _)| id.as_str()),
-        Some("test_belt")
-    );
+    assert_eq!(loaded_sectors.belt_sectors.len(), 3);
+    for (id, _) in &loaded_sectors.belt_sectors {
+        assert_eq!(id, "test_belt");
+    }
 }
 
 /// Test that a sector does NOT load when the player is above the belt (outside thickness)
@@ -202,7 +205,6 @@ fn test_belt_sector_not_load_when_player_above_belt() {
     let orbital_distance = 4.04e11;
     let radial_extent = 4.49e10;
     let thickness = 1.5e10;
-    let sector_size = 5.0e7;
 
     spawn_test_belt(
         &mut app,
@@ -210,7 +212,6 @@ fn test_belt_sector_not_load_when_player_above_belt() {
         orbital_distance,
         radial_extent,
         thickness,
-        sector_size,
     );
 
     // Player at z=20M km (above belt thickness of 15M km)
@@ -234,7 +235,6 @@ fn test_belt_sector_not_load_when_player_beneath_belt() {
     let orbital_distance = 4.04e11;
     let radial_extent = 4.49e10;
     let thickness = 1.5e10;
-    let sector_size = 5.0e7;
 
     spawn_test_belt(
         &mut app,
@@ -242,7 +242,6 @@ fn test_belt_sector_not_load_when_player_beneath_belt() {
         orbital_distance,
         radial_extent,
         thickness,
-        sector_size,
     );
 
     // Player at z=-20M km (beneath belt thickness of 15M km)
@@ -266,7 +265,6 @@ fn test_belt_sector_not_load_when_player_before_belt() {
     let orbital_distance = 4.04e11;
     let radial_extent = 4.49e10;
     let thickness = 1.5e10;
-    let sector_size = 5.0e7;
 
     spawn_test_belt(
         &mut app,
@@ -274,7 +272,6 @@ fn test_belt_sector_not_load_when_player_before_belt() {
         orbital_distance,
         radial_extent,
         thickness,
-        sector_size,
     );
 
     // Player at 359M km (before inner edge of belt at ~359.1M km)
@@ -298,7 +295,6 @@ fn test_belt_sector_not_load_when_player_behind_belt() {
     let orbital_distance = 4.04e11;
     let radial_extent = 4.49e10;
     let thickness = 1.5e10;
-    let sector_size = 5.0e7;
 
     spawn_test_belt(
         &mut app,
@@ -306,7 +302,6 @@ fn test_belt_sector_not_load_when_player_behind_belt() {
         orbital_distance,
         radial_extent,
         thickness,
-        sector_size,
     );
 
     // Player at 449M km (beyond outer edge of belt at ~448.9M km)
@@ -322,7 +317,7 @@ fn test_belt_sector_not_load_when_player_behind_belt() {
     );
 }
 
-/// Test that sector loads when player is within streaming distance but not exactly on ring
+/// Test that sectors load when player is within streaming distance but not exactly on ring
 #[test]
 fn test_belt_sector_loads_when_player_near_ring() {
     let mut app = build_streaming_app();
@@ -330,7 +325,6 @@ fn test_belt_sector_loads_when_player_near_ring() {
     let orbital_distance = 4.04e11;
     let radial_extent = 4.49e10;
     let thickness = 1.5e10;
-    let sector_size = 5.0e7;
 
     spawn_test_belt(
         &mut app,
@@ -338,7 +332,6 @@ fn test_belt_sector_loads_when_player_near_ring() {
         orbital_distance,
         radial_extent,
         thickness,
-        sector_size,
     );
 
     // Player clearly inside the ring (50,000 km inside, well within streaming distance of 100,000 km)
@@ -351,8 +344,9 @@ fn test_belt_sector_loads_when_player_near_ring() {
     let loaded_sectors = app.world().resource::<LoadedSectors>();
     assert!(
         !loaded_sectors.belt_sectors.is_empty(),
-        "belt sector should load when player is within streaming distance of ring"
+        "belt sectors should load when player is within streaming distance of ring"
     );
+    assert_eq!(loaded_sectors.belt_sectors.len(), 3);
 }
 
 /// Test that sector does NOT load when player is outside streaming distance
@@ -363,7 +357,6 @@ fn test_belt_sector_not_load_when_player_far_from_ring() {
     let orbital_distance = 4.04e11;
     let radial_extent = 4.49e10;
     let thickness = 1.5e10;
-    let sector_size = 5.0e7;
 
     spawn_test_belt(
         &mut app,
@@ -371,7 +364,6 @@ fn test_belt_sector_not_load_when_player_far_from_ring() {
         orbital_distance,
         radial_extent,
         thickness,
-        sector_size,
     );
 
     // Player far from the ring (outside streaming distance)

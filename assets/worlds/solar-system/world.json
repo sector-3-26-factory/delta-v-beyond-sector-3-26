@@ -19191,10 +19191,6 @@
           }
         ],
         "seed": 20260930,
-        "sector_size": {
-          "value": 50000000.0,
-          "unit": "m"
-        },
         "size_distribution": [
           {
             "radius": {
@@ -19321,10 +19317,6 @@
         },
         "excluded_radii": [],
         "seed": 20260931,
-        "sector_size": {
-          "value": 20000000.0,
-          "unit": "m"
-        },
         "size_distribution": [
           {
             "radius": {
@@ -19402,10 +19394,6 @@
         },
         "excluded_radii": [],
         "seed": 20260932,
-        "sector_size": {
-          "value": 10000000.0,
-          "unit": "m"
-        },
         "size_distribution": [
           {
             "radius": {
@@ -19476,10 +19464,6 @@
         },
         "excluded_radii": [],
         "seed": 20260933,
-        "sector_size": {
-          "value": 50000000.0,
-          "unit": "m"
-        },
         "size_distribution": [
           {
             "radius": {
@@ -19557,10 +19541,6 @@
         },
         "excluded_radii": [],
         "seed": 20260934,
-        "sector_size": {
-          "value": 50000000.0,
-          "unit": "m"
-        },
         "size_distribution": [
           {
             "radius": {
@@ -19642,10 +19622,6 @@
         },
         "excluded_radii": [],
         "seed": 20260935,
-        "sector_size": {
-          "value": 50000000.0,
-          "unit": "m"
-        },
         "size_distribution": [
           {
             "radius": {
@@ -19727,10 +19703,6 @@
         },
         "excluded_radii": [],
         "seed": 20260936,
-        "sector_size": {
-          "value": 50000000.0,
-          "unit": "m"
-        },
         "size_distribution": [
           {
             "radius": {

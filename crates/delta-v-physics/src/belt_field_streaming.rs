@@ -193,13 +193,20 @@ pub fn belt_sector_streaming_system(
 
         // Check if player is within streaming distance of the belt volume
         if distance_to_belt <= STREAMING_DISTANCE_M {
-            // Load only the nearest sector (not neighbors) to reduce asteroid count
-            tracing::debug!(
-                "[belt_streaming] Belt '{}' sector {}: LOADING (within streaming distance of belt volume)",
-                belt.id,
-                sector_index
-            );
-            should_load.push((belt.id.clone(), sector_index));
+            // Load 3 sectors: index-1, index, index+1 (with wrap-around)
+            let circumference = 2.0 * std::f32::consts::PI * orbital_body.orbital_distance;
+            #[allow(clippy::cast_possible_truncation)]
+            let num_sectors = (circumference / belt.sector_size).ceil() as i64;
+
+            for offset in [-1, 0, 1] {
+                let neighbor_index = (sector_index + offset + num_sectors) % num_sectors;
+                tracing::debug!(
+                    "[belt_streaming] Belt '{}' sector {}: LOADING (within streaming distance of belt volume)",
+                    belt.id,
+                    neighbor_index
+                );
+                should_load.push((belt.id.clone(), neighbor_index));
+            }
         } else {
             tracing::debug!(
                 "[belt_streaming] Belt '{}': OUTSIDE streaming distance of belt volume, skipping",
@@ -371,11 +378,12 @@ pub fn field_streaming_system(
     >,
     existing_fields: Query<'_, '_, (Entity, &GeneratedField)>,
     asset_server: Res<'_, AssetServer>,
+    floating_origin: Res<'_, FloatingOrigin>,
 ) {
     let Ok(player_transform) = player_query.single() else {
         return;
     };
-    let player_pos = player_transform.translation();
+    let player_local_pos = player_transform.translation();
     let simulation_time = time.elapsed_secs();
     let detail_level = player_settings.detail_level;
 
@@ -383,14 +391,17 @@ pub fn field_streaming_system(
     let mut should_load: Vec<String> = Vec::new();
 
     for (_field_entity, field, field_transform, orbital_body) in &field_query {
-        // Get the field's current position
-        let field_pos = orbital_body.map_or_else(
+        // Get the field's current position in absolute coordinates
+        let field_abs_pos = orbital_body.map_or_else(
             || field_transform.translation(),
             |orbital| compute_orbital_position(orbital, simulation_time),
         );
 
-        // Check if within streaming distance
-        let distance = player_pos.distance(field_pos);
+        // Convert to local coordinates for distance check
+        let field_local_pos = floating_origin.to_local(field_abs_pos);
+
+        // Check if within streaming distance (in local coordinates)
+        let distance = player_local_pos.distance(field_local_pos);
         if distance <= STREAMING_DISTANCE_M {
             should_load.push(field.id.clone());
         }

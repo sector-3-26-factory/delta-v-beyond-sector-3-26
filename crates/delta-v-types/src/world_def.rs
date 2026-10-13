@@ -117,8 +117,6 @@ pub struct AsteroidBeltParametersJson {
     pub excluded_radii: Option<Vec<ExcludedRadiusJson>>,
     /// Seed for deterministic procedural generation.
     pub seed: u64,
-    /// Cache granularity for belt sectors in metres (engine detail, not content).
-    pub sector_size: PhysicalQuantityJson,
     /// Which asteroid sizes are placed and how often.
     pub size_distribution: Vec<SizeDistributionEntryJson>,
     /// Material density in kg/m³ for generated asteroids.
@@ -154,8 +152,6 @@ pub struct AsteroidFieldParametersJson {
     pub mean_spacing: PhysicalQuantityJson,
     /// Seed for deterministic procedural generation.
     pub seed: u64,
-    /// Cache granularity for field sectors in metres (engine detail, not content).
-    pub sector_size: Option<PhysicalQuantityJson>,
     /// Which asteroid sizes are placed and how often.
     pub size_distribution: Vec<SizeDistributionEntryJson>,
     /// Material density in kg/m³ for generated asteroids.
@@ -232,8 +228,6 @@ pub struct AsteroidBeltParameters {
     pub excluded_radii: Vec<ExcludedRadius>,
     /// Seed for deterministic generation.
     pub seed: u64,
-    /// Sector size in metres.
-    pub sector_size: f32,
     /// Size distribution.
     pub size_distribution: Vec<SizeDistributionEntry>,
     /// Material density in kg/m³.
@@ -251,8 +245,6 @@ pub struct AsteroidFieldParameters {
     pub mean_spacing: f32,
     /// Seed for deterministic generation.
     pub seed: u64,
-    /// Sector size in metres (optional).
-    pub sector_size: Option<f32>,
     /// Size distribution.
     pub size_distribution: Vec<SizeDistributionEntry>,
     /// Material density in kg/m³.
@@ -345,7 +337,6 @@ impl From<EntitySpawnJson> for EntitySpawn {
                         })
                         .collect(),
                     seed: bp.seed,
-                    sector_size: bp.sector_size.to_meters(),
                     size_distribution: bp
                         .size_distribution
                         .into_iter()
@@ -363,7 +354,6 @@ impl From<EntitySpawnJson> for EntitySpawn {
                     shape: fp.shape,
                     mean_spacing: fp.mean_spacing.to_meters(),
                     seed: fp.seed,
-                    sector_size: fp.sector_size.map(|s| s.to_meters()),
                     size_distribution: fp
                         .size_distribution
                         .into_iter()

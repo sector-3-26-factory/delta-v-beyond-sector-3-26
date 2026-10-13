@@ -30,6 +30,7 @@ use delta_v_core::{EntityType, SpawnEntity, WorldEntityId};
 use delta_v_types::{AsteroidBeltTemplate, AsteroidFieldTemplate};
 
 use crate::OrbitalParentId;
+use crate::belt_field_generation::calculate_optimal_sector_size;
 use crate::celestial::OrbitalBody;
 
 // ---------------------------------------------------------------------------
@@ -58,7 +59,7 @@ pub struct AsteroidBelt {
     pub excluded_radii: Vec<crate::belt_field_generation::ExcludedRadius>,
     /// Random seed for deterministic generation.
     pub seed: u64,
-    /// Angular size of each sector in radians.
+    /// Arc length of each sector in metres (calculated at spawn time).
     pub sector_size: f32,
     /// Size distribution of asteroids in the belt.
     pub size_distribution: Vec<crate::belt_field_generation::SizeDistributionEntry>,
@@ -86,8 +87,6 @@ pub struct AsteroidField {
     pub mean_spacing: f32,
     /// Random seed for deterministic generation.
     pub seed: u64,
-    /// Optional sector size for streaming (None = no streaming).
-    pub sector_size: Option<f32>,
     /// Size distribution of asteroids in the field.
     pub size_distribution: Vec<crate::belt_field_generation::SizeDistributionEntry>,
     /// Material density of asteroids in kg/m³.
@@ -167,6 +166,14 @@ pub fn spawn_asteroid_belt(
                 })
                 .collect();
 
+        // Calculate optimal sector size for ~200 asteroids per sector
+        let sector_size = calculate_optimal_sector_size(
+            orbital_distance,
+            belt_params.radial_extent,
+            belt_params.thickness,
+            belt_params.mean_spacing,
+        );
+
         // Spawn the belt entity (the belt itself is a definition, not a physical body)
         let belt_entity = commands
             .spawn((
@@ -182,7 +189,7 @@ pub fn spawn_asteroid_belt(
                     mean_spacing: belt_params.mean_spacing,
                     excluded_radii,
                     seed: belt_params.seed,
-                    sector_size: belt_params.sector_size,
+                    sector_size,
                     size_distribution,
                     density: belt_params.density,
                 },
@@ -280,7 +287,6 @@ pub fn spawn_asteroid_field(
                     shape: field_params.shape.clone(),
                     mean_spacing: field_params.mean_spacing,
                     seed: field_params.seed,
-                    sector_size: field_params.sector_size,
                     size_distribution,
                     density: field_params.density,
                 },

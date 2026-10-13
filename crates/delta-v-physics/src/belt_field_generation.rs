@@ -36,6 +36,40 @@ use delta_v_types::{
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+/// Target number of asteroids per sector for performance optimization.
+const TARGET_ASTEROIDS_PER_SECTOR: u64 = 200;
+
+/// Calculates the optimal sector size (arc length in metres) for a belt
+/// to achieve approximately `TARGET_ASTEROIDS_PER_SECTOR` asteroids per sector.
+///
+/// The formula derives from the belt volume and mean spacing:
+/// - Belt volume ≈ 2π * `orbital_distance` * (`radial_extent` * 2) * (`thickness` * 2)
+/// - Sector volume = `belt_volume` * (`sector_size` / (2π * `orbital_distance`))
+/// - Expected count = `sector_volume` / `mean_spacing³`
+/// - Solving for `sector_size`: `sector_size` = `target_count` * `mean_spacing³` / (4 * `radial_extent` * `thickness`)
+///   (`orbital_distance` cancels out algebraically)
+///
+/// The result is clamped to at most 1/4 of the orbital circumference.
+pub fn calculate_optimal_sector_size(
+    orbital_distance: f32,
+    radial_extent: f32,
+    thickness: f32,
+    mean_spacing: f32,
+) -> f32 {
+    let spacing_cubed = mean_spacing * mean_spacing * mean_spacing;
+    #[allow(clippy::cast_precision_loss)]
+    let target_count = TARGET_ASTEROIDS_PER_SECTOR as f32;
+
+    // sector_size = target_count * spacing_cubed / (4 * radial_extent * thickness)
+    // (orbital_distance cancels out: belt_volume ∝ orbital_distance, sector_fraction ∝ 1/orbital_distance)
+    let sector_size = target_count * spacing_cubed / (4.0 * radial_extent * thickness);
+
+    // Clamp to reasonable bounds in metres (arc length)
+    // Max: 1/4 of circumference (PI/2 * orbital_distance)
+    let max_sector_size = std::f32::consts::PI * orbital_distance / 2.0; // quarter circumference
+    sector_size.clamp(0.0, max_sector_size)
+}
+
 /// A generated asteroid's properties before spawning.
 #[derive(Debug, Clone)]
 pub struct GeneratedAsteroid {
@@ -441,9 +475,8 @@ pub fn generate_belt_sector(params: &BeltSectorParams) -> Vec<GeneratedAsteroid>
     let spacing_cubed = params.mean_spacing * params.mean_spacing * params.mean_spacing;
     let estimated_count = (sector_volume / spacing_cubed) as u64;
 
-    // Cap at a reasonable maximum for performance
-    let max_asteroids = 2000;
-    let count = estimated_count.min(max_asteroids);
+    // No hardcoded cap - sector_size is now calculated to target ~200 asteroids per sector
+    let count = estimated_count;
 
     for body_index in 0..count {
         // Generate stable ID
@@ -636,9 +669,8 @@ pub fn generate_field(params: &FieldParams) -> Vec<GeneratedAsteroid> {
     let spacing_cubed = params.mean_spacing * params.mean_spacing * params.mean_spacing;
     let estimated_count = (field_volume / spacing_cubed) as u64;
 
-    // Cap at a reasonable maximum for performance
-    let max_asteroids = 2000;
-    let count = estimated_count.min(max_asteroids);
+    // No hardcoded cap - estimated_count is used directly
+    let count = estimated_count;
 
     for body_index in 0..count {
         // Generate stable ID
