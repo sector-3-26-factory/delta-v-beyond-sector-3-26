@@ -116,6 +116,8 @@ informational and must be aligned with.
 
 [ADR-0051]: The crate architecture follows a strict dependency hierarchy. Technical crates (`delta-v-json`, `delta-v-types`, `delta-v-spawn`, `delta-v-assets`) MUST NOT depend on domain crates. `delta-v-core` is a **foundation crate** (not a domain crate) — domain crates MAY depend on `delta-v-core` and on technical crates. Domain crates MUST NOT depend on other domain crates (use events/components for cross-domain communication per ADR-0005). `delta-v-core` MUST NOT depend on domain crates. The binary `delta-v` is the only crate that registers plugins. See the crate architecture decision tree in ADR-0051 for "where does this go?" guidance.
 
+[ADR-0060]: **Test Framework Single Source of Truth.** A dedicated crate `delta-v-app` exports `build_app(config: AppConfig) -> App` as the ONLY function that registers the full plugin stack. Both `main.rs` and ALL integration tests MUST use `delta_v_app::build_app`. Headless mode for CI/tests is achieved via `AppConfig { is_headless: true, ... }` which configures `DefaultPlugins` to disable `WinitPlugin` and set `primary_window: None`. **FORBIDDEN**: Using `MinimumPlugins`, manually assembling plugin lists, or rebuilding the plugin stack in integration tests. **FORBIDDEN**: Any integration test that does not use `build_app` from `delta-v-app`. The `AppConfig` struct centralizes: `is_headless: bool`, `asset_root_suffix: String` ("assets" for production, "tests/fixtures/assets" for tests), `world_name: Option<String>`, `log_filter: Option<String>`. This ensures zero drift between production and test plugin stacks, and headless CI works without X11/xvfb.
+
 ---
 
 <!-- Proposed ADRs - informational only, not strict rules -->
