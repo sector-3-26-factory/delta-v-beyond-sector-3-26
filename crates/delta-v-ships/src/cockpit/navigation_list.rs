@@ -509,10 +509,6 @@ pub fn update_navigation_list_distances_system(
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         nav_list_events.write(NavigationListChanged);
-        tracing::debug!(
-            "[nav_list] distances updated and re-sorted ({} entries)",
-            list_data.entries.len()
-        );
     }
 }
 

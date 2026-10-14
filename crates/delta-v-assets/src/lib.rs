@@ -61,7 +61,9 @@ mod template_tests;
 
 // Re-exports for convenience
 pub use error::AssetError;
-pub use paths::{get_workspace_root, resolve_template_path};
+pub use paths::{
+    get_workspace_root, resolve_asset_path, resolve_template_path, resolve_world_path, schema_root,
+};
 pub use sound::resolve_sound_path;
 
 /// Plugin for asset loading and template management.

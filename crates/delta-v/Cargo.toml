@@ -21,6 +21,7 @@ path = "src/main.rs"
 dev = ["delta-v-config/dev", "delta-v-ui/dev", "delta-v-core/dev"]
 
 [dependencies]
+delta-v-app = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-config = { workspace = true }
 delta-v-physics = { workspace = true }

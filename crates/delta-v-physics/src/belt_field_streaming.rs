@@ -142,14 +142,6 @@ pub fn belt_sector_streaming_system(
             player_rel_parent,
         );
 
-        tracing::debug!(
-            "[belt_streaming] Belt '{}': parent_abs_pos = {:?}, player_rel_parent = {:?}, sector_index = {}",
-            belt.id,
-            parent_abs_pos,
-            player_rel_parent,
-            sector_index
-        );
-
         // Calculate player's distance from orbital parent (radial distance)
         let player_dist_from_parent = player_rel_parent.length();
         let player_z = player_rel_parent.z.abs();
@@ -177,20 +169,6 @@ pub fn belt_sector_streaming_system(
 
         let distance_to_belt = radial_distance.hypot(vertical_distance);
 
-        tracing::debug!(
-            "[belt_streaming] Belt '{}': player_dist_from_parent={:.2}m, player_z={:.2}m, belt_inner={:.2}m, belt_outer={:.2}m, belt_half_thickness={:.2}m, radial_dist={:.2}m, vertical_dist={:.2}m, distance_to_belt={:.2}m (streaming_dist={:.2}m)",
-            belt.id,
-            player_dist_from_parent,
-            player_z,
-            belt_inner_radius,
-            belt_outer_radius,
-            belt_half_thickness,
-            radial_distance,
-            vertical_distance,
-            distance_to_belt,
-            STREAMING_DISTANCE_M
-        );
-
         // Check if player is within streaming distance of the belt volume
         if distance_to_belt <= STREAMING_DISTANCE_M {
             // Load 3 sectors: index-1, index, index+1 (with wrap-around)
@@ -200,18 +178,8 @@ pub fn belt_sector_streaming_system(
 
             for offset in [-1, 0, 1] {
                 let neighbor_index = (sector_index + offset + num_sectors) % num_sectors;
-                tracing::debug!(
-                    "[belt_streaming] Belt '{}' sector {}: LOADING (within streaming distance of belt volume)",
-                    belt.id,
-                    neighbor_index
-                );
                 should_load.push((belt.id.clone(), neighbor_index));
             }
-        } else {
-            tracing::debug!(
-                "[belt_streaming] Belt '{}': OUTSIDE streaming distance of belt volume, skipping",
-                belt.id
-            );
         }
     }
 
@@ -301,14 +269,6 @@ pub fn belt_sector_streaming_system(
 
             // Separate overlaps
             separate_overlaps(&mut asteroids);
-
-            let asteroid_count = asteroids.len();
-            tracing::debug!(
-                "[belt_streaming] Belt '{}' sector {}: spawning {} asteroids",
-                belt.id,
-                sector_index,
-                asteroid_count
-            );
 
             // Calculate sector's absolute position (sector center in absolute coordinates)
             let sector_world = sector_world_position(

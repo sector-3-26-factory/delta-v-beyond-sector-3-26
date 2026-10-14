@@ -439,13 +439,6 @@ pub fn velocity_vector_system(
         }
     };
 
-    tracing::debug!(
-        "[vvi] speed={:.3} threshold={:.3} current_visibility={:?}",
-        speed,
-        MIN_SPEED_THRESHOLD,
-        *visibility
-    );
-
     if speed < MIN_SPEED_THRESHOLD {
         if *visibility != Visibility::Hidden {
             tracing::debug!("[vvi] hiding indicator and text (speed below threshold)");
@@ -618,7 +611,6 @@ pub fn status_gauge_system(
     >,
     window_query: Query<'_, '_, &'static Window>,
 ) {
-    tracing::debug!("[status_gauge] status_gauge_system running");
     let _span = tracing::info_span!("delta_v_ships::status_gauge_system").entered();
 
     // Read player health once (used by all health gauges).
@@ -712,10 +704,8 @@ pub fn status_gauge_system(
             };
 
             // Update all needles matching this gauge
-            let mut needle_count = 0;
             for (mut transform, needle) in queries.p2() {
                 if needle.station_id == update.station_id && needle.slot_id == update.slot_id {
-                    needle_count += 1;
                     // Position the needle at the center of the gauge.
                     // Sprites with RenderLayer::CockpitForeground are rendered by the cockpit foreground camera.
                     // The cockpit foreground camera uses a centered coordinate system where (0, 0) is at the center of the screen.
@@ -739,22 +729,8 @@ pub fn status_gauge_system(
                     // The needle texture points up (0° = 12 o'clock).
                     // We need to rotate it to point at the health position.
                     transform.rotation = Quat::from_rotation_z(angle_rad);
-                    tracing::debug!(
-                        "[status_gauge] needle pos: gauge_center_vp=({:.1}%, {:.1}%) ui_pos=({:.1}, {:.1}) scale={:.3}",
-                        gauge_center_x_vp,
-                        gauge_center_y_vp,
-                        transform.translation.x,
-                        transform.translation.y,
-                        needle_scale
-                    );
                 }
             }
-            tracing::debug!(
-                "[status_gauge] updated {} needle(s) for gauge {:?} rotation={:.1}°",
-                needle_count,
-                update.entity,
-                angle_deg
-            );
             continue;
         }
 
@@ -798,13 +774,6 @@ pub fn status_gauge_system(
                 background_color.0 = fill_color;
             }
         }
-
-        tracing::debug!(
-            "[status_gauge] entity {:?} type={} fill={:.1}%",
-            update.entity,
-            update.gauge_type,
-            fill_ratio * 100.0
-        );
     }
 }
 
@@ -1296,14 +1265,6 @@ pub fn camera_shake_system(
     if let Ok((_camera_name, mut camera_transform)) = camera_query.get_mut(camera_entity) {
         camera_transform.translation = shake.original_translation + offset;
     }
-
-    tracing::debug!(
-        "[camera_shake] tick {}/{} intensity={:.3} offset={:?}",
-        shake.elapsed_ticks,
-        shake.duration_ticks,
-        current_intensity,
-        offset
-    );
 }
 
 /// Triggers camera shake on specific events.
@@ -1327,7 +1288,6 @@ pub fn trigger_camera_shake_system(
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(0.5, 10));
-            tracing::debug!("[camera_shake] triggered by FireWeapon");
         }
     }
 
@@ -1337,13 +1297,11 @@ pub fn trigger_camera_shake_system(
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(1.0, 15));
-            tracing::debug!("[camera_shake] triggered by ProjectileHit (target)");
         }
         if event.projectile == player_ship.0 {
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(0.8, 12));
-            tracing::debug!("[camera_shake] triggered by ProjectileHit (projectile)");
         }
     }
 
@@ -1359,11 +1317,6 @@ pub fn trigger_camera_shake_system(
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(intensity, duration));
-            tracing::debug!(
-                "[camera_shake] triggered by CollisionDetected intensity={:.2} duration={}",
-                intensity,
-                duration
-            );
         }
     }
 }
@@ -1438,12 +1391,6 @@ pub fn play_thrust_sound_system(
     };
 
     let is_thrusting = thrusting_state.is_thrusting;
-    tracing::debug!(
-        "[audio] thrust sound system: is_thrusting={}, active_sound.entity={:?}, thrust_sound_path={:?}",
-        is_thrusting,
-        active_sound.entity,
-        thrust_sound_path
-    );
 
     if is_thrusting {
         // If no sound is playing, start one

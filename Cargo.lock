@@ -3361,6 +3361,7 @@ dependencies = [
  "bevy 0.19.1",
  "clap",
  "delta-v-ai",
+ "delta-v-app",
  "delta-v-assets",
  "delta-v-config",
  "delta-v-core",
@@ -3388,6 +3389,27 @@ dependencies = [
  "delta-v-types",
  "thiserror 2.0.21",
  "tracing",
+]
+
+[[package]]
+name = "delta-v-app"
+version = "0.0.1"
+dependencies = [
+ "bevy 0.19.1",
+ "clap",
+ "delta-v-ai",
+ "delta-v-assets",
+ "delta-v-config",
+ "delta-v-core",
+ "delta-v-items",
+ "delta-v-net",
+ "delta-v-physics",
+ "delta-v-propulsion",
+ "delta-v-ships",
+ "delta-v-stations",
+ "delta-v-ui",
+ "delta-v-weapons",
+ "delta-v-world",
 ]
 
 [[package]]

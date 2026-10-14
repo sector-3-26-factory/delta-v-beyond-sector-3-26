@@ -63,14 +63,6 @@ pub fn navigation_menu_toggle_system(
     // Custom edge detection: only trigger on the frame the key transitions from not-pressed to pressed
     let toggle_just_pressed = toggle_pressed && !toggle_state.prev_pressed;
 
-    tracing::debug!(
-        "[navigation_menu_toggle] pressed={} prev_pressed={} just_pressed={} menu_open={}",
-        toggle_pressed,
-        toggle_state.prev_pressed,
-        toggle_just_pressed,
-        menu_open.0
-    );
-
     // Update previous state for next frame
     toggle_state.prev_pressed = toggle_pressed;
 
@@ -218,16 +210,8 @@ pub fn navigation_menu_refresh_system(
         return;
     };
 
-    tracing::debug!(
-        "[navigation_menu] received NavigationListChanged event, menu_open={}",
-        menu_open.0
-    );
-
     // Menu is closed - nothing to update
     if !menu_open.0 {
-        tracing::debug!(
-            "[navigation_menu] navigation list change event received but menu is closed"
-        );
         return;
     }
 

@@ -75,7 +75,7 @@ pub use spawn::{spawn_asteroid, spawn_moon, spawn_planet, spawn_sun};
 pub use systems::PhysicsSet;
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, Health, WorldSpawnSet};
+use delta_v_core::{AppState, FloatingOrigin, FloatingOriginConfig, WorldSpawnSet};
 use floating_origin_systems::check_and_recenter_origin_system;
 use systems::{
     clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
@@ -356,7 +356,6 @@ fn collision_detection_system(
             Option<&LazyLoadMesh>,
         ),
     >,
-    health_query: Query<'_, '_, &Health>,
 ) {
     let _span = tracing::info_span!("delta_v_physics::collision_detection_system").entered();
 
@@ -391,15 +390,10 @@ fn collision_detection_system(
 
     // Four tested groups. The two skipped groups — relevant x irrelevant and
     // irrelevant x irrelevant — are simply never formed.
-    test_pairs(
-        &relevant_asteroids,
-        &relevant_asteroids,
-        &mut events,
-        &health_query,
-    );
-    test_pairs(&relevant_asteroids, &others, &mut events, &health_query);
-    test_pairs(&irrelevant_asteroids, &others, &mut events, &health_query);
-    test_pairs(&others, &others, &mut events, &health_query);
+    test_pairs(&relevant_asteroids, &relevant_asteroids, &mut events);
+    test_pairs(&relevant_asteroids, &others, &mut events);
+    test_pairs(&irrelevant_asteroids, &others, &mut events);
+    test_pairs(&others, &others, &mut events);
 }
 
 /// One body's data as borrowed from the collision query.
@@ -420,7 +414,6 @@ fn test_pairs(
     a: &[BodyRef<'_>],
     b: &[BodyRef<'_>],
     events: &mut MessageWriter<'_, CollisionDetected>,
-    health_query: &Query<'_, '_, &Health>,
 ) {
     for (index, body_a) in a.iter().enumerate() {
         // When both lists are the same one, start past `index` so each pair is
@@ -460,18 +453,6 @@ fn test_pairs(
                 shape_b,
             ) {
                 let relative_velocity = body_b.velocity - body_a.velocity;
-
-                let health_a = health_query.get(entity_a).map_or_else(
-                    |_| "no-hp".to_string(),
-                    |h| format!("hp={:.0}/{:.0}", h.current, h.max),
-                );
-                let health_b = health_query.get(entity_b).map_or_else(
-                    |_| "no-hp".to_string(),
-                    |h| format!("hp={:.0}/{:.0}", h.current, h.max),
-                );
-                tracing::debug!(
-                    "Collision detected: {entity_a:?} ({health_a}) <-> {entity_b:?} ({health_b}), penetration={penetration_depth:.2}, normal={normal:?}"
-                );
 
                 events.write(CollisionDetected {
                     target: entity_a,
@@ -919,15 +900,6 @@ fn collision_response_system(
         {
             body_b.apply_impulse(impulse);
         }
-
-        tracing::debug!(
-            "Collision response: target={:?}, other={:?}, impulse_mag={:.2}, static={}/{}",
-            response.target,
-            response.other,
-            impulse_magnitude,
-            response.target_is_static,
-            response.other_is_static,
-        );
     }
 }
 
