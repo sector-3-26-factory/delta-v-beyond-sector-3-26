@@ -108,6 +108,8 @@ pub fn build_app(config: AppConfig) -> App {
                 ..Default::default()
             })
             .disable::<WinitPlugin>()
+            .disable::<bevy::gizmos::GizmoPlugin>()
+            .disable::<bevy::render::RenderPlugin>()
     } else {
         DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {

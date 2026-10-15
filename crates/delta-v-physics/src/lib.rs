@@ -929,10 +929,6 @@ mod systems_tests;
 mod collision_tests;
 
 #[cfg(test)]
-#[path = "integration_tests.rs"]
-mod integration_tests;
-
-#[cfg(test)]
 #[path = "rigid_body_panic_tests.rs"]
 mod rigid_body_panic_tests;
 

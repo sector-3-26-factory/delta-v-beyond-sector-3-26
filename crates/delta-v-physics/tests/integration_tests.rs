@@ -1,69 +1,38 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-#![cfg(test)]
-
 //! Multi-tick physics integration tests and floating origin tests.
 //! Updated for SOI gravity model per ADR-0055.
+//!
+//! Uses `delta_v_app::build_app` (Single Source of Truth per ADR-0060) instead
+//! of manually assembling the plugin stack.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]
 
 use bevy::prelude::*;
-use bevy::time::TimePlugin;
-
-use crate::celestial::{OrbitalBody, Planet};
-use crate::rigid_body::{MassSource, RigidBody};
-use crate::systems::{
-    PhysicsSet, clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
-    integrate_position_system, integrate_velocity_system,
-};
+use delta_v_physics::celestial::{OrbitalBody, Planet};
+use delta_v_physics::rigid_body::{MassSource, RigidBody};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Builds a minimal Bevy app with the full physics pipeline registered.
-fn build_physics_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.configure_sets(
-        FixedUpdate,
-        (
-            PhysicsSet::AccumulateForces,
-            PhysicsSet::IntegrateVelocity,
-            PhysicsSet::IntegratePosition,
-            PhysicsSet::ClearAccumulators,
-        )
-            .chain(),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (
-            gravity_system.in_set(PhysicsSet::AccumulateForces),
-            integrate_velocity_system.in_set(PhysicsSet::IntegrateVelocity),
-            integrate_angular_velocity_system.in_set(PhysicsSet::IntegrateVelocity),
-            integrate_position_system.in_set(PhysicsSet::IntegratePosition),
-            clear_accumulators_system.in_set(PhysicsSet::ClearAccumulators),
-        ),
-    );
-    app
+/// Builds the app using `build_app` (Single Source of Truth per ADR-0060).
+/// The full physics pipeline — including `FloatingOrigin`, `FloatingOriginConfig`,
+/// `Time<Fixed>` and the gravity/integrate systems — is registered by
+/// `PhysicsPlugin` inside `build_app`.
+fn build_test_app() -> App {
+    delta_v_app::build_app(delta_v_app::AppConfig {
+        is_headless: true,
+        asset_root_suffix: "crates/delta-v-physics/tests/fixtures/assets".to_string(),
+        world_name: None,
+        log_filter: Some("warn,delta_v=debug".to_string()),
+    })
 }
 
-/// Builds a minimal Bevy app with only gravity (no `clear_accumulators`),
-/// useful for checking force accumulator values after a tick.
-/// Uses SOI gravity model per ADR-0055.
-fn build_gravity_only_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.configure_sets(FixedUpdate, (PhysicsSet::AccumulateForces,));
-    app.add_systems(
-        FixedUpdate,
-        gravity_system.in_set(PhysicsSet::AccumulateForces),
-    );
-    app
-}
-
+/// Runs one fixed update tick.
+///
+/// In tests there is no game loop; this advances `Time<Real>` by one fixed
+/// timestep and calls `app.update()` so the `FixedUpdate` schedule executes.
 fn run_fixed_update(app: &mut App) {
     let fixed_duration = app.world().resource::<Time<Fixed>>().timestep();
     app.world_mut()
@@ -72,6 +41,7 @@ fn run_fixed_update(app: &mut App) {
     app.update();
 }
 
+/// Runs `n` fixed update ticks.
 fn run_fixed_updates(app: &mut App, n: usize) {
     for _ in 0..n {
         run_fixed_update(app);
@@ -84,7 +54,7 @@ fn run_fixed_updates(app: &mut App, n: usize) {
 
 #[test]
 fn test_soi_velocity_accumulates_over_multiple_ticks() {
-    let mut app = build_physics_app();
+    let mut app = build_test_app();
 
     // Spawn a planet (celestial body with SOI)
     let _planet_id = app
@@ -130,7 +100,7 @@ fn test_soi_velocity_accumulates_over_multiple_ticks() {
 
 #[test]
 fn test_position_changes_with_velocity() {
-    let mut app = build_physics_app();
+    let mut app = build_test_app();
 
     let body_id = app
         .world_mut()
@@ -158,7 +128,7 @@ fn test_position_changes_with_velocity() {
 
 #[test]
 fn test_soi_clear_accumulators_resets_forces_between_ticks() {
-    let mut app = build_physics_app();
+    let mut app = build_test_app();
 
     // Spawn a planet (celestial body with SOI)
     let _planet_id = app
@@ -203,7 +173,7 @@ fn test_soi_clear_accumulators_resets_forces_between_ticks() {
 
 #[test]
 fn test_soi_celestial_body_no_self_gravity() {
-    let mut app = build_physics_app();
+    let mut app = build_test_app();
 
     // Spawn a planet (celestial body with SOI)
     let planet_id = app
@@ -248,7 +218,7 @@ fn test_soi_celestial_body_no_self_gravity() {
 
 #[test]
 fn test_soi_gravity_inside_soi() {
-    let mut app = build_gravity_only_app();
+    let mut app = build_test_app();
 
     // Spawn a planet with known SOI
     let planet_mass = 5.972e24_f32; // Earth mass
@@ -303,18 +273,11 @@ fn test_soi_gravity_inside_soi() {
 fn test_floating_origin_no_recenter_below_threshold() {
     use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    let mut app = build_test_app();
     app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
     app.insert_resource(FloatingOriginConfig {
         recenter_threshold_m: 5_000.0,
     });
-
-    app.add_systems(
-        FixedUpdate,
-        crate::floating_origin_systems::check_and_recenter_origin_system,
-    );
 
     // Spawn player ship at position below threshold
     let player_id = app
@@ -353,18 +316,11 @@ fn test_floating_origin_no_recenter_below_threshold() {
 fn test_floating_origin_recenter_above_threshold() {
     use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    let mut app = build_test_app();
     app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
     app.insert_resource(FloatingOriginConfig {
         recenter_threshold_m: 5_000.0,
     });
-
-    app.add_systems(
-        FixedUpdate,
-        crate::floating_origin_systems::check_and_recenter_origin_system,
-    );
 
     // Spawn player ship at position above threshold (6km away)
     let player_id = app
@@ -410,19 +366,12 @@ fn test_floating_origin_recenter_above_threshold() {
 fn test_floating_origin_accumulates_offset_with_nonzero_initial_offset() {
     use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    let mut app = build_test_app();
     // Start with a non-zero offset to test accumulation
     app.insert_resource(FloatingOrigin::new(Vec3::new(10_000.0, 0.0, 0.0)));
     app.insert_resource(FloatingOriginConfig {
         recenter_threshold_m: 5_000.0,
     });
-
-    app.add_systems(
-        FixedUpdate,
-        crate::floating_origin_systems::check_and_recenter_origin_system,
-    );
 
     // Spawn player ship at local position (-6000, 0, 0) which has distance 6000 from origin
     // This will trigger recentering since 6000 > 5000 threshold
@@ -474,18 +423,11 @@ fn test_floating_origin_accumulates_offset_with_nonzero_initial_offset() {
 fn test_floating_origin_preserves_rotation_on_recenter() {
     use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    let mut app = build_test_app();
     app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
     app.insert_resource(FloatingOriginConfig {
         recenter_threshold_m: 5_000.0,
     });
-
-    app.add_systems(
-        FixedUpdate,
-        crate::floating_origin_systems::check_and_recenter_origin_system,
-    );
 
     // Spawn player ship at position above threshold (6km away)
     let player_id = app
@@ -519,18 +461,11 @@ fn test_floating_origin_preserves_rotation_on_recenter() {
 fn test_floating_origin_preserves_scale_on_recenter() {
     use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
 
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
+    let mut app = build_test_app();
     app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
     app.insert_resource(FloatingOriginConfig {
         recenter_threshold_m: 5_000.0,
     });
-
-    app.add_systems(
-        FixedUpdate,
-        crate::floating_origin_systems::check_and_recenter_origin_system,
-    );
 
     // Spawn player ship at position above threshold (6km away)
     let player_id = app

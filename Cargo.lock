@@ -3489,6 +3489,7 @@ dependencies = [
  "bevy_math 0.19.1",
  "bevy_mesh 0.19.1",
  "bevy_world_serialization",
+ "delta-v-app",
  "delta-v-assets",
  "delta-v-core",
  "delta-v-types",
@@ -3509,6 +3510,7 @@ name = "delta-v-ships"
 version = "0.0.1"
 dependencies = [
  "bevy 0.19.1",
+ "delta-v-app",
  "delta-v-assets",
  "delta-v-core",
  "delta-v-physics",
@@ -3560,6 +3562,7 @@ name = "delta-v-ui"
 version = "0.0.1"
 dependencies = [
  "bevy 0.19.1",
+ "delta-v-app",
  "delta-v-core",
  "delta-v-types",
  "leafwing-input-manager",

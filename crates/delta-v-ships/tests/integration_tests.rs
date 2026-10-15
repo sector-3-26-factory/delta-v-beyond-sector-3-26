@@ -2,7 +2,7 @@
 
 //! Integration tests for ships plugin.
 //!
-//! See ADR-0021 (Testing strategy).
+//! See ADR-0021 (Testing strategy) and ADR-0060 (Test framework single source of truth).
 
 #![allow(
     clippy::expect_used,
@@ -11,25 +11,19 @@
     clippy::panic
 )]
 
-use bevy::app::App;
-use bevy::asset::AssetPlugin;
 use bevy::prelude::*;
-use bevy::state::app::StatesPlugin;
-
-use delta_v_core::AppState;
+use delta_v_app::{AppConfig, build_app};
 use delta_v_ships::cockpit::components::ActiveCockpitStation;
 
 /// Integration test: verify `SelectedTarget` resource can be set and read.
 #[test]
 fn test_selected_target_resource_update() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(AssetPlugin {
-        file_path: "assets".to_string(),
-        ..default()
+    let mut app = build_app(AppConfig {
+        is_headless: true,
+        asset_root_suffix: "tests/fixtures/assets".to_string(),
+        world_name: None,
+        log_filter: Some("warn,delta_v=debug".to_string()),
     });
-    app.add_plugins(StatesPlugin);
-    app.init_state::<AppState>();
 
     // Add required resources
     app.insert_resource(delta_v_core::navigation::SelectedTarget(None));
@@ -70,14 +64,12 @@ fn test_selected_target_resource_update() {
 /// Integration test: verify `ActiveCockpitStation` resource is set correctly.
 #[test]
 fn test_active_cockpit_station_resource() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(AssetPlugin {
-        file_path: "assets".to_string(),
-        ..default()
+    let mut app = build_app(AppConfig {
+        is_headless: true,
+        asset_root_suffix: "tests/fixtures/assets".to_string(),
+        world_name: None,
+        log_filter: Some("warn,delta_v=debug".to_string()),
     });
-    app.add_plugins(StatesPlugin);
-    app.init_state::<AppState>();
 
     // Insert the ActiveCockpitStation resource
     app.insert_resource(ActiveCockpitStation {
@@ -97,22 +89,21 @@ fn test_active_cockpit_station_resource() {
     );
 }
 
-/// Integration test: verify `ShipsPlugin` can be added to an app without errors.
+/// Integration test: verify `ShipsPlugin` is registered by `build_app` without errors.
+///
+/// `ShipsPlugin` is already registered by `build_app` (Single Source of Truth per
+/// ADR-0060), so this test verifies its public resources are present rather than
+/// re-adding the plugin.
 #[test]
 fn test_ships_plugin_builds() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(AssetPlugin {
-        file_path: "assets".to_string(),
-        ..default()
+    let app = build_app(AppConfig {
+        is_headless: true,
+        asset_root_suffix: "tests/fixtures/assets".to_string(),
+        world_name: None,
+        log_filter: Some("warn,delta_v=debug".to_string()),
     });
-    app.add_plugins(StatesPlugin);
-    app.init_state::<AppState>();
 
-    // Add the ships plugin - this should not panic
-    app.add_plugins(delta_v_ships::ShipsPlugin);
-
-    // Verify the plugin registered its public resources
+    // ShipsPlugin is registered by build_app — verify its public resources are present
     assert!(
         app.world()
             .contains_resource::<delta_v_ships::ThrustCommand>()
