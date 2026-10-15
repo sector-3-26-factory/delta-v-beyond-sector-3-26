@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://delta-v-beyond-sector-3-26/schema/asteroid_field",
+    "title": "Asteroid field template",
+    "description": "AGENTS: before modifying this schema, read AGENTS.md at the repository root.\n\nDefines an asteroid field template: a procedural region that generates asteroids in a defined volume. Per ADR-0008, physical quantities use value+unit objects.",
+    "$comment": "AGENTS: before modifying this file, read AGENTS.md at the repository root.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "entity_type",
+        "meshes",
+        "density"
+    ],
+    "properties": {
+        "entity_type": {
+            "description": "Entity type discriminator. Must be 'asteroid_field'.",
+            "type": "string",
+            "const": "asteroid_field"
+        },
+        "meshes": {
+            "description": "List of asteroid mesh template names to draw from.",
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1
+        },
+        "density": {
+            "description": "Material density in kg/m³ for generated asteroids (used to compute mass from radius).",
+            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/density"
+        }
+    }
+}

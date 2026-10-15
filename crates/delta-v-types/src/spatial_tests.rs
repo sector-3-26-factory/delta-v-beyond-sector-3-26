@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Tests for spatial types: [`Vec3Json`], [`QuatJson`], [`BoundingBoxJson`].
 
 #![allow(clippy::float_cmp)]

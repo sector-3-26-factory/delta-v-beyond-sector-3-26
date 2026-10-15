@@ -35,6 +35,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 #  - mesa-vulkan-drivers   : Vulkan ICD for HW/software rendering
 #  - vulkan-tools          : `vulkaninfo` for debugging
 #
+# Testing:
+#  - xvfb                  : Virtual framebuffer for headless testing
+#
 # Tooling:
 #  - pkg-config            : build glue
 #  - mold                  : fast linker (recommended by Bevy)
@@ -66,6 +69,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         python3-pip \
         npm \
+        xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure ALSA to use PulseAudio as the default audio output.

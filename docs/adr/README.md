@@ -33,7 +33,7 @@ with its original number for historical traceability.
 | 0018 | [State management](0018-state-management.md)                              | Accepted |
 | 0019 | [Asset pipeline and user content](0019-asset-pipeline-and-user-content.md) | Accepted |
 | 0020 | [Save and load format](0020-save-and-load-format.md)                      | Accepted |
-| 0021 | [Testing strategy](0021-testing-strategy.md)                              | Accepted |
+| 0021 | [Testing strategy](0021-testing-strategy.md)                              | Superseded by ADR-0056 |
 | 0022 | [Performance instrumentation](0022-performance-instrumentation.md)        | Accepted |
 | 0023 | [Code style and lints](0023-code-style-and-lints.md)                      | Accepted |
 | 0024 | [Documentation policy](0024-documentation-policy.md)                      | Accepted |
@@ -55,6 +55,7 @@ with its original number for historical traceability.
 | 0040 | [delta-v-json for JSON validation](0040-delta-v-json-for-json-validation.md) | Accepted |
 | 0041 | [Third-party asset acquisition and licensing](0041-third-party-asset-acquisition.md) | Accepted |
 | 0042 | [Custom asset loader with two-root search](0042-custom-asset-loader-two-roots.md) | Proposed |
+| 0056 | [Benchmark purposes and tooling](0056-benchmark-purposes-and-tooling.md)    | Accepted |
 
 ## How to add a new ADR
 

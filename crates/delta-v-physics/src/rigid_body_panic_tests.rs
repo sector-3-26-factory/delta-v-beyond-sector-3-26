@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Panic tests for [`RigidBody`] invalid mass values.
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]

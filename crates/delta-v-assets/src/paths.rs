@@ -62,3 +62,36 @@ pub fn resolve_template_path(category: &str, name: &str) -> String {
 pub fn resolve_template_path_from(template: &TemplatePath) -> String {
     format!("templates/{}/{}/", template.category, template.name)
 }
+
+/// Resolves an absolute asset path from a workspace-relative suffix.
+///
+/// `suffix` is a path fragment like "assets" or "tests/fixtures/assets".
+/// The absolute path is `get_workspace_root().join(suffix)`.
+#[must_use]
+pub fn resolve_asset_path(suffix: &str) -> String {
+    get_workspace_root()
+        .join(suffix)
+        .to_string_lossy()
+        .to_string()
+}
+
+/// Resolves an absolute world.json path from asset suffix and world name.
+///
+/// Result: `get_workspace_root().join(suffix).join("worlds").join(world_name).join("world.json")`
+#[must_use]
+pub fn resolve_world_path(asset_suffix: &str, world_name: &str) -> PathBuf {
+    get_workspace_root()
+        .join(asset_suffix)
+        .join("worlds")
+        .join(world_name)
+        .join("world.json")
+}
+
+/// Returns the absolute path to the production schema directory.
+///
+/// Schemas are ALWAYS loaded from production assets, never from test fixtures.
+/// This ensures schema validation uses the authoritative schema definitions.
+#[must_use]
+pub fn schema_root() -> PathBuf {
+    get_workspace_root().join("assets/json/schema")
+}

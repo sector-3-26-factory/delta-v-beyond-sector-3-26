@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Unit tests for ship spawning.
 //!
 //! See ADR-0021 (Testing strategy).
@@ -31,8 +33,8 @@ fn test_load_player_controlled_ship() {
     // Verify the template is a PlayerShip variant
     match template {
         delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
-            // Verify core ship properties
-            assert!(player_ship.mass > 0.0, "mass should be positive");
+            // Verify core ship properties. Mass is deliberately absent: per ADR-0058
+            // it lives on the world entity, not on the template.
             assert!(
                 player_ship.inertia_scale > 0.0,
                 "inertia_scale should be positive"

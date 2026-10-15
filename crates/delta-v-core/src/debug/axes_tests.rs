@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Unit tests for debug axes behavior.
 //!
 //! Tests verify that:

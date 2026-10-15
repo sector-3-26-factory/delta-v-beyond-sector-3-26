@@ -21,5 +21,8 @@ delta-v-core = { workspace = true }
 delta-v-types = { workspace = true }
 leafwing-input-manager = { workspace = true }
 
+[dev-dependencies]
+delta-v-app = { workspace = true }
+
 [lints]
 workspace = true

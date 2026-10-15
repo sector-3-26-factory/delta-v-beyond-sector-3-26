@@ -56,6 +56,8 @@ pub struct NavEntry {
     pub entity_id: String,
     /// Distance from the player ship in meters.
     pub distance: f32,
+    /// Display name for the navigation menu (from Name component or `entity_id` fallback).
+    pub display_name: String,
 }
 
 /// Resource holding the current navigation list data.

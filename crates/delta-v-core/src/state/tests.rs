@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Unit tests for [`crate::state::AppState`].
 
 use crate::state::AppState;

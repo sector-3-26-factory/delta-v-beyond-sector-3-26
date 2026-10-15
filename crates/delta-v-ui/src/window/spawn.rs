@@ -19,6 +19,7 @@
 //! Window spawning functions.
 
 use bevy::prelude::*;
+use bevy::ui::widget::NodeImageMode;
 use bevy::ui::{Overflow, ScrollPosition, ZIndex};
 use delta_v_core::RenderLayer;
 
@@ -341,6 +342,7 @@ pub fn spawn_window(
                 });
 
                 // Fade-out zone: top — absolutely positioned, NOT affected by scroll
+                // Use ImageNode with Stretch mode to properly fill the layout node (Bevy 0.19 default is Auto)
                 ui.spawn((
                     Name::new("FadeTop"),
                     Node {
@@ -355,11 +357,13 @@ pub fn spawn_window(
                     ImageNode {
                         image: fade_top_image,
                         color: Color::WHITE,
+                        image_mode: NodeImageMode::Stretch,
                         ..default()
                     },
                 ));
 
                 // Fade-out zone: bottom — absolutely positioned, NOT affected by scroll
+                // Use ImageNode with Stretch mode to properly fill the layout node (Bevy 0.19 default is Auto)
                 ui.spawn((
                     Name::new("FadeBottom"),
                     Node {
@@ -374,6 +378,7 @@ pub fn spawn_window(
                     ImageNode {
                         image: fade_bottom_image,
                         color: Color::WHITE,
+                        image_mode: NodeImageMode::Stretch,
                         ..default()
                     },
                 ));

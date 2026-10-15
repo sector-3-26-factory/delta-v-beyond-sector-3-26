@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Tests for the input → forces pipeline systems.
 //!
 //! See ADR-0021 (Testing strategy).

@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
+#![cfg(test)]
 
 //! Tests for collision shape type deserialization.
 
@@ -107,18 +108,42 @@ fn test_collision_shape_json_shape_type_method() {
 fn test_collision_layers_ship() {
     let ship = crate::collision::layers::SHIP;
     assert_eq!(ship.layers, crate::collision::layers::SHIP_LAYER);
-    // Ship mask includes both SHIP_LAYER (for ship-to-ship) and ASTEROID_LAYER
-    assert_eq!(
-        ship.mask,
-        crate::collision::layers::SHIP_LAYER | crate::collision::layers::ASTEROID_LAYER
-    );
+    assert_eq!(ship.mask, crate::collision::layers::ALL_LAYERS);
 }
 
 #[test]
 fn test_collision_layers_asteroid() {
     let asteroid = crate::collision::layers::ASTEROID;
     assert_eq!(asteroid.layers, crate::collision::layers::ASTEROID_LAYER);
-    assert_eq!(asteroid.mask, crate::collision::layers::SHIP_LAYER);
+    assert_eq!(asteroid.mask, crate::collision::layers::ALL_LAYERS);
+}
+
+/// Suns, planets and moons collide with everything, like every other body.
+#[test]
+fn test_collision_layers_celestial() {
+    let celestial = crate::collision::layers::CELESTIAL;
+    assert_eq!(celestial.layers, crate::collision::layers::CELESTIAL_LAYER);
+    assert_eq!(celestial.mask, crate::collision::layers::ALL_LAYERS);
+}
+
+/// Every layer is a distinct bit, so `ALL_LAYERS` names all of them.
+#[test]
+fn test_all_layers_covers_every_layer() {
+    use crate::collision::layers::{
+        ALL_LAYERS, ASTEROID_LAYER, CELESTIAL_LAYER, PROJECTILE_LAYER, SHIP_LAYER,
+    };
+    assert_eq!(
+        ALL_LAYERS,
+        SHIP_LAYER | ASTEROID_LAYER | PROJECTILE_LAYER | CELESTIAL_LAYER
+    );
+    for layer in [
+        SHIP_LAYER,
+        ASTEROID_LAYER,
+        PROJECTILE_LAYER,
+        CELESTIAL_LAYER,
+    ] {
+        assert_ne!(ALL_LAYERS & layer, 0, "layer {layer} is not in ALL_LAYERS");
+    }
 }
 
 #[test]
@@ -138,13 +163,17 @@ fn test_collision_layers_ship_can_collide_with_ships() {
 }
 
 #[test]
-fn test_collision_layers_asteroid_no_self_collision() {
-    // Asteroid layer should not collide with itself
+fn test_collision_layers_asteroid_self_collision() {
+    // Asteroid layer CAN collide with other asteroids
     let asteroid = crate::collision::layers::ASTEROID;
-    assert_eq!(
+    assert_ne!(
         asteroid.layers & asteroid.mask,
         0,
-        "asteroid should not collide with itself"
+        "asteroid should be able to collide with other asteroids"
+    );
+    assert_eq!(
+        asteroid.mask & crate::collision::layers::ASTEROID_LAYER,
+        crate::collision::layers::ASTEROID_LAYER
     );
 }
 

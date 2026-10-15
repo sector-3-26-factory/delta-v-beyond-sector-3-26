@@ -8,7 +8,6 @@
     "additionalProperties": false,
     "required": [
         "entity_type",
-        "mass",
         "collision_shape",
         "bounding_box"
     ],
@@ -17,10 +16,6 @@
             "description": "Entity type discriminator. Must be 'asteroid'.",
             "type": "string",
             "const": "asteroid"
-        },
-        "mass": {
-            "description": "Asteroid mass in kilograms. Required per ADR-0009 (every rigid body MUST have mass) and ADR-0014 (gameplay values in JSON).",
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         },
         "collision_shape": {
             "description": "Collision shape for the asteroid. Defines how it interacts with other objects.",

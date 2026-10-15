@@ -30,13 +30,14 @@ use delta_v_core::{
     DebugAxesEligible, EntityType, RenderLayer, SpawnEntity, Targetable, WorldEntityId,
 };
 use delta_v_types::{
-    compute_debug_axis_length, resolve_mass, scale_bounding_box, scale_collision_shape,
+    compute_debug_axis_length, require_mass, scale_bounding_box, scale_collision_shape,
 };
 
 use crate::celestial::{ALWAYS_VISIBLE_SCREEN_RADIUS_PX, LazyLoadMesh, Moon};
+use crate::constants::COLLISION_RELEVANCE_PX;
 use crate::{
     CollisionLayersComponent, CollisionShape, MassSource, Navigable, OrbitalBody, OrbitalParentId,
-    Planet, RigidBody, Sun,
+    Planet, RigidBody, StaticBody, Sun,
 };
 
 // ---------------------------------------------------------------------------
@@ -67,9 +68,10 @@ pub fn spawn_sun(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(sun_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = sun_template.collision_shape;
@@ -107,10 +109,16 @@ pub fn spawn_sun(
                     loaded: false,
                     mesh_path: spawn.mesh_path(),
                     current_screen_radius_px: 0.0,
+                    collision_relevance_px: COLLISION_RELEVANCE_PX,
                     mesh_child_entities: Vec::new(),
                 },
                 DebugAxesEligible::new(entity_id.clone(), axis_length),
                 NotShadowCaster,
+                RenderLayer::Gameplay.render_layers(),
+                // The sun's PointLight child is parented here, and a PointLight
+                // requires InheritedVisibility. Without Visibility on this parent
+                // the child inherits nothing and Bevy logs warning B0004.
+                Visibility::default(),
             ))
             .id();
 
@@ -132,12 +140,19 @@ pub fn spawn_sun(
             scaled_collision_shape.offset
         );
 
-        commands
-            .entity(sun_entity)
-            .insert(CollisionShape(scaled_collision_shape));
+        // A sun is static: an impulse must never move it. `StaticBody` is what
+        // the collision response reads to zero the inverse mass.
+        commands.entity(sun_entity).insert((
+            CollisionShape(scaled_collision_shape),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::CELESTIAL),
+            StaticBody,
+        ));
 
         // Spawn a child entity with PointLight
         // The light follows the sun's transform automatically via ChildOf
+        // The light entity carries no mesh of its own, so NotShadowCaster is
+        // defensive: it just keeps the entity out of the shadow-casting pass.
+        // It has no effect on how the light illuminates its surroundings.
         commands.spawn((
             Name::new(format!("Sun Light: {entity_id}")),
             PointLight {
@@ -150,6 +165,7 @@ pub fn spawn_sun(
                 range: sun_template.light_range,
                 ..default()
             },
+            NotShadowCaster,
             RenderLayer::Gameplay.render_layers(),
             ChildOf(sun_entity),
         ));
@@ -186,9 +202,10 @@ pub fn spawn_planet(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(planet_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = planet_template.collision_shape;
@@ -254,6 +271,7 @@ pub fn spawn_planet(
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                collision_relevance_px: COLLISION_RELEVANCE_PX,
                 mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
@@ -289,7 +307,14 @@ pub fn spawn_planet(
             scaled_collision_shape.offset
         );
 
-        entity_commands.insert(CollisionShape(scaled_collision_shape));
+        // Planets are static for the same reason suns are: the collision
+        // response treats a body without `StaticBody` as dynamic and would
+        // apply the full impulse to it.
+        entity_commands.insert((
+            CollisionShape(scaled_collision_shape),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::CELESTIAL),
+            StaticBody,
+        ));
 
         tracing::info!(
             "spawned planet: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",
@@ -323,9 +348,10 @@ pub fn spawn_asteroid(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(asteroid_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = asteroid_template.collision_shape;
@@ -384,6 +410,7 @@ pub fn spawn_asteroid(
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                collision_relevance_px: COLLISION_RELEVANCE_PX,
                 mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
@@ -449,9 +476,10 @@ pub fn spawn_moon(
             continue;
         };
 
-        // Resolve mass: use override if present, otherwise use template mass.
+        // ADR-0058: mass belongs to the world entity. A body with no declared
+        // mass is a world authoring error and a hard failure, never a default.
         // Mass is NOT scaled - it is used as-is or overridden.
-        let mass = resolve_mass(moon_template.mass, spawn.mass);
+        let mass = require_mass(&spawn.id, spawn.mass);
 
         // Extract collision shape data
         let collision_shape_data = moon_template.collision_shape;
@@ -517,6 +545,7 @@ pub fn spawn_moon(
                 loaded: false,
                 mesh_path: spawn.mesh_path(),
                 current_screen_radius_px: 0.0,
+                collision_relevance_px: COLLISION_RELEVANCE_PX,
                 mesh_child_entities: Vec::new(),
             },
             DebugAxesEligible::new(entity_id.clone(), axis_length),
@@ -552,7 +581,14 @@ pub fn spawn_moon(
             scaled_collision_shape.offset
         );
 
-        entity_commands.insert(CollisionShape(scaled_collision_shape));
+        // Moons are static, and carry the celestial collision layer so a ship
+        // cannot fly through them. Without the layer the moon is not in the
+        // collision query at all and no test ever compares it to anything.
+        entity_commands.insert((
+            CollisionShape(scaled_collision_shape),
+            CollisionLayersComponent::new(delta_v_types::collision::layers::CELESTIAL),
+            StaticBody,
+        ));
 
         tracing::info!(
             "spawned moon: {entity_id} (mass={mass:.3e} kg, distance={orbital_distance:.3e} m, period={orbital_period:.3e} s)",

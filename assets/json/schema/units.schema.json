@@ -44,7 +44,8 @@
                 "a",
                 "hp",
                 "Hz",
-                "dimensionless"
+                "dimensionless",
+                "kg/m³"
             ]
         }
     },
@@ -146,6 +147,9 @@
                 },
                 "dimensionless": {
                     "description": "Dimensionless quantity (pure ratio, no physical unit)."
+                },
+                "kg/m³": {
+                    "description": "Kilograms per cubic meter — unit of density."
                 }
             }
         },
@@ -384,6 +388,28 @@
                     "type": "string",
                     "enum": [
                         "Hz"
+                    ]
+                }
+            }
+        },
+        "density": {
+            "description": "Physical quantity with density unit. Per ADR-0008, all density values use value+unit format. Units: kg/m³. Converted to kg/m³ at load time.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "unit"
+            ],
+            "properties": {
+                "value": {
+                    "description": "Density value. Must be finite.",
+                    "type": "number"
+                },
+                "unit": {
+                    "description": "Unit of density. Must be one of the allowed density units.",
+                    "type": "string",
+                    "enum": [
+                        "kg/m³"
                     ]
                 }
             }

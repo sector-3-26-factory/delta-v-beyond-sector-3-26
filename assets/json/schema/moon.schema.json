@@ -7,7 +7,6 @@
     "additionalProperties": false,
     "required": [
         "entity_type",
-        "mass",
         "collision_shape",
         "bounding_box"
     ],
@@ -16,9 +15,6 @@
             "description": "Entity type discriminator. Must be 'moon'.",
             "type": "string",
             "const": "moon"
-        },
-        "mass": {
-            "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
         },
         "collision_shape": {
             "description": "Collision shape for the moon. Defines how it interacts with other objects.",

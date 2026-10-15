@@ -1,9 +1,5 @@
 {
     "entity_type": "sun",
-    "mass": {
-        "value": 1.0,
-        "unit": "M_sun"
-    },
     "collision_shape": {
         "type": "sphere",
         "radius": {
