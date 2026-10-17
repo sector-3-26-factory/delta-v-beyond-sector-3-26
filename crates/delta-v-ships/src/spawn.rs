@@ -32,6 +32,7 @@ use std::path::Path;
 use crate::cockpit::CockpitOverlayResource;
 use crate::ship_templates::ShipPropulsionConfig;
 use bevy::prelude::*;
+use delta_v_assets::AssetRoot;
 use delta_v_core::{ActiveCameraName, CameraName, PlayerShipEntity, RenderLayer, SpawnEntity};
 use delta_v_spawn::build_physical_ship;
 use delta_v_spawn::template_extraction::png_dimensions;
@@ -95,6 +96,7 @@ fn insert_player_resources(
     template_path: &str,
     template: &PlayerShipTemplate,
     propulsion_config: ShipPropulsionConfig,
+    asset_root: &AssetRoot,
 ) {
     commands.insert_resource(PlayerShipEntity(ship_entity));
     commands.insert_resource(propulsion_config);
@@ -113,9 +115,11 @@ fn insert_player_resources(
     // Read the first station's texture dimensions from the PNG file.
     // Slot coordinates are in texture pixel space and must be scaled to viewport percentages.
     // Per ADR-0013, missing or invalid PNG is a hard error — no silent fallback.
+    // Resolve the path against the AssetRoot resource rather than the process CWD,
+    // which differs between production (workspace root) and tests (crate dir).
     let (texture_width, texture_height) =
         template.cockpit.stations.first().map_or((1.0, 1.0), |s| {
-            let path = format!("assets/{}/{}", cockpit_dir, s.texture);
+            let path = format!("{}/{}/{}", asset_root.0, cockpit_dir, s.texture);
             #[allow(clippy::expect_used)]
             png_dimensions(&path).expect("failed to read cockpit texture PNG dimensions (ADR-0013)")
         });
@@ -147,6 +151,7 @@ fn insert_player_resources(
 fn spawn_player_ship(
     commands: &mut Commands<'_, '_>,
     asset_server: &Res<'_, AssetServer>,
+    asset_root: &AssetRoot,
     event: &SpawnEntity,
 ) {
     // Extract player ship template from EntityTemplate enum.
@@ -183,6 +188,7 @@ fn spawn_player_ship(
         &event.template_path,
         &template,
         ship_propulsion_config,
+        asset_root,
     );
 
     tracing::info!(
@@ -252,11 +258,14 @@ fn spawn_static_ship(
 pub fn spawn_ship(
     mut commands: Commands<'_, '_>,
     asset_server: Res<'_, AssetServer>,
+    asset_root: Res<'_, AssetRoot>,
     mut events: MessageReader<'_, '_, SpawnEntity>,
 ) {
     for event in events.read() {
         match &event.template {
-            EntityTemplate::PlayerShip(_) => spawn_player_ship(&mut commands, &asset_server, event),
+            EntityTemplate::PlayerShip(_) => {
+                spawn_player_ship(&mut commands, &asset_server, &asset_root, event);
+            }
             EntityTemplate::StaticShip(_) => spawn_static_ship(&mut commands, &asset_server, event),
             // Other entity types (e.g. asteroids, suns, planets) are handled by other plugins.
             // Silently skip — a single plugin cannot know whether another plugin

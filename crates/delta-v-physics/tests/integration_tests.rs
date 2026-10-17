@@ -22,7 +22,6 @@ use delta_v_physics::rigid_body::{MassSource, RigidBody};
 /// `PhysicsPlugin` inside `build_app`.
 fn build_test_app() -> App {
     delta_v_app::build_app(delta_v_app::AppConfig {
-        is_headless: true,
         asset_root_suffix: "crates/delta-v-physics/tests/fixtures/assets".to_string(),
         world_name: None,
         log_filter: Some("warn,delta_v=debug".to_string()),

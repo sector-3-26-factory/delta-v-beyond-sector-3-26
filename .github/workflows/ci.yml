@@ -80,7 +80,9 @@ jobs:
             libxcursor-dev \
             libxrandr-dev \
             libxinerama-dev \
-            libvulkan-dev
+            libvulkan-dev \
+            xvfb \
+            xauth
 
       - name: Install Rust toolchain
         run: rustup show && rustup component add clippy

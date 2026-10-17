@@ -19,7 +19,6 @@ use delta_v_ships::cockpit::components::ActiveCockpitStation;
 #[test]
 fn test_selected_target_resource_update() {
     let mut app = build_app(AppConfig {
-        is_headless: true,
         asset_root_suffix: "tests/fixtures/assets".to_string(),
         world_name: None,
         log_filter: Some("warn,delta_v=debug".to_string()),
@@ -65,7 +64,6 @@ fn test_selected_target_resource_update() {
 #[test]
 fn test_active_cockpit_station_resource() {
     let mut app = build_app(AppConfig {
-        is_headless: true,
         asset_root_suffix: "tests/fixtures/assets".to_string(),
         world_name: None,
         log_filter: Some("warn,delta_v=debug".to_string()),
@@ -97,7 +95,6 @@ fn test_active_cockpit_station_resource() {
 #[test]
 fn test_ships_plugin_builds() {
     let app = build_app(AppConfig {
-        is_headless: true,
         asset_root_suffix: "tests/fixtures/assets".to_string(),
         world_name: None,
         log_filter: Some("warn,delta_v=debug".to_string()),

@@ -70,6 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-pip \
         npm \
         xvfb \
+        xauth \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure ALSA to use PulseAudio as the default audio output.

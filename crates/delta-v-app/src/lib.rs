@@ -49,7 +49,6 @@ use bevy::asset::AssetPlugin;
 use bevy::log::LogPlugin;
 use bevy::prelude::PluginGroup;
 use bevy::window::{Window, WindowPlugin};
-use bevy::winit::WinitPlugin;
 
 use delta_v_ai::AiPlugin;
 use delta_v_assets::AssetsPlugin;
@@ -73,8 +72,6 @@ use delta_v_world::{WorldPath, WorldPlugin};
 // allow-default: AppConfig has no JSON source; defaults are centralized here per ADR-0039
 #[derive(Debug, Clone)]
 pub struct AppConfig {
-    /// Headless mode: no window, no Winit, for CI/tests.
-    pub is_headless: bool,
     /// Asset root suffix (path fragment under workspace root).
     /// Default: "assets" (production). Tests: "tests/fixtures/assets".
     pub asset_root_suffix: String,
@@ -88,7 +85,6 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            is_headless: false,
             asset_root_suffix: "assets".to_string(),
             world_name: Some("default".to_string()),
             log_filter: None,
@@ -100,29 +96,19 @@ impl Default for AppConfig {
 pub fn build_app(config: AppConfig) -> App {
     let mut app = App::new();
 
-    // 1. DefaultPlugins with headless support
-    let plugins = if config.is_headless {
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: None,
-                ..Default::default()
-            })
-            .disable::<WinitPlugin>()
-            .disable::<bevy::gizmos::GizmoPlugin>()
-            .disable::<bevy::render::RenderPlugin>()
-    } else {
-        DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Delta-V beyond Sector 3.26".to_string(),
-                resolution: (1280, 720).into(),
-                ..Default::default()
-            }),
+    // 1. DefaultPlugins (always with window, xvfb provides virtual display in CI)
+    let plugins = DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Delta-V beyond Sector 3.26".to_string(),
+            resolution: (1280, 720).into(),
             ..Default::default()
-        })
-    };
+        }),
+        ..Default::default()
+    });
 
     // 2. AssetPlugin with path resolved by delta-v-assets
     let asset_path = delta_v_assets::resolve_asset_path(&config.asset_root_suffix);
+    let asset_root = asset_path.clone();
     let plugins = plugins.set(AssetPlugin {
         file_path: asset_path,
         ..Default::default()
@@ -154,7 +140,13 @@ pub fn build_app(config: AppConfig) -> App {
     });
     app.add_plugins(plugins);
 
-    // 4. WorldPath resource if world name provided
+    // 4. AssetRoot resource — the resolved absolute asset root directory.
+    // Domain crates that read files from the asset tree (e.g. cockpit PNG
+    // dimensions in delta-v-ships) query this rather than hardcoding `assets/`
+    // relative to the process CWD, which differs between production and tests.
+    app.insert_resource(delta_v_assets::AssetRoot(asset_root));
+
+    // 5. WorldPath resource if world name provided
     if let Some(world_name) = config.world_name {
         let world_path = delta_v_assets::resolve_world_path(&config.asset_root_suffix, &world_name);
         app.insert_resource(WorldPath(world_path));

@@ -88,6 +88,26 @@ See [`docs/architecture.md`](docs/architecture.md) for an overview of the crate 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md). By contributing you agree that your
 contributions are licensed under GPL-3.0-or-later.
 
+## Testing
+
+Unit tests run normally with `cargo test`. Integration tests that
+exercise the full Bevy plugin stack (UI menus, rendering, input)
+require a display, so they must be run under `xvfb-run`:
+
+```bash
+# All tests (unit + integration) under a virtual framebuffer
+xvfb-run -a cargo test --locked
+```
+
+Bevy's `WinitPlugin` requires the event loop on the **main thread**.
+Integration tests are registered as `[[test]]` targets with
+`harness = false` so the test runner executes `main()` on the main
+thread rather than on a worker thread.
+
+`xvfb` and `xauth` must be installed. The dev container already
+provides both; on a native Linux install, `sudo apt install xvfb
+xauth`.
+
 ## License
 
 Copyright (C) 2025 Cute-Donkey and contributors.

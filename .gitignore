@@ -43,3 +43,6 @@ docs/pending-ai-steps.md
 node_modules/
 package-lock.json
 package.json
+
+# Devcontainer unversioned data (Zoo plugin storage, etc.)
+.devcontainer/unversioned/

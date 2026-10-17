@@ -74,7 +74,6 @@ fn main() {
     print_x11_hint();
 
     let mut app = build_app(AppConfig {
-        is_headless: false,
         asset_root_suffix: "assets".to_string(), // Production suffix
         world_name: Some(world_name),
         log_filter: None, // Default from build_app (dev/non-dev via feature)
