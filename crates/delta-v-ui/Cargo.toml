@@ -23,9 +23,11 @@ leafwing-input-manager = { workspace = true }
 
 [dev-dependencies]
 delta-v-app = { workspace = true }
+delta-v-test-support = { workspace = true }
 
 # Run integration_tests.rs as a harness=false test so cargo test runs main()
-# on the main thread (WinitPlugin requirement). See plans/testframework.md.
+# on the main thread (WinitPlugin requirement). The test harness lives in
+# `delta-v-test-support`; this file only contains the test functions.
 [[test]]
 name = "ui_integration_tests"
 path = "tests/integration_tests.rs"

@@ -8,8 +8,9 @@
 //! plans/testframework.md step 8).
 //!
 //! The `harness = false` setting makes the test runner skip the `#[test]`
-//! harness and execute the binary's `main()` directly. This is the canonical
-//! invocation:
+//! harness and execute the binary's `main()` directly. The harness itself
+//! lives in the `delta-v-test-support` crate so it can be reused across
+//! crates without duplication. This file only contains the test functions.
 //!
 //!   xvfb-run -a cargo test --test `ui_integration_tests` -p delta-v-ui
 //!
@@ -26,6 +27,7 @@
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
+use delta_v_test_support::{check, press_action, run_harness, settle_render};
 use delta_v_types::LogicalAction;
 use delta_v_ui::overlays::keybindings_menu::{
     components::KeybindingsMenuRoot, resources::KeybindingsMenuOpen,
@@ -33,85 +35,24 @@ use delta_v_ui::overlays::keybindings_menu::{
 use delta_v_ui::overlays::navigation_menu::{
     components::NavigationMenuRoot, resources::NavigationMenuOpen,
 };
-use leafwing_input_manager::prelude::ActionState;
 
-/// Tracks whether any assertion has failed.
+/// Build the app and settle the render graph before running assertions.
 ///
-/// SAFETY INVARIANT: this `static mut` is only ever touched from the single
-/// OS main thread that `harness = false` guarantees (see the module doc
-/// comment). No rayon, no `std::thread::spawn`, no Bevy worker thread — the
-/// whole test body runs synchronously on the main thread, so there is no
-/// data race and no reordering hazard. Any future change that introduces
-/// concurrent access MUST first replace this with an `AtomicBool` or a
-/// `Mutex`.
-static mut TEST_PASSED: bool = true;
-
-/// Mark the test as failed (called from `check`).
-fn fail(message: &str) {
-    eprintln!("FAIL: {message}");
-    // SAFETY: single main-thread owner (see `TEST_PASSED` invariant).
-    unsafe {
-        TEST_PASSED = false;
-    }
-}
-
-/// Assert `condition`, logging failure instead of panicking so the app can
-/// keep running on the main thread and we can collect all failures.
-fn check(condition: bool, message: &str) {
-    if !condition {
-        fail(message);
-    }
-}
-
-/// Helper: press action and run app update.
-///
-/// Releases the action first and runs an update in between so that custom
-/// edge-detection resources (e.g. `NavigationMenuToggleState.prev_pressed`)
-/// are cleared before the next press. Without this, pressing the same action
-/// twice in a row fails because the action stays `Pressed` and the toggle
-/// state never sees a fresh rising edge.
-fn press_action(app: &mut App, action: LogicalAction) {
-    {
-        let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
-        let mut action_state = query
-            .single_mut(app.world_mut())
-            .expect("ActionState not found");
-        action_state.release(&action);
-    }
-    app.update();
-    {
-        let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
-        let mut action_state = query
-            .single_mut(app.world_mut())
-            .expect("ActionState not found");
-        action_state.press(&action);
-    }
-    app.update();
-}
-
-/// Run the menu-toggle integration test.
-fn run_test() {
+/// Called once in `main()`; the resulting `App` is shared across all tests
+/// in this target. Bevy's `WinitPlugin` permits only one `EventLoop` per
+/// thread, so a single `harness = false` target can host only one `App`.
+fn make_app() -> App {
     let mut app = build_app(AppConfig {
         asset_root_suffix: "crates/delta-v-ui/tests/fixtures/assets".to_string(),
         world_name: Some("test".to_string()),
         log_filter: Some("warn,delta_v=debug".to_string()),
     });
+    settle_render(&mut app);
+    app
+}
 
-    // Bevy's default runner (`run_once`) calls `finish()` -> `cleanup()` ->
-    // `update()`. `Plugin::finish()` is where `RenderDevice` is inserted
-    // into the render world (via `RenderResources::unpack_into`). Calling
-    // `app.update()` alone skips `finish()`, so `Res<RenderDevice>` is not
-    // yet available and render systems panic. We call `finish()` here, then
-    // `cleanup()` once to set up the render thread (which consumes the
-    // RenderApp on the first `update()`). Subsequent `update()` calls drive
-    // the render graph. (See plans/testframework.md step 9.)
-    app.finish();
-    app.cleanup();
-    for _ in 0..20 {
-        app.update();
-    }
-
-    // ===== Test Keybindings Menu (F1) =====
+/// Test: F1 toggles the keybindings menu open and closed.
+fn test_keybindings_menu_toggle(app: &mut App) {
     // Verify menu starts closed
     let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
     check(!menu_resource.0, "keybindings menu should start closed");
@@ -125,7 +66,7 @@ fn run_test() {
     );
 
     // Press F1 to open
-    press_action(&mut app, LogicalAction::ToggleKeybindingsMenu);
+    press_action(app, LogicalAction::ToggleKeybindingsMenu);
 
     // Verify menu opened
     let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
@@ -143,7 +84,7 @@ fn run_test() {
     );
 
     // Press F1 again to close
-    press_action(&mut app, LogicalAction::ToggleKeybindingsMenu);
+    press_action(app, LogicalAction::ToggleKeybindingsMenu);
 
     // Verify menu closed
     let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
@@ -159,8 +100,10 @@ fn run_test() {
             == 0,
         "keybindings menu UI should be despawned",
     );
+}
 
-    // ===== Test Navigation Menu (N) =====
+/// Test: N toggles the navigation menu open and closed.
+fn test_navigation_menu_toggle(app: &mut App) {
     // Verify menu starts closed
     let menu_resource = app.world().resource::<NavigationMenuOpen>();
     check(!menu_resource.0, "navigation menu should start closed");
@@ -174,7 +117,7 @@ fn run_test() {
     );
 
     // Press N to open
-    press_action(&mut app, LogicalAction::ToggleNavigationMenu);
+    press_action(app, LogicalAction::ToggleNavigationMenu);
 
     // Verify menu opened
     let menu_resource = app.world().resource::<NavigationMenuOpen>();
@@ -192,7 +135,7 @@ fn run_test() {
     );
 
     // Press N again to close
-    press_action(&mut app, LogicalAction::ToggleNavigationMenu);
+    press_action(app, LogicalAction::ToggleNavigationMenu);
 
     // Verify menu closed
     let menu_resource = app.world().resource::<NavigationMenuOpen>();
@@ -214,16 +157,12 @@ fn run_test() {
 ///
 /// Exits 0 on success, 1 on any assertion failure.
 fn main() {
-    run_test();
-
-    // SAFETY: single main-thread owner (see `TEST_PASSED` invariant).
-    unsafe {
-        if TEST_PASSED {
-            println!("ALL TESTS PASSED");
-            std::process::exit(0);
-        } else {
-            eprintln!("SOME TESTS FAILED");
-            std::process::exit(1);
-        }
-    }
+    let mut app = make_app();
+    run_harness(
+        &mut app,
+        &[
+            ("keybindings_menu_toggle", test_keybindings_menu_toggle),
+            ("navigation_menu_toggle", test_navigation_menu_toggle),
+        ],
+    );
 }
