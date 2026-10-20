@@ -23,6 +23,7 @@ categories = ["game-development", "development-tools"]
 [dependencies]
 bevy = { workspace = true }
 delta-v-types = { workspace = true }
+image = { workspace = true }
 leafwing-input-manager = { workspace = true }
 
 [lints]

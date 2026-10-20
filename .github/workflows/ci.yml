@@ -25,6 +25,14 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
+  # This runner has no GPU Vulkan. Bevy's wgpu can only present to the
+  # virtual xvfb framebuffer through the software (LVP) Vulkan driver, so
+  # we force that ICD and set the runtime dir the loader requires.
+  # Without these the screenshot tests panic with
+  # "No DRI3 support detected" / "Fallback system failed to choose present
+  # mode" and capture an all-black framebuffer.
+  VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+  XDG_RUNTIME_DIR: /tmp/xvfb-run-1000
 
 jobs:
   forbidden-patterns:
@@ -81,6 +89,7 @@ jobs:
             libxrandr-dev \
             libxinerama-dev \
             libvulkan-dev \
+            mesa-vulkan-drivers \
             xvfb \
             xauth
 

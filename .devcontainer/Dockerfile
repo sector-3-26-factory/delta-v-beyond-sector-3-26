@@ -79,6 +79,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN echo 'pcm.!default { type pulse }' > /etc/asound.conf && \
     echo 'ctl.!default { type pulse }' >> /etc/asound.conf
 
+# Wrapper so `cargo test` automatically runs under xvfb-run.
+# Integration tests use Bevy's WinitPlugin and need a virtual display.
+# /home/vscode/.local/bin is on PATH and comes before /usr/local/cargo/bin.
+# Must run as root (before USER vscode) to write to /home/vscode/.local/bin.
+RUN mkdir -p /home/vscode/.local/bin && \
+    cat > /home/vscode/.local/bin/cargo <<'WRAPPER'
+#!/bin/sh
+if [ "$1" = "test" ]; then
+  exec xvfb-run -a /usr/local/cargo/bin/cargo "$@"
+fi
+exec /usr/local/cargo/bin/cargo "$@"
+WRAPPER
+RUN chmod +x /home/vscode/.local/bin/cargo && \
+    chown -R vscode:vscode /home/vscode/.local
+
 # Pre-install useful cargo subcommands for the workflow.
 # (Kept minimal; add more on demand to keep image size reasonable.)
 USER vscode

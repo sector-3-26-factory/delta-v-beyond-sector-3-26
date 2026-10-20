@@ -27,7 +27,7 @@
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
-use delta_v_test_support::{check, press_action, run_harness, settle_render};
+use delta_v_test_support::{check, press_action, run_harness};
 use delta_v_types::LogicalAction;
 use delta_v_ui::overlays::keybindings_menu::{
     components::KeybindingsMenuRoot, resources::KeybindingsMenuOpen,
@@ -35,21 +35,6 @@ use delta_v_ui::overlays::keybindings_menu::{
 use delta_v_ui::overlays::navigation_menu::{
     components::NavigationMenuRoot, resources::NavigationMenuOpen,
 };
-
-/// Build the app and settle the render graph before running assertions.
-///
-/// Called once in `main()`; the resulting `App` is shared across all tests
-/// in this target. Bevy's `WinitPlugin` permits only one `EventLoop` per
-/// thread, so a single `harness = false` target can host only one `App`.
-fn make_app() -> App {
-    let mut app = build_app(AppConfig {
-        asset_root_suffix: "crates/delta-v-ui/tests/fixtures/assets".to_string(),
-        world_name: Some("test".to_string()),
-        log_filter: Some("warn,delta_v=debug".to_string()),
-    });
-    settle_render(&mut app);
-    app
-}
 
 /// Test: F1 toggles the keybindings menu open and closed.
 fn test_keybindings_menu_toggle(app: &mut App) {
@@ -157,7 +142,16 @@ fn test_navigation_menu_toggle(app: &mut App) {
 ///
 /// Exits 0 on success, 1 on any assertion failure.
 fn main() {
-    let mut app = make_app();
+    // 60 `app.update()` invocations: enough for the menu-toggle tests, which
+    // do not render a scene. The fadezone test passes 200 because software
+    // rendering needs many ticks to settle the framebuffer.
+    let mut app = delta_v_test_support::make_app(60, || {
+        build_app(AppConfig {
+            asset_root_suffix: "crates/delta-v-ui/tests/fixtures/assets".to_string(),
+            world_name: Some("test".to_string()),
+            log_filter: Some("warn,delta_v=debug".to_string()),
+        })
+    });
     run_harness(
         &mut app,
         &[
