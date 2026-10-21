@@ -15,13 +15,7 @@
         // PulseAudio socket for audio playback in the container.
         // Mounts the host's PulseAudio socket to a fixed path in the container.
         // The Dockerfile creates /etc/asound.conf to route ALSA to PulseAudio.
-        "PULSE_SERVER": "unix:/pulse-native",
-        // Screenshot tests (ui_fadezone_tests) need a Vulkan renderer that
-        // can present to a virtual framebuffer. The container ships the
-        // software LVP driver (mesa-vulkan-drivers); force it so the tests
-        // work headless even when no GPU is passed through.
-        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
-        "XDG_RUNTIME_DIR": "/tmp/xvfb-run-1000"
+        "PULSE_SERVER": "unix:/pulse-native"
     },
     "mounts": [
         // We only need the X11 sockets. No .Xauthority mount needed when using 'xhost +local:'
