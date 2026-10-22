@@ -49,6 +49,7 @@ pub use systems::WeaponsSet;
 use bevy::prelude::*;
 use delta_v_core::{AppState, FireWeapon, ProjectileHit, SelectedWeapon};
 use delta_v_physics::PhysicsSet;
+use leafwing_input_manager::plugin::InputManagerSystem;
 
 /// Weapons plugin for managing projectiles and damage.
 ///
@@ -82,12 +83,17 @@ impl Plugin for WeaponsPlugin {
             .add_systems(
                 FixedUpdate,
                 (
-                    systems::weapon_selection_system.in_set(WeaponsSet::ProcessFireCommands),
                     systems::fire_input_system.in_set(WeaponsSet::ProcessFireCommands),
                     systems::process_fire_commands.in_set(WeaponsSet::ProcessFireCommands),
                     systems::projectile_collision_system.in_set(WeaponsSet::ProjectileCollision),
                     systems::update_projectiles.in_set(WeaponsSet::UpdateProjectiles),
                 ),
+            )
+            .add_systems(
+                PreUpdate,
+                (systems::weapon_selection_system
+                    .run_if(in_state(AppState::InGame))
+                    .after(InputManagerSystem::Update),),
             )
             .add_systems(
                 Update,

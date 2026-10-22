@@ -21,13 +21,14 @@
 //! Manages the spawning and lifecycle of ship entities. Listens for
 //! [`delta_v_core::SpawnEntity`] events and spawns ships from templates.
 //!
-//! The input → forces pipeline (D3) runs in `FixedUpdate`:
-//! 1. Input reader: [`ActiveActions`] → [`ThrustCommand`] + [`TorqueCommand`]
-//! 2. Flight-assist toggle: [`LogicalAction::ToggleFlightAssist`] action → flip state
-//! 3. Thrust system: [`ThrustCommand`] → `apply_force` on [`RigidBody`]
-//! 4. Torque system: [`TorqueCommand`] → `apply_torque` on [`RigidBody`]
-//! 5. Flight-assist damping: if enabled, damp velocity
-//! 6. Clear commands: zero out command buffers
+//! The input → forces pipeline (D3):
+//! - `PreUpdate`: flight-assist toggle (reads `just_pressed` after leafwing's `update_action_state`)
+//! - `FixedUpdate`:
+//!   1. Input reader: [`ActionState<LogicalAction>`] → [`ThrustCommand`] + [`TorqueCommand`]
+//!   2. Thrust system: [`ThrustCommand`] → `apply_force` on [`RigidBody`]
+//!   3. Torque system: [`TorqueCommand`] → `apply_torque` on [`RigidBody`]
+//!   4. Flight-assist damping: if enabled, damp velocity
+//!   5. Clear commands: zero out command buffers
 //!
 //! See ADR-0005 (plugin architecture), ADR-0038 (entity template system),
 //! and ADR-0017 (Fixed timestep).
@@ -72,10 +73,11 @@ pub use spawn::spawn_ship;
 use bevy::prelude::*;
 use delta_v_core::{AppState, WorldSpawnSet};
 use delta_v_physics::PhysicsSet;
+use leafwing_input_manager::plugin::InputManagerSystem;
 use systems::{
-    PreviousActions, RotationRampState, ShipInputSet, clear_commands_system,
-    flight_assist_damping_system, flight_assist_toggle_system, input_reader_system,
-    propulsion_selection_system, thrust_system, torque_system,
+    RotationRampState, ShipInputSet, clear_commands_system, flight_assist_damping_system,
+    flight_assist_toggle_system, input_reader_system, propulsion_selection_system, thrust_system,
+    torque_system,
 };
 
 /// Ships plugin for managing player and NPC vessels.
@@ -95,10 +97,8 @@ impl Plugin for ShipsPlugin {
         // These are per-tick command buffers, not configuration.
         app.init_resource::<ThrustCommand>()
             .init_resource::<TorqueCommand>()
-            .init_resource::<PreviousActions>()
             .init_resource::<RotationRampState>()
             .init_resource::<delta_v_core::ActiveCameraName>()
-            .init_resource::<delta_v_core::CameraSwitchCycleState>()
             .add_message::<delta_v_core::CameraSwitched>();
 
         // Configure WorldSpawnSet ordering (ADR-0038).
@@ -136,11 +136,19 @@ impl Plugin for ShipsPlugin {
         );
 
         // Camera switching system (M7).
-        // Must run in PreUpdate (after leafwing-input-manager's update_action_state)
-        // because tick_action_state runs in FixedPostUpdate which clears just_pressed before Update runs.
+        // Must run in PreUpdate after leafwing-input-manager's update_action_state,
+        // otherwise just_pressed flags are stale (cleared by tick_action_state before
+        // update_action_state re-presses them).
         app.add_systems(
             PreUpdate,
-            delta_v_core::camera_switch_system.run_if(in_state(AppState::InGame)),
+            (
+                delta_v_core::camera_switch_system
+                    .run_if(in_state(AppState::InGame))
+                    .after(InputManagerSystem::Update),
+                flight_assist_toggle_system
+                    .run_if(in_state(AppState::InGame))
+                    .after(InputManagerSystem::Update),
+            ),
         );
 
         // Cockpit overlay systems (M6).
@@ -154,7 +162,6 @@ impl Plugin for ShipsPlugin {
             (
                 ShipInputSet::AccumulateCommands,
                 ShipInputSet::SelectPropulsion,
-                ShipInputSet::ToggleFlightAssist,
                 ShipInputSet::ApplyThrust,
                 ShipInputSet::ApplyTorque,
                 ShipInputSet::FlightAssistDamping,
@@ -168,13 +175,17 @@ impl Plugin for ShipsPlugin {
             FixedUpdate,
             (
                 input_reader_system.in_set(ShipInputSet::AccumulateCommands),
-                propulsion_selection_system.in_set(ShipInputSet::SelectPropulsion),
-                flight_assist_toggle_system.in_set(ShipInputSet::ToggleFlightAssist),
                 thrust_system.in_set(ShipInputSet::ApplyThrust),
                 torque_system.in_set(ShipInputSet::ApplyTorque),
                 flight_assist_damping_system.in_set(ShipInputSet::FlightAssistDamping),
                 clear_commands_system.in_set(ShipInputSet::ClearCommands),
             ),
+        )
+        .add_systems(
+            PreUpdate,
+            (propulsion_selection_system
+                .run_if(in_state(AppState::InGame))
+                .after(InputManagerSystem::Update),),
         );
     }
 }

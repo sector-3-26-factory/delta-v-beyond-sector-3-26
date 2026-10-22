@@ -79,11 +79,17 @@ pub fn check(condition: bool, message: &str) {
 
 /// Helper: press action and run app update.
 ///
-/// Releases the action first and runs an update in between so that custom
-/// edge-detection resources (e.g. `NavigationMenuToggleState.prev_pressed`)
-/// are cleared before the next press. Without this, pressing the same
-/// action twice in a row fails because the action stays `Pressed` and the
-/// toggle state never sees a fresh rising edge.
+/// Simulates a complete key press cycle (release → press) with proper timing
+/// for `ActionState::just_pressed` to work with the `PreUpdate` schedule.
+///
+/// The sequence is:
+/// 1. `release()` - sets action to released state
+/// 2. `app.update()` - runs `tick_action_state` in `PreUpdate`, clearing `just_pressed` flags
+/// 3. `press()` - sets action to pressed, sets `just_pressed = true`
+/// 4. `app.update()` - runs systems in `PreUpdate` that check `just_pressed()`
+///
+/// This works with the current architecture where edge-detected systems run in
+/// `PreUpdate` after `InputManagerSystem::Update`, so `just_pressed` flags are fresh.
 ///
 /// # Panics
 ///

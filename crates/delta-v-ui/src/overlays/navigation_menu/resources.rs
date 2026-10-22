@@ -27,16 +27,3 @@ use bevy::prelude::*;
 // allow-default: Bevy ECS Resource trait requires Default for resource initialization.
 #[derive(Resource, Default)]
 pub struct NavigationMenuOpen(pub bool);
-
-/// Resource tracking the previous state of the `ToggleNavigationMenu` action for edge detection.
-///
-/// Used by `navigation_menu_toggle_system` to detect key press transitions
-/// (on press, not on hold). This provides more reliable edge detection than
-/// relying solely on `ActionState::just_pressed`, which can be unreliable
-/// when many keys are held simultaneously.
-// allow-default: Bevy ECS Resource trait requires Default for resource initialization.
-#[derive(Resource, Default)]
-pub struct NavigationMenuToggleState {
-    /// Whether `ToggleNavigationMenu` was pressed last frame.
-    pub prev_pressed: bool,
-}

@@ -92,8 +92,9 @@ pub struct CameraSwitch;
 
 /// Cycles between available ship cameras when the player presses the switch keys.
 ///
-/// Runs in `Update` during `AppState::InGame`.
-/// Uses edge detection to fire once per key press.
+/// Runs in `PreUpdate` during `AppState::InGame` (after leafwing-input-manager's
+/// `update_action_state`), so `just_pressed` flags are fresh.
+/// Uses `ActionState::just_pressed` for edge detection — fires once per key press.
 /// Camera order is fixed: cockpit → front → rear → left → right → top → bottom.
 /// Only cameras with `available: true` that were actually spawned are in the query results.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
@@ -101,27 +102,17 @@ pub fn camera_switch_system(
     mut events: MessageWriter<'_, CameraSwitched>,
     action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut active_camera: ResMut<'_, ActiveCameraName>,
-    mut cycle_state: ResMut<'_, CameraSwitchCycleState>,
     mut query: Query<'_, '_, (Entity, &CameraName, &Camera3d, &'static mut Camera)>,
 ) {
     use LogicalAction;
 
-    let next_active = action_state.pressed(&LogicalAction::CameraSwitchNext);
-    let prev_active = action_state.pressed(&LogicalAction::CameraSwitchPrev);
-
-    // Edge detection: only switch when key is first pressed
-    let switching = if next_active && !cycle_state.next_pressed {
+    let switching: i32 = if action_state.just_pressed(&LogicalAction::CameraSwitchNext) {
         1
-    } else if prev_active && !cycle_state.prev_pressed {
+    } else if action_state.just_pressed(&LogicalAction::CameraSwitchPrev) {
         -1
     } else {
-        cycle_state.next_pressed = next_active;
-        cycle_state.prev_pressed = prev_active;
         return;
     };
-
-    cycle_state.next_pressed = next_active;
-    cycle_state.prev_pressed = prev_active;
 
     // Collect all available cameras in the fixed order
     let mut cameras: Vec<_> = query
@@ -180,17 +171,6 @@ pub fn camera_switch_system(
     events.write(CameraSwitched {
         camera_name: new_name.to_string(),
     });
-}
-
-/// Tracks which camera switch keys were already consumed to prevent repeated firing.
-// allow-default: Bevy requires Default on resources for init_resource.
-// This is runtime state, not configuration.
-#[derive(Resource, Default)]
-pub struct CameraSwitchCycleState {
-    /// Whether `CameraSwitchNext` was active last tick.
-    next_pressed: bool,
-    /// Whether `CameraSwitchPrev` was active last tick.
-    prev_pressed: bool,
 }
 
 /// Spawns the 2-D cockpit background camera.

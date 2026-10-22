@@ -51,9 +51,8 @@ pub mod weapons;
 // Re-exports from subdirectories
 pub use camera::{
     ActiveCameraName, ActiveMainCamera, CameraDefinition, CameraName, CameraSwitch,
-    CameraSwitchCycleState, PlayerShipEntity, RenderLayer, ShipCamerasTemplate,
-    camera_switch_system, spawn_cockpit_background_camera, spawn_cockpit_foreground_camera,
-    spawn_menu_camera,
+    PlayerShipEntity, RenderLayer, ShipCamerasTemplate, camera_switch_system,
+    spawn_cockpit_background_camera, spawn_cockpit_foreground_camera, spawn_menu_camera,
 };
 pub use debug::{
     AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible, DebugConfig, LightDebugPlugin,

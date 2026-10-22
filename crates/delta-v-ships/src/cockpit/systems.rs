@@ -69,24 +69,14 @@ pub struct ThrustingState {
     pub is_thrusting: bool,
 }
 
-/// Tracks which actions were already consumed to prevent repeated firing.
-// allow-default: Bevy requires Default on resources for init_resource. This
-// resource tracks key press state for edge detection; it starts false.
-#[derive(Resource, Default)]
-pub struct CockpitCycleState {
-    /// Whether `CockpitCycleNext` was active last tick.
-    next_active: bool,
-    /// Whether `CockpitCyclePrev` was active last tick.
-    prev_active: bool,
-}
-
 /// Cycles to the next or previous cockpit station when the player presses the key.
 ///
-/// Runs in `Update` during `AppState::InGame`.
+/// Runs in `PreUpdate` during `AppState::InGame` (after `leafwing-input-manager`'s
+/// `update_action_state`), so `just_pressed` flags are fresh.
 /// Reads `ActionState<LogicalAction>` for `CockpitCycleNext` or `CockpitCyclePrev`.
 /// Cycles through stations in JSON order (wrapping around), loading the new station's PNG texture.
 ///
-/// Uses edge detection to fire only once per key press, not every frame while held.
+/// Uses `ActionState::just_pressed` for edge detection — fires once per key press.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn cockpit_station_cycle_system(
     mut commands: Commands<'_, '_>,
@@ -96,7 +86,6 @@ pub fn cockpit_station_cycle_system(
     query: Query<'_, '_, (Entity, &'static Children), With<CockpitOverlay>>,
     mut image_node_query: Query<'_, '_, &'static mut ImageNode>,
     action_state: Single<'_, '_, &ActionState<LogicalAction>>,
-    mut cycle_state: ResMut<'_, CockpitCycleState>,
     mut gauge_query: Query<
         '_,
         '_,
@@ -104,22 +93,13 @@ pub fn cockpit_station_cycle_system(
         Without<CockpitOverlay>,
     >,
 ) {
-    let next_active = action_state.pressed(&LogicalAction::CockpitCycleNext);
-    let prev_active = action_state.pressed(&LogicalAction::CockpitCyclePrev);
-
-    // Edge detection: only fire on the frame the key is first pressed
-    let direction: i32 = if next_active && !cycle_state.next_active {
+    let direction: i32 = if action_state.just_pressed(&LogicalAction::CockpitCycleNext) {
         1
-    } else if prev_active && !cycle_state.prev_active {
+    } else if action_state.just_pressed(&LogicalAction::CockpitCyclePrev) {
         -1
     } else {
-        cycle_state.next_active = next_active;
-        cycle_state.prev_active = prev_active;
         return;
     };
-
-    cycle_state.next_active = next_active;
-    cycle_state.prev_active = prev_active;
 
     let Ok((entity, children)) = query.single() else {
         tracing::warn!("[cockpit] cycle: no CockpitOverlay entity found");

@@ -29,7 +29,7 @@ use super::components::{
     NavMenuDistanceText, NavMenuRowBackground, NavMenuRowEntity, NavigationMenuRoot,
 };
 use super::distance_format::format_distance;
-use super::resources::{NavigationMenuOpen, NavigationMenuToggleState};
+use super::resources::NavigationMenuOpen;
 use super::spawn::spawn_navigation_menu;
 use crate::window::UiTheme;
 
@@ -39,14 +39,12 @@ use crate::window::UiTheme;
 /// Checks for `ToggleNavigationMenu` action via `InputMap`.
 /// When opening: spawns the menu UI.
 /// When closing: despawns the menu entity.
-/// Uses custom edge detection via `NavigationMenuToggleState` for more reliable
-/// detection when many keys are held simultaneously.
+/// Uses `ActionState::just_pressed` for edge detection — fires once per key press.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 pub fn navigation_menu_toggle_system(
     mut commands: Commands<'_, '_>,
     action_state: Single<'_, '_, &ActionState<LogicalAction>>,
     mut menu_open: ResMut<'_, NavigationMenuOpen>,
-    mut toggle_state: ResMut<'_, NavigationMenuToggleState>,
     query: Query<'_, '_, Entity, With<NavigationMenuRoot>>,
     asset_server: Res<'_, AssetServer>,
     theme: Res<'_, UiTheme>,
@@ -57,16 +55,8 @@ pub fn navigation_menu_toggle_system(
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
 ) {
     let _span = info_span!("delta_v_ui::navigation_menu_toggle_system").entered();
-    // Check if ToggleNavigationMenu action is pressed
-    let toggle_pressed = action_state.pressed(&LogicalAction::ToggleNavigationMenu);
-
-    // Custom edge detection: only trigger on the frame the key transitions from not-pressed to pressed
-    let toggle_just_pressed = toggle_pressed && !toggle_state.prev_pressed;
-
-    // Update previous state for next frame
-    toggle_state.prev_pressed = toggle_pressed;
-
-    if !toggle_just_pressed {
+    // Check if ToggleNavigationMenu action was just pressed (edge detection)
+    if !action_state.just_pressed(&LogicalAction::ToggleNavigationMenu) {
         return;
     }
 

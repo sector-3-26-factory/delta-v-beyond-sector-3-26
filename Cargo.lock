@@ -3711,6 +3711,7 @@ dependencies = [
  "delta-v-physics",
  "delta-v-spawn",
  "delta-v-types",
+ "leafwing-input-manager",
  "tracing",
 ]
 
