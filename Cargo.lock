@@ -3635,6 +3635,7 @@ dependencies = [
  "delta-v-core",
  "delta-v-physics",
  "delta-v-spawn",
+ "delta-v-test-support",
  "delta-v-types",
  "leafwing-input-manager",
  "rand 0.9.5",

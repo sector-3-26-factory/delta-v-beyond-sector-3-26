@@ -1,0 +1,115 @@
+{
+    "format_version": 1,
+    "name": "Test Targetable World",
+    "entities": [
+        {
+            "template": "ships/debug-ship-cube",
+            "id": "player_ship",
+            "player_controlled": true,
+            "position": {
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "rotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "ships/debug-ship-cube",
+            "id": "target_ship_1",
+            "position": {
+                "x": {
+                    "value": 1000.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "ships/debug-ship-cube",
+            "id": "target_ship_2",
+            "position": {
+                "x": {
+                    "value": 2000.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "ships/debug-ship-cube",
+            "id": "target_ship_3",
+            "position": {
+                "x": {
+                    "value": 3000.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        }
+    ]
+}

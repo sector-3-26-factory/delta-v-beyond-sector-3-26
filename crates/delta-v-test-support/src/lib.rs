@@ -59,9 +59,17 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use delta_v_types::LogicalAction;
 use image::GenericImageView;
-use leafwing_input_manager::prelude::ActionState;
+
+use std::sync::LazyLock;
 
 static TEST_PASSED: AtomicBool = AtomicBool::new(true);
+
+/// Tracks every action currently held by a test helper so that the next
+/// helper call can release stale presses from a previous test. Without this,
+/// pressing `ThrustForward` after `CycleTargetNext` leaves `CycleTargetNext`
+/// held and the input reader sees both actions.
+static PRESSED_ACTIONS: LazyLock<std::sync::Mutex<std::collections::HashSet<LogicalAction>>> =
+    LazyLock::new(|| std::sync::Mutex::new(std::collections::HashSet::new()));
 
 /// Mark the test as failed (called from `check`).
 pub fn fail(message: &str) {
@@ -77,55 +85,185 @@ pub fn check(condition: bool, message: &str) {
     }
 }
 
-/// Helper: press action and run app update.
+/// Press a logical action by writing a `KeyboardInput` message for its
+/// bound key, then running one `app.update()` so leafwing's `PreUpdate`
+/// pipeline observes a fresh `just_pressed`.
 ///
-/// Simulates a complete key press cycle (release → press) with proper timing
-/// for `ActionState::just_pressed` to work with the `PreUpdate` schedule.
-///
-/// The sequence is:
-/// 1. `release()` - sets action to released state
-/// 2. `app.update()` - runs `tick_action_state` in `PreUpdate`, clearing `just_pressed` flags
-/// 3. `press()` - sets action to pressed, sets `just_pressed = true`
-/// 4. `app.update()` - runs systems in `PreUpdate` that check `just_pressed()`
-///
-/// This works with the current architecture where edge-detected systems run in
-/// `PreUpdate` after `InputManagerSystem::Update`, so `just_pressed` flags are fresh.
+/// This is the **only** correct way to simulate input in tests: it routes
+/// through the real `CentralInputStore` / `InputMap` path instead of
+/// hand-editing the `ActionState` component, so the `just_pressed` / `pressed`
+/// flags match what production sees.
 ///
 /// # Panics
 ///
-/// Panics if the `ActionState<LogicalAction>` resource is not present.
-///
-/// # Safety
-///
-/// The `ActionState<LogicalAction>` resource is inserted unconditionally by
-/// `delta-v-app::build_app` (the leafwing-input-manager plugin) before any
-/// test function runs. `press_action` is only ever called from test functions
-/// that have already invoked `make_app` -> `build_app` -> `settle_render`,
-/// so the resource is guaranteed to exist. There is no code path in this
-/// crate that constructs an `App` without it, and the resource is never
-/// removed or replaced between calls.
-#[allow(clippy::expect_used)]
+/// Panics if no `ActionState<LogicalAction>` component exists (the input-map
+/// entity has not been spawned yet).
 pub fn press_action(app: &mut App, action: LogicalAction) {
-    {
-        let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
-        // SAFETY: `ActionState<LogicalAction>` is inserted by
-        // `delta-v-app::build_app` before any test runs and is never removed.
-        let mut action_state = query
-            .single_mut(app.world_mut())
-            .expect("ActionState not found");
-        action_state.release(&action);
-    }
+    press_key(app, action);
     app.update();
-    {
-        let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
-        // SAFETY: same invariant as above — the resource is present for the
-        // lifetime of the shared `App`.
-        let mut action_state = query
-            .single_mut(app.world_mut())
-            .expect("ActionState not found");
-        action_state.press(&action);
-    }
+}
+
+/// Release a logical action by writing a `KeyboardInput` release message and
+/// running one `app.update()`.
+pub fn release_action(app: &mut App, action: LogicalAction) {
+    release_key(app, action);
     app.update();
+}
+
+/// Write a `KeyboardInput` press message for the key bound to `action`.
+///
+/// Looks up the bound `Buttonlike` from the `InputMap<LogicalAction>` component
+/// on the input-map entity, then calls `Buttonlike::press`, which writes a
+/// `KeyboardInput { state: Pressed }` message. Bevy's `KeyboardInput` system
+/// (registered by `InputManagerPlugin` via `CentralInputStore`) consumes the
+/// message on the next `PreUpdate` and populates the store that
+/// `update_action_state` reads.
+fn press_key(app: &mut App, action: LogicalAction) {
+    let bindings = bound_bindings(app, action);
+    let world = app.world_mut();
+    for binding in &bindings {
+        binding.press(world);
+    }
+}
+
+/// Write a `KeyboardInput` release message for the key bound to `action`.
+fn release_key(app: &mut App, action: LogicalAction) {
+    let bindings = bound_bindings(app, action);
+    let world = app.world_mut();
+    for binding in &bindings {
+        binding.release(world);
+    }
+}
+
+/// Resolve every `Buttonlike` binding for `action` from the
+/// `InputMap<LogicalAction>` component, cloned into an owned `Vec`.
+///
+/// Walks every binding for the action and returns clones of all of them.
+/// Chords (e.g. `ShiftLeft + KeyT`) are handled because `ButtonlikeChord`
+/// decomposes into its constituent keys; `Buttonlike::press` writes a
+/// `KeyboardInput` for every constituent key, so pressing a chord presses
+/// all of its keys at once.
+///
+/// Returns an empty `Vec` if no `Buttonlike` binding exists for `action`.
+fn bound_bindings(
+    app: &mut App,
+    action: LogicalAction,
+) -> Vec<Box<dyn leafwing_input_manager::user_input::Buttonlike>> {
+    use leafwing_input_manager::prelude::InputMap;
+    use leafwing_input_manager::user_input::Buttonlike;
+
+    let mut query = app.world_mut().query::<&InputMap<LogicalAction>>();
+    let mut found: Vec<Box<dyn Buttonlike>> = Vec::new();
+    for input_map in query.iter(app.world_mut()) {
+        for (bound_action, bindings) in input_map.iter_buttonlike() {
+            if *bound_action != action {
+                continue;
+            }
+            for binding in bindings {
+                found.push(binding.clone());
+            }
+        }
+        if !found.is_empty() {
+            break;
+        }
+    }
+    found
+}
+
+/// Press an action and run one full `app.update()` so that the `PreUpdate`
+/// pipeline observes a fresh `just_pressed`.
+///
+/// For actions that use `just_pressed` in `PreUpdate` (like `CycleTargetNext`,
+/// `ToggleFlightAssist`, `ToggleTargetingMode`, weapon/propulsion selection).
+///
+/// The sequence is: release stale actions → release this action → update
+/// (process releases) → press this action → update (process press).
+///
+/// Releasing first is essential: leafwing's `ButtonState::press` only sets
+/// `JustPressed` when the action is NOT already `Pressed`, so a second press
+/// of the same action without an intervening release is silently ignored.
+/// Releasing *stale* actions first ensures actions held by a previous test
+/// (e.g. `CycleTargetNext` from the targeting test) don't leak into the next
+/// test's input-reader snapshot.
+pub fn press_and_update(app: &mut App, action: LogicalAction) {
+    release_all_stale(app);
+    release_key(app, action);
+    app.update();
+    press_key(app, action);
+    mark_pressed(action);
+    app.update();
+}
+
+/// Press an action and run one fixed-timestep tick so that systems reading
+/// `pressed()` in `FixedUpdate` execute with the action held.
+///
+/// This writes a `KeyboardInput` press message and advances `Time<Real>` by
+/// one fixed timestep; `app.update()` then runs `RunFixedMainLoop` → `FixedMain`
+/// once, covering input-reader + thrust/torque + flight-assist + clear in a
+/// single pass.
+///
+/// Same release-then-press sequence as [`press_and_update`] so repeated presses
+/// of the same action are not silently dropped, and stale actions from
+/// previous tests are cleared first.
+pub fn press_and_fixed_update(app: &mut App, action: LogicalAction) {
+    release_all_stale(app);
+    release_key(app, action);
+    app.update();
+    press_key(app, action);
+    mark_pressed(action);
+    advance_one_fixed_tick(app);
+    app.update();
+}
+
+/// Release every action currently tracked as held by a previous helper call.
+///
+/// This is called at the start of every `press_*` helper so that actions
+/// pressed by one test (e.g. `CycleTargetNext` in the targeting test) don't
+/// leak into the next test's input-reader snapshot.
+#[allow(clippy::unwrap_used)]
+fn release_all_stale(app: &mut App) {
+    let stale: Vec<LogicalAction> = {
+        let guard = PRESSED_ACTIONS.lock().unwrap();
+        guard.iter().copied().collect()
+    };
+    for action in &stale {
+        release_key(app, *action);
+    }
+    if !stale.is_empty() {
+        app.update();
+    }
+    PRESSED_ACTIONS.lock().unwrap().clear();
+}
+
+/// Record `action` as currently held so a future helper call can release it.
+#[allow(clippy::unwrap_used)]
+fn mark_pressed(action: LogicalAction) {
+    PRESSED_ACTIONS.lock().unwrap().insert(action);
+}
+
+/// Accumulate one fixed timestep of overstep on `Time<Fixed>` so the
+/// fixed-timestep accumulator (`run_fixed_main_schedule`) schedules exactly
+/// one `FixedMain` pass on the next `app.update()`.
+///
+/// This deliberately uses `Time<Fixed>::accumulate_overstep` rather than
+/// `Time<Real>::advance_by`. Bevy's `time_system` runs in `First` on every
+/// `app.update()` and calls `real_time.update_with_instant(Instant::now())`,
+/// which recomputes `real.delta` from wall-clock `last_update` and
+/// **overwrites** any manual `advance_by`. The fixed-timestep accumulator
+/// consumes `Time<Virtual>::delta()` (derived from `real.delta`), not
+/// `real.elapsed`, so a manual `Time<Real>::advance_by` is silently
+/// clobbered and `FixedMain` does not run. `accumulate_overstep` feeds the
+/// counter that `run_fixed_main_schedule` actually consumes, so it survives
+/// the next `time_system` call.
+///
+/// This is the idiomatic Bevy test-facing API for advancing the fixed clock.
+fn advance_one_fixed_tick(app: &mut App) {
+    use bevy::time::{Fixed, Time};
+
+    let timestep = app.world().resource::<Time<Fixed>>().timestep();
+    app.world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .accumulate_overstep(timestep);
 }
 
 /// Drive the render graph so render-dependent resources are available.

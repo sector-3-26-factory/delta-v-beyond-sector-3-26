@@ -64,8 +64,15 @@ enables a curated set of lints:
 ```
 
 Test code: the `#![deny]`s above are allowed to be relaxed in test
-modules via `#[allow(clippy::unwrap_used)]` etc., but only inside
-`#[cfg(test)]` blocks.
+code via `#[allow(clippy::unwrap_used)]` etc. "Test code" means any
+code that is never linked into a production binary. Recognised signals
+of test-ness are: (1) `#[cfg(test)]` blocks, (2) files compiled as
+part of a `harness = false` `[[test]]` target (per ADR-0060, where
+`cfg(test)` is never defined), and (3) `dev-dependency` crates whose
+entire public API is consumed only by test targets. The `#[allow]`
+must be localised (per-function or per-block, never blanket at crate
+level) with an inline comment explaining the rationale. This does not
+relax ADR-0016 for genuine production code.
 
 **Naming**:
 

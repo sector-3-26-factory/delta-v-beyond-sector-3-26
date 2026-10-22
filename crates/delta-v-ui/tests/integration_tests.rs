@@ -27,7 +27,7 @@
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
-use delta_v_test_support::{check, press_action, run_harness};
+use delta_v_test_support::{check, press_and_update, run_harness};
 use delta_v_types::LogicalAction;
 use delta_v_ui::overlays::keybindings_menu::{
     components::KeybindingsMenuRoot, resources::KeybindingsMenuOpen,
@@ -51,7 +51,7 @@ fn test_keybindings_menu_toggle(app: &mut App) {
     );
 
     // Press F1 to open
-    press_action(app, LogicalAction::ToggleKeybindingsMenu);
+    press_and_update(app, LogicalAction::ToggleKeybindingsMenu);
 
     // Verify menu opened
     let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
@@ -69,7 +69,7 @@ fn test_keybindings_menu_toggle(app: &mut App) {
     );
 
     // Press F1 again to close
-    press_action(app, LogicalAction::ToggleKeybindingsMenu);
+    press_and_update(app, LogicalAction::ToggleKeybindingsMenu);
 
     // Verify menu closed
     let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
@@ -102,7 +102,7 @@ fn test_navigation_menu_toggle(app: &mut App) {
     );
 
     // Press N to open
-    press_action(app, LogicalAction::ToggleNavigationMenu);
+    press_and_update(app, LogicalAction::ToggleNavigationMenu);
 
     // Verify menu opened
     let menu_resource = app.world().resource::<NavigationMenuOpen>();
@@ -120,7 +120,7 @@ fn test_navigation_menu_toggle(app: &mut App) {
     );
 
     // Press N again to close
-    press_action(app, LogicalAction::ToggleNavigationMenu);
+    press_and_update(app, LogicalAction::ToggleNavigationMenu);
 
     // Verify menu closed
     let menu_resource = app.world().resource::<NavigationMenuOpen>();
