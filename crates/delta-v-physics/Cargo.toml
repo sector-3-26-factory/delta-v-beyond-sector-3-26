@@ -31,6 +31,22 @@ delta-v-types = { workspace = true }
 [dev-dependencies]
 tempfile = "3"
 delta-v-app = { workspace = true }
+delta-v-test-support = { workspace = true }
+
+# Run integration tests as harness=false so cargo test runs main()
+# on the main thread (WinitPlugin requirement).
+[[test]]
+name = "physics_integration_tests"
+path = "tests/integration_tests.rs"
+harness = false
+
+# Floating origin recentering tests — uses the empty `floating_origin` world
+# fixture so no celestial body exerts gravity during the recentering
+# assertions. Runs as harness=false (main thread) for WinitPlugin.
+[[test]]
+name = "floating_origin_tests"
+path = "tests/floating_origin_tests.rs"
+harness = false
 
 [lints]
 workspace = true

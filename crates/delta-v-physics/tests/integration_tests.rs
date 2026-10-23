@@ -3,58 +3,47 @@
 //! Multi-tick physics integration tests and floating origin tests.
 //! Updated for SOI gravity model per ADR-0055.
 //!
-//! Uses `delta_v_app::build_app` (Single Source of Truth per ADR-0060) instead
-//! of manually assembling the plugin stack.
-
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]
+//! Registered as a `[[test]]` target with `harness = false` in Cargo.toml so
+//! that `cargo test --test physics_integration_tests` runs `main()` on the
+//! **main thread**, which is required by Bevy's `WinitPlugin` (see
+//! plans/testframework.md step 8).
+//!
+//!   xvfb-run -a cargo test --test `physics_integration_tests` -p delta-v-physics
+//!
+//! See ADR-0021 (Testing strategy) and ADR-0060 (Test framework single
+//! source of truth).
 
 use bevy::prelude::*;
+use delta_v_app::{AppConfig, build_app};
 use delta_v_physics::celestial::{OrbitalBody, Planet};
 use delta_v_physics::rigid_body::{MassSource, RigidBody};
+use delta_v_test_support::{check, make_app, run_fixed_update, run_fixed_updates, run_harness};
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/// Builds the app using `build_app` (Single Source of Truth per ADR-0060).
-/// The full physics pipeline — including `FloatingOrigin`, `FloatingOriginConfig`,
-/// `Time<Fixed>` and the gravity/integrate systems — is registered by
-/// `PhysicsPlugin` inside `build_app`.
+/// Build the test `App` via `build_app` (Single Source of Truth per ADR-0060).
+/// `PhysicsPlugin` registers `FloatingOrigin`, `FloatingOriginConfig`,
+/// `Time<Fixed>` and the gravity/integrate systems. No manual
+/// `insert_resource` for those (plan step 7).
 fn build_test_app() -> App {
-    delta_v_app::build_app(delta_v_app::AppConfig {
+    build_app(AppConfig {
         asset_root_suffix: "crates/delta-v-physics/tests/fixtures/assets".to_string(),
-        world_name: None,
+        world_name: Some("test".to_string()),
         log_filter: Some("warn,delta_v=debug".to_string()),
     })
-}
-
-/// Runs one fixed update tick.
-///
-/// In tests there is no game loop; this advances `Time<Real>` by one fixed
-/// timestep and calls `app.update()` so the `FixedUpdate` schedule executes.
-fn run_fixed_update(app: &mut App) {
-    let fixed_duration = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Real>>()
-        .advance_by(fixed_duration);
-    app.update();
-}
-
-/// Runs `n` fixed update ticks.
-fn run_fixed_updates(app: &mut App, n: usize) {
-    for _ in 0..n {
-        run_fixed_update(app);
-    }
 }
 
 // ---------------------------------------------------------------------------
 // P1: Physics integration multi-tick tests
 // ---------------------------------------------------------------------------
 
-#[test]
-fn test_soi_velocity_accumulates_over_multiple_ticks() {
-    let mut app = build_test_app();
-
+/// Test: SOI gravity accumulates velocity over multiple ticks.
+///
+/// A ship at 400km altitude inside a planet's SOI should gain negative X
+/// velocity (falling toward the planet) after 60 fixed-timestep ticks.
+///
+/// Approach: Option A (programmatic setup) — entities are spawned in code;
+/// no world fixture needed because this test does not exercise the world
+/// loading pipeline (templates, spawning, UI).
+fn test_soi_velocity_accumulates_over_multiple_ticks(app: &mut App) {
     // Spawn a planet (celestial body with SOI)
     let _planet_id = app
         .world_mut()
@@ -87,20 +76,49 @@ fn test_soi_velocity_accumulates_over_multiple_ticks() {
         ))
         .id();
 
-    run_fixed_updates(&mut app, 60);
+    run_fixed_updates(app, 60);
 
     let body = app.world().get::<RigidBody>(body_id).unwrap();
-    assert!(
+    check(
         body.velocity.x < 0.0,
-        "body should have negative X velocity (pulled toward planet), got {}",
-        body.velocity.x
+        "body should have negative X velocity (pulled toward planet)",
     );
 }
 
-#[test]
-fn test_position_changes_with_velocity() {
-    let mut app = build_test_app();
+/// Entry point — runs on the main thread so `WinitPlugin` can initialize.
+fn main() {
+    let mut app = make_app(60, build_test_app);
+    run_harness(
+        &mut app,
+        &[
+            (
+                "soi_velocity_accumulates_over_multiple_ticks",
+                test_soi_velocity_accumulates_over_multiple_ticks,
+            ),
+            (
+                "position_changes_with_velocity",
+                test_position_changes_with_velocity,
+            ),
+            (
+                "soi_clear_accumulators_resets_forces_between_ticks",
+                test_soi_clear_accumulators_resets_forces_between_ticks,
+            ),
+            (
+                "soi_celestial_body_no_self_gravity",
+                test_soi_celestial_body_no_self_gravity,
+            ),
+            ("soi_gravity_inside_soi", test_soi_gravity_inside_soi),
+        ],
+    );
+}
 
+/// Test: position integrates velocity over one tick.
+///
+/// A body with X velocity 1.0 m/s should move by 1/60 m after one fixed
+/// timestep (60 Hz). Verifies the position integration system.
+///
+/// Approach: Option A (programmatic setup).
+fn test_position_changes_with_velocity(app: &mut App) {
     let body_id = app
         .world_mut()
         .spawn((
@@ -114,21 +132,24 @@ fn test_position_changes_with_velocity() {
         body.velocity = Vec3::new(1.0, 0.0, 0.0);
     }
 
-    run_fixed_update(&mut app);
+    run_fixed_update(app);
 
     let transform = app.world().get::<Transform>(body_id).unwrap();
     let expected_x = 1.0 / 60.0;
-    assert!(
+    check(
         (transform.translation.x - expected_x).abs() < 0.001,
-        "position should integrate velocity, got x={}",
-        transform.translation.x
+        "position should integrate velocity",
     );
 }
 
-#[test]
-fn test_soi_clear_accumulators_resets_forces_between_ticks() {
-    let mut app = build_test_app();
-
+/// Test: force accumulator is cleared after each tick.
+///
+/// After one fixed update, the ship's `force_accumulator` must be `Vec3::ZERO`
+/// so forces do not accumulate across ticks. Each tick recomputes gravity
+/// fresh; without this clear, forces would compound (G, 2G, 3G...).
+///
+/// Approach: Option A (programmatic setup).
+fn test_soi_clear_accumulators_resets_forces_between_ticks(app: &mut App) {
     // Spawn a planet (celestial body with SOI)
     let _planet_id = app
         .world_mut()
@@ -160,20 +181,22 @@ fn test_soi_clear_accumulators_resets_forces_between_ticks() {
         ))
         .id();
 
-    run_fixed_update(&mut app);
+    run_fixed_update(app);
 
     let body = app.world().get::<RigidBody>(body_id).unwrap();
-    assert_eq!(
-        body.force_accumulator,
-        Vec3::ZERO,
-        "force accumulator should be cleared after tick"
+    check(
+        body.force_accumulator == Vec3::ZERO,
+        "force accumulator should be cleared after tick",
     );
 }
 
-#[test]
-fn test_soi_celestial_body_no_self_gravity() {
-    let mut app = build_test_app();
-
+/// Test: a celestial body does not exert gravity on itself.
+///
+/// A planet with `MassSource` should not accumulate force from its own
+/// gravity field — only dynamic bodies inside its SOI are affected.
+///
+/// Approach: Option A (programmatic setup).
+fn test_soi_celestial_body_no_self_gravity(app: &mut App) {
     // Spawn a planet (celestial body with SOI)
     let planet_id = app
         .world_mut()
@@ -197,13 +220,12 @@ fn test_soi_celestial_body_no_self_gravity() {
         ))
         .id();
 
-    run_fixed_update(&mut app);
+    run_fixed_update(app);
 
     let planet = app.world().get::<RigidBody>(planet_id).unwrap();
-    assert_eq!(
-        planet.force_accumulator,
-        Vec3::ZERO,
-        "Celestial body should not exert gravity on itself"
+    check(
+        planet.force_accumulator == Vec3::ZERO,
+        "Celestial body should not exert gravity on itself",
     );
 }
 
@@ -215,10 +237,16 @@ fn test_soi_celestial_body_no_self_gravity() {
 // The old tests used bare MassSource without celestial body components (Sun/Planet/Moon + OrbitalBody).
 // New SOI gravity tests (test_soi_gravity_*) cover the same functionality with proper celestial hierarchy.
 
-#[test]
-fn test_soi_gravity_inside_soi() {
-    let mut app = build_test_app();
-
+/// Test: gravity is applied inside the planet's SOI.
+///
+/// A ship at 400km altitude (well inside Earth's ~925,000km SOI) should
+/// accumulate a non-zero force toward the planet (negative X). This is the
+/// positive counterpart to `test_soi_celestial_body_no_self_gravity` — it
+/// confirms gravity IS applied inside the SOI, not just that the planet
+/// doesn't self-gravitate.
+///
+/// Approach: Option A (programmatic setup).
+fn test_soi_gravity_inside_soi(app: &mut App) {
     // Spawn a planet with known SOI
     let planet_mass = 5.972e24_f32; // Earth mass
     let _planet_id = app
@@ -253,277 +281,26 @@ fn test_soi_gravity_inside_soi() {
         ))
         .id();
 
-    run_fixed_update(&mut app);
+    run_fixed_update(app);
 
+    // Note: `force_accumulator` is cleared by `clear_accumulators_system`
+    // at the end of every tick, so it is always Vec3::ZERO after a completed
+    // tick. The observable signal of gravity is the ship's velocity — the
+    // integrated result of the gravitational force. After one tick inside
+    // the planet's SOI, the ship should have negative X velocity (falling
+    // toward the planet at the origin).
     let ship = app.world().get::<RigidBody>(ship_id).unwrap();
-    assert!(
-        ship.force_accumulator.length() > f32::EPSILON,
-        "gravity should be applied inside SOI"
-    );
-    // Force should be toward planet (negative X)
-    assert!(ship.force_accumulator.x < 0.0);
-}
-
-// ---------------------------------------------------------------------------
-// P3: Floating origin recentering tests
-// ---------------------------------------------------------------------------
-
-#[test]
-fn test_floating_origin_no_recenter_below_threshold() {
-    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
-
-    let mut app = build_test_app();
-    app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
-    app.insert_resource(FloatingOriginConfig {
-        recenter_threshold_m: 5_000.0,
-    });
-
-    // Spawn player ship at position below threshold
-    let player_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(1_000.0, 0.0, 0.0)))
-        .id();
-    app.insert_resource(PlayerShipEntity(player_id));
-
-    // Spawn another entity to verify it doesn't get recentered
-    let other_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(500.0, 0.0, 0.0)))
-        .id();
-
-    let original_player_pos = app.world().get::<Transform>(player_id).unwrap().translation;
-    let original_other_pos = app.world().get::<Transform>(other_id).unwrap().translation;
-
-    run_fixed_update(&mut app);
-
-    let player_transform = app.world().get::<Transform>(player_id).unwrap();
-    let other_transform = app.world().get::<Transform>(other_id).unwrap();
-
-    // Player should still be at the same position (no recentering below threshold)
-    assert_eq!(
-        player_transform.translation, original_player_pos,
-        "player below threshold should not be recentered"
-    );
-    // Other entity should also not be recentered
-    assert_eq!(
-        other_transform.translation, original_other_pos,
-        "other entity should not be recentered when player is below threshold"
-    );
-}
-
-#[test]
-fn test_floating_origin_recenter_above_threshold() {
-    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
-
-    let mut app = build_test_app();
-    app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
-    app.insert_resource(FloatingOriginConfig {
-        recenter_threshold_m: 5_000.0,
-    });
-
-    // Spawn player ship at position above threshold (6km away)
-    let player_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(6_000.0, 0.0, 0.0)))
-        .id();
-    app.insert_resource(PlayerShipEntity(player_id));
-
-    // Spawn another entity at 1.6km from player (in front)
-    let other_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(7_600.0, 0.0, 0.0))) // 6000 + 1600
-        .id();
-
-    run_fixed_update(&mut app);
-
-    // Check that the origin was recentered to the player's position
-    let origin = app.world().get_resource::<FloatingOrigin>().unwrap();
-    assert_eq!(
-        origin.offset,
-        Vec3::new(6_000.0, 0.0, 0.0),
-        "origin should be recentered to player position"
-    );
-
-    // Check that the player is now at the origin (local position 0,0,0)
-    let player_transform = app.world().get::<Transform>(player_id).unwrap();
-    assert_eq!(
-        player_transform.translation,
-        Vec3::ZERO,
-        "player should be at origin after recentering"
-    );
-
-    // Check that the other entity is now at 1600 (relative to player)
-    let other_transform = app.world().get::<Transform>(other_id).unwrap();
-    assert_eq!(
-        other_transform.translation,
-        Vec3::new(1_600.0, 0.0, 0.0),
-        "other entity should be at relative position after recentering"
-    );
-}
-
-#[test]
-fn test_floating_origin_accumulates_offset_with_nonzero_initial_offset() {
-    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
-
-    let mut app = build_test_app();
-    // Start with a non-zero offset to test accumulation
-    app.insert_resource(FloatingOrigin::new(Vec3::new(10_000.0, 0.0, 0.0)));
-    app.insert_resource(FloatingOriginConfig {
-        recenter_threshold_m: 5_000.0,
-    });
-
-    // Spawn player ship at local position (-6000, 0, 0) which has distance 6000 from origin
-    // This will trigger recentering since 6000 > 5000 threshold
-    // Absolute position = (-6000, 0, 0) + (10000, 0, 0) = (4000, 0, 0)
-    let player_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(-6_000.0, 0.0, 0.0)))
-        .id();
-    app.insert_resource(PlayerShipEntity(player_id));
-
-    // Spawn another entity at 1.6km from player (in +X direction in local space)
-    // Other entity at local position (-6000 + 1600, 0, 0) = (-4400, 0, 0)
-    // Absolute position = (-4400, 0, 0) + (10000, 0, 0) = (5600, 0, 0)
-    let other_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(-4_400.0, 0.0, 0.0)))
-        .id();
-
-    run_fixed_update(&mut app);
-
-    // After recentering:
-    // Player was at local position (-6000, 0, 0) relative to origin at (10000, 0, 0)
-    // New offset should be (10000, 0, 0) + (-6000, 0, 0) = (4000, 0, 0)
-    let origin = app.world().get_resource::<FloatingOrigin>().unwrap();
-    assert_eq!(
-        origin.offset,
-        Vec3::new(4_000.0, 0.0, 0.0),
-        "origin should be accumulated to player's local position"
-    );
-
-    // Player should be at origin (0, 0, 0)
-    let player_transform = app.world().get::<Transform>(player_id).unwrap();
-    assert_eq!(
-        player_transform.translation,
-        Vec3::ZERO,
-        "player should be at origin after recentering"
-    );
-
-    // Other entity should be at 1600 (relative to player)
-    let other_transform = app.world().get::<Transform>(other_id).unwrap();
-    assert_eq!(
-        other_transform.translation,
-        Vec3::new(1_600.0, 0.0, 0.0),
-        "other entity should be at relative position after recentering"
-    );
-}
-
-#[test]
-fn test_floating_origin_preserves_rotation_on_recenter() {
-    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
-
-    let mut app = build_test_app();
-    app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
-    app.insert_resource(FloatingOriginConfig {
-        recenter_threshold_m: 5_000.0,
-    });
-
-    // Spawn player ship at position above threshold (6km away)
-    let player_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(6_000.0, 0.0, 0.0)))
-        .id();
-    app.insert_resource(PlayerShipEntity(player_id));
-
-    // Spawn another entity with a specific rotation
-    let rotation = Quat::from_axis_angle(Vec3::Z, std::f32::consts::FRAC_PI_4); // 45 degrees
-    let other_id = app
-        .world_mut()
-        .spawn(Transform {
-            translation: Vec3::new(7_600.0, 0.0, 0.0),
-            rotation,
-            ..default()
-        })
-        .id();
-
-    run_fixed_update(&mut app);
-
-    // Check that the other entity's rotation is preserved
-    let other_transform = app.world().get::<Transform>(other_id).unwrap();
-    assert_eq!(
-        other_transform.rotation, rotation,
-        "other entity's rotation should be preserved after recentering"
-    );
-}
-
-#[test]
-fn test_floating_origin_preserves_scale_on_recenter() {
-    use delta_v_core::{FloatingOrigin, FloatingOriginConfig, PlayerShipEntity};
-
-    let mut app = build_test_app();
-    app.insert_resource(FloatingOrigin::new(Vec3::ZERO));
-    app.insert_resource(FloatingOriginConfig {
-        recenter_threshold_m: 5_000.0,
-    });
-
-    // Spawn player ship at position above threshold (6km away)
-    let player_id = app
-        .world_mut()
-        .spawn(Transform::from_translation(Vec3::new(6_000.0, 0.0, 0.0)))
-        .id();
-    app.insert_resource(PlayerShipEntity(player_id));
-
-    // Spawn another entity with a non-default scale (e.g., 400.0 for a scaled-down sun)
-    let scale = Vec3::new(400.0, 400.0, 400.0);
-    let other_id = app
-        .world_mut()
-        .spawn(Transform {
-            translation: Vec3::new(7_600.0, 0.0, 0.0),
-            scale,
-            ..default()
-        })
-        .id();
-
-    run_fixed_update(&mut app);
-
-    // Check that the other entity's scale is preserved after recentering
-    let other_transform = app.world().get::<Transform>(other_id).unwrap();
-    assert_eq!(
-        other_transform.scale, scale,
-        "other entity's scale should be preserved after recentering"
+    check(
+        ship.velocity.x < 0.0,
+        "ship should gain negative X velocity (gravity applied inside SOI)",
     );
 }
 
 // ---------------------------------------------------------------------------
 // P4: RigidBody panic tests
 // ---------------------------------------------------------------------------
-
-#[test]
-#[should_panic(expected = "RigidBodyData mass must be positive and finite")]
-fn test_rigid_body_zero_mass_panics() {
-    RigidBody::new(0.0, 1.0);
-}
-
-#[test]
-#[should_panic(expected = "RigidBodyData mass must be positive and finite")]
-fn test_rigid_body_negative_mass_panics() {
-    RigidBody::new(-10.0, 1.0);
-}
-
-#[test]
-#[should_panic(expected = "RigidBodyData mass must be positive and finite")]
-fn test_rigid_body_nan_mass_panics() {
-    RigidBody::new(f32::NAN, 1.0);
-}
-
-#[test]
-#[should_panic(expected = "RigidBodyData mass must be positive and finite")]
-fn test_rigid_body_infinite_mass_panics() {
-    RigidBody::new(f32::INFINITY, 1.0);
-}
-
-#[test]
-#[should_panic(expected = "RigidBodyData mass must be positive and finite")]
-fn test_rigid_body_neg_infinity_mass_panics() {
-    RigidBody::new(f32::NEG_INFINITY, 1.0);
-}
+//
+// These tests live in `crates/delta-v-physics/src/rigid_body_panic_tests.rs`
+// (unit tests, no harness needed). Duplicated here previously; removed to
+// avoid running the same assertions twice.
+// ---------------------------------------------------------------------------

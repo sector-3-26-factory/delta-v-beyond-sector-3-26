@@ -40,7 +40,14 @@
     clippy::pedantic,
     clippy::cargo
 )]
-#![allow(clippy::multiple_crate_versions)]
+// Workspace-wide dependency version conflicts (e.g., accesskit_consumer 0.35.0 vs 0.38.0,
+// bitflags 1.3.2 vs 2.13.2, etc.) are unavoidable in the current dependency graph.
+// This crate is a dev-only test helper; the warning does not affect production code.
+// Narrowest scope: crate-level allow with justification per ADR-0034.
+#![allow(
+    clippy::multiple_crate_versions,
+    reason = "workspace dependency version conflicts are unavoidable; dev-only crate"
+)]
 #![deny(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -257,13 +264,38 @@ fn mark_pressed(action: LogicalAction) {
 /// the next `time_system` call.
 ///
 /// This is the idiomatic Bevy test-facing API for advancing the fixed clock.
-fn advance_one_fixed_tick(app: &mut App) {
+pub fn advance_one_fixed_tick(app: &mut App) {
     use bevy::time::{Fixed, Time};
 
     let timestep = app.world().resource::<Time<Fixed>>().timestep();
     app.world_mut()
         .resource_mut::<Time<Fixed>>()
         .accumulate_overstep(timestep);
+}
+
+/// Run one fixed update tick: advance the fixed clock and call
+/// `app.update()` so the `FixedUpdate` schedule executes.
+///
+/// This is the test-facing equivalent of one frame of the production game
+/// loop. Physics tests that need to drive the fixed-timestep pipeline use
+/// this instead of calling `app.update()` directly, which skips
+/// `Plugin::finish()` and would panic on render systems (see
+/// `settle_render`).
+///
+/// # Panics
+///
+/// Panics if `Time<Fixed>` is not present (the app was not built via
+/// `build_app`).
+pub fn run_fixed_update(app: &mut App) {
+    advance_one_fixed_tick(app);
+    app.update();
+}
+
+/// Run `n` fixed update ticks.
+pub fn run_fixed_updates(app: &mut App, n: usize) {
+    for _ in 0..n {
+        run_fixed_update(app);
+    }
 }
 
 /// Drive the render graph so render-dependent resources are available.
@@ -344,6 +376,27 @@ where
     app
 }
 
+/// Reset the fixed-timestep overstep counter so each test starts clean.
+///
+/// `accumulate_overstep` adds to a counter that Bevy's fixed-timestep
+/// accumulator consumes. If it is not reset between tests, overstep from
+/// a previous test (e.g. 60 ticks) leaks into the next test's single
+/// `accumulate_overstep` call, causing `FixedMain` to run multiple ticks
+/// in one `app.update()` and producing flaky results.
+pub fn reset_fixed_time(app: &mut App) {
+    use bevy::time::{Fixed, Time};
+    // discard_overstep subtracts from the accumulated overstep counter;
+    // passing the full current overstep zeroes it out so each test
+    // starts with a clean fixed-timestep accumulator.
+    let overstep = app
+        .world()
+        .get_resource::<Time<Fixed>>()
+        .map_or(std::time::Duration::ZERO, Time::overstep);
+    if let Some(mut time) = app.world_mut().get_resource_mut::<Time<Fixed>>() {
+        time.discard_overstep(overstep);
+    }
+}
+
 /// Run a battery of tests against a single shared `App`.
 ///
 /// Bevy's `WinitPlugin` permits only one `EventLoop` per thread, and
@@ -368,6 +421,7 @@ pub fn run_harness(app: &mut App, tests: &[TestSpec]) {
         // Reset the global state before each test so failures don't leak
         // between tests.
         TEST_PASSED.store(true, Ordering::SeqCst);
+        reset_fixed_time(app);
         test_fn(app);
         let passed = TEST_PASSED.load(Ordering::SeqCst);
         if passed {

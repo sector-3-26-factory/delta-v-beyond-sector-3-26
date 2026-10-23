@@ -3612,6 +3612,7 @@ dependencies = [
  "delta-v-app",
  "delta-v-assets",
  "delta-v-core",
+ "delta-v-test-support",
  "delta-v-types",
  "tempfile",
  "tracing",
