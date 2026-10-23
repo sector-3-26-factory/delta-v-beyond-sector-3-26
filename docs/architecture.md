@@ -144,6 +144,35 @@ weapon damage, ...) live in JSON, with no Rust-side defaults. See
 - See [ADR-0023](adr/0023-code-style-and-lints.md) and
   [ADR-0024](adr/0024-documentation-policy.md).
 
+## Performance benchmarks
+
+Benchmarks are **opt-in**. They compile only under the `bench` cargo
+feature, so a plain `cargo test --workspace` never runs them:
+
+```sh
+cargo test -p delta-v-physics --features bench -- --ignored --nocapture
+```
+
+Every benchmark file declares what it is for, because "benchmark" covers
+three activities that need different tooling. What distinguishes them is
+what the number is compared against:
+
+| Purpose | Compared against | Tooling |
+| --- | --- | --- |
+| `hardware-reference` | a named reference machine | harness that records CPU, core count, build profile and commit |
+| `regression-tracking` | its own history across a window of commits | one stable scalar per run, recorded per commit; `criterion` for retention only |
+| `approach-comparison` | sibling variants measured in the same run | hand-rolled harness in a `#[cfg(test)]` module, variants interleaved in one process |
+
+Today the repository contains only `approach-comparison` benchmarks, in
+`crates/delta-v-physics/src/approach_comparison/performance_benchmarks_tests.rs`. They answer
+"how does cost grow with entity count, and is this within the frame
+budget", which is a capacity question against sibling configurations
+measured in one run.
+
+No benchmark result blocks a merge, and no numeric regression threshold is
+binding — a human or an agent judges whether a change matters. See
+[ADR-0056](adr/0056-benchmark-purposes-and-tooling.md).
+
 ## Multiplayer (planned)
 
 Peer-to-peer with a player-as-host model; NAT traversal candidates

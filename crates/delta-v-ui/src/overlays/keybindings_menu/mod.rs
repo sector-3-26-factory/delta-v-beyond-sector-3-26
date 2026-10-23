@@ -23,6 +23,7 @@
 
 use bevy::prelude::*;
 use delta_v_core::AppState;
+use leafwing_input_manager::plugin::InputManagerSystem;
 
 pub mod components;
 pub mod resources;
@@ -39,11 +40,14 @@ impl Plugin for KeybindingsMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<KeybindingsMenuOpen>();
 
-        // The toggle system must run in PreUpdate (after leafwing-input-manager's update_action_state)
-        // because tick_action_state runs in FixedPostUpdate which clears just_pressed before Update runs.
+        // The toggle system must run in PreUpdate after leafwing-input-manager's
+        // update_action_state, otherwise just_pressed flags are stale (cleared by
+        // tick_action_state before update_action_state re-presses them).
         app.add_systems(
             PreUpdate,
-            systems::keybindings_menu_toggle_system.run_if(in_state(AppState::InGame)),
+            systems::keybindings_menu_toggle_system
+                .run_if(in_state(AppState::InGame))
+                .after(InputManagerSystem::Update),
         );
     }
 }

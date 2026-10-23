@@ -24,10 +24,10 @@ use rand::Rng;
 
 use delta_v_core::input::ActionState;
 use delta_v_core::{
-    ActiveCameraName, CameraName, CameraSwitched, EntityType, FireWeapon, Health, I18n,
-    PlayerShipEntity, ProjectileHit, RenderLayer, TargetSelected, Weapon, WorldEntityId,
+    ActiveCameraName, CameraName, CameraSwitched, FireWeapon, Health, I18n, PlayerShipEntity,
+    ProjectileHit, RenderLayer, TargetSelected, Weapon,
 };
-use delta_v_physics::{CollisionDetected, CollisionShape, RigidBody, distance_to_surface};
+use delta_v_physics::{CollisionDetected, RigidBody};
 use delta_v_types::LogicalAction;
 
 use super::ActiveCockpitStation;
@@ -44,7 +44,6 @@ use super::components::TargetingMode;
 use super::components::VelocityVectorIndicator;
 use super::velocity_indicator::create_thrust_arrow_presets;
 use super::velocity_indicator::format_speed;
-use delta_v_core::Targetable;
 
 use super::spawn::CockpitOverlayResource;
 
@@ -70,24 +69,14 @@ pub struct ThrustingState {
     pub is_thrusting: bool,
 }
 
-/// Tracks which actions were already consumed to prevent repeated firing.
-// allow-default: Bevy requires Default on resources for init_resource. This
-// resource tracks key press state for edge detection; it starts false.
-#[derive(Resource, Default)]
-pub struct CockpitCycleState {
-    /// Whether `CockpitCycleNext` was active last tick.
-    next_active: bool,
-    /// Whether `CockpitCyclePrev` was active last tick.
-    prev_active: bool,
-}
-
 /// Cycles to the next or previous cockpit station when the player presses the key.
 ///
-/// Runs in `Update` during `AppState::InGame`.
+/// Runs in `PreUpdate` during `AppState::InGame` (after `leafwing-input-manager`'s
+/// `update_action_state`), so `just_pressed` flags are fresh.
 /// Reads `ActionState<LogicalAction>` for `CockpitCycleNext` or `CockpitCyclePrev`.
 /// Cycles through stations in JSON order (wrapping around), loading the new station's PNG texture.
 ///
-/// Uses edge detection to fire only once per key press, not every frame while held.
+/// Uses `ActionState::just_pressed` for edge detection — fires once per key press.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn cockpit_station_cycle_system(
     mut commands: Commands<'_, '_>,
@@ -97,7 +86,6 @@ pub fn cockpit_station_cycle_system(
     query: Query<'_, '_, (Entity, &'static Children), With<CockpitOverlay>>,
     mut image_node_query: Query<'_, '_, &'static mut ImageNode>,
     action_state: Single<'_, '_, &ActionState<LogicalAction>>,
-    mut cycle_state: ResMut<'_, CockpitCycleState>,
     mut gauge_query: Query<
         '_,
         '_,
@@ -105,22 +93,13 @@ pub fn cockpit_station_cycle_system(
         Without<CockpitOverlay>,
     >,
 ) {
-    let next_active = action_state.pressed(&LogicalAction::CockpitCycleNext);
-    let prev_active = action_state.pressed(&LogicalAction::CockpitCyclePrev);
-
-    // Edge detection: only fire on the frame the key is first pressed
-    let direction: i32 = if next_active && !cycle_state.next_active {
+    let direction: i32 = if action_state.just_pressed(&LogicalAction::CockpitCycleNext) {
         1
-    } else if prev_active && !cycle_state.prev_active {
+    } else if action_state.just_pressed(&LogicalAction::CockpitCyclePrev) {
         -1
     } else {
-        cycle_state.next_active = next_active;
-        cycle_state.prev_active = prev_active;
         return;
     };
-
-    cycle_state.next_active = next_active;
-    cycle_state.prev_active = prev_active;
 
     let Ok((entity, children)) = query.single() else {
         tracing::warn!("[cockpit] cycle: no CockpitOverlay entity found");
@@ -440,13 +419,6 @@ pub fn velocity_vector_system(
         }
     };
 
-    tracing::debug!(
-        "[vvi] speed={:.3} threshold={:.3} current_visibility={:?}",
-        speed,
-        MIN_SPEED_THRESHOLD,
-        *visibility
-    );
-
     if speed < MIN_SPEED_THRESHOLD {
         if *visibility != Visibility::Hidden {
             tracing::debug!("[vvi] hiding indicator and text (speed below threshold)");
@@ -619,7 +591,6 @@ pub fn status_gauge_system(
     >,
     window_query: Query<'_, '_, &'static Window>,
 ) {
-    tracing::debug!("[status_gauge] status_gauge_system running");
     let _span = tracing::info_span!("delta_v_ships::status_gauge_system").entered();
 
     // Read player health once (used by all health gauges).
@@ -713,10 +684,8 @@ pub fn status_gauge_system(
             };
 
             // Update all needles matching this gauge
-            let mut needle_count = 0;
             for (mut transform, needle) in queries.p2() {
                 if needle.station_id == update.station_id && needle.slot_id == update.slot_id {
-                    needle_count += 1;
                     // Position the needle at the center of the gauge.
                     // Sprites with RenderLayer::CockpitForeground are rendered by the cockpit foreground camera.
                     // The cockpit foreground camera uses a centered coordinate system where (0, 0) is at the center of the screen.
@@ -740,22 +709,8 @@ pub fn status_gauge_system(
                     // The needle texture points up (0° = 12 o'clock).
                     // We need to rotate it to point at the health position.
                     transform.rotation = Quat::from_rotation_z(angle_rad);
-                    tracing::debug!(
-                        "[status_gauge] needle pos: gauge_center_vp=({:.1}%, {:.1}%) ui_pos=({:.1}, {:.1}) scale={:.3}",
-                        gauge_center_x_vp,
-                        gauge_center_y_vp,
-                        transform.translation.x,
-                        transform.translation.y,
-                        needle_scale
-                    );
                 }
             }
-            tracing::debug!(
-                "[status_gauge] updated {} needle(s) for gauge {:?} rotation={:.1}°",
-                needle_count,
-                update.entity,
-                angle_deg
-            );
             continue;
         }
 
@@ -799,13 +754,6 @@ pub fn status_gauge_system(
                 background_color.0 = fill_color;
             }
         }
-
-        tracing::debug!(
-            "[status_gauge] entity {:?} type={} fill={:.1}%",
-            update.entity,
-            update.gauge_type,
-            fill_ratio * 100.0
-        );
     }
 }
 
@@ -850,6 +798,8 @@ pub fn targeting_mode_toggle_system(
 /// Runs in `Update` during `AppState::InGame`.
 /// `T` key: selects next target (closest to the right in sorted list).
 /// `ShiftLeft + T` key: selects previous target.
+/// Reads the sorted list from `NavigationListData` instead of building its own,
+/// so the key and the menu always show the same sequence.
 #[allow(
     clippy::needless_pass_by_value,
     clippy::too_many_arguments,
@@ -857,37 +807,12 @@ pub fn targeting_mode_toggle_system(
     clippy::manual_let_else
 )]
 pub fn cycle_target_system(
-    player_ship: Res<'_, PlayerShipEntity>,
+    _player_ship: Res<'_, PlayerShipEntity>,
     mut selected_target: ResMut<'_, SelectedTarget>,
     mut selected_nav_object: ResMut<'_, SelectedNavObject>,
     targeting_mode: Res<'_, super::components::TargetingMode>,
     action_state: Single<'_, '_, &ActionState<LogicalAction>>,
-    targetable_query: Query<
-        '_,
-        '_,
-        (
-            Entity,
-            &Transform,
-            Option<&Name>,
-            &EntityType,
-            &WorldEntityId,
-            &CollisionShape,
-        ),
-        With<Targetable>,
-    >,
-    navigable_query: Query<
-        '_,
-        '_,
-        (
-            Entity,
-            &Transform,
-            Option<&Name>,
-            &EntityType,
-            &WorldEntityId,
-            &CollisionShape,
-        ),
-        With<delta_v_physics::Navigable>,
-    >,
+    list_data: Res<'_, delta_v_core::NavigationListData>,
     mut events: MessageWriter<'_, TargetSelected>,
 ) {
     let is_next = action_state.just_pressed(&LogicalAction::CycleTargetNext);
@@ -897,83 +822,41 @@ pub fn cycle_target_system(
         return;
     }
 
-    // Get player position
-    let Some(player_pos) = targetable_query
-        .iter()
-        .find_map(|(entity, transform, _, _, _, _)| {
-            if entity == player_ship.0 {
-                Some(transform.translation)
-            } else {
-                None
-            }
-        })
-    else {
-        return;
-    };
-
-    // Determine which query to use based on targeting mode
-    let (targets, selected_resource, mode) = match targeting_mode.mode {
-        super::components::TargetingModeType::Combat => {
-            let mut targets: Vec<(Entity, f32, String, String)> = targetable_query
-                .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
-                    if entity == player_ship.0 {
-                        return None;
-                    }
-                    let distance = distance_to_surface(player_pos, transform.translation, shape);
-                    let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
-                    Some((entity, distance, name_str, entity_type.0.clone()))
-                })
-                .collect();
-            targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
-            (
-                targets,
-                &mut selected_target.0,
-                super::components::TargetingModeType::Combat,
-            )
-        }
-        super::components::TargetingModeType::Nav => {
-            let mut targets: Vec<(Entity, f32, String, String)> = navigable_query
-                .iter()
-                .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
-                    if entity == player_ship.0 {
-                        return None;
-                    }
-                    let distance = distance_to_surface(player_pos, transform.translation, shape);
-                    let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
-                    Some((entity, distance, name_str, entity_type.0.clone()))
-                })
-                .collect();
-            targets.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
-            (
-                targets,
-                &mut selected_nav_object.0,
-                super::components::TargetingModeType::Nav,
-            )
-        }
-    };
-
-    if targets.is_empty() {
+    // Read the pre-sorted list from NavigationListData
+    let entries = &list_data.entries;
+    if entries.is_empty() {
         return;
     }
+
+    // Determine which resource to update based on targeting mode
+    let (selected_resource, mode) = match targeting_mode.mode {
+        super::components::TargetingModeType::Combat => (
+            &mut selected_target.0,
+            super::components::TargetingModeType::Combat,
+        ),
+        super::components::TargetingModeType::Nav => (
+            &mut selected_nav_object.0,
+            super::components::TargetingModeType::Nav,
+        ),
+    };
 
     // Find current selection index
     let current_idx = selected_resource
         .as_ref()
-        .and_then(|current| targets.iter().position(|(e, _, _, _)| e == current))
+        .and_then(|current| entries.iter().position(|e| e.entity == *current))
         .unwrap_or(0);
 
     // Select next or previous
     let new_idx = if is_next {
-        (current_idx + 1) % targets.len()
+        (current_idx + 1) % entries.len()
     } else {
-        (current_idx + targets.len() - 1) % targets.len()
+        (current_idx + entries.len() - 1) % entries.len()
     };
 
-    let Some((new_target, distance, name_str, entity_type_str)) = targets.get(new_idx) else {
+    let Some(entry) = entries.get(new_idx) else {
         return;
     };
-    let new_target = *new_target;
+    let new_target = entry.entity;
     *selected_resource = Some(new_target);
 
     // Emit TargetSelected event for notification
@@ -998,9 +881,9 @@ pub fn cycle_target_system(
     tracing::debug!(
         "[targeting] selected target {:?} '{}' ({}) (distance: {:.1}m)",
         new_target,
-        name_str,
-        entity_type_str,
-        distance
+        entry.display_name,
+        entry.entity_type,
+        entry.distance
     );
 }
 
@@ -1362,14 +1245,6 @@ pub fn camera_shake_system(
     if let Ok((_camera_name, mut camera_transform)) = camera_query.get_mut(camera_entity) {
         camera_transform.translation = shake.original_translation + offset;
     }
-
-    tracing::debug!(
-        "[camera_shake] tick {}/{} intensity={:.3} offset={:?}",
-        shake.elapsed_ticks,
-        shake.duration_ticks,
-        current_intensity,
-        offset
-    );
 }
 
 /// Triggers camera shake on specific events.
@@ -1393,7 +1268,6 @@ pub fn trigger_camera_shake_system(
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(0.5, 10));
-            tracing::debug!("[camera_shake] triggered by FireWeapon");
         }
     }
 
@@ -1403,13 +1277,11 @@ pub fn trigger_camera_shake_system(
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(1.0, 15));
-            tracing::debug!("[camera_shake] triggered by ProjectileHit (target)");
         }
         if event.projectile == player_ship.0 {
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(0.8, 12));
-            tracing::debug!("[camera_shake] triggered by ProjectileHit (projectile)");
         }
     }
 
@@ -1425,11 +1297,6 @@ pub fn trigger_camera_shake_system(
             commands
                 .entity(player_ship.0)
                 .insert(CameraShake::new(intensity, duration));
-            tracing::debug!(
-                "[camera_shake] triggered by CollisionDetected intensity={:.2} duration={}",
-                intensity,
-                duration
-            );
         }
     }
 }
@@ -1504,12 +1371,6 @@ pub fn play_thrust_sound_system(
     };
 
     let is_thrusting = thrusting_state.is_thrusting;
-    tracing::debug!(
-        "[audio] thrust sound system: is_thrusting={}, active_sound.entity={:?}, thrust_sound_path={:?}",
-        is_thrusting,
-        active_sound.entity,
-        thrust_sound_path
-    );
 
     if is_thrusting {
         // If no sound is playing, start one

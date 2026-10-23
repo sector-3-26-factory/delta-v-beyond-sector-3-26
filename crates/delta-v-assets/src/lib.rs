@@ -45,6 +45,7 @@
 )]
 
 use bevy::app::Plugin;
+use bevy::prelude::Resource;
 
 pub mod error;
 pub mod paths;
@@ -61,8 +62,22 @@ mod template_tests;
 
 // Re-exports for convenience
 pub use error::AssetError;
-pub use paths::{get_workspace_root, resolve_template_path};
+pub use paths::{
+    get_workspace_root, resolve_asset_path, resolve_template_path, resolve_world_path, schema_root,
+};
 pub use sound::resolve_sound_path;
+
+/// The resolved absolute asset root directory.
+///
+/// Inserted by `delta_v_app::build_app` from `AppConfig::asset_root_suffix`.
+/// Domain crates that need to read files from the asset tree (e.g. cockpit
+/// PNG dimensions) query this resource rather than hardcoding `assets/`
+/// relative to the process CWD — which differs between production and tests.
+///
+/// Per ADR-0013, missing or invalid files are a hard error, so callers
+/// should surface failures rather than silently falling back.
+#[derive(Debug, Clone, Resource)]
+pub struct AssetRoot(pub String);
 
 /// Plugin for asset loading and template management.
 pub struct AssetsPlugin;

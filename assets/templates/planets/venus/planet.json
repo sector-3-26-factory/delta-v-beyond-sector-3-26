@@ -1,9 +1,5 @@
 {
     "entity_type": "planet",
-    "mass": {
-        "value": 0.815,
-        "unit": "M_earth"
-    },
     "collision_shape": {
         "type": "sphere",
         "radius": {

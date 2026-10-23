@@ -1,49 +1,162 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-//! Integration tests for keybindings menu.
+//! Integration tests for UI menus.
 //!
-//! See ADR-0021 (Testing strategy).
+//! Registered as a `[[test]]` target with `harness = false` in Cargo.toml so
+//! that `cargo test --test ui_integration_tests` runs `main()` on the **main
+//! thread**, which is required by Bevy's `WinitPlugin` (see
+//! plans/testframework.md step 8).
+//!
+//! The `harness = false` setting makes the test runner skip the `#[test]`
+//! harness and execute the binary's `main()` directly. The harness itself
+//! lives in the `delta-v-test-support` crate so it can be reused across
+//! crates without duplication. This file only contains the test functions.
+//!
+//!   xvfb-run -a cargo test --test `ui_integration_tests` -p delta-v-ui
+//!
+//! See ADR-0021 (Testing strategy) and ADR-0060 (Test framework single
+//! source of truth).
 
-// Test code is allowed to use expect/unwrap/indexing per ADR-0023.
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
     clippy::indexing_slicing,
-    clippy::panic
+    clippy::panic,
+    unsafe_code
 )]
 
-use bevy::app::App;
-use bevy::asset::AssetPlugin;
 use bevy::prelude::*;
+use delta_v_app::{AppConfig, build_app};
+use delta_v_test_support::{check, press_and_update, run_harness};
+use delta_v_types::LogicalAction;
+use delta_v_ui::overlays::keybindings_menu::{
+    components::KeybindingsMenuRoot, resources::KeybindingsMenuOpen,
+};
+use delta_v_ui::overlays::navigation_menu::{
+    components::NavigationMenuRoot, resources::NavigationMenuOpen,
+};
 
-use delta_v_ui::overlays::keybindings_menu::resources::KeybindingsMenuOpen;
+/// Test: F1 toggles the keybindings menu open and closed.
+fn test_keybindings_menu_toggle(app: &mut App) {
+    // Verify menu starts closed
+    let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
+    check(!menu_resource.0, "keybindings menu should start closed");
+    check(
+        app.world_mut()
+            .query_filtered::<Entity, With<KeybindingsMenuRoot>>()
+            .iter(app.world_mut())
+            .count()
+            == 0,
+        "keybindings menu UI should not exist initially",
+    );
 
-/// Integration test: verify `KeybindingsMenuOpen` resource can be set and read.
+    // Press F1 to open
+    press_and_update(app, LogicalAction::ToggleKeybindingsMenu);
+
+    // Verify menu opened
+    let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
+    check(
+        menu_resource.0,
+        "keybindings menu should be open after press",
+    );
+    check(
+        app.world_mut()
+            .query_filtered::<Entity, With<KeybindingsMenuRoot>>()
+            .iter(app.world_mut())
+            .count()
+            == 1,
+        "keybindings menu UI should be spawned",
+    );
+
+    // Press F1 again to close
+    press_and_update(app, LogicalAction::ToggleKeybindingsMenu);
+
+    // Verify menu closed
+    let menu_resource = app.world().resource::<KeybindingsMenuOpen>();
+    check(
+        !menu_resource.0,
+        "keybindings menu should be closed after second press",
+    );
+    check(
+        app.world_mut()
+            .query_filtered::<Entity, With<KeybindingsMenuRoot>>()
+            .iter(app.world_mut())
+            .count()
+            == 0,
+        "keybindings menu UI should be despawned",
+    );
+}
+
+/// Test: N toggles the navigation menu open and closed.
+fn test_navigation_menu_toggle(app: &mut App) {
+    // Verify menu starts closed
+    let menu_resource = app.world().resource::<NavigationMenuOpen>();
+    check(!menu_resource.0, "navigation menu should start closed");
+    check(
+        app.world_mut()
+            .query_filtered::<Entity, With<NavigationMenuRoot>>()
+            .iter(app.world_mut())
+            .count()
+            == 0,
+        "navigation menu UI should not exist initially",
+    );
+
+    // Press N to open
+    press_and_update(app, LogicalAction::ToggleNavigationMenu);
+
+    // Verify menu opened
+    let menu_resource = app.world().resource::<NavigationMenuOpen>();
+    check(
+        menu_resource.0,
+        "navigation menu should be open after press",
+    );
+    check(
+        app.world_mut()
+            .query_filtered::<Entity, With<NavigationMenuRoot>>()
+            .iter(app.world_mut())
+            .count()
+            == 1,
+        "navigation menu UI should be spawned",
+    );
+
+    // Press N again to close
+    press_and_update(app, LogicalAction::ToggleNavigationMenu);
+
+    // Verify menu closed
+    let menu_resource = app.world().resource::<NavigationMenuOpen>();
+    check(
+        !menu_resource.0,
+        "navigation menu should be closed after second press",
+    );
+    check(
+        app.world_mut()
+            .query_filtered::<Entity, With<NavigationMenuRoot>>()
+            .iter(app.world_mut())
+            .count()
+            == 0,
+        "navigation menu UI should be despawned",
+    );
+}
+
+/// Entry point — runs on the main thread so `WinitPlugin` can initialize.
 ///
-/// This test verifies the basic resource update behavior.
-#[test]
-fn test_keybindings_menu_open_resource() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(AssetPlugin {
-        file_path: "assets".to_string(),
-        ..default()
+/// Exits 0 on success, 1 on any assertion failure.
+fn main() {
+    // 60 `app.update()` invocations: enough for the menu-toggle tests, which
+    // do not render a scene. The fadezone test passes 200 because software
+    // rendering needs many ticks to settle the framebuffer.
+    let mut app = delta_v_test_support::make_app(60, || {
+        build_app(AppConfig {
+            asset_root_suffix: "crates/delta-v-ui/tests/fixtures/assets".to_string(),
+            world_name: Some("test".to_string()),
+            log_filter: Some("warn,delta_v=debug".to_string()),
+        })
     });
-
-    // Add the KeybindingsMenuOpen resource
-    app.insert_resource(KeybindingsMenuOpen(false));
-
-    // Verify initial state
-    let menu_open = app.world().get_resource::<KeybindingsMenuOpen>().unwrap();
-    assert!(!menu_open.0, "menu should start closed");
-
-    // Simulate opening the menu
-    app.world_mut().resource_mut::<KeybindingsMenuOpen>().0 = true;
-    let menu_open = app.world().get_resource::<KeybindingsMenuOpen>().unwrap();
-    assert!(menu_open.0, "menu should be open after setting to true");
-
-    // Simulate closing the menu
-    app.world_mut().resource_mut::<KeybindingsMenuOpen>().0 = false;
-    let menu_open = app.world().get_resource::<KeybindingsMenuOpen>().unwrap();
-    assert!(!menu_open.0, "menu should be closed after setting to false");
+    run_harness(
+        &mut app,
+        &[
+            ("keybindings_menu_toggle", test_keybindings_menu_toggle),
+            ("navigation_menu_toggle", test_navigation_menu_toggle),
+        ],
+    );
 }

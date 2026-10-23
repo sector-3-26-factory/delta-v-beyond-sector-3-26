@@ -224,8 +224,9 @@ fn load_with_user_override<T>(
 where
     T: serde::de::DeserializeOwned,
 {
-    let defaults_path = PathBuf::from(format!("assets/config/{name}.json"));
-    let schema_path = PathBuf::from(format!("assets/json/schema/{name}.schema.json"));
+    let defaults_path = PathBuf::from(delta_v_assets::resolve_asset_path("assets"))
+        .join(format!("config/{name}.json"));
+    let schema_path = delta_v_assets::schema_root().join(format!("{name}.schema.json"));
 
     let merged = load(defaults_path.clone(), schema_path)
         .with_user_override(user_path_fn().as_deref())
@@ -233,7 +234,7 @@ where
         .map_err(|e| map_json_error(e, &defaults_path))?;
 
     serde_json::from_value(merged).map_err(|e| ConfigError::Parse {
-        path: defaults_path,
+        path: defaults_path.clone(),
         source: e,
     })
 }

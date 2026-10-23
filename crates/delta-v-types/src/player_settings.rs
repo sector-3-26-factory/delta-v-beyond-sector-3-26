@@ -38,4 +38,8 @@ pub struct PlayerSettings {
     /// ISO 639-1 language code for UI translations (e.g. 'en', 'de').
     /// The game loads `assets/i18n/<language>.json` at startup.
     pub language: String,
+    /// Procedural generation detail level for asteroid belts and fields.
+    /// A unitless factor in (0, 1] that deterministically filters generated bodies.
+    /// 1.0 = all bodies, 0.5 = half the bodies. Per ADR-0012, default is in schema only.
+    pub detail_level: f32,
 }

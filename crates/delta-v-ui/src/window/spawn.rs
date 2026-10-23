@@ -19,6 +19,7 @@
 //! Window spawning functions.
 
 use bevy::prelude::*;
+use bevy::ui::widget::NodeImageMode;
 use bevy::ui::{Overflow, ScrollPosition, ZIndex};
 use delta_v_core::RenderLayer;
 
@@ -48,6 +49,16 @@ pub struct WindowConfig {
     /// If `true`, a scroll container with fade zones is created.
     /// If `false`, content is placed directly without fade zones or scrolling.
     pub scrollable: bool,
+    /// Whether to spawn the animated corner brackets and scan-line dots on
+    /// the window border.
+    ///
+    /// The border animation advances on wall-clock time
+    /// (`time.delta_secs_f64()`), so its sub-pixel phase differs between
+    /// processes and makes the framebuffer non-deterministic. Tests that
+    /// compare screenshots byte-for-byte (tolerance 0) set this to `false` so
+    /// the render depends only on the static content. Production keeps the
+    /// default `true`.
+    pub border_enabled: bool,
 }
 
 // allow-default: WindowConfig is a pure Rust UI helper struct, not JSON-backed.
@@ -61,6 +72,7 @@ impl Default for WindowConfig {
             header_height: UiTheme::HEADER_HEIGHT,
             animation: None,
             scrollable: true,
+            border_enabled: true,
         }
     }
 }
@@ -222,19 +234,25 @@ pub fn spawn_window(
 
     // Spawn corner brackets and scan line dots as children of the panel
     commands.entity(panel_entity).with_children(|ui| {
-        // Spawn corner brackets
-        for corner in 0..4u8 {
-            spawn_corner_bracket(ui, corner, size);
-        }
+        // Spawn corner brackets and scan line dots only when the border
+        // animation is enabled. The border animation advances on wall-clock
+        // time, so it makes the framebuffer non-deterministic; tests that
+        // compare screenshots byte-for-byte disable it.
+        if config.border_enabled {
+            // Spawn corner brackets
+            for corner in 0..4u8 {
+                spawn_corner_bracket(ui, corner, size);
+            }
 
-        // Spawn scan line dots (4 corners x (1 main + trail dots))
-        for corner in 0..4u8 {
-            // Main dot
-            spawn_scan_line_dot(ui, corner, true, 0, panel_entity);
+            // Spawn scan line dots (4 corners x (1 main + trail dots))
+            for corner in 0..4u8 {
+                // Main dot
+                spawn_scan_line_dot(ui, corner, true, 0, panel_entity);
 
-            // Trail dots
-            for trail_idx in 0..UiTheme::SCAN_TRAIL_LENGTH {
-                spawn_scan_line_dot(ui, corner, false, trail_idx, panel_entity);
+                // Trail dots
+                for trail_idx in 0..UiTheme::SCAN_TRAIL_LENGTH {
+                    spawn_scan_line_dot(ui, corner, false, trail_idx, panel_entity);
+                }
             }
         }
 
@@ -341,6 +359,7 @@ pub fn spawn_window(
                 });
 
                 // Fade-out zone: top — absolutely positioned, NOT affected by scroll
+                // Use ImageNode with Stretch mode to properly fill the layout node (Bevy 0.19 default is Auto)
                 ui.spawn((
                     Name::new("FadeTop"),
                     Node {
@@ -355,11 +374,13 @@ pub fn spawn_window(
                     ImageNode {
                         image: fade_top_image,
                         color: Color::WHITE,
+                        image_mode: NodeImageMode::Stretch,
                         ..default()
                     },
                 ));
 
                 // Fade-out zone: bottom — absolutely positioned, NOT affected by scroll
+                // Use ImageNode with Stretch mode to properly fill the layout node (Bevy 0.19 default is Auto)
                 ui.spawn((
                     Name::new("FadeBottom"),
                     Node {
@@ -374,6 +395,7 @@ pub fn spawn_window(
                     ImageNode {
                         image: fade_bottom_image,
                         color: Color::WHITE,
+                        image_mode: NodeImageMode::Stretch,
                         ..default()
                     },
                 ));

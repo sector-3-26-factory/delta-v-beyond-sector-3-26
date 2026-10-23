@@ -92,7 +92,7 @@
                     ]
                 },
                 "mass": {
-                    "description": "Optional mass override. If present, this value overrides the template's mass. Mass is NOT scaled with the scale factor - it is used as-is or overridden. Per ADR-0008, uses value+unit format. Units: kg, t, M_earth, M_sun. Converted to kilograms at load time.",
+                    "description": "The real mass of this body in this world, in kilograms or an equivalent unit. Per ADR-0058 mass belongs to the world entity and not to its template, because one mesh is reused at many sizes and the bodies are not one object scaled up. It is NOT scaled by `scale`, which is size and appearance only. Required for every entity that produces a body: a body spawned without one is a hard error (ADR-0013). Belt and field entities are definitions rather than bodies and do not carry it. Per ADR-0008, uses value+unit format. Units: kg, t, M_earth, M_sun. Converted to kilograms at load time.",
                     "$ref": "https://delta-v-beyond-sector-3-26/schema/units#/$defs/mass"
                 }
             }

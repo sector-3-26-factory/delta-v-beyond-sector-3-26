@@ -1,9 +1,5 @@
 {
     "entity_type": "moon",
-    "mass": {
-        "value": 1.79e-09,
-        "unit": "M_earth"
-    },
     "collision_shape": {
         "type": "sphere",
         "radius": {

@@ -21,5 +21,28 @@ delta-v-core = { workspace = true }
 delta-v-types = { workspace = true }
 leafwing-input-manager = { workspace = true }
 
+[dev-dependencies]
+bevy_winit = { workspace = true }
+delta-v-app = { workspace = true }
+delta-v-test-support = { workspace = true }
+
+# Run *_tests.rs as harness=false tests so cargo test runs main()
+# on the main thread (WinitPlugin requirement). The test harness lives in
+# `delta-v-test-support`; these files only contain the test functions.
+#
+# IMPORTANT: These tests require a virtual display (xvfb) because they use
+# Bevy's WinitPlugin which needs an X11/Wayland display. Run with:
+#   xvfb-run -a cargo test --test <test_name> -p delta-v-ui
+# The -a flag auto-allocates a display number.
+[[test]]
+name = "ui_integration_tests"
+path = "tests/integration_tests.rs"
+harness = false
+
+[[test]]
+name = "ui_fadezone_tests"
+path = "tests/fadezone_tests.rs"
+harness = false
+
 [lints]
 workspace = true

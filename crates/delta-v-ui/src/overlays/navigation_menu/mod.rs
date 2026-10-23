@@ -23,6 +23,7 @@
 
 use bevy::prelude::*;
 use delta_v_core::AppState;
+use leafwing_input_manager::plugin::InputManagerSystem;
 
 pub mod components;
 pub mod distance_format;
@@ -32,7 +33,7 @@ pub mod systems;
 
 pub use components::*;
 pub use distance_format::format_distance;
-pub use resources::{NavigationMenuOpen, NavigationMenuToggleState};
+pub use resources::NavigationMenuOpen;
 
 /// Plugin for navigation menu systems.
 pub struct NavigationMenuPlugin;
@@ -40,13 +41,14 @@ pub struct NavigationMenuPlugin;
 impl Plugin for NavigationMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<NavigationMenuOpen>();
-        app.init_resource::<NavigationMenuToggleState>();
 
         // The toggle system must run in PreUpdate (after leafwing-input-manager's update_action_state)
         // because tick_action_state runs in FixedPostUpdate which clears just_pressed before Update runs.
         app.add_systems(
             PreUpdate,
-            systems::navigation_menu_toggle_system.run_if(in_state(AppState::InGame)),
+            systems::navigation_menu_toggle_system
+                .run_if(in_state(AppState::InGame))
+                .after(InputManagerSystem::Update),
         );
         app.add_systems(
             Update,

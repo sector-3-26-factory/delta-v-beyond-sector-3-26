@@ -8,7 +8,6 @@
 //! See ADR-0047 (centralized spawning) and ADR-0051 (dependency hierarchy).
 
 use crate::collision::scale_collision_shape;
-use crate::template_extraction::resolve_mass;
 use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use delta_v_assets::resolve_sound_path;
@@ -21,7 +20,7 @@ use delta_v_core::{
     Targetable, Weapon, WorldEntityId,
 };
 use delta_v_physics::{CollisionLayersComponent, CollisionShape, RigidBody};
-use delta_v_types::{PropulsionConfig, ShipTemplateBase};
+use delta_v_types::{PropulsionConfig, ShipTemplateBase, require_mass};
 
 /// Builds the base physical ship entity with common components.
 ///
@@ -114,9 +113,9 @@ fn spawn_ship_entity(
     // Extract uniform scale from event (use max of x, y, z for uniform scaling).
     let scale = event.scale.x.max(event.scale.y).max(event.scale.z);
 
-    // Resolve mass: use override if present, otherwise use template mass.
-    // Mass is NOT scaled - it is used as-is or overridden.
-    let mass = resolve_mass(template.mass(), event.mass);
+    // ADR-0058: mass belongs to the world entity. A ship with no declared mass is a
+    // world authoring error and a hard failure, never a default.
+    let mass = require_mass(&event.id, event.mass);
 
     // Derive mesh path from template path using filesystem functions.
     // The mesh is always at mesh.glb in the template's directory.

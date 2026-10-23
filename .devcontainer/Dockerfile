@@ -35,6 +35,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 #  - mesa-vulkan-drivers   : Vulkan ICD for HW/software rendering
 #  - vulkan-tools          : `vulkaninfo` for debugging
 #
+# Testing:
+#  - xvfb                  : Virtual framebuffer for headless testing
+#
 # Tooling:
 #  - pkg-config            : build glue
 #  - mold                  : fast linker (recommended by Bevy)
@@ -66,6 +69,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         python3-pip \
         npm \
+        xvfb \
+        xauth \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure ALSA to use PulseAudio as the default audio output.
@@ -73,6 +78,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # mounted from the host. Without this, ALSA cannot find any audio devices.
 RUN echo 'pcm.!default { type pulse }' > /etc/asound.conf && \
     echo 'ctl.!default { type pulse }' >> /etc/asound.conf
+
+# Wrapper so `cargo test` automatically runs under xvfb-run with the
+# software Vulkan driver. Integration tests use Bevy's WinitPlugin and
+# need a virtual display + the LVP ICD to present headlessly.
+#
+# /home/vscode/.local/bin is on PATH and comes before /usr/local/cargo/bin.
+# Must run as root (before USER vscode) to write to /home/vscode/.local/bin.
+RUN mkdir -p /home/vscode/.local/bin && \
+    cat > /home/vscode/.local/bin/cargo <<'WRAPPER'
+#!/bin/sh
+if [ "$1" = "test" ]; then
+  export VK_ICD_FILENAMES="/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+  export XDG_RUNTIME_DIR="/tmp/xvfb-run-1000"
+  exec xvfb-run -a /usr/local/cargo/bin/cargo "$@"
+fi
+exec /usr/local/cargo/bin/cargo "$@"
+WRAPPER
+RUN chmod +x /home/vscode/.local/bin/cargo && \
+    chown -R vscode:vscode /home/vscode/.local
 
 # Pre-install useful cargo subcommands for the workflow.
 # (Kept minimal; add more on demand to keep image size reasonable.)

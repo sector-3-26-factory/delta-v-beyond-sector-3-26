@@ -1,0 +1,30 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
+[package]
+name = "delta-v-test-support"
+version.workspace = true
+edition = "2021"
+description = "Shared test harness for Bevy integration tests (harness = false targets)"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["test", "bevy", "harness"]
+categories = ["game-development", "development-tools"]
+
+# This crate is ONLY used as a dev-dependency. It is a regular library so
+# that path-dependency resolution works across the workspace, but it
+# intentionally has NO domain-crate dependencies (no delta-v-app, no
+# delta-v-core, ...) to avoid creating a dependency cycle:
+#
+#   delta-v-ui (dev) -> delta-v-test-support -> delta-v-app -> delta-v-ui
+#
+# Test functions call `delta_v_app::build_app` themselves and pass the
+# resulting `App` to the helpers exported here.
+
+[dependencies]
+bevy = { workspace = true }
+delta-v-types = { workspace = true }
+image = { workspace = true }
+leafwing-input-manager = { workspace = true }
+
+[lints]
+workspace = true

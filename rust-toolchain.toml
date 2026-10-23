@@ -11,5 +11,5 @@
 #
 # Bump deliberately and keep `rust-version` in Cargo.toml in sync.
 channel = "1.95.0"
-components = ["rustfmt", "clippy", "rust-analyzer"]
+components = ["cargo", "rustfmt", "clippy", "rust-analyzer"]
 profile = "minimal"

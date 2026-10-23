@@ -11,6 +11,12 @@ readme = "README.md"
 keywords = ["physics", "simulation"]
 categories = ["game-development"]
 
+[features]
+# ADR-0056: performance benchmarks live behind this flag so they do not slow
+# down day-to-day `cargo test`. Run them explicitly with:
+#   cargo test -p delta-v-physics --features bench -- --ignored --nocapture
+bench = []
+
 [dependencies]
 bevy = { workspace = true }
 bevy_math = { workspace = true }
@@ -24,6 +30,23 @@ delta-v-types = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+delta-v-app = { workspace = true }
+delta-v-test-support = { workspace = true }
+
+# Run integration tests as harness=false so cargo test runs main()
+# on the main thread (WinitPlugin requirement).
+[[test]]
+name = "physics_integration_tests"
+path = "tests/integration_tests.rs"
+harness = false
+
+# Floating origin recentering tests — uses the empty `floating_origin` world
+# fixture so no celestial body exerts gravity during the recentering
+# assertions. Runs as harness=false (main thread) for WinitPlugin.
+[[test]]
+name = "floating_origin_tests"
+path = "tests/floating_origin_tests.rs"
+harness = false
 
 [lints]
 workspace = true

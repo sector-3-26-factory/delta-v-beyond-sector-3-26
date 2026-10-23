@@ -59,6 +59,14 @@ pub struct SpawnEntity {
     /// If `Some`, the entity will orbit the specified parent body.
     /// If `None`, the entity will not orbit (e.g., sun, free-floating body).
     pub orbital_parameters: Option<OrbitalParameters>,
+
+    /// Optional asteroid belt parameters from the world definition.
+    /// Only present for asteroid belt entities.
+    pub asteroid_belt_parameters: Option<delta_v_types::world_def::AsteroidBeltParameters>,
+
+    /// Optional asteroid field parameters from the world definition.
+    /// Only present for asteroid field entities.
+    pub asteroid_field_parameters: Option<delta_v_types::world_def::AsteroidFieldParameters>,
 }
 
 impl SpawnEntity {
@@ -87,6 +95,8 @@ impl SpawnEntity {
             ai_task: None,
             mass: None,
             orbital_parameters: None,
+            asteroid_belt_parameters: None,
+            asteroid_field_parameters: None,
         }
     }
 

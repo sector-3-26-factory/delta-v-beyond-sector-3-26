@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Tests for physics integration systems (SOI gravity model per ADR-0055).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]

@@ -1,0 +1,181 @@
+{
+    "format_version": 1,
+    "name": "Sector 3.26 — Development Default",
+    "entities": [
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "player_ship",
+            "player_controlled": true,
+            "position": {
+                "x": {
+                    "value": 500.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1020.0,
+                    "unit": "m"
+                }
+            },
+            "rotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "ships/space-fighter-comrade1280",
+            "id": "ship_1",
+            "position": {
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": -25.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "asteroids/meshy-asteroid-2",
+            "id": "asteroid_1",
+            "position": {
+                "x": {
+                    "value": 500.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 3000.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 50000000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "asteroids/daphne-planetoid-sebastiansosnowski",
+            "id": "asteroid_2",
+            "position": {
+                "x": {
+                    "value": -300.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 100.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 800.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 50000000000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "asteroids/asteroid-low-poly-pasquill",
+            "id": "asteroid_3",
+            "position": {
+                "x": {
+                    "value": 200.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": -50.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1500.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 1881330000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "asteroids/asteroid-low-poly-pasquill",
+            "id": "asteroid_4",
+            "position": {
+                "x": {
+                    "value": -100.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 200.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 2000.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 1881330000,
+                "unit": "kg"
+            }
+        },
+        {
+            "template": "asteroids/daphne-planetoid-sebastiansosnowski",
+            "id": "asteroid_5",
+            "position": {
+                "x": {
+                    "value": 800.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 50.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1200.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 50000000000,
+                "unit": "kg"
+            }
+        }
+    ]
+}

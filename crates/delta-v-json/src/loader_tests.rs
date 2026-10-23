@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Unit tests for JSON loader unit validation (ADR-0008).
 
 #![allow(clippy::unwrap_used, clippy::panic)]

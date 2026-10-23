@@ -94,6 +94,12 @@ agent must know:
 - **Linting**: `cargo clippy --workspace --all-targets -- -D warnings`
   must pass.
 - **Tests**: `cargo test --workspace` must pass.
+  - **IMPORTANT**: Integration tests using Bevy's `WinitPlugin` (any test
+    with `harness = false` in `Cargo.toml`) require a virtual display.
+    Run them with `xvfb-run -a cargo test --test <test_name> -p <crate>`.
+    The CI workflow (`.github/workflows/ci.yml`) and devcontainer
+    (`.devcontainer/devcontainer.json`) already configure the required
+    environment variables (`VK_ICD_FILENAMES`, `XDG_RUNTIME_DIR`).
 - **No `unsafe`** without an ADR or an inline comment that justifies it
   and is approved on review. See
   [ADR-0028](docs/adr/ARCHITECTURAL_RULES.md) for the

@@ -9,16 +9,15 @@
 //! Thrust and torque magnitudes come from [`ShipPropulsionConfig`], which is
 //! populated from the ship template JSON at spawn time (ADR-0014).
 //!
-//! System execution order within `FixedUpdate`:
-//! 1. Input reader (Translate) — samples keybindings → [`ActionState<LogicalAction>`] (from `delta-v-core`)
-//! 2. Input reader (Ships) — [`ActionState<LogicalAction>`] → [`ThrustCommand`] + [`TorqueCommand`]
-//! 3. Flight-assist toggle — [`LogicalAction::ToggleFlightAssist`] action → flip [`FlightAssistState`]
-//! 4. Thrust system — [`ThrustCommand`] → `apply_force` on [`RigidBody`]
-//! 5. Torque system — [`TorqueCommand`] → `apply_torque` on [`RigidBody`]
-//! 6. Flight-assist damping — if enabled, damp velocity
-//! 7. Clear commands — zero out [`ThrustCommand`] + [`TorqueCommand`]
-
-use std::collections::BTreeSet;
+//! System execution order:
+//! - `PreUpdate`: flight-assist toggle (reads `just_pressed` after leafwing's `update_action_state`)
+//! - `FixedUpdate`:
+//!   1. Input reader (Translate) — samples keybindings → [`ActionState<LogicalAction>`] (from `delta-v-core`)
+//!   2. Input reader (Ships) — [`ActionState<LogicalAction>`] → [`ThrustCommand`] + [`TorqueCommand`]
+//!   3. Thrust system — [`ThrustCommand`] → `apply_force` on [`RigidBody`]
+//!   4. Torque system — [`TorqueCommand`] → `apply_torque` on [`RigidBody`]
+//!   5. Flight-assist damping — if enabled, damp velocity
+//!   6. Clear commands — zero out [`ThrustCommand`] + [`TorqueCommand`]
 
 use bevy::prelude::*;
 use delta_v_assets::template::load_main_thruster_definition;
@@ -43,8 +42,6 @@ pub enum ShipInputSet {
     /// Select propulsion (main thruster) based on [`LogicalAction::SelectPropulsion1`] through
     /// [`LogicalAction::SelectPropulsion10`].
     SelectPropulsion,
-    /// Toggle flight assist on/off based on [`LogicalAction::ToggleFlightAssist`].
-    ToggleFlightAssist,
     /// Apply accumulated [`ThrustCommand`] as forces on the player ship.
     ApplyThrust,
     /// Apply accumulated [`TorqueCommand`] as torques on the player ship.
@@ -54,15 +51,6 @@ pub enum ShipInputSet {
     /// Clear [`ThrustCommand`] and [`TorqueCommand`] after application.
     ClearCommands,
 }
-
-/// Tracks the previous tick's pressed actions for edge detection.
-///
-/// Used by [`flight_assist_toggle_system`] to detect key press transitions
-/// (on press, not on hold).
-// allow-default: Bevy requires Default on resources for init_resource.
-// This is per-tick state, not configuration.
-#[derive(Resource, Default, Debug)]
-pub struct PreviousActions(pub BTreeSet<LogicalAction>);
 
 /// Rotation force ramp state per axis.
 ///
@@ -323,29 +311,17 @@ fn ramp_factor(ramp_counter: &mut f32, ramp_ticks_max: u32) -> f32 {
 
 /// Toggles flight assist on/off when the player presses the toggle key.
 ///
-/// Runs in `FixedUpdate` after the input translation systems.
-/// Only toggles on the frame the action transitions from not-active to active
-/// (i.e. on press, not on hold). Uses [`PreviousActions`] for edge detection.
+/// Runs in `PreUpdate` after `leafwing-input-manager`'s `update_action_state`,
+/// so `just_pressed` flags are fresh. Only toggles on the frame the action
+/// transitions from not-active to active (i.e. on press, not on hold).
 #[allow(clippy::needless_pass_by_value)]
 pub fn flight_assist_toggle_system(
     action_state: Single<'_, '_, &ActionState<LogicalAction>>,
-    mut prev: ResMut<'_, PreviousActions>,
     mut state: ResMut<'_, FlightAssistState>,
 ) {
-    let toggle = LogicalAction::ToggleFlightAssist;
-    let is_pressed = action_state.pressed(&toggle);
-    let was_pressed = prev.0.contains(&toggle);
-
-    // Edge detection: only toggle on the transition from not-pressed to pressed.
-    if is_pressed && !was_pressed {
+    if action_state.just_pressed(&LogicalAction::ToggleFlightAssist) {
         state.enabled = !state.enabled;
         tracing::info!("flight assist toggled: {}", state.enabled);
-    }
-
-    // Update previous state for next tick.
-    prev.0.clear();
-    for action in action_state.get_pressed() {
-        prev.0.insert(action);
     }
 }
 

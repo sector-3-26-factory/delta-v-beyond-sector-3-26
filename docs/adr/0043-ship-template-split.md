@@ -12,7 +12,7 @@ This caused two problems:
 1. **No separation of concerns**: Player-specific data (cameras) was mixed with common ship data
 2. **No easy ship switching**: To fly a different ship, you had to create a whole new template file with all properties duplicated
 
-Per ADR-0038 (entity template system), each entity type should have its own schema. Per ADR-0012 (JSON schema validation), schemas should avoid `allOf`/`oneOf` composition patterns.
+Per ADR-0038 (entity template system), each entity type should have its own schema. Per ADR-0012 (JSON schema validation), schemas must under all circumstances avoid `allOf`/`oneOf` composition patterns.
 
 ## Decision
 

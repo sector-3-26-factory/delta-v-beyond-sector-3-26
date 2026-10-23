@@ -29,6 +29,7 @@
 
 use bevy::prelude::*;
 use delta_v_core::AppState;
+use leafwing_input_manager::plugin::InputManagerSystem;
 
 pub mod components;
 pub mod navigation_list;
@@ -49,7 +50,6 @@ pub struct CockpitPlugin;
 impl Plugin for CockpitPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<systems::ArrowTextureCache>()
-            .init_resource::<systems::CockpitCycleState>()
             .init_resource::<systems::ActiveThrustSound>()
             .init_resource::<systems::ThrustingState>()
             .init_resource::<components::TargetingMode>()
@@ -83,7 +83,6 @@ impl Plugin for CockpitPlugin {
             .add_systems(
                 Update,
                 (
-                    systems::cockpit_station_cycle_system,
                     systems::cockpit_visibility_system,
                     systems::velocity_vector_system,
                     systems::status_gauge_system,
@@ -103,22 +102,28 @@ impl Plugin for CockpitPlugin {
                     .run_if(in_state(AppState::InGame)),
             )
             .add_systems(
-                PreUpdate,
-                (
-                    systems::targeting_mode_toggle_system,
-                    systems::cycle_target_system,
-                    systems::cockpit_station_cycle_system,
-                )
-                    .run_if(in_state(AppState::InGame)),
-            )
-            .add_systems(
                 Update,
                 (
                     navigation_list::update_navigation_list_system,
                     navigation_list::update_selection_system,
                     navigation_list::handle_target_selected_system,
+                    navigation_list::rebuild_on_spawn_despawn_system,
                 )
                     .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                PreUpdate,
+                (
+                    systems::targeting_mode_toggle_system
+                        .run_if(in_state(AppState::InGame))
+                        .after(InputManagerSystem::Update),
+                    systems::cycle_target_system
+                        .run_if(in_state(AppState::InGame))
+                        .after(InputManagerSystem::Update),
+                    systems::cockpit_station_cycle_system
+                        .run_if(in_state(AppState::InGame))
+                        .after(InputManagerSystem::Update),
+                ),
             )
             .add_systems(
                 FixedUpdate,

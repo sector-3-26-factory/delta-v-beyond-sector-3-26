@@ -45,6 +45,7 @@ pub fn spawn_notification(
             config.animation.flicker_count,
         )),
         scrollable: false,
+        border_enabled: true,
     };
 
     let window_entity = spawn_window(commands, &window_config, asset_server, theme, |ui| {

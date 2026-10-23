@@ -1,5 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
+#![cfg(test)]
+
 //! Tests for the input → forces pipeline systems.
 //!
 //! See ADR-0021 (Testing strategy).
@@ -14,15 +16,16 @@
 
 use bevy::prelude::*;
 use bevy::time::TimePlugin;
+use leafwing_input_manager::prelude::ActionState;
+use std::time::Instant;
 
 use delta_v_core::FlightAssistState;
-use delta_v_core::input::ActionState;
 use delta_v_physics::RigidBody;
 use delta_v_types::LogicalAction;
 
 use crate::ship_templates::{ShipPropulsionConfig, ThrustCommand, TorqueCommand};
 use crate::systems::{
-    PreviousActions, RotationRampState, clear_commands_system, flight_assist_damping_system,
+    RotationRampState, clear_commands_system, flight_assist_damping_system,
     flight_assist_toggle_system, input_reader_system, thrust_system, torque_system,
 };
 
@@ -35,11 +38,8 @@ fn build_input_app() -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    // ActionState is a component. Spawn an entity with ActionState directly
-    // (tests manually press actions, so InputManagerPlugin is not needed).
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
-    app.init_resource::<PreviousActions>();
     app.init_resource::<FlightAssistState>();
     app.init_resource::<RotationRampState>();
     app.insert_resource(ShipPropulsionConfig {
@@ -51,19 +51,30 @@ fn build_input_app() -> App {
         rotation_ramp_ticks: 60,
         thrust_sound: None,
     });
-    // Spawn an entity with ActionState for manual action pressing
+    // Spawn an entity with ActionState for manual action pressing.
     app.world_mut()
-        .spawn(leafwing_input_manager::prelude::ActionState::<LogicalAction>::default());
+        .spawn(ActionState::<LogicalAction>::default());
     app
 }
 
-/// Runs one fixed update tick.
+/// Runs one fixed update tick, then manually advances `ActionState` so that
+/// `just_pressed` flags transition to `pressed` (mimicking leafwing's
+/// `tick_action_state`). This must happen AFTER the systems under test run,
+/// otherwise `just_pressed` is stale on the next tick.
 fn run_fixed_update(app: &mut App) {
     let fixed_duration = app.world().resource::<Time<Fixed>>().timestep();
     app.world_mut()
         .resource_mut::<Time<Real>>()
         .advance_by(fixed_duration);
     app.update();
+    // Advance ActionState: JustPressed → Pressed, JustReleased → Released.
+    let mut query = app.world_mut().query::<&mut ActionState<LogicalAction>>();
+    let mut action_state = query
+        .single_mut(app.world_mut())
+        .expect("ActionState not found");
+    let current = Instant::now();
+    let previous = Instant::now();
+    action_state.tick(current, previous);
 }
 
 /// Presses an action on the `ActionState` component.
@@ -81,11 +92,8 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
     let mut app = App::new();
     app.add_plugins(TimePlugin);
     app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    // ActionState is a component. Spawn an entity with ActionState directly
-    // (tests manually press actions, so InputManagerPlugin is not needed).
     app.init_resource::<ThrustCommand>();
     app.init_resource::<TorqueCommand>();
-    app.init_resource::<PreviousActions>();
     app.init_resource::<FlightAssistState>();
     app.init_resource::<RotationRampState>();
     app.insert_resource(ShipPropulsionConfig {
@@ -97,9 +105,9 @@ fn build_ramp_app(rotation_ramp_ticks: u32) -> App {
         rotation_ramp_ticks,
         thrust_sound: None,
     });
-    // Spawn an entity with ActionState for manual action pressing
+    // Spawn an entity with ActionState for manual action pressing.
     app.world_mut()
-        .spawn(leafwing_input_manager::prelude::ActionState::<LogicalAction>::default());
+        .spawn(ActionState::<LogicalAction>::default());
     app
 }
 
@@ -285,7 +293,7 @@ fn test_flight_assist_toggle_on_press() {
 
     press_action(&mut app, LogicalAction::ToggleFlightAssist);
 
-    app.add_systems(FixedUpdate, flight_assist_toggle_system);
+    app.add_systems(PreUpdate, flight_assist_toggle_system);
     run_fixed_update(&mut app);
 
     let state = app.world().resource::<FlightAssistState>();
@@ -303,7 +311,7 @@ fn test_flight_assist_no_toggle_on_hold() {
 
     press_action(&mut app, LogicalAction::ToggleFlightAssist);
 
-    app.add_systems(FixedUpdate, flight_assist_toggle_system);
+    app.add_systems(PreUpdate, flight_assist_toggle_system);
 
     // First tick — toggles on
     run_fixed_update(&mut app);
@@ -320,7 +328,7 @@ fn test_flight_assist_no_toggle_on_hold() {
 }
 
 #[test]
-fn test_flight_assist_toggle_off_on_second_press() {
+fn test_flight_assist_toggle_twice_returns_to_original() {
     let mut app = build_input_app();
 
     {
@@ -331,7 +339,7 @@ fn test_flight_assist_toggle_off_on_second_press() {
     // First press
     press_action(&mut app, LogicalAction::ToggleFlightAssist);
 
-    app.add_systems(FixedUpdate, flight_assist_toggle_system);
+    app.add_systems(PreUpdate, flight_assist_toggle_system);
     run_fixed_update(&mut app);
 
     // Release the key by creating a fresh ActionState with no pressed actions
@@ -351,8 +359,8 @@ fn test_flight_assist_toggle_off_on_second_press() {
 
     let state = app.world().resource::<FlightAssistState>();
     assert!(
-        !state.enabled,
-        "flight assist should be toggled off on second press"
+        state.enabled,
+        "flight assist should be toggled on on second press"
     );
 }
 

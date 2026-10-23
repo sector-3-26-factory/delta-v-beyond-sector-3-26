@@ -1,0 +1,63 @@
+{
+    "entity_type": "ship",
+    "inertia_scale": 1.0,
+    "bounding_box": {
+        "min": {
+            "x": {
+                "value": -0.5,
+                "unit": "m"
+            },
+            "y": {
+                "value": -0.5,
+                "unit": "m"
+            },
+            "z": {
+                "value": -0.5,
+                "unit": "m"
+            }
+        },
+        "max": {
+            "x": {
+                "value": 0.5,
+                "unit": "m"
+            },
+            "y": {
+                "value": 0.5,
+                "unit": "m"
+            },
+            "z": {
+                "value": 0.5,
+                "unit": "m"
+            }
+        }
+    },
+    "collision_shape": {
+        "type": "box",
+        "half_extents": {
+            "x": {
+                "value": 0.5,
+                "unit": "m"
+            },
+            "y": {
+                "value": 0.5,
+                "unit": "m"
+            },
+            "z": {
+                "value": 0.5,
+                "unit": "m"
+            }
+        }
+    },
+    "propulsion": {
+        "main_thrusters": [
+            "chemical-main",
+            "antimatter-torch"
+        ],
+        "maneuvering_thruster": "rcs-standard"
+    },
+    "weapons": [
+        "laser-standard"
+    ],
+    "max_weapons_count": 2,
+    "max_propulsions_count": 2
+}
