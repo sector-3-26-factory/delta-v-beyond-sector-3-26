@@ -54,7 +54,7 @@ pub fn spawn_npc_ship(
     for event in events.read() {
         // Extract AI ship template from EntityTemplate enum.
         // The template was already loaded and converted by delta-v-assets (ADR-0040).
-        let template = match &event.template {
+        let template = match &event.template.template {
             delta_v_types::EntityTemplate::AiShip(t) => t.clone(),
             _ => continue,
         };
@@ -95,7 +95,7 @@ pub fn spawn_npc_ship(
             event.position.x,
             event.position.y,
             event.position.z,
-            event.template_path,
+            event.template.template_path,
             event
                 .mass
                 .map_or_else(|| "unset".to_string(), |m| format!("{m}")),

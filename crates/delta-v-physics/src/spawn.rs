@@ -64,7 +64,7 @@ pub fn spawn_sun(
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
-        let delta_v_types::EntityTemplate::Sun(sun_template) = &spawn.template else {
+        let delta_v_types::EntityTemplate::Sun(sun_template) = &spawn.template.template else {
             continue;
         };
 
@@ -198,7 +198,8 @@ pub fn spawn_planet(
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
-        let delta_v_types::EntityTemplate::Planet(planet_template) = &spawn.template else {
+        let delta_v_types::EntityTemplate::Planet(planet_template) = &spawn.template.template
+        else {
             continue;
         };
 
@@ -344,7 +345,8 @@ pub fn spawn_asteroid(
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
-        let delta_v_types::EntityTemplate::Asteroid(asteroid_template) = &spawn.template else {
+        let delta_v_types::EntityTemplate::Asteroid(asteroid_template) = &spawn.template.template
+        else {
             continue;
         };
 
@@ -472,7 +474,7 @@ pub fn spawn_moon(
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
-        let delta_v_types::EntityTemplate::Moon(moon_template) = &spawn.template else {
+        let delta_v_types::EntityTemplate::Moon(moon_template) = &spawn.template.template else {
             continue;
         };
 

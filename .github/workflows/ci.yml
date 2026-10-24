@@ -83,6 +83,7 @@ jobs:
             libudev-dev \
             libwayland-dev \
             libxkbcommon-dev \
+            libxkbcommon-x11-0 \
             libx11-dev \
             libxi-dev \
             libxcursor-dev \

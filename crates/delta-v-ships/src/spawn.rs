@@ -157,7 +157,7 @@ fn spawn_player_ship(
     // Extract player ship template from EntityTemplate enum.
     // The template was already loaded and converted by delta-v-assets (ADR-0040).
     // INVARIANT: This function is only called when event.template is EntityTemplate::PlayerShip.
-    let EntityTemplate::PlayerShip(template) = &event.template else {
+    let EntityTemplate::PlayerShip(template) = &event.template.template else {
         unreachable!("spawn_player_ship only called for PlayerShip template");
     };
     let template = template.clone();
@@ -185,7 +185,7 @@ fn spawn_player_ship(
     insert_player_resources(
         commands,
         ship_entity,
-        &event.template_path,
+        &event.template.template_path,
         &template,
         ship_propulsion_config,
         asset_root,
@@ -196,7 +196,7 @@ fn spawn_player_ship(
         event.position.x,
         event.position.y,
         event.position.z,
-        event.template_path,
+        event.template.template_path,
         event
             .mass
             .map_or_else(|| "unset".to_string(), |m| format!("{m}")),
@@ -224,7 +224,7 @@ fn spawn_static_ship(
     // Extract static ship template from EntityTemplate enum.
     // The template was already loaded and converted by delta-v-assets (ADR-0040).
     // INVARIANT: This function is only called when event.template is EntityTemplate::StaticShip.
-    let template = match &event.template {
+    let template = match &event.template.template {
         EntityTemplate::StaticShip(t) => t.clone(),
         _ => unreachable!("spawn_static_ship only called for StaticShip template"),
     };
@@ -238,7 +238,7 @@ fn spawn_static_ship(
         event.position.x,
         event.position.y,
         event.position.z,
-        event.template_path,
+        event.template.template_path,
         event
             .mass
             .map_or_else(|| "unset".to_string(), |m| format!("{m}")),
@@ -262,7 +262,7 @@ pub fn spawn_ship(
     mut events: MessageReader<'_, '_, SpawnEntity>,
 ) {
     for event in events.read() {
-        match &event.template {
+        match &event.template.template {
             EntityTemplate::PlayerShip(_) => {
                 spawn_player_ship(&mut commands, &asset_server, &asset_root, event);
             }

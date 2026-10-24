@@ -26,12 +26,16 @@ fn test_load_player_controlled_ship() {
         result.err()
     );
 
-    let (template_path, template) = result.unwrap();
-    assert!(template_path.contains("space-fighter-comrade1280"));
-    assert!(template_path.contains("player_controlled_ship.json"));
+    let template = result.unwrap();
+    assert!(template.template_path.contains("space-fighter-comrade1280"));
+    assert!(
+        template
+            .template_path
+            .contains("player_controlled_ship.json")
+    );
 
     // Verify the template is a PlayerShip variant
-    match template {
+    match template.template {
         delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
             // Verify core ship properties. Mass is deliberately absent: per ADR-0058
             // it lives on the world entity, not on the template.
@@ -100,8 +104,8 @@ fn test_player_ship_cameras() {
     let result = load_player_controlled_ship("space-fighter-comrade1280");
     assert!(result.is_ok());
 
-    let (_, template) = result.unwrap();
-    match template {
+    let template = result.unwrap();
+    match template.template {
         delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
             let cameras = &player_ship.cameras;
             // All 8 cameras should be present
@@ -140,8 +144,8 @@ fn test_player_ship_propulsion() {
     let result = load_player_controlled_ship("space-fighter-comrade1280");
     assert!(result.is_ok());
 
-    let (_, template) = result.unwrap();
-    match template {
+    let template = result.unwrap();
+    match template.template {
         delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
             let propulsion = &player_ship.propulsion;
             assert!(!propulsion.main_thruster_names.is_empty());
@@ -157,8 +161,8 @@ fn test_player_ship_weapons() {
     let result = load_player_controlled_ship("space-fighter-comrade1280");
     assert!(result.is_ok());
 
-    let (_, template) = result.unwrap();
-    match template {
+    let template = result.unwrap();
+    match template.template {
         delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
             // Weapons may be empty, but the field should exist
             let _ = &player_ship.weapons;

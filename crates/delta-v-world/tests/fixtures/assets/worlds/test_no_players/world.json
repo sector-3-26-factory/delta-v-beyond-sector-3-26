@@ -1,0 +1,49 @@
+{
+    "format_version": 1,
+    "name": "Test World - No Players",
+    "entities": [
+        {
+            "template": "ships/debug-ship-cube",
+            "id": "ai_ship_1",
+            "player_controlled": false,
+            "position": {
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "rotation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+            },
+            "scale": {
+                "x": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 1.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 1.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 10000,
+                "unit": "kg"
+            }
+        }
+    ]
+}

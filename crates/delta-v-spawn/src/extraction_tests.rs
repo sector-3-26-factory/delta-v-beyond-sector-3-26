@@ -11,6 +11,7 @@ use crate::template_extraction::{
 };
 use delta_v_types::{
     AsteroidTemplate, BoundingBox, CollisionShapeData, CollisionShapeType, EntityTemplate,
+    LoadedTemplate,
 };
 
 // ---------------------------------------------------------------------------
@@ -18,20 +19,23 @@ use delta_v_types::{
 // ---------------------------------------------------------------------------
 #[test]
 fn test_extract_bounding_box_basic() {
-    let template = EntityTemplate::Asteroid(AsteroidTemplate {
-        entity_type: "asteroid".to_string(),
-        bounding_box: BoundingBox {
-            min: bevy::prelude::Vec3::new(-1.0, -2.0, -3.0),
-            max: bevy::prelude::Vec3::new(1.0, 2.0, 3.0),
-        },
-        collision_shape: CollisionShapeData {
-            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
-            offset: bevy::prelude::Vec3::ZERO,
-        },
-        is_gravity_source: false,
-    });
+    let template = LoadedTemplate {
+        template: EntityTemplate::Asteroid(AsteroidTemplate {
+            entity_type: "asteroid".to_string(),
+            bounding_box: BoundingBox {
+                min: bevy::prelude::Vec3::new(-1.0, -2.0, -3.0),
+                max: bevy::prelude::Vec3::new(1.0, 2.0, 3.0),
+            },
+            collision_shape: CollisionShapeData {
+                shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+                offset: bevy::prelude::Vec3::ZERO,
+            },
+            is_gravity_source: false,
+        }),
+        template_path: "templates/asteroids/test/asteroid.json".to_string(),
+    };
 
-    let bbox = extract_bounding_box(&template);
+    let bbox = extract_bounding_box(&template.template);
     assert!((bbox.min.x - (-1.0)).abs() < 0.01);
     assert!((bbox.min.y - (-2.0)).abs() < 0.01);
     assert!((bbox.min.z - (-3.0)).abs() < 0.01);
@@ -42,20 +46,23 @@ fn test_extract_bounding_box_basic() {
 
 #[test]
 fn test_extract_bounding_box_asymmetric() {
-    let template = EntityTemplate::Asteroid(AsteroidTemplate {
-        entity_type: "asteroid".to_string(),
-        bounding_box: BoundingBox {
-            min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
-            max: bevy::prelude::Vec3::new(10.0, 5.0, 2.0),
-        },
-        collision_shape: CollisionShapeData {
-            shape_type: CollisionShapeType::Sphere { radius: 1.0 },
-            offset: bevy::prelude::Vec3::ZERO,
-        },
-        is_gravity_source: false,
-    });
+    let template = LoadedTemplate {
+        template: EntityTemplate::Asteroid(AsteroidTemplate {
+            entity_type: "asteroid".to_string(),
+            bounding_box: BoundingBox {
+                min: bevy::prelude::Vec3::new(0.0, 0.0, 0.0),
+                max: bevy::prelude::Vec3::new(10.0, 5.0, 2.0),
+            },
+            collision_shape: CollisionShapeData {
+                shape_type: CollisionShapeType::Sphere { radius: 1.0 },
+                offset: bevy::prelude::Vec3::ZERO,
+            },
+            is_gravity_source: false,
+        }),
+        template_path: "templates/asteroids/test/asteroid.json".to_string(),
+    };
 
-    let bbox = extract_bounding_box(&template);
+    let bbox = extract_bounding_box(&template.template);
     assert!((bbox.min.x - 0.0).abs() < 0.01);
     assert!((bbox.min.y - 0.0).abs() < 0.01);
     assert!((bbox.min.z - 0.0).abs() < 0.01);

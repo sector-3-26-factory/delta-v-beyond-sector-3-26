@@ -481,7 +481,7 @@ fn test_pairs(
 /// world axes while ignoring `rotation_a` / `rotation_b` makes a pitched ship stop
 /// colliding with bodies that its drawn collision shape visibly overlaps.
 #[allow(clippy::too_many_lines)]
-fn check_collision(
+pub fn check_collision(
     pos_a: Vec3,
     rotation_a: Quat,
     shape_a: &CollisionShape,

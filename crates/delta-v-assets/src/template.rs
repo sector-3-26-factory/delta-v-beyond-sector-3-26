@@ -27,7 +27,7 @@
 use std::path::Path;
 
 use delta_v_json::load;
-use delta_v_types::EntityTemplate;
+use delta_v_types::{EntityTemplate, LoadedTemplate};
 use serde_json::Value;
 
 use crate::error::AssetError;
@@ -139,9 +139,7 @@ pub fn load_template(
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_player_controlled_ship(
-    ship_name: &str,
-) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_player_controlled_ship(ship_name: &str) -> Result<LoadedTemplate, AssetError> {
     let player_template = load_template(
         "ships",
         ship_name,
@@ -174,9 +172,12 @@ pub fn load_player_controlled_ship(
     // Convert to runtime type
     let template: delta_v_types::PlayerShipTemplateJson =
         serde_json::from_value(merged.clone()).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::PlayerShip(template.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::PlayerShip(template.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads an AI-controlled ship template, merging base ship with AI-specific data.
@@ -199,7 +200,7 @@ pub fn load_player_controlled_ship(
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_ai_controlled_ship(ship_name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_ai_controlled_ship(ship_name: &str) -> Result<LoadedTemplate, AssetError> {
     let ai_template = load_template(
         "ships",
         ship_name,
@@ -230,9 +231,12 @@ pub fn load_ai_controlled_ship(ship_name: &str) -> Result<(String, EntityTemplat
     // Convert to runtime type
     let template: delta_v_types::AiShipTemplateJson =
         serde_json::from_value(merged.clone()).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::AiShip(template.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::AiShip(template.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads an asteroid template.
@@ -251,7 +255,7 @@ pub fn load_ai_controlled_ship(ship_name: &str) -> Result<(String, EntityTemplat
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_asteroid(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_asteroid(name: &str) -> Result<LoadedTemplate, AssetError> {
     // INVARIANT: The name may or may not have the "asteroids/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "asteroids/my-asteroid" or "my-asteroid".
@@ -263,9 +267,12 @@ pub fn load_asteroid(name: &str) -> Result<(String, EntityTemplate), AssetError>
     // Convert to runtime type
     let template_json: delta_v_types::AsteroidTemplateJson =
         serde_json::from_value(template).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::Asteroid(template_json.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::Asteroid(template_json.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads an asteroid belt template.
@@ -283,7 +290,7 @@ pub fn load_asteroid(name: &str) -> Result<(String, EntityTemplate), AssetError>
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_asteroid_belt(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_asteroid_belt(name: &str) -> Result<LoadedTemplate, AssetError> {
     // INVARIANT: The name may or may not have the "asteroid-belts/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "asteroid-belts/my-belt" or "my-belt".
@@ -300,9 +307,12 @@ pub fn load_asteroid_belt(name: &str) -> Result<(String, EntityTemplate), AssetE
     // Convert to runtime type
     let template_json: delta_v_types::AsteroidBeltTemplateJson =
         serde_json::from_value(template).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::AsteroidBelt(template_json.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::AsteroidBelt(template_json.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads an asteroid field template.
@@ -320,7 +330,7 @@ pub fn load_asteroid_belt(name: &str) -> Result<(String, EntityTemplate), AssetE
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_asteroid_field(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_asteroid_field(name: &str) -> Result<LoadedTemplate, AssetError> {
     // INVARIANT: The name may or may not have the "asteroid-fields/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "asteroid-fields/my-field" or "my-field".
@@ -337,9 +347,12 @@ pub fn load_asteroid_field(name: &str) -> Result<(String, EntityTemplate), Asset
     // Convert to runtime type
     let template_json: delta_v_types::AsteroidFieldTemplateJson =
         serde_json::from_value(template).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::AsteroidField(template_json.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::AsteroidField(template_json.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads a ship template.
@@ -358,7 +371,7 @@ pub fn load_asteroid_field(name: &str) -> Result<(String, EntityTemplate), Asset
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_ship(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_ship(name: &str) -> Result<LoadedTemplate, AssetError> {
     // INVARIANT: The name may or may not have the "ships/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "ships/my-ship" or "my-ship".
@@ -374,9 +387,12 @@ pub fn load_ship(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // Convert to runtime type
     let template_json: delta_v_types::StaticShipTemplateJson =
         serde_json::from_value(template).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::StaticShip(template_json.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::StaticShip(template_json.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads a sun template.
@@ -395,7 +411,7 @@ pub fn load_ship(name: &str) -> Result<(String, EntityTemplate), AssetError> {
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_sun(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_sun(name: &str) -> Result<LoadedTemplate, AssetError> {
     // INVARIANT: The name may or may not have the "suns/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "suns/my-sun" or "my-sun".
@@ -407,9 +423,12 @@ pub fn load_sun(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // Convert to runtime type
     let template_json: delta_v_types::SunTemplateJson =
         serde_json::from_value(template).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::Sun(template_json.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::Sun(template_json.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads a planet template.
@@ -428,7 +447,7 @@ pub fn load_sun(name: &str) -> Result<(String, EntityTemplate), AssetError> {
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_planet(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_planet(name: &str) -> Result<LoadedTemplate, AssetError> {
     // INVARIANT: The name may or may not have the "planets/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "planets/my-planet" or "my-planet".
@@ -440,9 +459,12 @@ pub fn load_planet(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // Convert to runtime type
     let template_json: delta_v_types::PlanetTemplateJson =
         serde_json::from_value(template).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::Planet(template_json.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::Planet(template_json.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads a moon template.
@@ -461,7 +483,7 @@ pub fn load_planet(name: &str) -> Result<(String, EntityTemplate), AssetError> {
 /// Panics if the JSON fails to deserialize. This should never happen because
 /// the JSON has already been validated against the schema (INVARIANT: per ADR-0013).
 #[allow(clippy::expect_used, clippy::missing_panics_doc)]
-pub fn load_moon(name: &str) -> Result<(String, EntityTemplate), AssetError> {
+pub fn load_moon(name: &str) -> Result<LoadedTemplate, AssetError> {
     // INVARIANT: The name may or may not have the "moons/" prefix.
     // If it has the prefix, we strip it for the template_path; otherwise, we use the name as-is.
     // The `unwrap_or` is intentional: callers may pass either "moons/my-moon" or "my-moon".
@@ -473,9 +495,12 @@ pub fn load_moon(name: &str) -> Result<(String, EntityTemplate), AssetError> {
     // Convert to runtime type
     let template_json: delta_v_types::MoonTemplateJson =
         serde_json::from_value(template).expect("validated JSON should deserialize");
-    let runtime_template = EntityTemplate::Moon(template_json.into());
+    let runtime_template = LoadedTemplate {
+        template: EntityTemplate::Moon(template_json.into()),
+        template_path,
+    };
 
-    Ok((template_path, runtime_template))
+    Ok(runtime_template)
 }
 
 /// Loads and validates a template from explicit paths.
@@ -636,6 +661,57 @@ pub fn load_maneuvering_thruster_definition(
     let definition: delta_v_types::ManeuveringThrusterDefinitionJson =
         serde_json::from_value(value).expect("validated JSON should deserialize");
     Ok(definition.into())
+}
+
+/// Loads a template by dispatching on the template path prefix.
+///
+/// This is the single entry point for template loading by kind. Domain crates
+/// MUST use this function rather than reimplementing the prefix dispatch
+/// (ADR-0049).
+///
+/// The returned [`EntityTemplate`] carries the template file path (relative to
+/// the `assets/` root) on every variant, so callers can locate the co-located
+/// `mesh.glb` and other assets without re-deriving it.
+///
+/// # Arguments
+///
+/// * `template_short` — the template path as it appears in a world definition
+///   (e.g. `"ships/debug-ship-cube"`, `"asteroid-belts/main"`).
+/// * `player_controlled` — whether the entity is player-controlled (affects
+///   which ship template variant is loaded).
+/// * `ai_task` — optional AI task discriminator.
+///
+/// # Errors
+///
+/// Returns [`AssetError`] if the template cannot be loaded or validated.
+pub fn load_template_by_kind(
+    template_short: &str,
+    player_controlled: bool,
+    ai_task: Option<&delta_v_types::AiTask>,
+) -> Result<LoadedTemplate, AssetError> {
+    if template_short.starts_with("ships/") {
+        if player_controlled {
+            load_player_controlled_ship(template_short)
+        } else if ai_task.is_some() {
+            load_ai_controlled_ship(template_short)
+        } else {
+            load_ship(template_short)
+        }
+    } else if template_short.starts_with("asteroids/") {
+        load_asteroid(template_short)
+    } else if template_short.starts_with("asteroid-belts/") {
+        load_asteroid_belt(template_short)
+    } else if template_short.starts_with("asteroid-fields/") {
+        load_asteroid_field(template_short)
+    } else if template_short.starts_with("suns/") {
+        load_sun(template_short)
+    } else if template_short.starts_with("planets/") {
+        load_planet(template_short)
+    } else if template_short.starts_with("moons/") {
+        load_moon(template_short)
+    } else {
+        load_ship(template_short)
+    }
 }
 
 /// Loads and validates a world definition from the given path.

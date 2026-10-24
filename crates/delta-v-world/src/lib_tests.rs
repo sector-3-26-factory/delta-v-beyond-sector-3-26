@@ -44,7 +44,7 @@ fn spawn_ship_bodies(
     asset_server: Res<'_, AssetServer>,
 ) {
     for event in events.read() {
-        match &event.template {
+        match &event.template.template {
             EntityTemplate::Ship(template) => {
                 let _ship = delta_v_spawn::build_physical_ship(
                     &mut commands,
@@ -179,8 +179,14 @@ fn every_shipped_world_body_spawns_with_its_declared_mass() {
             {
                 continue;
             }
+            let loaded_template = delta_v_assets::template::load_template_by_kind(
+                &entity_spawn.template_short,
+                entity_spawn.player_controlled,
+                entity_spawn.ai_task.as_ref(),
+            )
+            .expect("template must load successfully");
             app.world_mut()
-                .write_message(build_spawn_event(entity_spawn));
+                .write_message(build_spawn_event(entity_spawn, loaded_template));
         }
         app.update();
 
@@ -251,8 +257,14 @@ fn belt_and_field_entities_spawn_and_generate_asteroids_with_mass() {
 
     let mut app = spawn_app();
     for entity_spawn in &mut world.entities {
+        let loaded_template = delta_v_assets::template::load_template_by_kind(
+            &entity_spawn.template_short,
+            entity_spawn.player_controlled,
+            entity_spawn.ai_task.as_ref(),
+        )
+        .expect("template must load successfully");
         app.world_mut()
-            .write_message(build_spawn_event(entity_spawn));
+            .write_message(build_spawn_event(entity_spawn, loaded_template));
     }
     app.update();
 

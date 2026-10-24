@@ -48,17 +48,16 @@ pub mod resources;
 #[path = "lib_tests.rs"]
 mod tests;
 
-pub use delta_v_core::SpawnEntity;
+pub use delta_v_core::{AppState, SpawnEntity};
 pub use delta_v_types::{EntitySpawn, WorldDef};
 pub use resources::WorldDefResource;
 pub use resources::WorldPath;
 
 use bevy::prelude::*;
-use delta_v_assets::template::{
-    load_ai_controlled_ship, load_asteroid, load_asteroid_belt, load_asteroid_field, load_moon,
-    load_planet, load_player_controlled_ship, load_ship, load_sun, load_world,
-};
-use delta_v_core::AppState;
+use delta_v_assets::template::{load_template_by_kind, load_world};
+use delta_v_physics::check_collision;
+use delta_v_physics::collision::CollisionShape;
+use delta_v_types::collision::scale_collision_shape;
 
 /// World plugin: loads and validates the world definition.
 ///
@@ -120,8 +119,6 @@ fn setup_scene_lighting(
 /// Transitions to [`AppState::SpawningEntities`] so domain plugins can
 /// spawn entities in dependency order (per ADR-0038).
 ///
-/// # Panics
-///
 /// Panics if the world file or any template file cannot be loaded or validated.
 /// This is intentional per ADR-0013 (no silent fallbacks).
 #[allow(clippy::needless_pass_by_value)]
@@ -131,6 +128,12 @@ fn load_world_system(
     mut events: MessageWriter<'_, SpawnEntity>,
     mut next: ResMut<'_, NextState<AppState>>,
 ) {
+    // ADR-0058: asteroid belts and fields are region definitions, not solid
+    // bodies. They generate asteroids within their volume but are not
+    // themselves collidable — there is plenty of empty space between the
+    // asteroids they spawn. We skip them in the collision check entirely.
+    const NON_SOLID_TYPES: &[&str] = &["asteroid_belt", "asteroid_field"];
+
     // INVARIANT: a missing or invalid world file is a hard startup
     // error (ADR-0013). The panic is intentional; no recovery is possible.
     #[allow(clippy::panic)]
@@ -149,11 +152,84 @@ fn load_world_system(
         player_controlled_count == 1,
         "fatal: exactly one entity must have player_controlled: true, found {player_controlled_count}"
     );
-    // Load templates for each entity and emit SpawnEntity events.
-    // Per ADR-0038, domain plugins listen for these events and spawn
-    // entities based on `entity_type`, in dependency order via WorldSpawnSet.
+
+    // Single pass: load each entity's template, check for collisions with
+    // already-loaded entities, then emit the SpawnEntity event immediately.
+    // Per ADR-0049, template loading goes through the unified delta-v-assets
+    // entry point. Per ADR-0013, any collision is a hard error.
+    //
+    // We use `check_collision` from delta-v-physics (SAT for box-box,
+    // exact for sphere-sphere and sphere-box) rather than a naive
+    // center-inside-shape test, which misses cases where two boxes
+    // overlap without either center being inside the other.
+    //
+    // The template is loaded once here and passed directly to
+    // `build_spawn_event`, which stores it on the entity spawn and
+    // forwards it into the `SpawnEntity` event — no second load.
+
+    #[allow(clippy::indexing_slicing)]
+    let mut spawned: Vec<(String, Vec3, Quat, CollisionShape)> = Vec::new();
+
     for entity_spawn in &mut world.entities {
-        let spawn_event = build_spawn_event(entity_spawn);
+        // Load the template via the unified entry point (ADR-0049).
+        // The template path is carried on the LoadedTemplate wrapper.
+        let loaded_template = {
+            #[allow(clippy::panic)]
+            load_template_by_kind(
+                &entity_spawn.template_short,
+                entity_spawn.player_controlled,
+                entity_spawn.ai_task.as_ref(),
+            )
+            .unwrap_or_else(|e| {
+                panic!(
+                    "fatal: failed to load template for entity '{}': {e}",
+                    entity_spawn.id
+                )
+            })
+        };
+
+        let entity_type = loaded_template.template.entity_type();
+
+        // Belts and fields are not solid — skip the collision check for them.
+        if NON_SOLID_TYPES.contains(&entity_type) {
+            let spawn_event = build_spawn_event(entity_spawn, loaded_template);
+            events.write(spawn_event);
+            continue;
+        }
+
+        // Apply the entity's scale to the template collision shape so the
+        // overlap check uses world-space dimensions, not the template's.
+        let shape_data = scale_collision_shape(
+            loaded_template.template.collision_shape(),
+            entity_spawn.scale.length(),
+        );
+        let shape = CollisionShape(shape_data);
+
+        let pos = Vec3::new(
+            entity_spawn.position.x,
+            entity_spawn.position.y,
+            entity_spawn.position.z,
+        );
+        let rot = entity_spawn.rotation;
+
+        // Check against every already-loaded solid entity.
+        // Uses the actual rotation from the world definition, not identity,
+        // so rotated bodies are checked correctly.
+        for (other_id, other_pos, other_rot, other_shape) in &spawned {
+            assert!(
+                check_collision(pos, rot, &shape, *other_pos, *other_rot, other_shape).is_none(),
+                "fatal: entities '{}' and '{}' have overlapping collision shapes. \
+                 Entities cannot occupy the same space.",
+                entity_spawn.id,
+                other_id
+            );
+        }
+
+        spawned.push((entity_spawn.id.clone(), pos, rot, shape));
+
+        // No collision: emit the spawn event now, reusing the template
+        // we just loaded instead of loading it a second time.
+        let spawn_event = build_spawn_event(entity_spawn, loaded_template);
         events.write(spawn_event);
     }
 
@@ -163,55 +239,18 @@ fn load_world_system(
 
 /// Builds a `SpawnEntity` event for a world entity spawn definition.
 ///
+/// The template is passed in as a [`LoadedTemplate`] — the caller is
+/// responsible for loading it (in the collision pass) so it isn't loaded
+/// a second time here.
+///
 /// # Panics
 ///
 /// Panics if template loading fails. This is intentional per ADR-0013 (no silent fallbacks).
 #[allow(clippy::expect_used, clippy::panic)]
-fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
-    let template_short = &entity_spawn.template_short;
-
-    // Load template based on entity type.
-    // For player_controlled ships: load player_controlled_ship.json and merge with ship.json.
-    // For AI-controlled ships: load ai_controlled_ship.json and merge with ship.json.
-    // For asteroids: load asteroid.json directly.
-    // For suns: load sun.json directly.
-    // For planets: load planet.json directly.
-    // For other ships: load ship.json directly.
-    // INVARIANT: template loading must succeed (ADR-0013).
-    let (template_path, merged_template) = if entity_spawn.player_controlled {
-        // INVARIANT: player_controlled_ship template is required by schema (ADR-0013)
-        load_player_controlled_ship(template_short)
-            .expect("player_controlled_ship template must load successfully")
-    } else if entity_spawn.ai_task.is_some() {
-        // INVARIANT: ai_controlled_ship template is required by schema (ADR-0013)
-        load_ai_controlled_ship(template_short)
-            .expect("ai_controlled_ship template must load successfully")
-    } else if template_short.starts_with("asteroids/") {
-        // INVARIANT: asteroid template is required by schema (ADR-0013)
-        load_asteroid(template_short).expect("asteroid template must load successfully")
-    } else if template_short.starts_with("asteroid-belts/") {
-        // INVARIANT: asteroid belt template is required by schema (ADR-0013)
-        load_asteroid_belt(template_short).expect("asteroid belt template must load successfully")
-    } else if template_short.starts_with("asteroid-fields/") {
-        // INVARIANT: asteroid field template is required by schema (ADR-0013)
-        load_asteroid_field(template_short).expect("asteroid field template must load successfully")
-    } else if template_short.starts_with("suns/") {
-        // INVARIANT: sun template is required by schema (ADR-0013)
-        load_sun(template_short).expect("sun template must load successfully")
-    } else if template_short.starts_with("planets/") {
-        // INVARIANT: planet template is required by schema (ADR-0013)
-        load_planet(template_short).expect("planet template must load successfully")
-    } else if template_short.starts_with("moons/") {
-        // INVARIANT: moon template is required by schema (ADR-0013)
-        load_moon(template_short).expect("moon template must load successfully")
-    } else {
-        // INVARIANT: ship template is required by schema (ADR-0013)
-        load_ship(template_short).expect("ship template must load successfully")
-    };
-
-    // Store the loaded template in the entity spawn
-    entity_spawn.template = Some(merged_template.clone());
-
+fn build_spawn_event(
+    entity_spawn: &EntitySpawn,
+    loaded_template: delta_v_types::LoadedTemplate,
+) -> SpawnEntity {
     let pos = Vec3::new(
         entity_spawn.position.x,
         entity_spawn.position.y,
@@ -229,10 +268,9 @@ fn build_spawn_event(entity_spawn: &mut EntitySpawn) -> SpawnEntity {
         entity_spawn.scale.z,
     );
 
-    let mut spawn_event =
-        SpawnEntity::new(entity_spawn.id.clone(), merged_template, template_path, pos)
-            .with_rotation(rot)
-            .with_scale(scale);
+    let mut spawn_event = SpawnEntity::new(entity_spawn.id.clone(), loaded_template, pos)
+        .with_rotation(rot)
+        .with_scale(scale);
 
     // Pass through the AI task if present.
     if let Some(ref ai_task) = entity_spawn.ai_task {

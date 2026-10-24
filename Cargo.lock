@@ -3734,6 +3734,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "delta-v-world-tests"
+version = "0.0.1"
+dependencies = [
+ "bevy 0.19.1",
+ "delta-v-app",
+ "delta-v-core",
+ "delta-v-test-support",
+ "delta-v-world",
+]
+
+[[package]]
 name = "derive_more"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

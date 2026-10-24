@@ -1,0 +1,48 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
+[package]
+name = "delta-v-world-tests"
+version.workspace = true
+edition = "2024"
+description = "Integration tests for delta-v-world (harness = false targets)"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["integration-tests", "bevy", "world"]
+categories = ["game-development"]
+
+[dependencies]
+bevy = { workspace = true }
+delta-v-core = { workspace = true }
+delta-v-world = { workspace = true }
+
+[dev-dependencies]
+delta-v-app = { workspace = true }
+delta-v-test-support = { workspace = true }
+
+[[test]]
+name = "world_integration_tests"
+path = "tests/world_integration_tests.rs"
+harness = false
+
+[[test]]
+name = "world_belt_field_tests"
+path = "tests/world_belt_field_tests.rs"
+harness = false
+
+[[test]]
+name = "world_player_controlled_zero"
+path = "tests/world_player_controlled_zero.rs"
+harness = false
+
+[[test]]
+name = "world_player_controlled_two"
+path = "tests/world_player_controlled_two.rs"
+harness = false
+
+[[test]]
+name = "world_collision_detection"
+path = "tests/world_collision_detection.rs"
+harness = false
+
+[lints]
+workspace = true

@@ -22,6 +22,12 @@ use crate::weapons::{ProjectileDefinition, WeaponTemplate};
 /// This enum replaces the `serde_json::Value` field in `SpawnEntity` with a type-safe
 /// variant that contains the already-converted runtime template struct.
 /// All unit conversions (ADR-0008) happen in `delta-v-assets` at load time.
+///
+/// The template file path (relative to the `assets/` root) is carried separately on
+/// [`LoadedTemplate`], which wraps this enum. This keeps the enum a pure description
+/// of the entity's static properties and avoids duplicating the path on every variant.
+///
+/// See ADR-0038 (entity template system) and ADR-0046 (shared types crate).
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum EntityTemplate {
@@ -420,5 +426,28 @@ impl EntityTemplate {
     #[must_use]
     pub const fn initial_orbital_angle(&self) -> f32 {
         0.0
+    }
+}
+
+/// A loaded entity template together with the path it was loaded from.
+///
+/// `delta-v-assets` produces one of these per entity; the world plugin stores it on
+/// the [`EntitySpawn`] definition and forwards it into the [`SpawnEntity`] event.
+/// Downstream crates read `template` for the entity's static properties and
+/// `template_path` for the co-located `mesh.glb` and other assets.
+#[derive(Debug, Clone)]
+pub struct LoadedTemplate {
+    /// The loaded and validated template as a runtime type.
+    pub template: EntityTemplate,
+    /// Path to the template JSON file, relative to the `assets/` root
+    /// (e.g. `templates/ships/debug-ship-cube/player_controlled_ship.json`).
+    pub template_path: String,
+}
+
+impl LoadedTemplate {
+    /// Returns the entity type string for the wrapped template.
+    #[must_use]
+    pub const fn entity_type(&self) -> &'static str {
+        self.template.entity_type()
     }
 }

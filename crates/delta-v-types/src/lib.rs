@@ -69,7 +69,7 @@ pub use collision::{
     scale_collision_shape,
 };
 pub use config_types::{DebugConfigJson, DiagnosticsConfigJson, FlightAssistConfigJson};
-pub use entity_template::EntityTemplate;
+pub use entity_template::{EntityTemplate, LoadedTemplate};
 pub use i18n::{I18n, KeybindingsMenuTranslations, MenuTranslations, UiTranslations};
 pub use ids::{EntityId, TemplatePath};
 pub use logical_action::LogicalAction;

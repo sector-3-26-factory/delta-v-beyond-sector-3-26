@@ -113,7 +113,8 @@ pub fn spawn_asteroid_belt(
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
-        let delta_v_types::EntityTemplate::AsteroidBelt(belt_template) = &spawn.template else {
+        let delta_v_types::EntityTemplate::AsteroidBelt(belt_template) = &spawn.template.template
+        else {
             continue;
         };
 
@@ -237,7 +238,8 @@ pub fn spawn_asteroid_field(
 ) {
     for spawn in events.read() {
         // Use the template from the event (already loaded by WorldPlugin)
-        let delta_v_types::EntityTemplate::AsteroidField(field_template) = &spawn.template else {
+        let delta_v_types::EntityTemplate::AsteroidField(field_template) = &spawn.template.template
+        else {
             continue;
         };
 

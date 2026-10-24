@@ -9,14 +9,14 @@
 //! See ADR-0005 (plugin architecture) and ADR-0038 (entity template system).
 
 use bevy::prelude::*;
-use delta_v_types::{EntityTemplate, world_def::OrbitalParameters};
+use delta_v_types::{LoadedTemplate, world_def::OrbitalParameters};
 
 /// Event emitted when an entity should be spawned from a template.
 ///
 /// The world plugin emits these events during [`AppState::LoadingWorld`].
 /// Domain-specific plugins (`ShipsPlugin`, `SunPlugin`, etc.) listen for this
-/// event, filter by `template` variant, and spawn the entity with appropriate
-/// components.
+/// event, filter by `template.template` variant, and spawn the entity with
+/// appropriate components.
 ///
 /// This decouples world loading from entity spawning, allowing each domain
 /// to own its spawn logic (ADR-0005).
@@ -26,14 +26,11 @@ pub struct SpawnEntity {
     /// Used for debug filtering, save/load, networking, and player-facing UI.
     pub id: String,
 
-    /// The loaded and validated template as a runtime type.
+    /// The loaded and validated template as a runtime type, together with the
+    /// template file path it was loaded from.
     /// Contains all static properties for the entity with SI units.
     /// The entity type is derived from the `EntityTemplate` variant.
-    pub template: EntityTemplate,
-
-    /// Path to the template file (e.g., `templates/ships/player_ship/template.json`).
-    /// The mesh is always at `mesh.glb` in this template's directory.
-    pub template_path: String,
+    pub template: LoadedTemplate,
 
     /// Spawn position in world coordinates (metres).
     pub position: Vec3,
@@ -75,20 +72,14 @@ impl SpawnEntity {
     /// # Arguments
     ///
     /// * `id` - Unique identifier for this entity instance.
-    /// * `template` - Loaded template as runtime type.
-    /// * `template_path` - Path to the template file.
+    /// * `template` - Loaded template as runtime type, together with the
+    ///   template file path it was loaded from.
     /// * `position` - Spawn position in metres.
     #[allow(clippy::missing_const_for_fn)]
-    pub fn new(
-        id: String,
-        template: EntityTemplate,
-        template_path: String,
-        position: Vec3,
-    ) -> Self {
+    pub fn new(id: String, template: LoadedTemplate, position: Vec3) -> Self {
         Self {
             id,
             template,
-            template_path,
             position,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
@@ -147,10 +138,12 @@ impl SpawnEntity {
     #[must_use]
     pub fn mesh_path(&self) -> String {
         use std::path::Path;
-        Path::new(&self.template_path).parent().map_or_else(
-            || self.template_path.clone(),
-            |p| p.join("mesh.glb").to_string_lossy().into_owned(),
-        )
+        Path::new(&self.template.template_path)
+            .parent()
+            .map_or_else(
+                || self.template.template_path.clone(),
+                |p| p.join("mesh.glb").to_string_lossy().into_owned(),
+            )
     }
 }
 

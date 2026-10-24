@@ -27,12 +27,16 @@ fn test_load_player_controlled_ship_with_cockpit() {
         result.err()
     );
 
-    let (template_path, template) = result.unwrap();
-    assert!(template_path.contains("space-fighter-comrade1280"));
-    assert!(template_path.contains("player_controlled_ship.json"));
+    let template = result.unwrap();
+    assert!(template.template_path.contains("space-fighter-comrade1280"));
+    assert!(
+        template
+            .template_path
+            .contains("player_controlled_ship.json")
+    );
 
     // Verify the template is a PlayerShip variant
-    match template {
+    match template.template {
         delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
             // Verify cockpit is present and has stations
             assert!(
@@ -55,8 +59,8 @@ fn test_cockpit_structure_in_ship_template() {
     let result = load_player_controlled_ship("space-fighter-comrade1280");
     assert!(result.is_ok());
 
-    let (_, template) = result.unwrap();
-    match template {
+    let template = result.unwrap();
+    match template.template {
         delta_v_types::EntityTemplate::PlayerShip(player_ship) => {
             let cockpit = &player_ship.cockpit;
             // At least one station
