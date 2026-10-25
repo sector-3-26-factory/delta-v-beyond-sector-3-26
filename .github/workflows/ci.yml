@@ -25,13 +25,12 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
-  # This runner has no GPU Vulkan. Bevy's wgpu can only present to the
-  # virtual xvfb framebuffer through the software (LVP) Vulkan driver, so
-  # we force that ICD and set the runtime dir the loader requires.
-  # Without these the screenshot tests panic with
-  # "No DRI3 support detected" / "Fallback system failed to choose present
-  # mode" and capture an all-black framebuffer.
-  VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+  # This runner has no GPU Vulkan. Bevy's wgpu presents to the virtual
+  # xvfb framebuffer through the software (LVP) Vulkan driver. The ICD
+  # path is resolved dynamically (see "Resolve Vulkan ICD path" step
+  # below) because the mesa-vulkan-drivers package layout differs
+  # between Ubuntu releases — a hardcoded path breaks when the package
+  # version changes. XDG_RUNTIME_DIR is required by the Vulkan loader.
   XDG_RUNTIME_DIR: /tmp/xvfb-run-1000
 
 jobs:
@@ -96,6 +95,20 @@ jobs:
 
       - name: Install Rust toolchain
         run: rustup show && rustup component add clippy
+
+      - name: Resolve Vulkan ICD path
+        # The mesa-vulkan-drivers package layout differs between Ubuntu
+        # releases, so the LVP ICD JSON path is discovered dynamically
+        # rather than hardcoded. The path is exported to $GITHUB_ENV so
+        # all subsequent steps (cargo check, clippy, test) inherit it.
+        run: |
+          LVP_PATH=$(find /usr/share/vulkan/icd.d -name 'lvp_icd*.json' | head -1)
+          if [ -z "$LVP_PATH" ]; then
+            echo "ERROR: no LVP Vulkan ICD found; cannot run GPU-less tests"
+            exit 1
+          fi
+          echo "VK_ICD_FILENAMES=$LVP_PATH" >> "$GITHUB_ENV"
+          echo "Resolved Vulkan ICD: $LVP_PATH"
 
       - name: Cache cargo registry (deps only, NOT target/)
         # NOTE: target/ is intentionally excluded from the cache.
