@@ -97,20 +97,28 @@ jobs:
       - name: Install Rust toolchain
         run: rustup show && rustup component add clippy
 
-      - name: Cache cargo registry & build
+      - name: Cache cargo registry (deps only, NOT target/)
+        # NOTE: target/ is intentionally excluded from the cache.
+        # Caching compiled artifacts across runs causes disk-space
+        # exhaustion on the runner: the linker's temp files push the
+        # accumulated target/ over the disk limit, producing either
+        # "no more space on disk" or a silent `ld` bus error
+        # (signal 7). Only the dependency download cache is cached.
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml', 'rust-toolchain.toml') }}
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock', 'rust-toolchain.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-registry-
 
       # CI builds without the `dev` feature (no dynamic linking) for
       # portability and reproducibility. --locked ensures Cargo.lock is
       # the source of truth for dependency versions (see ADR-0029).
+      - name: cargo clean
+        run: cargo clean
+
       - name: cargo check
         run: cargo check --locked
       - name: cargo clippy
