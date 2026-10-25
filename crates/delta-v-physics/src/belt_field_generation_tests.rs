@@ -535,3 +535,164 @@ fn test_named_asteroid_never_filtered() {
         "Large named asteroids should be present at full detail"
     );
 }
+
+/// Test that generated asteroids, after overlap separation, have no
+/// remaining overlaps.
+///
+/// This verifies the full pipeline: `generate_belt_sector` produces
+/// positions from hash streams, and `separate_overlaps` resolves any
+/// remaining collisions. A regression in either function would cause
+/// asteroids to overlap in-game.
+#[test]
+#[allow(
+    clippy::indexing_slicing,
+    reason = "test code uses direct indexing for pairwise comparison"
+)]
+fn test_generated_sector_has_no_overlaps_after_separation() {
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
+    let params = BeltSectorParams {
+        belt_id: "test_belt".to_string(),
+        sector_index: 0,
+        template: AsteroidBeltTemplate {
+            entity_type: "asteroid_belt".to_string(),
+            meshes: vec!["mesh_1".to_string(), "mesh_2".to_string()],
+            density: 3000.0,
+        },
+        orbital_parent: "sun".to_string(),
+        orbital_distance,
+        orbital_period: 1.4e8,
+        orbital_eccentricity: 0.12,
+        orbital_inclination: 0.1745,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
+        excluded_radii: vec![],
+        size_distribution: vec![SizeDistributionEntry {
+            radius: 1000.0,
+            weight: 1.0,
+        }],
+        density: 3000.0,
+        seed: 20_260_930,
+        simulation_time: 0.0,
+        detail_level: 1.0,
+    };
+
+    let mut asteroids = generate_belt_sector(&params);
+    separate_overlaps(&mut asteroids);
+
+    // Every pair must be separated by at least the sum of their radii.
+    for i in 0..asteroids.len() {
+        for j in (i + 1)..asteroids.len() {
+            let distance = (asteroids[i].position - asteroids[j].position).length();
+            let min_distance = asteroids[i].radius + asteroids[j].radius;
+            assert!(
+                distance >= min_distance - 1.0,
+                "Asteroids {} and {} overlap: distance {:.3} < min {:.3}",
+                asteroids[i].stable_id,
+                asteroids[j].stable_id,
+                distance,
+                min_distance
+            );
+        }
+    }
+}
+
+/// Test that generated asteroids are spread across the sector volume,
+/// not clustered at a single position.
+///
+/// A regression where all asteroids get the same position (e.g. a hash
+/// bug or a hardcoded position) would pass every other test —
+/// determinism, mass, overlap separation — but produce gameplay where
+/// all asteroids are bunched in one spot. This test verifies the
+/// bounding box of generated positions covers a significant fraction
+/// of the sector's radial extent and thickness.
+#[test]
+fn test_generated_sector_asteroids_spread_across_volume() {
+    let orbital_distance = 4.04e11;
+    let radial_extent = 1.0e8; // 100M km
+    let thickness = 1.0e8; // 100M km
+    let mean_spacing = 1.0e6; // 1000 km
+    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
+        orbital_distance,
+        radial_extent,
+        thickness,
+        mean_spacing,
+    );
+
+    let params = BeltSectorParams {
+        belt_id: "test_belt".to_string(),
+        sector_index: 0,
+        template: AsteroidBeltTemplate {
+            entity_type: "asteroid_belt".to_string(),
+            meshes: vec!["mesh_1".to_string(), "mesh_2".to_string()],
+            density: 3000.0,
+        },
+        orbital_parent: "sun".to_string(),
+        orbital_distance,
+        orbital_period: 1.4e8,
+        orbital_eccentricity: 0.12,
+        orbital_inclination: 0.1745,
+        sector_size,
+        radial_extent,
+        thickness,
+        mean_spacing,
+        excluded_radii: vec![],
+        size_distribution: vec![SizeDistributionEntry {
+            radius: 1000.0,
+            weight: 1.0,
+        }],
+        density: 3000.0,
+        seed: 20_260_930,
+        simulation_time: 0.0,
+        detail_level: 1.0,
+    };
+
+    let mut asteroids = generate_belt_sector(&params);
+    separate_overlaps(&mut asteroids);
+
+    // Compute the bounding box of all asteroid positions.
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+    for asteroid in &asteroids {
+        min = min.min(asteroid.position);
+        max = max.max(asteroid.position);
+    }
+    let extent = max - min;
+
+    // The sector is a torus segment around the orbital ring at
+    // orbital_distance. The radial extent is ±radial_extent/2 from the
+    // ring, and the thickness is ±thickness/2 vertically. The angular
+    // spread is ±sector_size/2 along the ring. We verify the positions
+    // cover a significant fraction of the sector volume in all three
+    // dimensions.
+    assert!(
+        extent.x > radial_extent * 0.3,
+        "Asteroids not spread radially: x-extent {:.3} < {:.3}",
+        extent.x,
+        radial_extent * 0.3
+    );
+    assert!(
+        extent.z > thickness * 0.3,
+        "Asteroids not spread vertically: z-extent {:.3} < {:.3}",
+        extent.z,
+        thickness * 0.3
+    );
+    // The y-extent (along the ring) should also be non-trivial.
+    assert!(
+        extent.y > sector_size * 0.3,
+        "Asteroids not spread along ring: y-extent {:.3} < {:.3}",
+        extent.y,
+        sector_size * 0.3
+    );
+}

@@ -17,6 +17,7 @@ delta-v-world = { workspace = true }
 
 [dev-dependencies]
 delta-v-app = { workspace = true }
+delta-v-physics = { workspace = true }
 delta-v-test-support = { workspace = true }
 
 [[test]]

@@ -68,10 +68,10 @@ fn test_entity_validation(app: &mut App) {
         "WorldDefResource should contain the loaded world name",
     );
 
-    // Verify exactly 3 entities in the world definition
+    // Verify exactly 4 entities in the world definition (sun + ship + belt + field)
     check(
-        world_def.0.entities.len() == 3,
-        "WorldDef should contain exactly 3 entities from belt_field_test.world.json",
+        world_def.0.entities.len() == 4,
+        "WorldDef should contain exactly 4 entities from belt_field_test.world.json",
     );
 
     // Verify entity 1: player ship (debug-ship-cube)

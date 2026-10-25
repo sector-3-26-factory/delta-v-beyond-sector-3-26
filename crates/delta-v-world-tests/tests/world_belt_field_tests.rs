@@ -48,10 +48,10 @@ fn test_entity_validation(app: &mut App) {
         "AppState should be SpawningEntities or InGame after world load",
     );
 
-    // Verify exactly 3 entities in the world definition
+    // Verify exactly 4 entities in the world definition (sun + ship + belt + field)
     check(
-        world_def.0.entities.len() == 3,
-        "WorldDef should contain exactly 3 entities from belt_field_test.world.json",
+        world_def.0.entities.len() == 4,
+        "WorldDef should contain exactly 4 entities from belt_field_test.world.json",
     );
 
     // Verify entity 1: player ship (debug-ship-cube)
@@ -160,8 +160,75 @@ fn build_belt_field_app() -> App {
     })
 }
 
+/// Test: belt sectors are loaded when the player ship is on the belt's
+/// orbital ring (the happy path).
+///
+/// This exercises the full pipeline: world JSON → template loading →
+/// spawn systems → streaming system. The player ship is at 404M km
+/// (on the belt's orbital ring), so the streaming system should load
+/// 3 belt sectors (index-1, index, index+1).
+fn test_belt_streaming_happy_path(app: &mut App) {
+    use delta_v_physics::belt_field_streaming::LoadedSectors;
+
+    // Run several fixed updates so the streaming system has a chance to
+    // run. The streaming system runs in `FixedUpdate` during
+    // `AppState::InGame`.
+    delta_v_test_support::run_fixed_updates(app, 5);
+
+    let loaded = app.world().resource::<LoadedSectors>();
+    check(
+        !loaded.belt_sectors.is_empty(),
+        "belt sectors should be loaded when player is on the belt ring",
+    );
+    check(
+        loaded.belt_sectors.len() == 3,
+        "exactly 3 belt sectors should be loaded (index-1, index, index+1)",
+    );
+    for (id, _) in &loaded.belt_sectors {
+        check(
+            id == "test_belt",
+            "loaded sector should belong to test_belt",
+        );
+    }
+}
+
+/// Test: belt sectors are NOT loaded when the player ship is far from
+/// the belt (outside streaming distance).
+///
+/// The player ship is moved to 300M km (well outside the belt's
+/// streaming distance of 100M km), so no sectors should load.
+fn test_belt_streaming_player_far(app: &mut App) {
+    use delta_v_core::PlayerShipEntity;
+    use delta_v_physics::belt_field_streaming::LoadedSectors;
+
+    // Move the player ship far from the belt (300M km, outside
+    // streaming distance of 100M km).
+    let player = app.world().resource::<PlayerShipEntity>().0;
+    if let Ok(mut entity) = app.world_mut().get_entity_mut(player) {
+        let pos = Vec3::new(3.0e11, 0.0, 0.0);
+        entity.insert(GlobalTransform::from_translation(pos));
+        entity.insert(Transform::from_translation(pos));
+    }
+
+    // Run several fixed updates so the streaming system can evaluate.
+    delta_v_test_support::run_fixed_updates(app, 5);
+
+    let loaded = app.world().resource::<LoadedSectors>();
+    check(
+        loaded.belt_sectors.is_empty(),
+        "no belt sectors should be loaded when player is far from the belt",
+    );
+}
+
 /// Entry point — runs on the main thread so `WinitPlugin` can initialize.
 fn main() {
     let mut app = delta_v_test_support::make_app(60, build_belt_field_app);
-    run_harness(&mut app, &[("entity_validation", test_entity_validation)]);
+    run_harness(
+        &mut app,
+        &[
+            ("entity_validation", test_entity_validation),
+            ("belt_streaming_happy_path", test_belt_streaming_happy_path),
+            ("belt_streaming_player_far", test_belt_streaming_player_far),
+        ],
+    );
 }

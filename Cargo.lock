@@ -3740,6 +3740,7 @@ dependencies = [
  "bevy 0.19.1",
  "delta-v-app",
  "delta-v-core",
+ "delta-v-physics",
  "delta-v-test-support",
  "delta-v-world",
 ]
