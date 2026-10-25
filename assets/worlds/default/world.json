@@ -138,7 +138,7 @@
             "id": "asteroid_4",
             "position": {
                 "x": {
-                    "value": -100.0,
+                    "value": -400.0,
                     "unit": "m"
                 },
                 "y": {

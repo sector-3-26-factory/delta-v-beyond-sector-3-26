@@ -190,6 +190,10 @@ fn load_world_system(
 
         let entity_type = loaded_template.template.entity_type();
 
+        // Store the loaded template back on the EntitySpawn so downstream
+        // systems (e.g. setup_scene_lighting's sun check) can inspect it.
+        entity_spawn.template = Some(loaded_template.template.clone());
+
         // Belts and fields are not solid — skip the collision check for them.
         if NON_SOLID_TYPES.contains(&entity_type) {
             let spawn_event = build_spawn_event(entity_spawn, loaded_template);
