@@ -13,17 +13,18 @@ yanked = "warn"
 unused-ignored-advisory = "warn"
 
 # Ignored advisories - waiting for upstream fixes
-# RUSTSEC-2026-0194: Quadratic run time when checking a start tag for duplicate attribute names in quick-xml
-# RUSTSEC-2026-0195: Unbounded namespace-declaration allocation in NsReader enables memory-exhaustion denial of service in quick-xml
-# Both are transitive dependencies via bevy -> winit -> wayland-scanner -> quick-xml
-# wayland-scanner 0.31.10 pins quick-xml = "^0.39", fix requires wayland-scanner 0.31.1+ (not yet published)
-# Tracking issue: https://github.com/sector-3-26-factory/delta-v-beyond-sector-3-26/issues/34
-# RUSTSEC-2026-0344: Decompression bomb in ruzstd: a tiny input can exhaust memory (OOM)
-# Transitive dependency via bevy -> bevy_image -> ruzstd
-# ruzstd 0.8.3 is vulnerable, fixed in 0.9.1+
-# zstd_rust feature is optional and not enabled by default
+#
+# RUSTSEC-2026-0194 and RUSTSEC-2026-0195 (quick-xml) were previously
+# ignored but are now resolved: wayland-scanner 0.31.11 pulls quick-xml
+# 0.41.0, which is the patched version for both. The ignore entries were
+# removed because they produced advisory-not-detected warnings.
+#
+# RUSTSEC-2026-0344: Decompression bomb in ruzstd: a tiny input can
+# exhaust memory (OOM). Transitive dependency via bevy -> bevy_image ->
+# ruzstd. ruzstd 0.8.3 is vulnerable, fixed in 0.9.1+. The zstd_rust
+# feature is optional and not enabled by default.
 # Tracking issue: https://github.com/sector-3-26-factory/delta-v-beyond-sector-3-26/issues/XX
-ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195", "RUSTSEC-2026-0344"]
+ignore = ["RUSTSEC-2026-0344"]
 
 [licenses]
 allow = [
@@ -42,6 +43,7 @@ allow = [
     "MPL-2.0",
     "Unicode-3.0",
     "Zlib",
+    "NCSA",
 ]
 # Some licenses are listed but not yet encountered in dependencies.
 # They are kept for future-proofing per ADR-0027 (Open source licensing).
