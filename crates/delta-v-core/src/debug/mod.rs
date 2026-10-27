@@ -24,14 +24,11 @@
 pub mod axes;
 /// Debug axis systems (`mark_debug_axes`, `render_debug_axes`, `update_debug_axis_labels`).
 pub mod axes_system;
-/// Debug configuration (`DebugConfig`).
-pub mod debug_config;
-/// Light source debugging utilities.
-pub mod light_debug;
-
 #[cfg(test)]
 #[path = "axes_tests.rs"]
 mod axes_tests;
+/// Debug configuration (`DebugConfig`).
+pub mod debug_config;
 
 pub use axes::{AxesVisibility, AxisLabel, DebugAxes, DebugAxesEligible};
 pub use axes_system::{
@@ -39,4 +36,3 @@ pub use axes_system::{
     spawn_debug_axis_labels, update_debug_axis_labels, update_gizmo_render_layers,
 };
 pub use debug_config::DebugConfig;
-pub use light_debug::{LightDebugPlugin, debug_log_all_lights, debug_log_lights_once};

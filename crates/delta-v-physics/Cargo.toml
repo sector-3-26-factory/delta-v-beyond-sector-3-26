@@ -48,5 +48,123 @@ name = "floating_origin_tests"
 path = "tests/floating_origin_tests.rs"
 harness = false
 
+# Force magnitude test — verifies gravitational force matches F = G·M·m/r².
+# Uses the `force_magnitude` world fixture (Earth at origin, ship at 400km
+# altitude). Runs as harness=false (main thread) for WinitPlugin.
+[[test]]
+name = "force_magnitude_tests"
+path = "tests/force_magnitude_tests.rs"
+harness = false
+
 [lints]
 workspace = true
+
+# Collision detection and response tests, split into one harness=false target
+# per file so each test gets its own App and its own world fixture. No shared
+# state, no reset_world hack. Uses the `floating_origin` fixture (single player
+# ship, no celestial bodies); test bodies are placed at a safe offset from the
+# ship so the fixture ship does not pollute event counts.
+[[test]]
+name = "sphere_sphere_tests"
+path = "tests/sphere_sphere_tests.rs"
+harness = false
+
+[[test]]
+name = "box_box_tests"
+path = "tests/box_box_tests.rs"
+harness = false
+
+[[test]]
+name = "sphere_box_tests"
+path = "tests/sphere_box_tests.rs"
+harness = false
+
+[[test]]
+name = "normal_direction_tests"
+path = "tests/normal_direction_tests.rs"
+harness = false
+
+[[test]]
+name = "penetration_depth_tests"
+path = "tests/penetration_depth_tests.rs"
+harness = false
+
+[[test]]
+name = "collision_response_tests"
+path = "tests/collision_response_tests.rs"
+harness = false
+
+[[test]]
+name = "collision_shape_tests"
+path = "tests/collision_shape_tests.rs"
+harness = false
+
+[[test]]
+name = "offset_tests"
+path = "tests/offset_tests.rs"
+harness = false
+
+[[test]]
+name = "convex_hull_tests"
+path = "tests/convex_hull_tests.rs"
+harness = false
+
+[[test]]
+name = "distance_to_surface_tests"
+path = "tests/distance_to_surface_tests.rs"
+harness = false
+
+[[test]]
+name = "oriented_box_tests"
+path = "tests/oriented_box_tests.rs"
+harness = false
+
+[[test]]
+name = "collision_relevant_asteroid_pair_still_collides"
+path = "tests/collision_relevant_asteroid_pair_still_collides.rs"
+harness = false
+
+[[test]]
+name = "collision_irrelevant_asteroid_pair_is_skipped"
+path = "tests/collision_irrelevant_asteroid_pair_is_skipped.rs"
+harness = false
+
+[[test]]
+name = "collision_asteroid_pair_requires_both_relevant"
+path = "tests/collision_asteroid_pair_requires_both_relevant.rs"
+harness = false
+
+[[test]]
+name = "collision_body_without_lazy_mesh_is_always_tested"
+path = "tests/collision_body_without_lazy_mesh_is_always_tested.rs"
+harness = false
+
+[[test]]
+name = "collision_relevance_threshold_is_inclusive"
+path = "tests/collision_relevance_threshold_is_inclusive.rs"
+harness = false
+
+[[test]]
+name = "ship_collides_with_a_celestial_body"
+path = "tests/ship_collides_with_a_celestial_body.rs"
+harness = false
+
+[[test]]
+name = "two_celestial_bodies_collide"
+path = "tests/two_celestial_bodies_collide.rs"
+harness = false
+
+[[test]]
+name = "every_layer_collides_with_every_other"
+path = "tests/every_layer_collides_with_every_other.rs"
+harness = false
+
+[[test]]
+name = "ship_bounces_off_a_static_moon"
+path = "tests/ship_bounces_off_a_static_moon.rs"
+harness = false
+
+[[test]]
+name = "collision_mixed_pair_needs_only_one_relevant_side"
+path = "tests/collision_mixed_pair_needs_only_one_relevant_side.rs"
+harness = false

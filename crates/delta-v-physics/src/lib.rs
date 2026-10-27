@@ -342,7 +342,7 @@ fn is_collision_relevant(lazy_load: Option<&LazyLoadMesh>) -> bool {
 // for ADR-0057 pushed this query past the lint's element threshold. Narrower than
 // introducing a type alias that would exist for a single signature.
 #[allow(clippy::needless_pass_by_value, clippy::type_complexity)]
-fn collision_detection_system(
+pub fn collision_detection_system(
     mut events: MessageWriter<'_, CollisionDetected>,
     bodies: Query<
         '_,
@@ -773,7 +773,7 @@ struct CollisionResponse {
 ///
 /// Runs in `FixedUpdate` BEFORE velocity integration, so impulses affect current frame.
 #[allow(clippy::needless_pass_by_value)]
-fn collision_response_system(
+pub fn collision_response_system(
     mut events: MessageReader<'_, '_, CollisionDetected>,
     mut all_bodies: Query<'_, '_, (&mut RigidBody, &mut Transform)>,
     static_markers: Query<'_, '_, Entity, With<StaticBody>>,
@@ -923,10 +923,6 @@ fn get_collision_radius(shape: &CollisionShape) -> f32 {
 #[cfg(test)]
 #[path = "systems_tests.rs"]
 mod systems_tests;
-
-#[cfg(test)]
-#[path = "collision_tests.rs"]
-mod collision_tests;
 
 #[cfg(test)]
 #[path = "rigid_body_panic_tests.rs"]

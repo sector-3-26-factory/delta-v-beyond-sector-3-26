@@ -294,6 +294,16 @@ fn test_soi_gravity_inside_soi(app: &mut App) {
         ship.velocity.x < 0.0,
         "ship should gain negative X velocity (gravity applied inside SOI)",
     );
+    // Y/Z zero-check: gravity should pull purely along X toward the planet
+    // at the origin. No lateral velocity should appear.
+    check(
+        ship.velocity.y.abs() < f32::EPSILON,
+        "no Y velocity expected",
+    );
+    check(
+        ship.velocity.z.abs() < f32::EPSILON,
+        "no Z velocity expected",
+    );
 }
 
 // ---------------------------------------------------------------------------

@@ -18,363 +18,62 @@
 
 //! Unit tests for `belt_field_streaming` module.
 //!
-//! These tests create minimal in-memory entities to test the streaming logic
-//! directly, without the full world loading pipeline or `ShipsPlugin`.
+//! These are pure-function tests that do not require a Bevy `App` — they
+//! exercise `find_nearest_sector_index` directly. The full streaming system
+//! (load/despawn behaviour) is covered by the integration tests in
+//! `crates/delta-v-world-tests/tests/world_belt_field_tests.rs`.
 
-use crate::belt_field_generation::SizeDistributionEntry;
-use crate::belt_field_spawn::AsteroidBelt;
-use crate::belt_field_streaming::{
-    LoadedSectors, belt_sector_streaming_system, find_nearest_sector_index,
-};
-use crate::celestial::OrbitalBody;
-use crate::constants::FIXED_TIMESTEP_HZ;
 use bevy::prelude::*;
-use bevy::state::app::StatesPlugin;
-use bevy::time::{Time, TimePlugin};
-use delta_v_core::{AppState, PlayerShipEntity};
-use delta_v_types::AsteroidBeltTemplate;
-use delta_v_types::PlayerSettings;
 
-/// Builds a minimal app with only the streaming system and required resources.
-fn build_streaming_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(TimePlugin)
-        .add_plugins(AssetPlugin::default())
-        .add_plugins(StatesPlugin)
-        .insert_resource(Time::<Fixed>::from_hz(f64::from(FIXED_TIMESTEP_HZ)))
-        .init_resource::<LoadedSectors>()
-        .init_resource::<crate::belt_field_generation::AsteroidDeltaStore>()
-        .insert_resource(PlayerSettings {
-            language: "en".to_string(),
-            detail_level: 1.0,
-        })
-        .insert_resource(delta_v_core::FloatingOrigin::default())
-        .init_state::<AppState>()
-        .add_systems(FixedUpdate, belt_sector_streaming_system);
-    // Set state to InGame so the streaming system runs
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::InGame);
-    app
-}
+use crate::belt_field_streaming::find_nearest_sector_index;
 
-/// Runs the `FixedUpdate` schedule once by advancing time.
-fn run_fixed_update(app: &mut App) {
-    let fixed_duration = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Real>>()
-        .advance_by(fixed_duration);
-    app.update();
-}
-
-/// Creates a test belt entity with the given parameters.
-/// `sector_size` is now calculated automatically based on belt parameters.
-fn spawn_test_belt(
-    app: &mut App,
-    id: &str,
-    orbital_distance: f32,
-    radial_extent: f32,
-    thickness: f32,
-) -> Entity {
-    // Calculate sector_size using the same formula as the real system
-    let sector_size = crate::belt_field_generation::calculate_optimal_sector_size(
-        orbital_distance,
-        radial_extent,
-        thickness,
-        23000.0, // mean_spacing
-    );
-
-    let belt = AsteroidBelt {
-        template: AsteroidBeltTemplate {
-            entity_type: "asteroid_belt".to_string(),
-            meshes: vec!["asteroid_small".to_string()],
-            density: 2800.0,
-        },
-        id: id.to_string(),
-        radial_extent,
-        thickness,
-        mean_spacing: 23000.0,
-        excluded_radii: vec![],
-        seed: 20_260_930,
-        sector_size,
-        size_distribution: vec![SizeDistributionEntry {
-            radius: 1000.0,
-            weight: 1.0,
-        }],
-        density: 2800.0,
-    };
-
-    // Create a dummy parent entity for the orbital parent
-    let sun_entity = app
-        .world_mut()
-        .spawn((
-            delta_v_core::navigation::navigation_list::WorldEntityId("sun".to_string()),
-            GlobalTransform::default(),
-            Transform::default(),
-        ))
-        .id();
-
-    let orbital_body = OrbitalBody {
-        orbital_parent: sun_entity,
-        orbital_distance,
-        orbital_period: 140_000_000.0,
-        orbital_eccentricity: 0.12,
-        orbital_inclination: 10.0_f32.to_radians(),
-        initial_orbital_angle: 0.0,
-    };
-
-    app.world_mut()
-        .spawn((
-            belt,
-            orbital_body,
-            crate::OrbitalParentId("sun".to_string()),
-            GlobalTransform::default(),
-            Transform::default(),
-        ))
-        .id()
-}
-
-/// Creates a test player ship entity at the given position.
-fn spawn_test_player(app: &mut App, position: Vec3) -> Entity {
-    let entity = app
-        .world_mut()
-        .spawn((
-            GlobalTransform::from_translation(position),
-            Transform::from_translation(position),
-        ))
-        .id();
-
-    // Insert the PlayerShipEntity resource
-    app.insert_resource(PlayerShipEntity(entity));
-
-    entity
-}
-
+/// Test: a player on the +X axis (angle 0) maps to sector index 0.
 #[test]
-fn test_find_nearest_sector_index() {
+fn test_find_nearest_sector_index_at_angle_zero() {
     let idx = find_nearest_sector_index("sun", 4.04e11, 5.0e7, Vec3::new(4.04e11, 0.0, 0.0));
-    assert_eq!(idx, 0);
+    assert_eq!(idx, 0, "player on +X axis should map to sector 0");
+}
 
+/// Test: a player on the +Y axis (angle PI/2) maps to a non-zero sector.
+#[test]
+fn test_find_nearest_sector_index_at_angle_pi_half() {
     let idx = find_nearest_sector_index("sun", 4.04e11, 5.0e7, Vec3::new(0.0, 4.04e11, 0.0));
-    assert!(idx > 0);
+    assert!(idx > 0, "player on +Y axis should map to a non-zero sector");
 }
 
-/// Test that sectors load when the player is within the belt's volume (in sector)
-/// Now loads 3 sectors: index-1, index, index+1
+/// Test: the function is deterministic — the same input yields the same index.
 #[test]
-fn test_belt_sector_loads_when_player_in_sector() {
-    let mut app = build_streaming_app();
-
-    // Belt at 404M km from sun, 44.9M km radial extent, 15M km thickness
-    let orbital_distance = 4.04e11;
-    let radial_extent = 4.49e10;
-    let thickness = 1.5e10;
-
-    spawn_test_belt(
-        &mut app,
-        "test_belt",
-        orbital_distance,
-        radial_extent,
-        thickness,
-    );
-
-    // Player at 404M km (in the belt, on the ring)
-    let player_pos = Vec3::new(4.04e11, 0.0, 0.0);
-    spawn_test_player(&mut app, player_pos);
-
-    // Run the streaming system (FixedUpdate)
-    run_fixed_update(&mut app);
-
-    // Check that 3 sectors were loaded (index-1, index, index+1)
-    let loaded_sectors = app.world().resource::<LoadedSectors>();
-    assert!(
-        !loaded_sectors.belt_sectors.is_empty(),
-        "belt sectors should be loaded when player is in belt volume"
-    );
-    assert_eq!(loaded_sectors.belt_sectors.len(), 3);
-    for (id, _) in &loaded_sectors.belt_sectors {
-        assert_eq!(id, "test_belt");
-    }
-}
-
-/// Test that a sector does NOT load when the player is above the belt (outside thickness)
-#[test]
-fn test_belt_sector_not_load_when_player_above_belt() {
-    let mut app = build_streaming_app();
-
-    let orbital_distance = 4.04e11;
-    let radial_extent = 4.49e10;
-    let thickness = 1.5e10;
-
-    spawn_test_belt(
-        &mut app,
-        "test_belt",
-        orbital_distance,
-        radial_extent,
-        thickness,
-    );
-
-    // Player at z=20M km (above belt thickness of 15M km)
-    let player_pos = Vec3::new(4.04e11, 0.0, 2.0e10);
-    spawn_test_player(&mut app, player_pos);
-
-    run_fixed_update(&mut app);
-
-    let loaded_sectors = app.world().resource::<LoadedSectors>();
-    assert!(
-        loaded_sectors.belt_sectors.is_empty(),
-        "belt sector should NOT load when player is above belt thickness"
+fn test_find_nearest_sector_index_is_deterministic() {
+    let pos = Vec3::new(4.04e11, 0.0, 0.0);
+    let idx1 = find_nearest_sector_index("sun", 4.04e11, 5.0e7, pos);
+    let idx2 = find_nearest_sector_index("sun", 4.04e11, 5.0e7, pos);
+    assert_eq!(
+        idx1, idx2,
+        "find_nearest_sector_index must be deterministic"
     );
 }
 
-/// Test that a sector does NOT load when player is beneath the belt (outside thickness)
+/// Test: adjacent positions map to the same or neighbouring sectors, never a
+/// jump across the ring.
 #[test]
-fn test_belt_sector_not_load_when_player_beneath_belt() {
-    let mut app = build_streaming_app();
-
+fn test_find_nearest_sector_index_adjacent_positions_neighbour() {
+    let sector_size = 5.0e7;
     let orbital_distance = 4.04e11;
-    let radial_extent = 4.49e10;
-    let thickness = 1.5e10;
-
-    spawn_test_belt(
-        &mut app,
-        "test_belt",
+    let a = find_nearest_sector_index(
+        "sun",
         orbital_distance,
-        radial_extent,
-        thickness,
+        sector_size,
+        Vec3::new(4.04e11, 0.0, 0.0),
     );
-
-    // Player at z=-20M km (beneath belt thickness of 15M km)
-    let player_pos = Vec3::new(4.04e11, 0.0, -2.0e10);
-    spawn_test_player(&mut app, player_pos);
-
-    run_fixed_update(&mut app);
-
-    let loaded_sectors = app.world().resource::<LoadedSectors>();
-    assert!(
-        loaded_sectors.belt_sectors.is_empty(),
-        "belt sector should NOT load when player is beneath belt thickness"
-    );
-}
-
-/// Test that a sector does NOT load when player is before the belt (towards the sun)
-#[test]
-fn test_belt_sector_not_load_when_player_before_belt() {
-    let mut app = build_streaming_app();
-
-    let orbital_distance = 4.04e11;
-    let radial_extent = 4.49e10;
-    let thickness = 1.5e10;
-
-    spawn_test_belt(
-        &mut app,
-        "test_belt",
+    let b = find_nearest_sector_index(
+        "sun",
         orbital_distance,
-        radial_extent,
-        thickness,
+        sector_size,
+        Vec3::new(4.04e11, 1.0e6, 0.0),
     );
-
-    // Player at 359M km (before inner edge of belt at ~359.1M km)
-    let player_pos = Vec3::new(3.59e11, 0.0, 0.0);
-    spawn_test_player(&mut app, player_pos);
-
-    run_fixed_update(&mut app);
-
-    let loaded_sectors = app.world().resource::<LoadedSectors>();
+    let diff = (a - b).abs();
     assert!(
-        loaded_sectors.belt_sectors.is_empty(),
-        "belt sector should NOT load when player is before the belt (towards sun)"
-    );
-}
-
-/// Test that a sector does NOT load when player is behind the belt (away from sun)
-#[test]
-fn test_belt_sector_not_load_when_player_behind_belt() {
-    let mut app = build_streaming_app();
-
-    let orbital_distance = 4.04e11;
-    let radial_extent = 4.49e10;
-    let thickness = 1.5e10;
-
-    spawn_test_belt(
-        &mut app,
-        "test_belt",
-        orbital_distance,
-        radial_extent,
-        thickness,
-    );
-
-    // Player at 449M km (beyond outer edge of belt at ~448.9M km)
-    let player_pos = Vec3::new(4.49e11, 0.0, 0.0);
-    spawn_test_player(&mut app, player_pos);
-
-    run_fixed_update(&mut app);
-
-    let loaded_sectors = app.world().resource::<LoadedSectors>();
-    assert!(
-        loaded_sectors.belt_sectors.is_empty(),
-        "belt sector should NOT load when player is behind the belt (away from sun)"
-    );
-}
-
-/// Test that sectors load when player is within streaming distance but not exactly on ring
-#[test]
-fn test_belt_sector_loads_when_player_near_ring() {
-    let mut app = build_streaming_app();
-
-    let orbital_distance = 4.04e11;
-    let radial_extent = 4.49e10;
-    let thickness = 1.5e10;
-
-    spawn_test_belt(
-        &mut app,
-        "test_belt",
-        orbital_distance,
-        radial_extent,
-        thickness,
-    );
-
-    // Player clearly inside the ring (50,000 km inside, well within streaming distance of 100,000 km)
-    // Ring is at 404M km, so 403.95M km is 50,000 km inside
-    let player_pos = Vec3::new(4.0395e11, 0.0, 0.0);
-    spawn_test_player(&mut app, player_pos);
-
-    run_fixed_update(&mut app);
-
-    let loaded_sectors = app.world().resource::<LoadedSectors>();
-    assert!(
-        !loaded_sectors.belt_sectors.is_empty(),
-        "belt sectors should load when player is within streaming distance of ring"
-    );
-    assert_eq!(loaded_sectors.belt_sectors.len(), 3);
-}
-
-/// Test that sector does NOT load when player is outside streaming distance
-#[test]
-fn test_belt_sector_not_load_when_player_far_from_ring() {
-    let mut app = build_streaming_app();
-
-    let orbital_distance = 4.04e11;
-    let radial_extent = 4.49e10;
-    let thickness = 1.5e10;
-
-    spawn_test_belt(
-        &mut app,
-        "test_belt",
-        orbital_distance,
-        radial_extent,
-        thickness,
-    );
-
-    // Player far from the ring (outside streaming distance)
-    let player_pos = Vec3::new(3.0e11, 0.0, 0.0);
-    spawn_test_player(&mut app, player_pos);
-
-    run_fixed_update(&mut app);
-
-    let loaded_sectors = app.world().resource::<LoadedSectors>();
-    assert!(
-        loaded_sectors.belt_sectors.is_empty(),
-        "belt sector should NOT load when player is outside streaming distance"
+        diff <= 1,
+        "adjacent positions along the ring should map to the same or neighbouring sector, got {a} and {b}"
     );
 }
