@@ -17,6 +17,15 @@ categories = ["game-development"]
 #   cargo test -p delta-v-physics --features bench -- --ignored --nocapture
 bench = []
 
+
+# Strategy Z2 test driver: normal #[test] target that spawns the real
+# binary with --test-function <name> and checks the exit code.
+# See plans/testframework-poc.md Section 7.
+[[test]]
+name = "sphere_sphere_tests_driver"
+path = "tests/sphere_sphere_tests_driver.rs"
+harness = true
+
 [dependencies]
 bevy = { workspace = true }
 bevy_math = { workspace = true }
@@ -30,8 +39,8 @@ delta-v-types = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+delta-v-test-framework = { workspace = true }
 delta-v-app = { workspace = true }
-delta-v-test-support = { workspace = true }
 
 # Run integration tests as harness=false so cargo test runs main()
 # on the main thread (WinitPlugin requirement).
@@ -64,11 +73,6 @@ workspace = true
 # state, no reset_world hack. Uses the `floating_origin` fixture (single player
 # ship, no celestial bodies); test bodies are placed at a safe offset from the
 # ship so the fixture ship does not pollute event counts.
-[[test]]
-name = "sphere_sphere_tests"
-path = "tests/sphere_sphere_tests.rs"
-harness = false
-
 [[test]]
 name = "box_box_tests"
 path = "tests/box_box_tests.rs"

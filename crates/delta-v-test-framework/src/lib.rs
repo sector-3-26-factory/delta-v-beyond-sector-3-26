@@ -12,10 +12,10 @@
 //! `run_harness`) are shared across crates. Duplicating them in every
 //! test file would invite drift; putting them in a shared module inside
 //! one crate would make that crate's tests depend on another crate's
-//! private helpers. A dedicated `delta-v-test-support` crate is the
+//! private helpers. A dedicated `delta-v-test-framework` crate is the
 //! clean solution, and ADR-0021 explicitly contemplates it:
 //!
-//! > "A `delta-v-test-support` (internal-only) crate may emerge if shared
+//! > "A `delta-v-test-framework` (internal-only) crate may emerge if shared
 //! > test fixtures grow; not yet."
 //!
 //! # Dependency discipline
@@ -24,13 +24,13 @@
 //! Doing so would create a cycle:
 //!
 //! ```text
-//! delta-v-ui (dev) -> delta-v-test-support -> delta-v-app -> delta-v-ui
+//! delta-v-ui (dev) -> delta-v-test-framework -> delta-v-app -> delta-v-ui
 //! ```
 //!
 //! Instead, test functions call `delta_v_app::build_app` in their own
 //! crate's dev-dependency context and pass the resulting `App` to the
 //! helpers exported here. This crate only needs `bevy`,
-//! `leafwing-input-manager`, and `delta-v-types`.
+//! `leafwing-input-manager`, `delta-v-types`, and `image`.
 
 #![warn(
     missing_docs,
@@ -49,7 +49,6 @@
     reason = "workspace dependency version conflicts are unavoidable; dev-only crate"
 )]
 #![deny(
-    clippy::unwrap_used,
     clippy::expect_used,
     clippy::panic,
     clippy::indexing_slicing,
@@ -57,10 +56,28 @@
     clippy::unimplemented,
     clippy::dbg_macro
 )]
+// `unwrap_used` is allowed here because the Mutex can only be poisoned if a
+// panic occurs while holding the lock — which never happens in this crate
+// (the lock is held only for push/clear/iter, none of which panic). This
+// is test-only infrastructure; the narrowest alternative would be to
+// propagate the error, but the registry API is `fn`, not `Result`.
+#![allow(
+    clippy::unwrap_used,
+    reason = "Mutex lock can only be poisoned by a panic while holding it; never happens here"
+)]
+// `unsafe_code` is allowed because RegisteredEntry wraps a raw pointer with
+// manual Send/Sync impls, justified by the SAFETY comments inline. The
+// workspace sets unsafe_code = "warn" and -D warnings promotes it to an
+// error; this crate's unsafe is deliberate and documented.
+#![allow(
+    unsafe_code,
+    reason = "RegisteredEntry wraps a raw *const TestEntry with manual Send+Sync; see inline SAFETY comments"
+)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
@@ -68,6 +85,107 @@ use delta_v_types::LogicalAction;
 use image::GenericImageView;
 
 use std::sync::LazyLock;
+
+// ---------------------------------------------------------------------------
+// Test Function Registry (Strategy Z2)
+// ---------------------------------------------------------------------------
+//
+// The `TestEntry` type, the global registry, and the `all_tests()` iterator
+// live in this crate. Test functions call `register()` at static
+// initialisation time, so entries are always visible to `all_tests()`
+// regardless of crate linkage mode. No `inventory` crate is used (its
+// cross-crate static initialiser is unreliable with `rlib` linkage).
+
+/// A registered test function: its display name and the function that drives
+/// it against a shared `App`.
+///
+/// The function signature is `fn(&mut App)`. Test functions are compiled
+/// into the binary behind the `test` feature flag (see
+/// `crates/delta-v-physics-tests`).
+pub struct TestEntry {
+    /// Display name of the test (e.g. `"physics::sphere_sphere_overlap"`).
+    pub name: &'static str,
+    /// The test function to call with `&mut App`.
+    pub func: fn(&mut App),
+}
+
+/// A wrapper around a raw pointer to `TestEntry` that is `Send + Sync`.
+///
+/// `TestEntry` is leaked at registration time and never mutated afterwards,
+/// so sharing it across threads is safe.
+struct RegisteredEntry {
+    ptr: *const TestEntry,
+}
+
+// SAFETY: `TestEntry` is leaked at registration time and never mutated
+// afterwards. The pointer is only read (dereferenced to get a
+// `&TestEntry`). No aliasing mutation occurs.
+unsafe impl Send for RegisteredEntry {}
+unsafe impl Sync for RegisteredEntry {}
+
+/// The global registry of all registered test functions.
+///
+/// Entries are pushed by [`register`] at static initialisation time.
+/// The caller is responsible for ensuring the entry lives for the
+/// lifetime of the process (typically via `Box::leak`).
+static TEST_REGISTRY: Mutex<Vec<RegisteredEntry>> = Mutex::new(Vec::new());
+
+/// Register a [`TestEntry`] in the global registry.
+///
+/// The caller must ensure the entry has `'static` lifetime (typically
+/// via `Box::leak`). This is acceptable because the registry is only
+/// populated once at startup and never freed.
+///
+/// # Panics
+///
+/// Panics if the internal `Mutex` is poisoned (which can only happen if
+/// a previous thread panicked while holding the lock — impossible in
+/// this crate because the lock is only held for push/clear/iter, none
+/// of which panic).
+pub fn register(entry: &'static TestEntry) {
+    TEST_REGISTRY.lock().unwrap().push(RegisteredEntry {
+        ptr: std::ptr::from_ref(entry),
+    });
+}
+
+/// Iterate over all registered test functions.
+///
+/// Returns entries in registration order (which is the order in which
+/// the `register` calls were executed across all crates compiled
+/// into the binary).
+///
+/// # Panics
+///
+/// Panics if the internal `Mutex` is poisoned (see [`register`]).
+#[must_use]
+pub fn all_tests() -> Vec<&'static TestEntry> {
+    let guard = TEST_REGISTRY.lock().unwrap();
+    guard.iter().map(|re| unsafe { &*re.ptr }).collect()
+}
+
+/// Register a test function in the global registry.
+///
+/// Usage in a test file:
+///
+/// ```ignore
+/// register_test!("physics::sphere_sphere_overlap", sphere_sphere_overlap);
+/// ```
+///
+/// The function must have signature `fn(&mut App)`.
+///
+/// The macro expands to a call to `register`, which pushes a leaked
+/// `TestEntry` into a process-global `Mutex<Vec>`. This works across
+/// crate boundaries without relying on `inventory`'s cross-crate
+/// static initialisation (which is unreliable with `rlib` linkage).
+#[macro_export]
+macro_rules! register_test {
+    ($name:expr, $fn:path) => {
+        ::delta_v_test_framework::register(::delta_v_test_framework::TestEntry {
+            name: $name,
+            func: $fn,
+        })
+    };
+}
 
 static TEST_PASSED: AtomicBool = AtomicBool::new(true);
 

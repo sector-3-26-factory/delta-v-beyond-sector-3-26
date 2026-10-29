@@ -3488,9 +3488,11 @@ dependencies = [
  "delta-v-items",
  "delta-v-net",
  "delta-v-physics",
+ "delta-v-physics-tests",
  "delta-v-propulsion",
  "delta-v-ships",
  "delta-v-stations",
+ "delta-v-test-framework",
  "delta-v-ui",
  "delta-v-weapons",
  "delta-v-world",
@@ -3612,9 +3614,24 @@ dependencies = [
  "delta-v-app",
  "delta-v-assets",
  "delta-v-core",
- "delta-v-test-support",
+ "delta-v-test-framework",
  "delta-v-types",
  "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "delta-v-physics-tests"
+version = "0.0.1"
+dependencies = [
+ "avian3d",
+ "bevy 0.19.1",
+ "bevy_math 0.19.1",
+ "bevy_mesh 0.19.1",
+ "bevy_world_serialization",
+ "delta-v-app",
+ "delta-v-physics",
+ "delta-v-test-framework",
  "tracing",
 ]
 
@@ -3636,7 +3653,7 @@ dependencies = [
  "delta-v-core",
  "delta-v-physics",
  "delta-v-spawn",
- "delta-v-test-support",
+ "delta-v-test-framework",
  "delta-v-types",
  "leafwing-input-manager",
  "rand 0.9.5",
@@ -3669,7 +3686,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "delta-v-test-support"
+name = "delta-v-test-framework"
 version = "0.0.1"
 dependencies = [
  "bevy 0.19.1",
@@ -3697,7 +3714,7 @@ dependencies = [
  "bevy_winit",
  "delta-v-app",
  "delta-v-core",
- "delta-v-test-support",
+ "delta-v-test-framework",
  "delta-v-types",
  "leafwing-input-manager",
  "tracing",
@@ -3741,7 +3758,7 @@ dependencies = [
  "delta-v-app",
  "delta-v-core",
  "delta-v-physics",
- "delta-v-test-support",
+ "delta-v-test-framework",
  "delta-v-world",
 ]
 

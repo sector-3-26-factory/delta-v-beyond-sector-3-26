@@ -26,7 +26,7 @@
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
 use delta_v_core::AppState;
-use delta_v_test_support::{check, run_harness};
+use delta_v_test_framework::{check, run_harness};
 use delta_v_world::resources::WorldDefResource;
 
 /// Test: entity validation — loads belt_field_test.world.json and verifies all
@@ -173,7 +173,7 @@ fn test_belt_streaming_happy_path(app: &mut App) {
     // Run several fixed updates so the streaming system has a chance to
     // run. The streaming system runs in `FixedUpdate` during
     // `AppState::InGame`.
-    delta_v_test_support::run_fixed_updates(app, 5);
+    delta_v_test_framework::run_fixed_updates(app, 5);
 
     let loaded = app.world().resource::<LoadedSectors>();
     check(
@@ -211,7 +211,7 @@ fn test_belt_streaming_player_far(app: &mut App) {
     }
 
     // Run several fixed updates so the streaming system can evaluate.
-    delta_v_test_support::run_fixed_updates(app, 5);
+    delta_v_test_framework::run_fixed_updates(app, 5);
 
     let loaded = app.world().resource::<LoadedSectors>();
     check(
@@ -222,7 +222,7 @@ fn test_belt_streaming_player_far(app: &mut App) {
 
 /// Entry point — runs on the main thread so `WinitPlugin` can initialize.
 fn main() {
-    let mut app = delta_v_test_support::make_app(60, build_belt_field_app);
+    let mut app = delta_v_test_framework::make_app(60, build_belt_field_app);
     run_harness(
         &mut app,
         &[

@@ -25,7 +25,11 @@
 //! See ADR-0005 (plugin architecture) and ADR-0060 (test framework single source of truth).
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
-#![allow(clippy::multiple_crate_versions)]
+#![allow(
+    clippy::multiple_crate_versions,
+    clippy::module_name_repetitions,
+    clippy::must_use_candidate
+)]
 #![deny(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -35,7 +39,6 @@
     clippy::unimplemented,
     clippy::dbg_macro
 )]
-#![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 use clap::Parser;
 use delta_v_app::{AppConfig, build_app};
@@ -59,6 +62,18 @@ struct Args {
     ///   - `custom` → `assets/worlds/custom/`
     #[arg(short, long, default_value = "default")]
     world: String,
+
+    /// Asset root suffix (path fragment under workspace root).
+    /// Production: "assets". Tests: "crates/delta-v-physics/tests/fixtures/assets".
+    #[arg(long, default_value = "assets")]
+    asset_root: String,
+
+    /// Run a named test function from the registry instead of the event loop.
+    ///
+    /// The function must be registered via `init_registry()` in a per-domain
+    /// test crate compiled into this binary behind the `test` feature flag.
+    #[arg(long)]
+    test_function: Option<String>,
 }
 
 fn main() {
@@ -74,11 +89,48 @@ fn main() {
     print_x11_hint();
 
     let mut app = build_app(AppConfig {
-        asset_root_suffix: "assets".to_string(), // Production suffix
+        asset_root_suffix: args.asset_root,
         world_name: Some(world_name),
         log_filter: None, // Default from build_app (dev/non-dev via feature)
     });
-    app.run();
+
+    if let Some(test_name) = args.test_function {
+        run_test_function(&mut app, &test_name);
+    } else {
+        app.run();
+    }
+}
+
+/// Run a named test function from the registry.
+///
+/// The function must be registered via `init_registry()` in a per-domain
+/// test crate compiled into this binary behind the `test` feature flag.
+///
+/// Exits 0 on success, 1 on failure.
+#[cfg(feature = "test")]
+fn run_test_function(app: &mut bevy::prelude::App, test_name: &str) {
+    use delta_v_physics_tests::real_app_ITs::init_registry;
+    use delta_v_test_framework::all_tests;
+
+    // Register all test functions before looking up the requested one.
+    init_registry();
+
+    for entry in all_tests() {
+        if entry.name == test_name {
+            (entry.func)(app);
+            std::process::exit(0);
+        }
+    }
+
+    eprintln!("test function not found: {test_name}");
+    std::process::exit(1);
+}
+
+/// Fallback when the `test` feature is not enabled.
+#[cfg(not(feature = "test"))]
+fn run_test_function(_app: &mut bevy::prelude::App, _test_name: &str) {
+    eprintln!("test feature not enabled; rebuild with --features test");
+    std::process::exit(1);
 }
 
 /// Prints a display-forwarding hint on Linux.

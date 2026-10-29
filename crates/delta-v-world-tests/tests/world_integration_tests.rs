@@ -26,7 +26,7 @@
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
 use delta_v_core::AppState;
-use delta_v_test_support::{check, run_harness};
+use delta_v_test_framework::{check, run_harness};
 use delta_v_world::resources::WorldDefResource;
 
 /// Test: world loading pipeline — loads a world through the full app stack,
@@ -212,7 +212,7 @@ fn build_belt_field_app() -> App {
 /// Entry point — runs on the main thread so `WinitPlugin` can initialize.
 fn main() {
     // Test 1: world loading pipeline with simple test fixture
-    let mut app1 = delta_v_test_support::make_app(60, build_test_app);
+    let mut app1 = delta_v_test_framework::make_app(60, build_test_app);
     run_harness(
         &mut app1,
         &[
@@ -225,6 +225,6 @@ fn main() {
     );
 
     // Test 2: entity validation with belt/field fixture
-    let mut app2 = delta_v_test_support::make_app(60, build_belt_field_app);
+    let mut app2 = delta_v_test_framework::make_app(60, build_belt_field_app);
     run_harness(&mut app2, &[("entity_validation", test_entity_validation)]);
 }

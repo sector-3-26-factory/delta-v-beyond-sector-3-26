@@ -66,4 +66,5 @@ The `AppConfig` struct centralizes all configuration:
 
 ## Notes
 
-This ADR implements step 0 of the implementation plan in `plans/testframework.md`. The full plan covers crate creation, migration, and fixture structure.
+This ADR implements step 0 of the implementation plan for the test framework. The full plan covers crate creation, migration, and fixture structure.
+-------

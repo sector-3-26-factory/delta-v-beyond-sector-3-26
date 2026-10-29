@@ -24,7 +24,7 @@ use delta_v_app::{AppConfig, build_app};
 use delta_v_physics::celestial::{OrbitalBody, Planet};
 use delta_v_physics::constants::GRAVITATIONAL_CONSTANT;
 use delta_v_physics::rigid_body::{MassSource, RigidBody};
-use delta_v_test_support::{check, make_app, run_fixed_update, run_harness};
+use delta_v_test_framework::{check, make_app, run_fixed_update, run_harness};
 
 /// Build the test `App` via `build_app` (Single Source of Truth per ADR-0060).
 /// Uses the empty `test` world fixture so no celestial bodies interfere.

@@ -16,7 +16,7 @@
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
 use delta_v_physics::collision::{CollisionShape, CollisionShapeType};
-use delta_v_test_support::{check, make_app, run_harness};
+use delta_v_test_framework::{check, make_app, run_harness};
 
 fn build_test_app() -> App {
     build_app(AppConfig {

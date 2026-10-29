@@ -22,7 +22,7 @@
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
-use delta_v_test_support::{check, press_and_fixed_update, press_and_update, run_harness};
+use delta_v_test_framework::{check, press_and_fixed_update, press_and_update, run_harness};
 use delta_v_types::LogicalAction;
 
 /// Test: targeting pipeline — `CycleTargetNext` advances selection through navigation list.
@@ -229,7 +229,7 @@ fn test_thrust_torque_pipeline(app: &mut App) {
 
 /// Entry point — runs on the main thread so `WinitPlugin` can initialize.
 fn main() {
-    let mut app = delta_v_test_support::make_app(60, || {
+    let mut app = delta_v_test_framework::make_app(60, || {
         build_app(AppConfig {
             asset_root_suffix: "crates/delta-v-ships/tests/fixtures/assets".to_string(),
             world_name: Some("test_targetable".to_string()),

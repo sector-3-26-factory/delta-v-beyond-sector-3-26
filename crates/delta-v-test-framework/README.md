@@ -1,4 +1,4 @@
-# delta-v-test-support
+# delta-v-test-framework
 
 Shared test harness for Bevy integration tests (harness = false targets)
 

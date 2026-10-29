@@ -25,7 +25,7 @@
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
-use delta_v_test_support::make_app;
+use delta_v_test_framework::make_app;
 use std::panic;
 
 /// Build the test `App` via `build_app` using the `test_two_players` fixture.

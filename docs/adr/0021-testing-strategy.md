@@ -100,6 +100,6 @@ Negative:
 
 Follow-up:
 
-- A `delta-v-test-support` (internal-only) crate may emerge if
+- A `delta-v-test-framework` (internal-only) crate may emerge if
   shared test fixtures grow; not yet.
 - A coverage report is nice-to-have, not blocking.

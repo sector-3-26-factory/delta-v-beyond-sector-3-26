@@ -2,11 +2,9 @@
 
 //! Sphere-sphere collision detection tests.
 //!
-//! Registered as a `[[test]]` target with `harness = false` so that
-//! `cargo test --test sphere_sphere_tests` runs `main()` on the
-//! **main thread**, which is required by Bevy's `WinitPlugin`.
-//!
-//!   xvfb-run -a cargo test --test `sphere_sphere_tests` -p delta-v-physics
+//! Each test function is registered in the global registry via
+//! [`init_registry`] and called by the binary's `run_test_function()`
+//! when `--test-function <name>` is passed.
 
 #![allow(
     clippy::expect_used,
@@ -14,21 +12,12 @@
     clippy::indexing_slicing,
     clippy::panic,
     clippy::float_cmp,
-    unsafe_code
+    unsafe_code,
+    dead_code
 )]
 
 use bevy::prelude::*;
-use delta_v_app::{AppConfig, build_app};
 use delta_v_physics::collision::{CollisionShape, CollisionShapeData};
-use delta_v_test_support::{check, make_app, run_harness};
-
-fn build_test_app() -> App {
-    build_app(AppConfig {
-        asset_root_suffix: "crates/delta-v-physics/tests/fixtures/assets".to_string(),
-        world_name: Some("floating_origin".to_string()),
-        log_filter: Some("warn,delta_v=debug".to_string()),
-    })
-}
 
 const fn sphere_shape(radius: f32) -> CollisionShape {
     CollisionShape(CollisionShapeData::sphere(radius, Vec3::ZERO))
@@ -57,15 +46,15 @@ fn test_sphere_sphere_overlap(_app: &mut App) {
     let pos_b = Vec3::new(3.0, 0.0, 0.0);
 
     let result = check_unrotated(pos_a, &a, pos_b, &b);
-    check(result.is_some(), "spheres should collide");
+    assert!(result.is_some(), "spheres should collide");
     let (normal, penetration) = result.unwrap();
-    check(
+    assert!(
         (penetration - 1.0).abs() < 0.01,
-        &format!("penetration should be ~1.0, got {penetration}"),
+        "penetration should be ~1.0, got {penetration}"
     );
-    check(
+    assert!(
         (normal.x - 1.0).abs() < 0.01,
-        &format!("normal should point +X, got {normal}"),
+        "normal should point +X, got {normal}"
     );
 }
 
@@ -76,7 +65,7 @@ fn test_sphere_sphere_no_overlap(_app: &mut App) {
     let pos_b = Vec3::new(5.0, 0.0, 0.0);
 
     let result = check_unrotated(pos_a, &a, pos_b, &b);
-    check(result.is_none(), "spheres should not collide");
+    assert!(result.is_none(), "spheres should not collide");
 }
 
 fn test_sphere_sphere_touching_exactly(_app: &mut App) {
@@ -86,7 +75,7 @@ fn test_sphere_sphere_touching_exactly(_app: &mut App) {
     let pos_b = Vec3::new(2.0, 0.0, 0.0);
 
     let result = check_unrotated(pos_a, &a, pos_b, &b);
-    check(
+    assert!(
         result.is_none(),
         "exactly touching spheres should not collide",
     );
@@ -99,33 +88,43 @@ fn test_sphere_sphere_coincident_centers(_app: &mut App) {
     let pos_b = Vec3::ZERO;
 
     let result = check_unrotated(pos_a, &a, pos_b, &b);
-    check(result.is_some(), "coincident spheres should collide");
+    assert!(result.is_some(), "coincident spheres should collide");
     let (normal, penetration) = result.unwrap();
-    check(
+    assert!(
         (penetration - 5.0).abs() < 0.01,
-        &format!("penetration should be 5.0, got {penetration}"),
+        "penetration should be 5.0, got {penetration}"
     );
-    check(
+    assert!(
         (normal.z - 1.0).abs() < 0.01,
-        &format!("normal should be +Z for coincident, got {normal}"),
+        "normal should be +Z for coincident, got {normal}"
     );
 }
 
-fn main() {
-    let mut app = make_app(60, build_test_app);
-    run_harness(
-        &mut app,
-        &[
-            ("sphere_sphere_overlap", test_sphere_sphere_overlap),
-            ("sphere_sphere_no_overlap", test_sphere_sphere_no_overlap),
-            (
-                "sphere_sphere_touching_exactly",
-                test_sphere_sphere_touching_exactly,
-            ),
-            (
-                "sphere_sphere_coincident_centers",
-                test_sphere_sphere_coincident_centers,
-            ),
-        ],
+/// Register all test functions in the global registry.
+///
+/// Called from [`super::super::init_registry`] (the crate-level
+/// `real_app_ITs::init_registry`).
+pub fn init_registry() {
+    do_register("physics::sphere_sphere_overlap", test_sphere_sphere_overlap);
+    do_register(
+        "physics::sphere_sphere_no_overlap",
+        test_sphere_sphere_no_overlap,
     );
+    do_register(
+        "physics::sphere_sphere_touching_exactly",
+        test_sphere_sphere_touching_exactly,
+    );
+    do_register(
+        "physics::sphere_sphere_coincident_centers",
+        test_sphere_sphere_coincident_centers,
+    );
+}
+
+/// Register a test function in the global registry.
+///
+/// The entry is leaked so it lives for the lifetime of the process.
+fn do_register(name: &'static str, func: fn(&mut App)) {
+    let entry = delta_v_test_framework::TestEntry { name, func };
+    let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
+    delta_v_test_framework::register(leaked);
 }

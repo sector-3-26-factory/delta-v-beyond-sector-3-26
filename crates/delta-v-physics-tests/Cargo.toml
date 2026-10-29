@@ -1,0 +1,42 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
+[package]
+name = "delta-v-physics-tests"
+version.workspace = true
+edition = "2024"
+rust-version = "1.88"
+description = "Real-app integration tests for delta-v-physics, compiled into the binary behind the `test` feature flag"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["test", "physics", "simulation"]
+categories = ["game-development"]
+
+[features]
+# Enable test function registration for the binary's test feature flag.
+# See plans/testframework-poc.md Section 9 (Strategy Z2 Fixed).
+test = ["delta-v-test-framework/test", "delta-v-app"]
+
+[dependencies]
+bevy = { workspace = true }
+bevy_math = { workspace = true }
+bevy_mesh = { workspace = true }
+avian3d = { workspace = true }
+tracing = { workspace = true }
+bevy_world_serialization = { workspace = true }
+delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }
+delta-v-test-framework = { workspace = true }
+delta-v-app = { workspace = true, optional = true }
+
+[dev-dependencies]
+delta-v-test-framework = { workspace = true }
+
+# Strategy Z2 test driver: normal #[test] target that spawns the real
+# binary with --test-function <name> and checks the exit code.
+# See plans/testframework-poc.md Section 9.
+[[test]]
+name = "sphere_sphere_tests"
+path = "tests/real_app_ITs/collision/sphere_sphere/test_driver.rs"
+harness = true
+
+[lints]
+workspace = true

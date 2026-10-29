@@ -21,7 +21,7 @@ use delta_v_physics::collision::{
 };
 use delta_v_physics::rigid_body::RigidBody;
 use delta_v_physics::systems::PhysicsSet;
-use delta_v_test_support::{check, make_app, run_fixed_update, run_harness};
+use delta_v_test_framework::{check, make_app, run_fixed_update, run_harness};
 use delta_v_types::collision::layers;
 
 const SHIFT: Vec3 = Vec3::new(10.0, 0.0, 0.0);

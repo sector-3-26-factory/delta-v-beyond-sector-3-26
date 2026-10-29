@@ -18,7 +18,7 @@
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
-use delta_v_test_support::{make_app, run_fixed_update, run_harness};
+use delta_v_test_framework::{make_app, run_fixed_update, run_harness};
 
 /// Build the test `App` via `build_app` (Single Source of Truth per ADR-0060).
 /// Uses the `floating_origin` world fixture (empty — no celestial bodies).

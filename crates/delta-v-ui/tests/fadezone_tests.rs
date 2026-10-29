@@ -9,7 +9,7 @@
 //!
 //! The `harness = false` setting makes the test runner skip the `#[test]`
 //! harness and execute the binary's `main()` directly. The harness itself
-//! lives in the `delta-v-test-support` crate so it can be reused across
+//! lives in the `delta-v-test-framework` crate so it can be reused across
 //! crates without duplication. This file only contains the test functions.
 //!
 //!   xvfb-run -a cargo test --test `ui_fadezone_tests` -p delta-v-ui
@@ -29,7 +29,7 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
-use delta_v_test_support::{
+use delta_v_test_framework::{
     ScreenshotCaptureState, ScreenshotTestConfig, check, run_screenshot_test,
 };
 use delta_v_ui::window::components::WindowRoot;
@@ -158,7 +158,7 @@ fn spawn_fade_test_window_system(
 ///
 /// Exits 0 on success, 1 on any assertion failure.
 fn main() {
-    let mut app = delta_v_test_support::make_app(200, || {
+    let mut app = delta_v_test_framework::make_app(200, || {
         build_app(AppConfig {
             asset_root_suffix: "crates/delta-v-ui/tests/fixtures/assets".to_string(),
             world_name: Some("test".to_string()),

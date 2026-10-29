@@ -9,7 +9,7 @@
 //!
 //! The `harness = false` setting makes the test runner skip the `#[test]`
 //! harness and execute the binary's `main()` directly. The harness itself
-//! lives in the `delta-v-test-support` crate so it can be reused across
+//! lives in the `delta-v-test-framework` crate so it can be reused across
 //! crates without duplication. This file only contains the test functions.
 //!
 //!   xvfb-run -a cargo test --test `ui_integration_tests` -p delta-v-ui
@@ -27,7 +27,7 @@
 
 use bevy::prelude::*;
 use delta_v_app::{AppConfig, build_app};
-use delta_v_test_support::{check, press_and_update, run_harness};
+use delta_v_test_framework::{check, press_and_update, run_harness};
 use delta_v_types::LogicalAction;
 use delta_v_ui::overlays::keybindings_menu::{
     components::KeybindingsMenuRoot, resources::KeybindingsMenuOpen,
@@ -145,7 +145,7 @@ fn main() {
     // 60 `app.update()` invocations: enough for the menu-toggle tests, which
     // do not render a scene. The fadezone test passes 200 because software
     // rendering needs many ticks to settle the framebuffer.
-    let mut app = delta_v_test_support::make_app(60, || {
+    let mut app = delta_v_test_framework::make_app(60, || {
         build_app(AppConfig {
             asset_root_suffix: "crates/delta-v-ui/tests/fixtures/assets".to_string(),
             world_name: Some("test".to_string()),
