@@ -19,5 +19,5 @@ pub mod collision;
 /// be module-level statements.
 #[cfg(feature = "test")]
 pub fn init_registry() {
-    collision::sphere_sphere::init_registry();
+    collision::init_registry();
 }

@@ -3630,8 +3630,10 @@ dependencies = [
  "bevy_mesh 0.19.1",
  "bevy_world_serialization",
  "delta-v-app",
+ "delta-v-core",
  "delta-v-physics",
  "delta-v-test-framework",
+ "delta-v-types",
  "tracing",
 ]
 

@@ -24,6 +24,8 @@ avian3d = { workspace = true }
 tracing = { workspace = true }
 bevy_world_serialization = { workspace = true }
 delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }
+delta-v-core = { workspace = true }
+delta-v-types = { workspace = true }
 delta-v-test-framework = { workspace = true }
 delta-v-app = { workspace = true, optional = true }
 

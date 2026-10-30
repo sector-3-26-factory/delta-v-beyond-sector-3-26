@@ -1,8 +1,6 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 //! ADR-0057: a ship bounces off a static moon.
-//!
-//!   xvfb-run -a cargo test --test `ship_bounces_off_a_static_moon` -p delta-v-physics
 
 #![allow(
     clippy::expect_used,
@@ -14,24 +12,15 @@
 )]
 
 use bevy::prelude::*;
-use delta_v_app::{AppConfig, build_app};
 use delta_v_physics::collision::{
     CollisionLayersComponent, CollisionShape, CollisionShapeData, DynamicBody, StaticBody,
 };
 use delta_v_physics::rigid_body::RigidBody;
 use delta_v_physics::systems::PhysicsSet;
-use delta_v_test_framework::{check, make_app, run_fixed_update, run_harness};
+use delta_v_test_framework::run_fixed_update;
 use delta_v_types::collision::layers;
 
 const SHIFT: Vec3 = Vec3::new(10.0, 0.0, 0.0);
-
-fn build_test_app() -> App {
-    build_app(AppConfig {
-        asset_root_suffix: "crates/delta-v-physics/tests/fixtures/assets".to_string(),
-        world_name: Some("floating_origin".to_string()),
-        log_filter: Some("warn,delta_v=debug".to_string()),
-    })
-}
 
 const fn sphere_shape(radius: f32) -> CollisionShape {
     CollisionShape(CollisionShapeData::sphere(radius, Vec3::ZERO))
@@ -76,20 +65,23 @@ fn test(app: &mut App) {
     run_fixed_update(app);
     let ship_velocity = app.world().get::<RigidBody>(ship).unwrap().velocity;
     let moon_velocity = app.world().get::<RigidBody>(moon).unwrap().velocity;
-    check(
+    assert!(
         ship_velocity.z > 0.0,
-        &format!(
-            "the ship should rebound, its z velocity was {}",
-            ship_velocity.z
-        ),
+        "the ship should rebound, its z velocity was {}",
+        ship_velocity.z
     );
-    check(
+    assert!(
         moon_velocity == Vec3::ZERO,
-        &format!("the moon must not be moved, got {moon_velocity:?}"),
+        "the moon must not be moved, got {moon_velocity:?}"
     );
 }
 
-fn main() {
-    let mut app = make_app(60, build_test_app);
-    run_harness(&mut app, &[("test", test)]);
+pub fn init_registry() {
+    do_register("physics::ship_bounces_off_a_static_moon", test);
+}
+
+fn do_register(name: &'static str, func: fn(&mut App)) {
+    let entry = delta_v_test_framework::TestEntry { name, func };
+    let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
+    delta_v_test_framework::register(leaked);
 }

@@ -1,8 +1,6 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 //! Collision shape offset tests.
-//!
-//!   xvfb-run -a cargo test --test `offset_tests` -p delta-v-physics
 
 #![allow(
     clippy::expect_used,
@@ -14,17 +12,7 @@
 )]
 
 use bevy::prelude::*;
-use delta_v_app::{AppConfig, build_app};
 use delta_v_physics::collision::{CollisionShape, CollisionShapeData};
-use delta_v_test_framework::{check, make_app, run_harness};
-
-fn build_test_app() -> App {
-    build_app(AppConfig {
-        asset_root_suffix: "crates/delta-v-physics/tests/fixtures/assets".to_string(),
-        world_name: Some("floating_origin".to_string()),
-        log_filter: Some("warn,delta_v=debug".to_string()),
-    })
-}
 
 fn check_unrotated(
     pos_a: Vec3,
@@ -51,9 +39,9 @@ fn test_collision_with_offset(_app: &mut App) {
     let pos_a = Vec3::ZERO + a.offset;
     let pos_b = Vec3::ZERO + b.offset;
     let result = check_unrotated(pos_a, &a, pos_b, &b);
-    check(
+    assert!(
         result.is_none(),
-        "spheres with offset should be exactly touching, not overlapping",
+        "spheres with offset should be exactly touching, not overlapping"
     );
 }
 
@@ -63,24 +51,24 @@ fn test_collision_with_offset_overlap(_app: &mut App) {
     let pos_a = Vec3::ZERO + a.offset;
     let pos_b = Vec3::ZERO + b.offset;
     let result = check_unrotated(pos_a, &a, pos_b, &b);
-    check(result.is_some(), "spheres with offset should overlap");
+    assert!(result.is_some(), "spheres with offset should overlap");
     let (_normal, penetration) = result.unwrap();
-    check(
+    assert!(
         (penetration - 1.0).abs() < 0.01,
-        &format!("penetration should be ~1.0, got {penetration}"),
+        "penetration should be ~1.0, got {penetration}"
     );
 }
 
-fn main() {
-    let mut app = make_app(60, build_test_app);
-    run_harness(
-        &mut app,
-        &[
-            ("collision_with_offset", test_collision_with_offset),
-            (
-                "collision_with_offset_overlap",
-                test_collision_with_offset_overlap,
-            ),
-        ],
+pub fn init_registry() {
+    do_register("physics::collision_with_offset", test_collision_with_offset);
+    do_register(
+        "physics::collision_with_offset_overlap",
+        test_collision_with_offset_overlap,
     );
+}
+
+fn do_register(name: &'static str, func: fn(&mut App)) {
+    let entry = delta_v_test_framework::TestEntry { name, func };
+    let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
+    delta_v_test_framework::register(leaked);
 }

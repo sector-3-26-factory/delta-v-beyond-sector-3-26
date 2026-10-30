@@ -1,8 +1,6 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
 //! Convex hull fallback tests.
-//!
-//!   xvfb-run -a cargo test --test `convex_hull_tests` -p delta-v-physics
 
 #![allow(
     clippy::expect_used,
@@ -14,17 +12,7 @@
 )]
 
 use bevy::prelude::*;
-use delta_v_app::{AppConfig, build_app};
 use delta_v_physics::collision::{CollisionShape, CollisionShapeData, CollisionShapeType};
-use delta_v_test_framework::{check, make_app, run_harness};
-
-fn build_test_app() -> App {
-    build_app(AppConfig {
-        asset_root_suffix: "crates/delta-v-physics/tests/fixtures/assets".to_string(),
-        world_name: Some("floating_origin".to_string()),
-        log_filter: Some("warn,delta_v=debug".to_string()),
-    })
-}
 
 fn test_convex_hull_fallback_uses_sphere_approximation(_app: &mut App) {
     let a = CollisionShape(CollisionShapeData {
@@ -39,19 +27,21 @@ fn test_convex_hull_fallback_uses_sphere_approximation(_app: &mut App) {
     let pos_b = Vec3::new(1.5, 0.0, 0.0);
     let result =
         delta_v_physics::check_collision(pos_a, Quat::IDENTITY, &a, pos_b, Quat::IDENTITY, &b);
-    check(
+    assert!(
         result.is_some(),
-        "convex hull fallback should detect collision via sphere approx",
+        "convex hull fallback should detect collision via sphere approx"
     );
 }
 
-fn main() {
-    let mut app = make_app(60, build_test_app);
-    run_harness(
-        &mut app,
-        &[(
-            "convex_hull_fallback_uses_sphere_approximation",
-            test_convex_hull_fallback_uses_sphere_approximation,
-        )],
+pub fn init_registry() {
+    do_register(
+        "physics::convex_hull_fallback_uses_sphere_approximation",
+        test_convex_hull_fallback_uses_sphere_approximation,
     );
+}
+
+fn do_register(name: &'static str, func: fn(&mut App)) {
+    let entry = delta_v_test_framework::TestEntry { name, func };
+    let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
+    delta_v_test_framework::register(leaked);
 }
