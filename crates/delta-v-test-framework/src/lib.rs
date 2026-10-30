@@ -76,6 +76,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
@@ -457,6 +458,69 @@ pub fn settle_render(app: &mut App, frames: u32) {
     for _ in 0..frames {
         app.update();
     }
+}
+
+// ---------------------------------------------------------------------------
+// Binary build helper (Strategy Z2 test drivers)
+// ---------------------------------------------------------------------------
+//
+// Test drivers spawn the real `delta-v` binary with `--test-function <name>`.
+// That binary must be built with `--features test` so the test function
+// registry is compiled in; without it the binary exits with
+// "test feature not enabled" (see `crates/delta-v/src/main.rs`).
+//
+// This function builds the binary ONCE (serialised by a process-global
+// `Mutex`) so that parallel test threads do not race each other and corrupt
+// the build artefacts. Every driver file calls it before spawning the binary.
+
+/// Serialises the `cargo build --features test` call across all driver
+/// processes so parallel test threads never race the build artefacts.
+static BUILD_LOCK: Mutex<()> = Mutex::new(());
+
+/// Build the `delta-v` binary with `--features test` and return its path.
+///
+/// The build is serialised by a process-global [`Mutex`] so that multiple
+/// driver files running in parallel do not corrupt each other's builds.
+///
+/// # Panics
+///
+/// Panics if `cargo build` fails or the binary cannot be located.
+#[allow(
+    clippy::expect_used,
+    clippy::used_underscore_binding,
+    clippy::panic,
+    reason = "build failure is unrecoverable for a test driver; expect/panic is the correct response"
+)]
+pub fn ensure_binary_built() -> String {
+    let workspace_root = workspace_root();
+    // `--profile dev` is the cargo flag for the default debug build, but the
+    // on-disk directory is `debug`, not `dev`. Map the profile name to its
+    // directory name so the binary path is correct regardless of which
+    // profile the caller built with (e.g. `test` runs under `test`).
+    let profile = std::env::var("CARGO_PROFILE_ID").unwrap_or_else(|_| "dev".to_string());
+    let profile_dir = if profile == "dev" {
+        "debug".to_string()
+    } else {
+        profile.clone()
+    };
+    let status = {
+        let _guard = BUILD_LOCK.lock().unwrap();
+        Command::new("cargo")
+            .args(["build", "--features", "test", "--profile", &profile])
+            .current_dir(workspace_root)
+            .status()
+            .expect("failed to run cargo build --features test")
+    };
+    assert!(
+        status.success(),
+        "cargo build --features test failed with exit code {status:?}"
+    );
+    workspace_root
+        .join("target")
+        .join(&profile_dir)
+        .join("delta-v")
+        .to_string_lossy()
+        .to_string()
 }
 
 /// Build the test `App` and settle its render graph.

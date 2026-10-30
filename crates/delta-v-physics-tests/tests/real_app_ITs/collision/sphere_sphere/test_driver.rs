@@ -10,19 +10,8 @@
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-fn delta_v_binary() -> String {
-    let workspace_root = delta_v_test_framework::workspace_root();
-    let profile = std::env::var("CARGO_PROFILE_ID").unwrap_or_else(|_| "debug".to_string());
-    workspace_root
-        .join("target")
-        .join(profile)
-        .join("delta-v")
-        .to_string_lossy()
-        .to_string()
-}
-
 fn run_test(name: &str) -> Result<(), String> {
-    let binary = delta_v_binary();
+    let binary = delta_v_test_framework::ensure_binary_built();
     let mut child = Command::new(&binary)
         .arg("--test-function")
         .arg(name)

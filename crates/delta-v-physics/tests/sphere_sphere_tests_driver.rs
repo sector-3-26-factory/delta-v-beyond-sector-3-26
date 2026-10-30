@@ -7,27 +7,11 @@
 
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-fn delta_v_binary() -> String {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest
-        .parent()
-        .and_then(|p| p.parent())
-        .expect("could not resolve workspace root");
-    let profile = std::env::var("CARGO_PROFILE_ID").unwrap_or_else(|_| "debug".to_string());
-    workspace_root
-        .join("target")
-        .join(profile)
-        .join("delta-v")
-        .to_string_lossy()
-        .to_string()
-}
-
 fn run_test(name: &str) -> Result<(), String> {
-    let binary = delta_v_binary();
+    let binary = delta_v_test_framework::ensure_binary_built();
     let mut child = Command::new(&binary)
         .arg("--test-function")
         .arg(name)
