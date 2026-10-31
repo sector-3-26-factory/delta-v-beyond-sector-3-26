@@ -1,0 +1,54 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
+[package]
+name = "delta-v-ui-tests"
+version.workspace = true
+edition = "2024"
+rust-version = "1.88"
+description = "Real-app integration tests for delta-v-ui, compiled into the binary behind the `test` feature flag"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["test", "ui", "simulation"]
+categories = ["game-development"]
+
+[features]
+# Enable test function registration for the binary's test feature flag.
+# See plans/testframework-poc.md Section 9 (Strategy Z2 Fixed).
+test = ["delta-v-test-framework/test", "delta-v-app"]
+
+[dependencies]
+bevy = { workspace = true }
+tracing = { workspace = true }
+leafwing-input-manager = { workspace = true }
+image = { workspace = true }
+delta-v-ui = { path = "../delta-v-ui", version = "0.0.1" }
+delta-v-core = { workspace = true }
+delta-v-types = { workspace = true }
+delta-v-test-framework = { workspace = true }
+delta-v-app = { workspace = true, optional = true }
+
+[dev-dependencies]
+bevy_winit = { workspace = true }
+delta-v-app = { workspace = true }
+delta-v-test-framework = { workspace = true }
+
+# Strategy Z2 test driver: normal #[test] target that spawns the real
+# binary with --test-function <name> and checks the exit code.
+# See plans/testframework-poc.md Section 9.
+[[test]]
+name = "ui_tests_driver"
+path = "tests/real_app_ITs/ui_tests_driver.rs"
+harness = true
+
+# Screenshot visual regression test that runs inside `app.run()`.
+# NOT compatible with the Z2 `fn(&mut App)` registry model — it needs
+# `MessageWriter<AppExit>` and `ResMut<ScreenshotCaptureState>` inside
+# the `Update` schedule. Kept as harness=false so it runs on the main
+# thread with WinitPlugin.
+[[test]]
+name = "ui_fadezone_tests"
+path = "tests/fadezone_tests.rs"
+harness = false
+
+[lints]
+workspace = true

@@ -22,7 +22,13 @@ dev = ["delta-v-config/dev", "delta-v-ui/dev", "delta-v-core/dev"]
 
 # Enable test function registry and compile per-domain test crates
 # into this binary. See plans/testframework-poc.md Section 9 and ADR-0061.
-test = ["delta-v-physics-tests/test", "delta-v-test-framework/test"]
+test = [
+    "delta-v-physics-tests/test",
+    "delta-v-ships-tests/test",
+    "delta-v-ui-tests/test",
+    "delta-v-test-framework/test",
+    "delta-v-world-tests-tests/test",
+]
 
 [dependencies]
 delta-v-app = { workspace = true }
@@ -40,6 +46,9 @@ delta-v-world = { workspace = true }
 delta-v-ai = { workspace = true }
 delta-v-ui = { workspace = true }
 delta-v-physics-tests = { workspace = true, optional = true }
+delta-v-ships-tests = { workspace = true, optional = true }
+delta-v-ui-tests = { workspace = true, optional = true }
+delta-v-world-tests-tests = { workspace = true, optional = true }
 
 bevy = { workspace = true }
 tracing = { workspace = true }

@@ -28,12 +28,5 @@ tempfile = "3"
 delta-v-app = { workspace = true }
 delta-v-test-framework = { workspace = true }
 
-# Run integration tests as harness=false so cargo test runs main()
-# on the main thread (WinitPlugin requirement).
-[[test]]
-name = "ships_integration_tests"
-path = "tests/integration_tests.rs"
-harness = false
-
 [lints]
 workspace = true

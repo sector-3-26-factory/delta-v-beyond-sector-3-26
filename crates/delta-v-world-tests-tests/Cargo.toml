@@ -1,0 +1,64 @@
+# AGENTS: before modifying this file, read AGENTS.md at the repository root.
+[package]
+name = "delta-v-world-tests-tests"
+version.workspace = true
+edition = "2024"
+rust-version = "1.88"
+description = "Real-app integration tests for delta-v-world, compiled into the binary behind the `test` feature flag"
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["test", "world", "simulation"]
+categories = ["game-development"]
+
+[features]
+# Enable test function registration for the binary's test feature flag.
+# See plans/testframework-poc.md Section 9 (Strategy Z2 Fixed).
+test = ["delta-v-test-framework/test", "delta-v-app"]
+
+[dependencies]
+bevy = { workspace = true }
+tracing = { workspace = true }
+delta-v-world = { workspace = true }
+delta-v-core = { workspace = true }
+delta-v-physics = { workspace = true }
+delta-v-types = { workspace = true }
+delta-v-test-framework = { workspace = true }
+delta-v-app = { workspace = true, optional = true }
+
+[dev-dependencies]
+delta-v-app = { workspace = true }
+delta-v-test-framework = { workspace = true }
+
+# Strategy Z2 test driver: normal #[test] target that spawns the real
+# binary with --test-function <name> and checks the exit code.
+# See plans/testframework-poc.md Section 9.
+[[test]]
+name = "world_tests_driver"
+path = "tests/real_app_ITs/world_tests_driver.rs"
+harness = true
+
+# The three panic-expecting tests (zero players, two players, collision
+# detection) expect `build_app` to panic during world validation. In Z2
+# the app is constructed in `main()` before the test function runs, so
+# the panic would exit the binary with a non-zero code that the driver
+# reads as failure — the test could not distinguish "expected panic"
+# from "unexpected failure". They stay as harness=false targets that
+# use `catch_unwind` to verify the panic message.
+[[test]]
+name = "world_player_controlled_zero"
+path = "tests/world_player_controlled_zero.rs"
+harness = false
+
+[[test]]
+name = "world_player_controlled_two"
+path = "tests/world_player_controlled_two.rs"
+harness = false
+
+[[test]]
+name = "world_collision_detection"
+path = "tests/world_collision_detection.rs"
+harness = false
+
+[lints]
+workspace = true

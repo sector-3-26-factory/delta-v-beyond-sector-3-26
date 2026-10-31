@@ -20,7 +20,7 @@ fn test_collision_shape_sphere_constructor(_app: &mut App) {
         CollisionShapeType::Sphere { radius } => {
             assert!((radius - 5.0).abs() < 0.01, "sphere radius should be 5.0");
         }
-        _ => assert!(false, "expected sphere shape"),
+        _ => unreachable!("expected sphere shape"),
     }
     assert!(
         shape.offset == Vec3::new(1.0, 2.0, 3.0),
@@ -38,7 +38,7 @@ fn test_collision_shape_box_constructor(_app: &mut App) {
             half_extents == he,
             "half_extents should be {he:?}, got {half_extents:?}"
         ),
-        _ => assert!(false, "expected box shape"),
+        _ => unreachable!("expected box shape"),
     }
     assert!(
         shape.offset == offset,

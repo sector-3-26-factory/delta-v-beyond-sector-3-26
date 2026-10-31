@@ -1,6 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 //! Floating origin recentering tests.
+//!
 //
 //! Each test function is registered in the global registry via
 //! [`init_registry`] and called by the binary's `run_test_function()`

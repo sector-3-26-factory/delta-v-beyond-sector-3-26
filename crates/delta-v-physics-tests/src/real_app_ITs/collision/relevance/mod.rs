@@ -22,7 +22,6 @@ use delta_v_physics::collision::{
     CollisionDetected, CollisionLayersComponent, CollisionShape, CollisionShapeData, DynamicBody,
 };
 use delta_v_physics::rigid_body::RigidBody;
-use delta_v_physics::systems::PhysicsSet;
 use delta_v_test_framework::run_fixed_update;
 use delta_v_types::collision::layers;
 

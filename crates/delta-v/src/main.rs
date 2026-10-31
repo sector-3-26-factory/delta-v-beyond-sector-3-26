@@ -109,11 +109,22 @@ fn main() {
 /// Exits 0 on success, 1 on failure.
 #[cfg(feature = "test")]
 fn run_test_function(app: &mut bevy::prelude::App, test_name: &str) {
-    use delta_v_physics_tests::real_app_ITs::init_registry;
+    use delta_v_physics_tests::real_app_ITs::init_registry as init_physics;
+    use delta_v_ships_tests::real_app_ITs::init_registry as init_ships;
     use delta_v_test_framework::all_tests;
+    use delta_v_ui_tests::real_app_ITs::init_registry as init_ui;
+    use delta_v_world_tests_tests::real_app_ITs::init_registry as init_world;
 
-    // Register all test functions before looking up the requested one.
-    init_registry();
+    // Settle the render graph so render-dependent resources
+    // (RenderDevice, etc.) are available before the test function runs.
+    delta_v_test_framework::settle_render(app, 60);
+
+    // Register all test functions from every per-domain test crate
+    // before looking up the requested one.
+    init_physics();
+    init_ships();
+    init_ui();
+    init_world();
 
     for entry in all_tests() {
         if entry.name == test_name {

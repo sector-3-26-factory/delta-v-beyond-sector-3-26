@@ -160,7 +160,7 @@ fn spawn_fade_test_window_system(
 fn main() {
     let mut app = delta_v_test_framework::make_app(200, || {
         build_app(AppConfig {
-            asset_root_suffix: "crates/delta-v-ui/tests/fixtures/assets".to_string(),
+            asset_root_suffix: "crates/delta-v-ui-tests/tests/fixtures/assets".to_string(),
             world_name: Some("test".to_string()),
             log_filter: Some("warn,delta_v=debug".to_string()),
         })

@@ -1,6 +1,7 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 //
 //! Multi-tick physics integration tests and floating origin tests.
+//!
 //! Updated for SOI gravity model per ADR-0055.
 //
 //! Each test function is registered in the global registry via
@@ -160,7 +161,6 @@ fn test_soi_celestial_body_no_self_gravity(app: &mut App) {
 }
 
 fn test_soi_gravity_inside_soi(app: &mut App) {
-    let planet_mass = 5.972e24_f32;
     let _planet_id = spawn_earth(app);
 
     let ship_id = app

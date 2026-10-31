@@ -21,7 +21,9 @@ members = [
     "crates/delta-v-ui",
     "crates/delta-v-test-framework",
     "crates/delta-v-physics-tests",
-    "crates/delta-v-world-tests",
+    "crates/delta-v-ships-tests",
+    "crates/delta-v-ui-tests",
+    "crates/delta-v-world-tests-tests",
 ]
 resolver = "2"
 
@@ -75,7 +77,9 @@ delta-v-world = { path = "crates/delta-v-world", version = "0.0.1" }
 delta-v-ui = { path = "crates/delta-v-ui", version = "0.0.1" }
 delta-v-test-framework = { path = "crates/delta-v-test-framework", version = "0.0.1" }
 delta-v-physics-tests = { path = "crates/delta-v-physics-tests", version = "0.0.1" }
-delta-v-world-tests = { path = "crates/delta-v-world-tests", version = "0.0.1" }
+delta-v-ships-tests = { path = "crates/delta-v-ships-tests", version = "0.0.1" }
+delta-v-ui-tests = { path = "crates/delta-v-ui-tests", version = "0.0.1" }
+delta-v-world-tests-tests = { path = "crates/delta-v-world-tests-tests", version = "0.0.1" }
 leafwing-input-manager = "0.21"
 
 [workspace.lints.rust]

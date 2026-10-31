@@ -3491,11 +3491,14 @@ dependencies = [
  "delta-v-physics-tests",
  "delta-v-propulsion",
  "delta-v-ships",
+ "delta-v-ships-tests",
  "delta-v-stations",
  "delta-v-test-framework",
  "delta-v-ui",
+ "delta-v-ui-tests",
  "delta-v-weapons",
  "delta-v-world",
+ "delta-v-world-tests-tests",
  "tracing",
 ]
 
@@ -3665,6 +3668,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "delta-v-ships-tests"
+version = "0.0.1"
+dependencies = [
+ "bevy 0.19.1",
+ "delta-v-app",
+ "delta-v-core",
+ "delta-v-physics",
+ "delta-v-ships",
+ "delta-v-test-framework",
+ "delta-v-types",
+ "leafwing-input-manager",
+ "tracing",
+]
+
+[[package]]
 name = "delta-v-spawn"
 version = "0.0.1"
 dependencies = [
@@ -3723,6 +3741,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "delta-v-ui-tests"
+version = "0.0.1"
+dependencies = [
+ "bevy 0.19.1",
+ "bevy_winit",
+ "delta-v-app",
+ "delta-v-core",
+ "delta-v-test-framework",
+ "delta-v-types",
+ "delta-v-ui",
+ "image",
+ "leafwing-input-manager",
+ "tracing",
+]
+
+[[package]]
 name = "delta-v-weapons"
 version = "0.0.1"
 dependencies = [
@@ -3753,7 +3787,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "delta-v-world-tests"
+name = "delta-v-world-tests-tests"
 version = "0.0.1"
 dependencies = [
  "bevy 0.19.1",
@@ -3761,7 +3795,9 @@ dependencies = [
  "delta-v-core",
  "delta-v-physics",
  "delta-v-test-framework",
+ "delta-v-types",
  "delta-v-world",
+ "tracing",
 ]
 
 [[package]]
