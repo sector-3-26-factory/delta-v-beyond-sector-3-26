@@ -32,23 +32,7 @@ bevy_winit = { workspace = true }
 delta-v-app = { workspace = true }
 delta-v-test-framework = { workspace = true }
 
-# Strategy Z2 test driver: normal #[test] target that spawns the real
-# binary with --test-function <name> and checks the exit code.
-# See plans/testframework-poc.md Section 9.
-[[test]]
-name = "ui_tests_driver"
-path = "tests/real_app_ITs/ui_tests_driver.rs"
-harness = true
 
-# Screenshot visual regression test that runs inside `app.run()`.
-# NOT compatible with the Z2 `fn(&mut App)` registry model — it needs
-# `MessageWriter<AppExit>` and `ResMut<ScreenshotCaptureState>` inside
-# the `Update` schedule. Kept as harness=false so it runs on the main
-# thread with WinitPlugin.
-[[test]]
-name = "ui_fadezone_tests"
-path = "tests/fadezone_tests.rs"
-harness = false
 
 [lints]
 workspace = true

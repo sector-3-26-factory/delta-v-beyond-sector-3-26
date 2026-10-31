@@ -62,7 +62,12 @@ pub fn init_registry() {
 }
 
 fn do_register(name: &'static str, func: fn(&mut App)) {
-    let entry = delta_v_test_framework::TestEntry { name, func };
+    let entry = delta_v_test_framework::TestEntry {
+        name,
+        func,
+        panic_expected: false,
+        panic_message: "",
+    };
     let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
     delta_v_test_framework::register(leaked);
 }

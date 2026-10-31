@@ -21,18 +21,6 @@ bench = []
 # Strategy Z2 test driver: normal #[test] target that spawns the real
 # binary with --test-function <name> and checks the exit code.
 # See plans/testframework-poc.md Section 9 and ADR-0061.
-#
-# All integration tests that previously lived in `tests/*.rs` as
-# `harness = false` targets have been migrated to the Z2 test function
-# registry (see `crates/delta-v-physics-tests/src/real_app_ITs/`).
-# They are now run by spawning the `delta-v` binary with
-# `--test-function <name>`; this driver target is the normal cargo test
-# that does the spawning.
-[[test]]
-name = "sphere_sphere_tests_driver"
-path = "tests/sphere_sphere_tests_driver.rs"
-harness = true
-
 [dependencies]
 bevy = { workspace = true }
 bevy_math = { workspace = true }

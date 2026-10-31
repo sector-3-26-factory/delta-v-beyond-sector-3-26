@@ -108,6 +108,13 @@ pub struct TestEntry {
     pub name: &'static str,
     /// The test function to call with `&mut App`.
     pub func: fn(&mut App),
+    /// If `true`, the test is expected to panic during `build_app` /
+    /// `settle_render` in `main.rs`. The panic message must contain
+    /// [`TestEntry::panic_message`] for the test to pass.
+    pub panic_expected: bool,
+    /// Substring that the panic message must contain when
+    /// `panic_expected` is `true`. Ignored otherwise.
+    pub panic_message: &'static str,
 }
 
 /// A wrapper around a raw pointer to `TestEntry` that is `Send + Sync`.
@@ -184,6 +191,16 @@ macro_rules! register_test {
         ::delta_v_test_framework::register(::delta_v_test_framework::TestEntry {
             name: $name,
             func: $fn,
+            panic_expected: false,
+            panic_message: "",
+        })
+    };
+    ($name:expr, $fn:path, $panic_msg:expr) => {
+        ::delta_v_test_framework::register(::delta_v_test_framework::TestEntry {
+            name: $name,
+            func: $fn,
+            panic_expected: true,
+            panic_message: $panic_msg,
         })
     };
 }

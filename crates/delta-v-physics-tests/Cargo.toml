@@ -32,13 +32,6 @@ delta-v-app = { workspace = true, optional = true }
 [dev-dependencies]
 delta-v-test-framework = { workspace = true }
 
-# Strategy Z2 test driver: normal #[test] target that spawns the real
-# binary with --test-function <name> and checks the exit code.
-# See plans/testframework-poc.md Section 9.
-[[test]]
-name = "sphere_sphere_tests"
-path = "tests/real_app_ITs/collision/sphere_sphere/test_driver.rs"
-harness = true
 
 [lints]
 workspace = true

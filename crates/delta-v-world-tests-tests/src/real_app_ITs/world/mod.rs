@@ -251,11 +251,66 @@ pub fn init_registry() {
         "world::belt_streaming_player_far",
         test_belt_streaming_player_far,
     );
+    // These three tests EXPECT a panic during `build_app` / `settle_render`
+    // in `main.rs`. The panic happens during app construction, before this
+    // function runs, so the function body is a no-op. The binary wraps
+    // construction in `catch_unwind` and checks the panic message.
+    do_register_panic(
+        "world::player_controlled_zero",
+        test_player_controlled_zero_panic,
+        "exactly one entity must have player_controlled: true",
+    );
+    do_register_panic(
+        "world::player_controlled_two",
+        test_player_controlled_two_panic,
+        "exactly one entity must have player_controlled: true",
+    );
+    do_register_panic(
+        "world::collision_detection",
+        test_collision_detection_panic,
+        "overlapping collision shapes",
+    );
 }
+
+/// No-op test function for panic-expecting tests.
+///
+/// The panic happens during `build_app` / `settle_render` in `main.rs`,
+/// which is wrapped in `catch_unwind` by `run_test_panic`. This function
+/// is never actually called — it exists only to satisfy the registry's
+/// `fn(&mut App)` signature.
+fn test_player_controlled_zero_panic(_app: &mut App) {}
+
+/// No-op test function for panic-expecting tests. See above.
+fn test_player_controlled_two_panic(_app: &mut App) {}
+
+/// No-op test function for panic-expecting tests. See above.
+fn test_collision_detection_panic(_app: &mut App) {}
 
 #[cfg(feature = "test")]
 fn do_register(name: &'static str, func: fn(&mut App)) {
-    let entry = delta_v_test_framework::TestEntry { name, func };
+    let entry = delta_v_test_framework::TestEntry {
+        name,
+        func,
+        panic_expected: false,
+        panic_message: "",
+    };
+    let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
+    delta_v_test_framework::register(leaked);
+}
+
+/// Register a test function that is EXPECTED to panic during app construction.
+///
+/// `panic_msg` is the substring the panic message must contain for the test
+/// to pass. The binary wraps `build_app` + `settle_render` in `catch_unwind`
+/// and checks the message in `run_test_panic`.
+#[cfg(feature = "test")]
+fn do_register_panic(name: &'static str, func: fn(&mut App), panic_msg: &'static str) {
+    let entry = delta_v_test_framework::TestEntry {
+        name,
+        func,
+        panic_expected: true,
+        panic_message: panic_msg,
+    };
     let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
     delta_v_test_framework::register(leaked);
 }

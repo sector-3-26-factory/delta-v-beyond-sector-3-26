@@ -18,7 +18,7 @@ fn run_test(name: &str) -> Result<(), String> {
         .arg("--world")
         .arg("floating_origin")
         .arg("--asset-root")
-        .arg("crates/delta-v-physics/tests/fixtures/assets")
+        .arg("crates/delta-v-physics-tests/tests/fixtures")
         .spawn()
         .map_err(|e| format!("failed to spawn: {e}"))?;
 

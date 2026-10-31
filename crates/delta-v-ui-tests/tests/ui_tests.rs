@@ -10,10 +10,10 @@
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-fn run_test(name: &str) -> Result<(), String> {
+fn run_test(name: &str, mode: &str) -> Result<(), String> {
     let binary = delta_v_test_framework::ensure_binary_built();
     let mut child = Command::new(&binary)
-        .arg("--test-function")
+        .arg(mode)
         .arg(name)
         .arg("--world")
         .arg("test")
@@ -22,7 +22,7 @@ fn run_test(name: &str) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("failed to spawn: {e}"))?;
 
-    let deadline = Instant::now() + Duration::from_secs(60);
+    let deadline = Instant::now() + Duration::from_secs(120);
     loop {
         if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
             if status.success() {
@@ -40,10 +40,15 @@ fn run_test(name: &str) -> Result<(), String> {
 
 #[test]
 fn test_keybindings_menu_toggle() {
-    run_test("ui::keybindings_menu_toggle").unwrap();
+    run_test("ui::keybindings_menu_toggle", "--test-function").unwrap();
 }
 
 #[test]
 fn test_navigation_menu_toggle() {
-    run_test("ui::navigation_menu_toggle").unwrap();
+    run_test("ui::navigation_menu_toggle", "--test-function").unwrap();
+}
+
+#[test]
+fn test_fade_zones_visible() {
+    run_test("ui::fade_zones_visible", "--test-run").unwrap();
 }

@@ -10,15 +10,15 @@
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-fn run_test(name: &str, world: &str) -> Result<(), String> {
+fn run_test(name: &str, world: &str, mode: &str) -> Result<(), String> {
     let binary = delta_v_test_framework::ensure_binary_built();
     let mut child = Command::new(&binary)
-        .arg("--test-function")
+        .arg(mode)
         .arg(name)
         .arg("--world")
         .arg(world)
         .arg("--asset-root")
-        .arg("crates/delta-v-world/tests/fixtures/assets")
+        .arg("crates/delta-v-world-tests-tests/tests/fixtures")
         .spawn()
         .map_err(|e| format!("failed to spawn: {e}"))?;
 
@@ -40,25 +40,75 @@ fn run_test(name: &str, world: &str) -> Result<(), String> {
 
 #[test]
 fn test_world_loading_pipeline() {
-    run_test("world::world_loading_pipeline", "test").unwrap();
+    run_test("world::world_loading_pipeline", "test", "--test-function").unwrap();
 }
 
 #[test]
 fn test_player_controlled_validation_one() {
-    run_test("world::player_controlled_validation_one", "test").unwrap();
+    run_test(
+        "world::player_controlled_validation_one",
+        "test",
+        "--test-function",
+    )
+    .unwrap();
 }
 
 #[test]
 fn test_entity_validation() {
-    run_test("world::entity_validation", "belt_field_test").unwrap();
+    run_test(
+        "world::entity_validation",
+        "belt_field_test",
+        "--test-function",
+    )
+    .unwrap();
 }
 
 #[test]
 fn test_belt_streaming_happy_path() {
-    run_test("world::belt_streaming_happy_path", "belt_field_test").unwrap();
+    run_test(
+        "world::belt_streaming_happy_path",
+        "belt_field_test",
+        "--test-function",
+    )
+    .unwrap();
 }
 
 #[test]
 fn test_belt_streaming_player_far() {
-    run_test("world::belt_streaming_player_far", "belt_field_test").unwrap();
+    run_test(
+        "world::belt_streaming_player_far",
+        "belt_field_test",
+        "--test-function",
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_player_controlled_zero_panic() {
+    run_test(
+        "world::player_controlled_zero",
+        "test_no_players",
+        "--test-panic",
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_player_controlled_two_panic() {
+    run_test(
+        "world::player_controlled_two",
+        "test_two_players",
+        "--test-panic",
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_collision_detection_panic() {
+    run_test(
+        "world::collision_detection",
+        "test_collision",
+        "--test-panic",
+    )
+    .unwrap();
 }
