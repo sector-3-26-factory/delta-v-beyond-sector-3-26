@@ -3782,7 +3782,6 @@ dependencies = [
  "delta-v-spawn",
  "delta-v-types",
  "tempfile",
- "thiserror 2.0.21",
  "tracing",
 ]
 

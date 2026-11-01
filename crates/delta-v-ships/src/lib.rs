@@ -57,10 +57,6 @@ pub mod systems;
 #[path = "spawn_tests.rs"]
 mod spawn_tests;
 
-#[cfg(test)]
-#[path = "systems_tests.rs"]
-mod systems_tests;
-
 pub use delta_v_core::Propulsion;
 pub use delta_v_types::{
     CockpitDefinition, CockpitStation, GaugeShape, GaugeSlot, PlayerShipTemplate,

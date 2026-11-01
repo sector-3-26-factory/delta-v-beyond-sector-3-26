@@ -3,7 +3,7 @@
 //! Strategy Z2 test driver: spawns the real `delta-v` binary with
 //! `--test-function <name>` and checks the exit code.
 //!
-//! Run with: cargo test --test `world_tests_driver` -p delta-v-world-tests-tests
+//! Run with: cargo test --test `world_tests` -p delta-v-world-tests-tests
 
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
@@ -57,6 +57,26 @@ fn test_player_controlled_validation_one() {
 fn test_entity_validation() {
     run_test(
         "world::entity_validation",
+        "belt_field_test",
+        "--test-function",
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_every_shipped_world_body_spawns_with_its_declared_mass() {
+    run_test(
+        "world::every_shipped_world_body_spawns_with_its_declared_mass",
+        "belt_field_test",
+        "--test-function",
+    )
+    .unwrap();
+}
+
+#[test]
+fn test_belt_and_field_entities_spawn_and_generate_asteroids_with_mass() {
+    run_test(
+        "world::belt_and_field_entities_spawn_and_generate_asteroids_with_mass",
         "belt_field_test",
         "--test-function",
     )

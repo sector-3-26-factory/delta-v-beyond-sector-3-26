@@ -1,95 +1,64 @@
 // AGENTS: before modifying this file, read AGENTS.md at the repository root.
 
-#![cfg(test)]
-
-//! Performance benchmarks for physics system scaling.
+//! Approach-comparison benchmarks for physics, converted to Strategy Z2.
 //!
-//! Measures CPU time per frame for different object counts to identify bottlenecks.
+//! Per ADR-0056 the directory name is the benchmark purpose, and every file
+//! in it MUST declare that same purpose in its `BENCHMARK-PURPOSE` header.
+//! This module is compiled into the binary behind the `bench` feature flag,
+//! which is independent of `test` so benchmarks are excluded from day-to-day
+//! `cargo test --workspace`. They still run on the same real plugin stack:
+//! the binary is built with `--features test,bench`.
+//!
+//! Each benchmark is a `fn(app: &mut App)` registered via `init_registry()`,
+//! with timing measured via `std::time::Instant` around `run_fixed_update`
+//! calls. The shared `App` is render-settled by `main.rs` before dispatch.
+//!
+//! Run them with:
+//! `cargo test --test benchmarks_tests_driver --features bench -p delta-v-physics-tests`
 //!
 //! BENCHMARK-PURPOSE: approach-comparison
 //! BENCHMARK-BASELINE: sibling-variants-same-run
 //! BENCHMARK-SCENARIO: physics-capacity-curve
-//! BENCHMARK-RUN: cargo test -p delta-v-physics --features bench -- --ignored --nocapture
-//!
-//! Per ADR-0056 this file is an `approach-comparison` benchmark: every run
-//! measures sibling entity counts in one process, so the numbers are
-//! relative to each other and the hardware is irrelevant. `criterion` is
-//! deliberately not used here — it compares a benchmark against its own
-//! previous run, which is a `regression-tracking` baseline, not this one.
+//! BENCHMARK-RUN: cargo test --test benchmarks_tests_driver --features bench -p delta-v-physics-tests -- --ignored --nocapture
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)]
+#![cfg(feature = "bench")]
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::panic,
+    clippy::float_cmp,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::used_underscore_binding,
+    unsafe_code
+)]
 
 use bevy::prelude::*;
-use bevy::time::TimePlugin;
 use std::time::Instant;
 
-use crate::CollisionDetected;
-use crate::celestial::{Moon, OrbitalBody, Planet, Sun};
-use crate::collision::{CollisionLayersComponent, CollisionShape, CollisionShapeType};
-use crate::rigid_body::{MassSource, RigidBody};
-use bevy::prelude::With;
-
-use crate::systems::{
-    PhysicsSet, clear_accumulators_system, gravity_system, integrate_angular_velocity_system,
-    integrate_position_system, integrate_velocity_system,
-};
+use delta_v_physics::celestial::{Moon, OrbitalBody, Planet, Sun};
+use delta_v_physics::collision::{CollisionLayersComponent, CollisionShape, CollisionShapeType};
+use delta_v_physics::rigid_body::{MassSource, RigidBody};
+use delta_v_test_framework::{reset_fixed_time, run_fixed_update};
 use delta_v_types::CollisionShapeData;
+use delta_v_types::collision::layers;
 
-/// Builds a minimal Bevy app with the full physics pipeline registered.
-fn build_physics_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.configure_sets(
-        FixedUpdate,
-        (
-            PhysicsSet::AccumulateForces,
-            PhysicsSet::IntegrateVelocity,
-            PhysicsSet::IntegratePosition,
-            PhysicsSet::ClearAccumulators,
-        )
-            .chain(),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (
-            gravity_system.in_set(PhysicsSet::AccumulateForces),
-            integrate_velocity_system.in_set(PhysicsSet::IntegrateVelocity),
-            integrate_angular_velocity_system.in_set(PhysicsSet::IntegrateVelocity),
-            integrate_position_system.in_set(PhysicsSet::IntegratePosition),
-            clear_accumulators_system.in_set(PhysicsSet::ClearAccumulators),
-        ),
-    );
-    app
-}
-
-fn run_fixed_update(app: &mut App) {
-    let fixed_duration = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Real>>()
-        .advance_by(fixed_duration);
-    app.update();
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /// Converts a benchmark count to `f32`.
-///
-/// `f32` implements `From` only for the integer types it can represent
-/// exactly, so the conversion goes through `u16` and the narrowing is a
-/// checked conversion rather than an `as` cast. Every count in this file is
-/// orders of magnitude below `u16::MAX`; exceeding it panics instead of
-/// silently producing a wrong benchmark layout.
 fn count_as_f32(value: usize) -> f32 {
     f32::from(u16::try_from(value).expect("benchmark count must fit in u16"))
 }
 
 /// Converts a sample count to `f64` for averaging frame times.
-///
-/// `f64` represents every `u32` exactly, so this conversion is lossless.
 fn len_as_f64(value: usize) -> f64 {
     f64::from(u32::try_from(value).expect("sample count must fit in u32"))
 }
 
-/// Spawns a planet (celestial body with SOI)
+/// Spawns a planet (celestial body with SOI).
 fn spawn_planet(app: &mut App, position: Vec3, mass: f32, orbital_distance: f32) -> Entity {
     app.world_mut()
         .spawn((
@@ -113,7 +82,7 @@ fn spawn_planet(app: &mut App, position: Vec3, mass: f32, orbital_distance: f32)
         .id()
 }
 
-/// Spawns a dynamic body (ship/asteroid) that feels gravity
+/// Spawns a dynamic body (ship/asteroid) that feels gravity.
 fn spawn_dynamic_body(app: &mut App, position: Vec3, mass: f32) -> Entity {
     app.world_mut()
         .spawn((
@@ -135,40 +104,45 @@ struct BenchmarkResult {
     frames_measured: usize,
 }
 
-/// Runs a benchmark with the given number of celestial and dynamic bodies
-fn run_benchmark(num_celestial: usize, num_dynamic: usize, num_frames: usize) -> BenchmarkResult {
-    let mut app = build_physics_app();
-
+/// Runs a benchmark with the given number of celestial and dynamic bodies.
+fn run_benchmark(
+    app: &mut App,
+    num_celestial: usize,
+    num_dynamic: usize,
+    num_frames: usize,
+) -> BenchmarkResult {
     // Spawn celestial bodies (Sun + planets)
     for i in 0..num_celestial {
         let index = count_as_f32(i);
-        let distance = 1.496e11 * (index + 1.0); // Spread out along X axis
-        let mass = 5.972e24 * (index + 1.0); // Earth mass scaled
-        spawn_planet(&mut app, Vec3::new(distance, 0.0, 0.0), mass, distance);
+        let distance = 1.496e11 * (index + 1.0);
+        let mass = 5.972e24 * (index + 1.0);
+        spawn_planet(app, Vec3::new(distance, 0.0, 0.0), mass, distance);
     }
 
     // Spawn dynamic bodies (ships/asteroids) distributed around
     for i in 0..num_dynamic {
         let index = count_as_f32(i);
         let angle = index * std::f32::consts::TAU / count_as_f32(num_dynamic);
-        let radius = index.mul_add(100_000.0, 6.371e6 + 400_000.0); // Different altitudes
+        let radius = index.mul_add(100_000.0, 6.371e6 + 400_000.0);
         let x = radius * angle.cos();
         let y = radius * angle.sin();
-        spawn_dynamic_body(&mut app, Vec3::new(x, y, 0.0), 1000.0);
+        spawn_dynamic_body(app, Vec3::new(x, y, 0.0), 1000.0);
     }
 
     // Warm-up frames
     for _ in 0..10 {
-        run_fixed_update(&mut app);
+        reset_fixed_time(app);
+        run_fixed_update(app);
     }
 
     // Measure frames
     let mut frame_times = Vec::with_capacity(num_frames);
     for _ in 0..num_frames {
+        reset_fixed_time(app);
         let start = Instant::now();
-        run_fixed_update(&mut app);
+        run_fixed_update(app);
         let elapsed = start.elapsed();
-        frame_times.push(elapsed.as_secs_f64() * 1000.0); // Convert to ms
+        frame_times.push(elapsed.as_secs_f64() * 1000.0);
     }
 
     let avg = frame_times.iter().sum::<f64>() / len_as_f64(frame_times.len());
@@ -183,100 +157,6 @@ fn run_benchmark(num_celestial: usize, num_dynamic: usize, num_frames: usize) ->
         min_frame_time_ms: min,
         max_frame_time_ms: max,
         frames_measured: num_frames,
-    }
-}
-
-#[test]
-fn benchmark_scaling() {
-    // Test configurations: (celestial_bodies, dynamic_bodies)
-    let configs = [
-        (1, 10),   // 11 total
-        (1, 20),   // 21 total
-        (1, 50),   // 51 total
-        (1, 100),  // 101 total
-        (1, 200),  // 201 total
-        (1, 300),  // 301 total
-        (5, 10),   // 15 total
-        (5, 50),   // 55 total
-        (5, 100),  // 105 total
-        (5, 200),  // 205 total
-        (10, 10),  // 20 total
-        (10, 50),  // 60 total
-        (10, 100), // 110 total
-        (10, 200), // 210 total
-    ];
-
-    println!("\n=== PHYSICS PERFORMANCE BENCHMARK ===");
-    println!(
-        "{:>8} {:>8} {:>8} {:>12} {:>12} {:>12} {:>10}",
-        "Celest", "Dynamic", "Total", "Avg(ms)", "Min(ms)", "Max(ms)", "Frames"
-    );
-    println!("{}", "-".repeat(80));
-
-    let mut results = Vec::new();
-
-    for (celestial, dynamic) in configs {
-        let result = run_benchmark(celestial, dynamic, 100);
-        println!(
-            "{:>8} {:>8} {:>8} {:>12.3} {:>12.3} {:>12.3} {:>10}",
-            result.num_celestial_bodies,
-            result.num_dynamic_bodies,
-            result.total_objects,
-            result.avg_frame_time_ms,
-            result.min_frame_time_ms,
-            result.max_frame_time_ms,
-            result.frames_measured
-        );
-        results.push(result);
-    }
-
-    println!("\n=== SCALING ANALYSIS ===");
-    println!("Fixed 1 celestial, varying dynamic:");
-    for r in &results {
-        if r.num_celestial_bodies == 1 {
-            println!(
-                "  {} dynamic: {:.3} ms/frame",
-                r.num_dynamic_bodies, r.avg_frame_time_ms
-            );
-        }
-    }
-
-    println!("\nFixed 5 celestial, varying dynamic:");
-    for r in &results {
-        if r.num_celestial_bodies == 5 {
-            println!(
-                "  {} dynamic: {:.3} ms/frame",
-                r.num_dynamic_bodies, r.avg_frame_time_ms
-            );
-        }
-    }
-
-    println!("\nFixed 10 celestial, varying dynamic:");
-    for r in &results {
-        if r.num_celestial_bodies == 10 {
-            println!(
-                "  {} dynamic: {:.3} ms/frame",
-                r.num_dynamic_bodies, r.avg_frame_time_ms
-            );
-        }
-    }
-
-    // Check for concerning performance
-    for r in &results {
-        if r.avg_frame_time_ms > 16.67 {
-            // 60 FPS budget
-            println!(
-                "\n⚠️  WARNING: {} objects exceeds 60 FPS budget ({:.2} ms > 16.67 ms)",
-                r.total_objects, r.avg_frame_time_ms
-            );
-        }
-        if r.avg_frame_time_ms > 33.33 {
-            // 30 FPS budget
-            println!(
-                "🚨 CRITICAL: {} objects exceeds 30 FPS budget ({:.2} ms > 33.33 ms)",
-                r.total_objects, r.avg_frame_time_ms
-            );
-        }
     }
 }
 
@@ -351,8 +231,6 @@ fn spawn_benchmark_planets(app: &mut App, sun_id: Entity) {
 
 /// Spawns up to `num_moons` benchmark moons, spread across the planets.
 fn spawn_benchmark_moons(app: &mut App, num_moons: usize) {
-    // Spawn moons (up to num_moons)
-    // Distribute them around the planets
     let moons_per_planet = num_moons.div_ceil(SOLAR_SYSTEM_PLANETS.len());
     let mut moon_count = 0;
 
@@ -362,7 +240,6 @@ fn spawn_benchmark_moons(app: &mut App, num_moons: usize) {
                 break;
             }
             let index = count_as_f32(moon_idx);
-            // Different orbital radii
             let moon_distance = index.mul_add(5e7, planet_distance + 1e8);
             let moon_mass = index.mul_add(1e19, 1e20);
             let moon_period = 24.0 * 3600.0 * (index + 1.0) * 0.1;
@@ -377,7 +254,7 @@ fn spawn_benchmark_moons(app: &mut App, num_moons: usize) {
                     animations_enabled: false,
                 },
                 OrbitalBody {
-                    orbital_parent: Entity::PLACEHOLDER, // Would be resolved to planet in real spawn
+                    orbital_parent: Entity::PLACEHOLDER,
                     orbital_distance: moon_distance,
                     orbital_period: moon_period,
                     orbital_eccentricity: 0.001,
@@ -393,13 +270,115 @@ fn spawn_benchmark_moons(app: &mut App, num_moons: usize) {
     }
 }
 
-/// Benchmark that simulates the actual solar system world loading
-/// This tests the full pipeline including orbital motion for all bodies
-#[test]
-fn benchmark_solar_system_simulation() {
+/// Runs a benchmark with the given number of celestial and dynamic bodies.
+fn run_scaling_benchmark(
+    app: &mut App,
+    num_celestial: usize,
+    num_dynamic: usize,
+    num_frames: usize,
+) -> BenchmarkResult {
+    run_benchmark(app, num_celestial, num_dynamic, num_frames)
+}
+
+/// Benchmark scaling: 14 configs of (celestial, dynamic) bodies.
+///
+/// Converted from `benchmark_scaling` in `performance_benchmarks_tests.rs`.
+/// The shared `App` is already render-settled by `main.rs`; we spawn bodies
+/// into it and measure `run_fixed_update` cost directly.
+pub fn benchmark_scaling(app: &mut App) {
     let configs = [
-        10, 20, 50, 100, 200, 289, // 289 = full solar system moons
+        (1, 10),
+        (1, 20),
+        (1, 50),
+        (1, 100),
+        (1, 200),
+        (1, 300),
+        (5, 10),
+        (5, 50),
+        (5, 100),
+        (5, 200),
+        (10, 10),
+        (10, 50),
+        (10, 100),
+        (10, 200),
     ];
+
+    println!("\n=== PHYSICS PERFORMANCE BENCHMARK ===");
+    println!(
+        "{:>8} {:>8} {:>8} {:>12} {:>12} {:>12} {:>10}",
+        "Celest", "Dynamic", "Total", "Avg(ms)", "Min(ms)", "Max(ms)", "Frames"
+    );
+    println!("{}", "-".repeat(80));
+
+    let mut results = Vec::new();
+
+    for (celestial, dynamic) in configs {
+        let result = run_scaling_benchmark(app, celestial, dynamic, 100);
+        println!(
+            "{:>8} {:>8} {:>8} {:>12.3} {:>12.3} {:>12.3} {:>10}",
+            result.num_celestial_bodies,
+            result.num_dynamic_bodies,
+            result.total_objects,
+            result.avg_frame_time_ms,
+            result.min_frame_time_ms,
+            result.max_frame_time_ms,
+            result.frames_measured
+        );
+        results.push(result);
+    }
+
+    println!("\n=== SCALING ANALYSIS ===");
+    println!("Fixed 1 celestial, varying dynamic:");
+    for r in &results {
+        if r.num_celestial_bodies == 1 {
+            println!(
+                "  {} dynamic: {:.3} ms/frame",
+                r.num_dynamic_bodies, r.avg_frame_time_ms
+            );
+        }
+    }
+
+    println!("\nFixed 5 celestial, varying dynamic:");
+    for r in &results {
+        if r.num_celestial_bodies == 5 {
+            println!(
+                "  {} dynamic: {:.3} ms/frame",
+                r.num_dynamic_bodies, r.avg_frame_time_ms
+            );
+        }
+    }
+
+    println!("\nFixed 10 celestial, varying dynamic:");
+    for r in &results {
+        if r.num_celestial_bodies == 10 {
+            println!(
+                "  {} dynamic: {:.3} ms/frame",
+                r.num_dynamic_bodies, r.avg_frame_time_ms
+            );
+        }
+    }
+
+    for r in &results {
+        if r.avg_frame_time_ms > 16.67 {
+            println!(
+                "\nWARNING: {} objects exceeds 60 FPS budget ({:.2} ms > 16.67 ms)",
+                r.total_objects, r.avg_frame_time_ms
+            );
+        }
+        if r.avg_frame_time_ms > 33.33 {
+            println!(
+                "CRITICAL: {} objects exceeds 30 FPS budget ({:.2} ms > 33.33 ms)",
+                r.total_objects, r.avg_frame_time_ms
+            );
+        }
+    }
+}
+
+/// Benchmark that simulates the actual solar system world loading.
+///
+/// Converted from `benchmark_solar_system_simulation` in `performance_benchmarks_tests.rs`.
+pub fn benchmark_solar_system_simulation(app: &mut App) {
+    let configs = [10, 20, 50, 100, 200, 289];
 
     println!("\n=== SOLAR SYSTEM SIMULATION BENCHMARK (with orbital motion) ===");
     println!(
@@ -408,27 +387,20 @@ fn benchmark_solar_system_simulation() {
     );
 
     for num_moons in configs {
-        let mut app = build_physics_app();
+        let sun_id = spawn_benchmark_sun(app);
+        spawn_benchmark_planets(app, sun_id);
+        spawn_benchmark_moons(app, num_moons);
 
-        // Spawn Sun
-        let sun_id = spawn_benchmark_sun(&mut app);
-
-        // Spawn planets (8 planets)
-        spawn_benchmark_planets(&mut app, sun_id);
-
-        // Spawn moons (up to num_moons), distributed around the planets
-        spawn_benchmark_moons(&mut app, num_moons);
-
-        // Warm-up
         for _ in 0..10 {
-            run_fixed_update(&mut app);
+            reset_fixed_time(app);
+            run_fixed_update(app);
         }
 
-        // Measure
         let mut times = Vec::new();
         for _ in 0..100 {
+            reset_fixed_time(app);
             let start = Instant::now();
-            run_fixed_update(&mut app);
+            run_fixed_update(app);
             times.push(start.elapsed().as_secs_f64() * 1000.0);
         }
 
@@ -438,7 +410,7 @@ fn benchmark_solar_system_simulation() {
 
         println!(
             "{:>8} {:>12.3} {:>12.3} {:>12.3} {:>10}",
-            num_moons + 9, // 1 sun + 8 planets + moons
+            num_moons + 9,
             avg,
             min,
             max,
@@ -447,9 +419,10 @@ fn benchmark_solar_system_simulation() {
     }
 }
 
-#[test]
-fn benchmark_gravity_system_only() {
-    // Isolate just the gravity system to measure its cost
+/// Benchmark isolating just the gravity system cost.
+///
+/// Converted from `benchmark_gravity_system_only` in `performance_benchmarks_tests.rs`.
+pub fn benchmark_gravity_system_only(app: &mut App) {
     let configs = vec![
         (1, 10),
         (1, 50),
@@ -473,17 +446,6 @@ fn benchmark_gravity_system_only() {
     );
 
     for (celestial, dynamic) in configs {
-        // Build fresh app for each configuration (App doesn't implement Clone)
-        let mut app = App::new();
-        app.add_plugins(TimePlugin);
-        app.insert_resource(Time::<Fixed>::from_hz(60.0));
-        app.configure_sets(FixedUpdate, (PhysicsSet::AccumulateForces,));
-        app.add_systems(
-            FixedUpdate,
-            gravity_system.in_set(PhysicsSet::AccumulateForces),
-        );
-
-        // Spawn celestial bodies
         for i in 0..celestial {
             let index = count_as_f32(i);
             let distance = 1.496e11 * (index + 1.0);
@@ -508,7 +470,6 @@ fn benchmark_gravity_system_only() {
             ));
         }
 
-        // Spawn dynamic bodies
         for i in 0..dynamic {
             let index = count_as_f32(i);
             let angle = index * std::f32::consts::TAU / count_as_f32(dynamic);
@@ -521,24 +482,16 @@ fn benchmark_gravity_system_only() {
             ));
         }
 
-        // Warm-up
         for _ in 0..10 {
-            let fixed_duration = app.world().resource::<Time<Fixed>>().timestep();
-            app.world_mut()
-                .resource_mut::<Time<Real>>()
-                .advance_by(fixed_duration);
-            app.update();
+            reset_fixed_time(app);
+            run_fixed_update(app);
         }
 
-        // Measure
         let mut times = Vec::new();
         for _ in 0..100 {
+            reset_fixed_time(app);
             let start = Instant::now();
-            let fixed_duration = app.world().resource::<Time<Fixed>>().timestep();
-            app.world_mut()
-                .resource_mut::<Time<Real>>()
-                .advance_by(fixed_duration);
-            app.update();
+            run_fixed_update(app);
             times.push(start.elapsed().as_secs_f64() * 1000.0);
         }
 
@@ -560,50 +513,18 @@ fn benchmark_gravity_system_only() {
 
 // ---------------------------------------------------------------------------
 // Collision detection benchmark
-//
-// `collision_detection_system` is O(n^2) over every body carrying
-// RigidBody + Transform + CollisionShape + CollisionLayersComponent. The other
-// benchmarks in this file deliberately exclude it, so they cannot show the cost
-// that a large asteroid belt would actually incur.
 // ---------------------------------------------------------------------------
-
-/// Builds an app with collision detection and response registered.
-fn build_collision_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(TimePlugin);
-    app.insert_resource(Time::<Fixed>::from_hz(60.0));
-    app.add_message::<CollisionDetected>();
-    app.configure_sets(FixedUpdate, (PhysicsSet::AccumulateForces,));
-    app.add_systems(
-        FixedUpdate,
-        (
-            crate::collision_detection_system,
-            crate::collision_response_system,
-        )
-            .in_set(PhysicsSet::AccumulateForces),
-    );
-    app
-}
 
 /// Deterministic 32-bit LCG so belt layouts are reproducible across runs.
 struct Lcg(u64);
 
 impl Lcg {
-    /// Returns a pseudo-random value in `[0, 1)`.
     fn next_f32(&mut self) -> f32 {
         self.0 = self
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        // `>> 40` leaves exactly 24 significant bits, which is the full f32
-        // mantissa, so the cast below is exact and the result is in [0, 1).
-        // `self.0` is `u64`, so narrowing it to `u32` is a truncation cast,
-        // not a precision-loss cast; that is why this allow names
-        // `cast_possible_truncation` while the `u32 -> f32` conversion below
-        // names `cast_precision_loss`.
-        #[allow(clippy::cast_possible_truncation)]
         let bits = (self.0 >> 40) as u32;
-        #[allow(clippy::cast_precision_loss)]
         let value = bits as f32;
         value / 16_777_216.0
     }
@@ -613,21 +534,12 @@ impl Lcg {
 const AU: f32 = 1.496e11;
 
 /// Spawns `count` asteroids spread across a main-belt-like volume.
-///
-/// Semi-major axis is sampled across 2.1-3.3 AU with a golden-angle
-/// distribution in longitude, and a small vertical thickness, so bodies are
-/// mostly far enough apart that few actual collisions occur. The O(n^2) pair
-/// loop runs regardless of whether pairs collide, so this measures the
-/// detection cost rather than a degenerate all-overlapping case.
 fn spawn_belt(app: &mut App, count: usize) {
     let golden_angle = std::f32::consts::PI * (3.0 - 5.0_f32.sqrt());
     let mut rng = Lcg(0x5DEE_CE66_D1CE_B00D);
 
     for i in 0..count {
         let a = 1.2f32.mul_add(rng.next_f32(), 2.1) * AU;
-        // `count` is at most a few thousand, far inside the exactly
-        // representable f32 range, so this cast is lossless.
-        #[allow(clippy::cast_precision_loss)]
         let theta = i as f32 * golden_angle;
         let y = (rng.next_f32() - 0.5) * 4.0e10;
 
@@ -638,34 +550,51 @@ fn spawn_belt(app: &mut App, count: usize) {
                 shape_type: CollisionShapeType::Sphere { radius: 250.0 },
                 offset: Vec3::ZERO,
             }),
-            CollisionLayersComponent::new(delta_v_types::collision::layers::ASTEROID),
+            CollisionLayersComponent::new(layers::ASTEROID),
         ));
     }
 }
 
-/// Runs exactly one `FixedUpdate` pass.
-///
-/// `run_fixed_update` drives the app through `Time<Real>` + `app.update()`,
-/// which makes the fixed-step accumulator decide how many ticks actually
-/// execute. A tick that is slower than the timestep therefore runs *more*
-/// often, and a tick faster than the timestep may run *zero* times, which
-/// silently invalidates a timing. Running the schedule directly removes that
-/// coupling and guarantees exactly one execution of the collision systems.
-fn run_one_collision_tick(app: &mut App) {
-    app.world_mut().run_schedule(FixedUpdate);
+/// Spawns `count` asteroids of which the first `relevant` carry a relevance value
+/// above the threshold and the rest carry one below it.
+fn spawn_belt_with_relevance(app: &mut App, count: usize, relevant: usize) {
+    spawn_belt(app, count);
+    let threshold = delta_v_physics::constants::COLLISION_RELEVANCE_PX;
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<Entity, With<CollisionShape>>();
+    let entities: Vec<Entity> = query.iter(app.world()).collect();
+    for (index, entity) in entities.into_iter().enumerate() {
+        let is_relevant = index < relevant;
+        let screen_radius_px = if is_relevant {
+            threshold * 10.0
+        } else {
+            threshold * 0.01
+        };
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(delta_v_physics::celestial::LazyLoadMesh {
+                min_screen_radius_px: 1.0,
+                loaded: true,
+                mesh_path: String::new(),
+                current_screen_radius_px: screen_radius_px,
+                collision_relevance_px: threshold,
+                mesh_child_entities: Vec::new(),
+            });
+    }
+}
+
+/// One variant of the relevance benchmark: how many of `count` asteroids are relevant.
+struct RelevanceVariant {
+    label: &'static str,
+    relevant: usize,
 }
 
 /// Measures collision detection cost against asteroid count.
 ///
-/// This is the benchmark that decides how many belt asteroids the engine can
-/// carry. Run it explicitly:
-///
-/// ```text
-/// cargo test -p delta-v-physics -- --ignored --nocapture benchmark_collision
-/// ```
-#[test]
-#[ignore = "performance benchmark; run explicitly with --ignored"]
-fn benchmark_collision() {
+/// Converted from `benchmark_collision` in `performance_benchmarks_tests.rs`.
+pub fn benchmark_collision(app: &mut App) {
     let configs = [500usize, 1_000, 2_000, 3_000, 4_000, 5_000, 8_000, 12_000];
     let warmup = 3;
     let frames = 15;
@@ -678,11 +607,8 @@ fn benchmark_collision() {
     println!("{}", "-".repeat(90));
 
     for count in configs {
-        let mut app = build_collision_app();
-        spawn_belt(&mut app, count);
+        spawn_belt(app, count);
 
-        // Confirm the query really sees every spawned body, otherwise the
-        // timing would silently measure an empty world.
         let bodies = app
             .world_mut()
             .query::<&CollisionShape>()
@@ -694,13 +620,15 @@ fn benchmark_collision() {
         );
 
         for _ in 0..warmup {
-            run_one_collision_tick(&mut app);
+            reset_fixed_time(app);
+            run_fixed_update(app);
         }
 
         let mut times = Vec::with_capacity(frames);
         for _ in 0..frames {
+            reset_fixed_time(app);
             let start = Instant::now();
-            run_one_collision_tick(&mut app);
+            run_fixed_update(app);
             times.push(start.elapsed().as_secs_f64() * 1000.0);
         }
 
@@ -734,66 +662,10 @@ fn benchmark_collision() {
     println!("ns/pair is the median tick divided by the O(n^2) pair count.");
 }
 
-/// One variant of the relevance benchmark: how many of `count` asteroids are relevant.
-struct RelevanceVariant {
-    /// Label printed in the results table.
-    label: &'static str,
-    /// Number of asteroids marked collision-relevant.
-    relevant: usize,
-}
-
-/// Spawns `count` asteroids of which the first `relevant` carry a relevance value
-/// above the threshold and the rest carry one below it.
-///
-/// Both groups are laid out by [`spawn_belt`], so the two variants differ only in
-/// how many bodies the filter admits and not in where the bodies are. That is what
-/// makes the comparison a measurement of the filter rather than of the layout.
-fn spawn_belt_with_relevance(app: &mut App, count: usize, relevant: usize) {
-    spawn_belt(app, count);
-    let threshold = crate::constants::COLLISION_RELEVANCE_PX;
-
-    let mut query = app
-        .world_mut()
-        .query_filtered::<Entity, With<CollisionShape>>();
-    let entities: Vec<Entity> = query.iter(app.world()).collect();
-    for (index, entity) in entities.into_iter().enumerate() {
-        let is_relevant = index < relevant;
-        // Above or below the threshold, never exactly on it, so the comparison does
-        // not depend on the inclusive boundary.
-        let screen_radius_px = if is_relevant {
-            threshold * 10.0
-        } else {
-            threshold * 0.01
-        };
-        app.world_mut()
-            .entity_mut(entity)
-            .insert(crate::celestial::LazyLoadMesh {
-                min_screen_radius_px: 1.0,
-                loaded: true,
-                mesh_path: String::new(),
-                current_screen_radius_px: screen_radius_px,
-                collision_relevance_px: threshold,
-                mesh_child_entities: Vec::new(),
-            });
-    }
-}
-
 /// Measures the collision relevance filter against the unfiltered loop.
 ///
-/// ADR-0057 replaces the `n^2/2` pair loop with `n_relevant^2` for asteroid pairs.
-/// This measures that replacement rather than assuming it: every variant below uses
-/// the same body count and the same layout, and only the number of bodies the filter
-/// admits changes. The reported ratio is the quantity of interest — it is a property
-/// of the approach and not of the machine.
-///
-/// Run it explicitly:
-///
-/// ```text
-/// cargo test -p delta-v-physics --features bench -- --ignored --nocapture benchmark_collision_relevance
-/// ```
-#[test]
-#[ignore = "performance benchmark; run explicitly with --ignored"]
-fn benchmark_collision_relevance() {
+/// Converted from `benchmark_collision_relevance` in `performance_benchmarks_tests.rs`.
+pub fn benchmark_collision_relevance(app: &mut App) {
     let configs = [500usize, 1_000, 2_000, 4_000, 8_000];
     let warmup = 3;
     let frames = 15;
@@ -806,7 +678,6 @@ fn benchmark_collision_relevance() {
     println!("{}", "-".repeat(80));
 
     for count in configs {
-        // Variant set: an unfiltered baseline plus two filtered populations.
         let variants = [
             RelevanceVariant {
                 label: "unfiltered",
@@ -825,8 +696,7 @@ fn benchmark_collision_relevance() {
         let mut medians: Vec<(&'static str, f64)> = Vec::new();
 
         for variant in &variants {
-            let mut app = build_collision_app();
-            spawn_belt_with_relevance(&mut app, count, variant.relevant);
+            spawn_belt_with_relevance(app, count, variant.relevant);
 
             let bodies = app
                 .world_mut()
@@ -839,13 +709,15 @@ fn benchmark_collision_relevance() {
             );
 
             for _ in 0..warmup {
-                run_one_collision_tick(&mut app);
+                reset_fixed_time(app);
+                run_fixed_update(app);
             }
 
             let mut times = Vec::with_capacity(frames);
             for _ in 0..frames {
+                reset_fixed_time(app);
                 let start = Instant::now();
-                run_one_collision_tick(&mut app);
+                run_fixed_update(app);
                 times.push(start.elapsed().as_secs_f64() * 1000.0);
             }
 
@@ -855,8 +727,6 @@ fn benchmark_collision_relevance() {
             };
             medians.push((variant.label, median));
 
-            // Asteroid/asteroid pairs need both sides relevant, so the filtered pair
-            // count is n_relevant^2/2 rather than n_relevant * n_total.
             let pairs_all = (count * count.saturating_sub(1)) / 2;
             let n_relevant = variant.relevant;
             let pairs_filtered = (n_relevant * n_relevant.saturating_sub(1)) / 2;
@@ -872,7 +742,6 @@ fn benchmark_collision_relevance() {
             );
         }
 
-        // Report the reduction against the unfiltered variant measured in this same run.
         if let Some((_, baseline)) = medians.first().copied()
             && baseline > 0.0
         {
@@ -891,4 +760,48 @@ fn benchmark_collision_relevance() {
     println!(
         "Reduction is the unfiltered median divided by the filtered median, measured in the same run."
     );
+}
+
+// ---------------------------------------------------------------------------
+// Registry
+// ---------------------------------------------------------------------------
+
+/// Register all benchmark functions in the global registry.
+///
+/// Called once at binary startup (from `main.rs` when the `bench`
+/// feature is enabled). Each benchmark is registered with its
+/// display name and a `fn(&mut App)` entry point.
+///
+/// The registration calls must be inside a function body — they cannot
+/// be module-level statements.
+#[cfg(feature = "bench")]
+pub fn init_registry() {
+    do_register("physics::benchmark_scaling", benchmark_scaling);
+    do_register(
+        "physics::benchmark_solar_system_simulation",
+        benchmark_solar_system_simulation,
+    );
+    do_register(
+        "physics::benchmark_gravity_system_only",
+        benchmark_gravity_system_only,
+    );
+    do_register("physics::benchmark_collision", benchmark_collision);
+    do_register(
+        "physics::benchmark_collision_relevance",
+        benchmark_collision_relevance,
+    );
+}
+
+#[cfg(not(feature = "bench"))]
+pub fn init_registry() {}
+
+fn do_register(name: &'static str, func: fn(&mut App)) {
+    let entry = delta_v_test_framework::TestEntry {
+        name,
+        func,
+        panic_expected: false,
+        panic_message: "",
+    };
+    let leaked: &'static delta_v_test_framework::TestEntry = Box::leak(Box::new(entry));
+    delta_v_test_framework::register(leaked);
 }

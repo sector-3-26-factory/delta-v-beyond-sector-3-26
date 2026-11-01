@@ -12,10 +12,9 @@ keywords = ["physics", "simulation"]
 categories = ["game-development"]
 
 [features]
-# ADR-0056: performance benchmarks live behind this flag so they do not slow
-# down day-to-day `cargo test`. Run them explicitly with:
-#   cargo test -p delta-v-physics --features bench -- --ignored --nocapture
-bench = []
+# Benchmarks have been converted to Strategy Z2 (see
+# crates/delta-v-physics-tests/src/real_app_ITs/benchmarks/mod.rs).
+# This crate no longer carries a `bench` feature.
 
 
 # Strategy Z2 test driver: normal #[test] target that spawns the real

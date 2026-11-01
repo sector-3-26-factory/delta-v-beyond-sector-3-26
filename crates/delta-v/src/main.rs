@@ -91,8 +91,8 @@ struct Args {
     ///
     /// Used by world-loading validation tests that expect a hard error
     /// (e.g. zero player-controlled entities, overlapping collision
-    /// shapes). The binary wraps app construction in `catch_unwind`,
-    /// so the panic never propagates to the driver.
+    /// shapes). The binary checks the `WorldLoadFailure` resource after
+    /// `settle_render`, so the error never propagates to the driver.
     #[arg(long)]
     test_panic: Option<String>,
 }
@@ -163,6 +163,11 @@ fn run_test_function(app: &mut bevy::prelude::App, test_name: &str) {
     init_ships();
     init_ui();
     init_world();
+    // Benchmarks are gated behind the `bench` feature (independent of
+    // `test`), so they only register when the binary is built with
+    // `--features bench`.
+    #[cfg(feature = "bench")]
+    delta_v_physics_tests::real_app_ITs::init_registry_bench();
 
     for entry in all_tests() {
         if entry.name == test_name {
@@ -175,13 +180,11 @@ fn run_test_function(app: &mut bevy::prelude::App, test_name: &str) {
     std::process::exit(1);
 }
 
-/// Fallback when the `test` feature is not enabled.
 #[cfg(not(feature = "test"))]
 fn run_test_function(_app: &mut bevy::prelude::App, _test_name: &str) {
     eprintln!("test feature not enabled; rebuild with --features test");
     std::process::exit(1);
 }
-
 /// Run a named test function that drives the full event loop.
 ///
 /// Unlike [`run_test_function`], this does NOT call `settle_render` —
@@ -206,6 +209,8 @@ fn run_test_run(app: &mut bevy::prelude::App, test_name: &str) {
     init_ships();
     init_ui();
     init_world();
+    #[cfg(feature = "bench")]
+    delta_v_physics_tests::real_app_ITs::init_registry_bench();
 
     for entry in all_tests() {
         if entry.name == test_name {
@@ -253,6 +258,8 @@ fn run_test_panic(config: &delta_v_app::AppConfig, test_name: &str) {
     init_ships();
     init_ui();
     init_world();
+    #[cfg(feature = "bench")]
+    delta_v_physics_tests::real_app_ITs::init_registry_bench();
 
     // Find the entry to get its expected panic message.
     let expected_msg = all_tests()
@@ -265,36 +272,32 @@ fn run_test_panic(config: &delta_v_app::AppConfig, test_name: &str) {
         std::process::exit(1);
     };
 
-    // Build the app inside catch_unwind — the panic happens during
-    // `build_app` / `settle_render`, before any test function runs.
-    let result = std::panic::catch_unwind(|| {
-        let mut app = build_app(config.clone());
-        delta_v_test_framework::settle_render(&mut app, 60);
-    });
+    // Build the app and settle render. `load_world_system` now logs errors
+    // to `WorldLoadFailure` instead of panicking, so we check the resource
+    // rather than relying on catch_unwind crossing async task pool threads.
+    let mut app = build_app(config.clone());
+    delta_v_test_framework::settle_render(&mut app, 60);
 
-    match result {
-        Ok(()) => {
+    let failure = app
+        .world()
+        .get_resource::<delta_v_world::WorldLoadFailure>();
+    match failure {
+        Some(f) if !f.0.is_empty() => {
+            if f.0.contains(expected_msg) {
+                eprintln!("PASS: expected error caught for `{test_name}`");
+                std::process::exit(0);
+            }
             eprintln!(
-                "FAIL: expected panic for `{test_name}` (message: \"{expected_msg}\"), \
-                 but app construction succeeded"
+                "FAIL: unexpected error for `{test_name}`: {} \
+                 (expected substring: \"{expected_msg}\")",
+                f.0
             );
             std::process::exit(1);
         }
-        Err(payload) => {
-            let msg = payload
-                .downcast_ref::<&str>()
-                .copied()
-                .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
-                .unwrap_or("unknown panic");
-
-            if msg.contains(expected_msg) {
-                eprintln!("PASS: expected panic caught for `{test_name}`");
-                std::process::exit(0);
-            }
-
+        _ => {
             eprintln!(
-                "FAIL: unexpected panic for `{test_name}`: {msg} \
-                 (expected substring: \"{expected_msg}\")"
+                "FAIL: expected error for `{test_name}` (message: \"{expected_msg}\", \
+                 but app construction succeeded"
             );
             std::process::exit(1);
         }

@@ -10,10 +10,16 @@ readme = "README.md"
 keywords = ["world", "sector", "galaxy"]
 categories = ["game-development"]
 
+[features]
+# Gated off in test builds so the Z2 `--test-panic` driver can read the
+# `WorldLoadFailure` resource after `settle_render` without the process
+# exiting. In production builds the `fail_on_world_load_error` system makes
+# a failed world load fatal (ADR-0013).
+test = []
+
 [dependencies]
 bevy = { workspace = true }
 tracing = { workspace = true }
-thiserror = { workspace = true }
 delta-v-core = { path = "../delta-v-core", version = "0.0.1" }
 delta-v-json = { workspace = true }
 delta-v-physics = { path = "../delta-v-physics", version = "0.0.1" }

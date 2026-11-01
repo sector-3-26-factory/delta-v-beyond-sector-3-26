@@ -921,12 +921,5 @@ fn get_collision_radius(shape: &CollisionShape) -> f32 {
 }
 
 #[cfg(test)]
-#[path = "systems_tests.rs"]
-mod systems_tests;
-
-#[cfg(test)]
 #[path = "rigid_body_panic_tests.rs"]
 mod rigid_body_panic_tests;
-
-#[cfg(all(test, feature = "bench"))]
-mod approach_comparison;

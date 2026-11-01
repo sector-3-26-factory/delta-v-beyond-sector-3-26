@@ -261,7 +261,11 @@ pub fn release_action(app: &mut App, action: LogicalAction) {
 /// (registered by `InputManagerPlugin` via `CentralInputStore`) consumes the
 /// message on the next `PreUpdate` and populates the store that
 /// `update_action_state` reads.
-fn press_key(app: &mut App, action: LogicalAction) {
+///
+/// Unlike [`press_action`], this does NOT call `app.update()`, so multiple
+/// presses can be batched before a single update — needed for tests that
+/// assert on multiple actions held in the same tick.
+pub fn press_key(app: &mut App, action: LogicalAction) {
     let bindings = bound_bindings(app, action);
     let world = app.world_mut();
     for binding in &bindings {
@@ -270,7 +274,10 @@ fn press_key(app: &mut App, action: LogicalAction) {
 }
 
 /// Write a `KeyboardInput` release message for the key bound to `action`.
-fn release_key(app: &mut App, action: LogicalAction) {
+///
+/// Unlike [`release_action`], this does NOT call `app.update()`, so multiple
+/// releases can be batched before a single update.
+pub fn release_key(app: &mut App, action: LogicalAction) {
     let bindings = bound_bindings(app, action);
     let world = app.world_mut();
     for binding in &bindings {

@@ -31,6 +31,9 @@
     clippy::panic
 )]
 
+#[cfg(feature = "test")]
+pub mod systems_tests;
+
 use bevy::prelude::*;
 use delta_v_types::LogicalAction;
 
@@ -193,6 +196,7 @@ pub fn init_registry() {
         test_cockpit_station_loading,
     );
     do_register("ships::thrust_torque_pipeline", test_thrust_torque_pipeline);
+    systems_tests::init_registry();
 }
 
 #[cfg(feature = "test")]

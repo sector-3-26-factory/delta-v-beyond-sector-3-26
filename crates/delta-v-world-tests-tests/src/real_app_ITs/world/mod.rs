@@ -185,6 +185,94 @@ fn test_player_controlled_validation_one(app: &mut App) {
     );
 }
 
+/// Test: every body entity spawns with its declared mass (ADR-0058).
+///
+/// Uses the `belt_field_test` world which has a sun and a ship with declared
+/// masses. Queries the spawned bodies (tagged with [`DebugAxesEligible`])
+/// and verifies their masses match the world definition.
+fn test_every_shipped_world_body_spawns_with_its_declared_mass(app: &mut App) {
+    use std::collections::HashMap;
+
+    use delta_v_core::DebugAxesEligible;
+    use delta_v_physics::RigidBody;
+
+    // Clone the entity list so we can drop the immutable borrow before the
+    // mutable query below.
+    let entities = app
+        .world()
+        .resource::<WorldDefResource>()
+        .0
+        .entities
+        .clone();
+
+    // Query all spawned bodies tagged with DebugAxesEligible (carries world entity id)
+    let mut bodies = app.world_mut().query::<(&DebugAxesEligible, &RigidBody)>();
+    let spawned_masses: HashMap<String, f32> = bodies
+        .iter(app.world())
+        .map(|(marker, body)| (marker.entity_id.clone(), body.mass))
+        .collect();
+
+    // Check each body entity (skip belt/field definitions - they are not bodies)
+    for entity_spawn in &entities {
+        if entity_spawn.template_short.starts_with("asteroid-belts/")
+            || entity_spawn.template_short.starts_with("asteroid-fields/")
+        {
+            continue;
+        }
+        let declared = entity_spawn.mass.expect("entity must declare a mass");
+        let spawned = spawned_masses
+            .get(&entity_spawn.id)
+            .expect("body must spawn");
+        assert!(
+            (spawned - declared).abs() <= f32::EPSILON * declared.abs().max(1.0),
+            "entity '{}' spawned with mass {spawned} but world declares {declared}",
+            entity_spawn.id
+        );
+    }
+}
+
+/// Test: belt and field entities spawn correctly and generate asteroids with proper mass.
+///
+/// Uses the `belt_field_test` world which has a belt and a field.
+/// Queries the spawned belt/field entities and verifies they exist with correct IDs.
+fn test_belt_and_field_entities_spawn_and_generate_asteroids_with_mass(app: &mut App) {
+    use delta_v_physics::belt_field_spawn::{AsteroidBelt, AsteroidField};
+
+    // Query spawned belt entities
+    let belt_entities: Vec<_> = {
+        let world = app.world_mut();
+        world
+            .query::<&AsteroidBelt>()
+            .iter(world)
+            .map(|b| b.id.clone())
+            .collect()
+    };
+    let field_entities: Vec<_> = {
+        let world = app.world_mut();
+        world
+            .query::<&AsteroidField>()
+            .iter(world)
+            .map(|f| f.id.clone())
+            .collect()
+    };
+
+    assert_eq!(
+        belt_entities.len(),
+        1,
+        "exactly one belt entity should be spawned"
+    );
+    assert_eq!(
+        field_entities.len(),
+        1,
+        "exactly one field entity should be spawned"
+    );
+    assert_eq!(belt_entities.first().map(String::as_str), Some("test_belt"));
+    assert_eq!(
+        field_entities.first().map(String::as_str),
+        Some("test_field")
+    );
+}
+
 /// Test: belt sectors are loaded when the player ship is on the belt's
 /// orbital ring (the happy path).
 fn test_belt_streaming_happy_path(app: &mut App) {
@@ -242,6 +330,14 @@ pub fn init_registry() {
     do_register(
         "world::player_controlled_validation_one",
         test_player_controlled_validation_one,
+    );
+    do_register(
+        "world::every_shipped_world_body_spawns_with_its_declared_mass",
+        test_every_shipped_world_body_spawns_with_its_declared_mass,
+    );
+    do_register(
+        "world::belt_and_field_entities_spawn_and_generate_asteroids_with_mass",
+        test_belt_and_field_entities_spawn_and_generate_asteroids_with_mass,
     );
     do_register(
         "world::belt_streaming_happy_path",

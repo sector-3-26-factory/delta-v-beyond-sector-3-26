@@ -22,6 +22,8 @@ dev = ["delta-v-config/dev", "delta-v-ui/dev", "delta-v-core/dev"]
 
 # Enable test function registry and compile per-domain test crates
 # into this binary. See plans/testframework-poc.md Section 9 and ADR-0061.
+# Benchmarks are deliberately NOT folded in here: per ADR-0056 they must
+# be excluded from day-to-day `cargo test --workspace`. Use `bench` for that.
 test = [
     "delta-v-physics-tests/test",
     "delta-v-ships-tests/test",
@@ -29,6 +31,10 @@ test = [
     "delta-v-test-framework/test",
     "delta-v-world-tests-tests/test",
 ]
+
+# Enable approach-comparison benchmarks compiled into this binary.
+# Independent of `test` so `cargo test --workspace` never compiles them.
+bench = ["delta-v-physics-tests/bench"]
 
 [dependencies]
 delta-v-app = { workspace = true }
