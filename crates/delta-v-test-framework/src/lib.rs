@@ -411,9 +411,13 @@ pub fn advance_one_fixed_tick(app: &mut App) {
     use bevy::time::{Fixed, Time};
 
     let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
+    let mut time = app.world_mut().resource_mut::<Time<Fixed>>();
+    // Discard any overstep carried over from settle_render / a previous
+    // update, then set exactly one timestep so the fixed accumulator
+    // fires exactly once regardless of wall-clock state.
+    let overstep = time.overstep();
+    time.discard_overstep(overstep);
+    time.accumulate_overstep(timestep);
 }
 
 /// Run one fixed update tick: advance the fixed clock and call
