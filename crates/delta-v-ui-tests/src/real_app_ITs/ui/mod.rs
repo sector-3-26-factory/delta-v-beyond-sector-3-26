@@ -284,7 +284,15 @@ fn test_fade_zones_visible(app: &mut App) {
     //
     // The thread-local guard in settle_render ensures finish()/cleanup()
     // only runs once; app.run() then drives the full event loop.
-    delta_v_test_framework::settle_render(app, 200);
+    //
+    // 400 frames (was 200): the settle happens before the test systems are
+    // registered, so asynchronous asset loading (the UI font, textures) on
+    // the Bevy asset thread is still in flight when the window spawns. Under
+    // software rendering in CI the framebuffer can therefore settle at
+    // slightly different points run-to-run, producing a flaky screenshot
+    // comparison. Doubling the settle depth gives the asset pipeline enough
+    // headroom to reach a stable state before the capture is taken.
+    delta_v_test_framework::settle_render(app, 400);
 
     app.init_resource::<FadeTestWindowRoot>();
     app.init_resource::<ScreenshotCaptureState>();
