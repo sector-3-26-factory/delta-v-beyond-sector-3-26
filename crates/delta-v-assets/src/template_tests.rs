@@ -454,8 +454,9 @@ fn template_produces_a_body(template_short: &str) -> bool {
 ///
 /// This is the JSON-level half of the ADR-0058 pair: it checks the content, so
 /// a mistake is reported against the world file that carries it. The
-/// code-level half lives in `delta-v-world` (`lib_tests.rs`), which spawns the
-/// same entities and reads the mass off the spawned body.
+/// code-level half lives in `delta-v-world-tests-tests` (the Z2 test
+/// `world::every_shipped_world_body_spawns_with_its_declared_mass`), which
+/// spawns the same entities and reads the mass off the spawned body.
 ///
 /// Belt and field entities are definitions rather than bodies and carry no
 /// mass; their generated bodies derive a mass from the region density, so they

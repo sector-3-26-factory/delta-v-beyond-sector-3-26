@@ -25,7 +25,11 @@
 //! See ADR-0005 (plugin architecture) and ADR-0060 (test framework single source of truth).
 #![warn(missing_docs, rust_2018_idioms, unreachable_pub)]
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
-#![allow(clippy::multiple_crate_versions)]
+#![allow(
+    clippy::multiple_crate_versions,
+    clippy::module_name_repetitions,
+    clippy::must_use_candidate
+)]
 #![deny(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -35,7 +39,6 @@
     clippy::unimplemented,
     clippy::dbg_macro
 )]
-#![allow(clippy::module_name_repetitions, clippy::must_use_candidate)]
 
 use clap::Parser;
 use delta_v_app::{AppConfig, build_app};
@@ -59,6 +62,39 @@ struct Args {
     ///   - `custom` → `assets/worlds/custom/`
     #[arg(short, long, default_value = "default")]
     world: String,
+
+    /// Asset root suffix (path fragment under workspace root).
+    /// Production: "assets". Tests: "crates/delta-v-physics/tests/fixtures/assets".
+    #[arg(long, default_value = "assets")]
+    asset_root: String,
+
+    /// Run a named test function from the registry instead of the event loop.
+    ///
+    /// The function must be registered via `init_registry()` in a per-domain
+    /// test crate compiled into this binary behind the `test` feature flag.
+    #[arg(long)]
+    test_function: Option<String>,
+
+    /// Run a named test function that drives the full event loop
+    /// (`app.run()`) and reads the exit code. Unlike `--test-function`,
+    /// the binary does NOT call `settle_render` before dispatching — the
+    /// registered function is responsible for calling `app.run()` itself.
+    ///
+    /// Used by screenshot-based visual regression tests that need the
+    /// `Update` schedule (e.g. `ui::fade_zones_visible`).
+    #[arg(long)]
+    test_run: Option<String>,
+
+    /// Run a named test function that is EXPECTED to panic during
+    /// `build_app` / `settle_render` in `main.rs`. The panic message
+    /// must contain the substring registered via `TestEntry::panic_message`.
+    ///
+    /// Used by world-loading validation tests that expect a hard error
+    /// (e.g. zero player-controlled entities, overlapping collision
+    /// shapes). The binary checks the `WorldLoadFailure` resource after
+    /// `settle_render`, so the error never propagates to the driver.
+    #[arg(long)]
+    test_panic: Option<String>,
 }
 
 fn main() {
@@ -73,12 +109,206 @@ fn main() {
     #[cfg(target_os = "linux")]
     print_x11_hint();
 
+    // `--test-panic` tests expect `build_app` itself to panic (e.g.
+    // world validation failure). They need `catch_unwind` around the
+    // construction, so the app is built inside `run_test_panic`, not here.
+    if let Some(test_name) = args.test_panic {
+        run_test_panic(
+            &AppConfig {
+                asset_root_suffix: args.asset_root,
+                world_name: Some(world_name),
+                log_filter: None,
+            },
+            &test_name,
+        );
+        return;
+    }
+
     let mut app = build_app(AppConfig {
-        asset_root_suffix: "assets".to_string(), // Production suffix
+        asset_root_suffix: args.asset_root,
         world_name: Some(world_name),
         log_filter: None, // Default from build_app (dev/non-dev via feature)
     });
-    app.run();
+
+    if let Some(test_name) = args.test_function {
+        run_test_function(&mut app, &test_name);
+    } else if let Some(test_name) = args.test_run {
+        run_test_run(&mut app, &test_name);
+    } else {
+        app.run();
+    }
+}
+
+/// Run a named test function from the registry.
+///
+/// The function must be registered via `init_registry()` in a per-domain
+/// test crate compiled into this binary behind the `test` feature flag.
+///
+/// Exits 0 on success, 1 on failure.
+#[cfg(feature = "test")]
+fn run_test_function(app: &mut bevy::prelude::App, test_name: &str) {
+    use delta_v_physics_tests::real_app_ITs::init_registry as init_physics;
+    use delta_v_ships_tests::real_app_ITs::init_registry as init_ships;
+    use delta_v_test_framework::all_tests;
+    use delta_v_ui_tests::real_app_ITs::init_registry as init_ui;
+    use delta_v_world_tests_tests::real_app_ITs::init_registry as init_world;
+
+    // Settle the render graph so render-dependent resources
+    // (RenderDevice, etc.) are available before the test function runs.
+    delta_v_test_framework::settle_render(app, 60);
+
+    // Register all test functions from every per-domain test crate
+    // before looking up the requested one.
+    init_physics();
+    init_ships();
+    init_ui();
+    init_world();
+    // Benchmarks are gated behind the `bench` feature (independent of
+    // `test`), so they only register when the binary is built with
+    // `--features bench`.
+    #[cfg(feature = "bench")]
+    delta_v_physics_tests::real_app_ITs::init_registry_bench();
+
+    for entry in all_tests() {
+        if entry.name == test_name {
+            (entry.func)(app);
+            std::process::exit(0);
+        }
+    }
+
+    eprintln!("test function not found: {test_name}");
+    std::process::exit(1);
+}
+
+#[cfg(not(feature = "test"))]
+fn run_test_function(_app: &mut bevy::prelude::App, _test_name: &str) {
+    eprintln!("test feature not enabled; rebuild with --features test");
+    std::process::exit(1);
+}
+/// Run a named test function that drives the full event loop.
+///
+/// Unlike [`run_test_function`], this does NOT call `settle_render` —
+/// the registered function is responsible for calling `app.run()` itself
+/// (and reading the exit code). Used by screenshot-based visual regression
+/// tests that need the `Update` schedule.
+///
+/// Exits 0 on success, 1 on failure.
+#[cfg(feature = "test")]
+fn run_test_run(app: &mut bevy::prelude::App, test_name: &str) {
+    use delta_v_physics_tests::real_app_ITs::init_registry as init_physics;
+    use delta_v_ships_tests::real_app_ITs::init_registry as init_ships;
+    use delta_v_test_framework::all_tests;
+    use delta_v_ui_tests::real_app_ITs::init_registry as init_ui;
+    use delta_v_world_tests_tests::real_app_ITs::init_registry as init_world;
+
+    // Register all test functions from every per-domain test crate
+    // before looking up the requested one. Do NOT call settle_render —
+    // the test function will call app.run() itself, which drives the
+    // full event loop including finish()/cleanup().
+    init_physics();
+    init_ships();
+    init_ui();
+    init_world();
+    #[cfg(feature = "bench")]
+    delta_v_physics_tests::real_app_ITs::init_registry_bench();
+
+    for entry in all_tests() {
+        if entry.name == test_name {
+            (entry.func)(app);
+            // If the test function returns without calling app.run()
+            // or process::exit, treat it as success.
+            std::process::exit(0);
+        }
+    }
+
+    eprintln!("test run not found: {test_name}");
+    std::process::exit(1);
+}
+
+/// Fallback when the `test` feature is not enabled.
+#[cfg(not(feature = "test"))]
+fn run_test_run(_app: &mut bevy::prelude::App, _test_name: &str) {
+    eprintln!("test feature not enabled; rebuild with --features test");
+    std::process::exit(1);
+}
+
+/// Run a named test function that is EXPECTED to panic during app
+/// construction.
+///
+/// The binary wraps `build_app` + `settle_render` in `catch_unwind`.
+/// If the panic message contains the registered substring, the test
+/// passes (exit 0). If no panic occurs, or the message doesn't match,
+/// the test fails (exit 1).
+///
+/// Used by world-loading validation tests that expect a hard error
+/// (e.g. zero player-controlled entities, overlapping collision
+/// shapes).
+///
+/// Exits 0 on expected panic, 1 on failure.
+#[cfg(feature = "test")]
+fn run_test_panic(config: &delta_v_app::AppConfig, test_name: &str) {
+    use delta_v_physics_tests::real_app_ITs::init_registry as init_physics;
+    use delta_v_ships_tests::real_app_ITs::init_registry as init_ships;
+    use delta_v_test_framework::all_tests;
+    use delta_v_ui_tests::real_app_ITs::init_registry as init_ui;
+    use delta_v_world_tests_tests::real_app_ITs::init_registry as init_world;
+
+    // Register all test functions before looking up the requested one.
+    init_physics();
+    init_ships();
+    init_ui();
+    init_world();
+    #[cfg(feature = "bench")]
+    delta_v_physics_tests::real_app_ITs::init_registry_bench();
+
+    // Find the entry to get its expected panic message.
+    let expected_msg = all_tests()
+        .iter()
+        .find(|e| e.name == test_name)
+        .map(|e| e.panic_message);
+
+    let Some(expected_msg) = expected_msg else {
+        eprintln!("test panic not found: {test_name}");
+        std::process::exit(1);
+    };
+
+    // Build the app and settle render. `load_world_system` now logs errors
+    // to `WorldLoadFailure` instead of panicking, so we check the resource
+    // rather than relying on catch_unwind crossing async task pool threads.
+    let mut app = build_app(config.clone());
+    delta_v_test_framework::settle_render(&mut app, 60);
+
+    let failure = app
+        .world()
+        .get_resource::<delta_v_world::WorldLoadFailure>();
+    match failure {
+        Some(f) if !f.0.is_empty() => {
+            if f.0.contains(expected_msg) {
+                eprintln!("PASS: expected error caught for `{test_name}`");
+                std::process::exit(0);
+            }
+            eprintln!(
+                "FAIL: unexpected error for `{test_name}`: {} \
+                 (expected substring: \"{expected_msg}\")",
+                f.0
+            );
+            std::process::exit(1);
+        }
+        _ => {
+            eprintln!(
+                "FAIL: expected error for `{test_name}` (message: \"{expected_msg}\", \
+                 but app construction succeeded"
+            );
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Fallback when the `test` feature is not enabled.
+#[cfg(not(feature = "test"))]
+fn run_test_panic(_config: &delta_v_app::AppConfig, _test_name: &str) {
+    eprintln!("test feature not enabled; rebuild with --features test");
+    std::process::exit(1);
 }
 
 /// Prints a display-forwarding hint on Linux.

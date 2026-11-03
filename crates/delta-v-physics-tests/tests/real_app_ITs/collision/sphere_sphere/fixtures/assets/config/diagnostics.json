@@ -1,0 +1,4 @@
+{
+    "frame_time_warn_threshold_ms": 33,
+    "consecutive_frames_threshold": 60
+}

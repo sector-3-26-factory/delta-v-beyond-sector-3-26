@@ -20,11 +20,27 @@ path = "src/main.rs"
 # See ADR-0035.
 dev = ["delta-v-config/dev", "delta-v-ui/dev", "delta-v-core/dev"]
 
+# Enable test function registry and compile per-domain test crates
+# into this binary. See plans/testframework-poc.md Section 9 and ADR-0061.
+# Benchmarks are deliberately NOT folded in here: per ADR-0056 they must
+# be excluded from day-to-day `cargo test --workspace`. Use `bench` for that.
+test = [
+    "delta-v-physics-tests/test",
+    "delta-v-ships-tests/test",
+    "delta-v-ui-tests/test",
+    "delta-v-test-framework/test",
+    "delta-v-world-tests-tests/test",
+]
+
+# Enable approach-comparison benchmarks compiled into this binary.
+# Independent of `test` so `cargo test --workspace` never compiles them.
+bench = ["delta-v-physics-tests/bench"]
+
 [dependencies]
 delta-v-app = { workspace = true }
 delta-v-core = { workspace = true }
 delta-v-config = { workspace = true }
-delta-v-physics = { workspace = true }
+delta-v-physics = { workspace = true, optional = true }
 delta-v-assets = { workspace = true }
 delta-v-net = { workspace = true }
 delta-v-ships = { workspace = true }
@@ -35,10 +51,15 @@ delta-v-items = { workspace = true }
 delta-v-world = { workspace = true }
 delta-v-ai = { workspace = true }
 delta-v-ui = { workspace = true }
+delta-v-physics-tests = { workspace = true, optional = true }
+delta-v-ships-tests = { workspace = true, optional = true }
+delta-v-ui-tests = { workspace = true, optional = true }
+delta-v-world-tests-tests = { workspace = true, optional = true }
 
 bevy = { workspace = true }
 tracing = { workspace = true }
 clap = { workspace = true }
+delta-v-test-framework = { workspace = true, optional = true }
 
 [lints]
 workspace = true

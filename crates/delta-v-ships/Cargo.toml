@@ -26,14 +26,7 @@ delta-v-spawn = { path = "../delta-v-spawn", version = "0.0.1" }
 [dev-dependencies]
 tempfile = "3"
 delta-v-app = { workspace = true }
-delta-v-test-support = { workspace = true }
-
-# Run integration tests as harness=false so cargo test runs main()
-# on the main thread (WinitPlugin requirement).
-[[test]]
-name = "ships_integration_tests"
-path = "tests/integration_tests.rs"
-harness = false
+delta-v-test-framework = { workspace = true }
 
 [lints]
 workspace = true

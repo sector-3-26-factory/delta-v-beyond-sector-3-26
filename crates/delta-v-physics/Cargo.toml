@@ -12,11 +12,14 @@ keywords = ["physics", "simulation"]
 categories = ["game-development"]
 
 [features]
-# ADR-0056: performance benchmarks live behind this flag so they do not slow
-# down day-to-day `cargo test`. Run them explicitly with:
-#   cargo test -p delta-v-physics --features bench -- --ignored --nocapture
-bench = []
+# Benchmarks have been converted to Strategy Z2 (see
+# crates/delta-v-physics-tests/src/real_app_ITs/benchmarks/mod.rs).
+# This crate no longer carries a `bench` feature.
 
+
+# Strategy Z2 test driver: normal #[test] target that spawns the real
+# binary with --test-function <name> and checks the exit code.
+# See plans/testframework-poc.md Section 9 and ADR-0061.
 [dependencies]
 bevy = { workspace = true }
 bevy_math = { workspace = true }
@@ -30,23 +33,8 @@ delta-v-types = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+delta-v-test-framework = { workspace = true }
 delta-v-app = { workspace = true }
-delta-v-test-support = { workspace = true }
-
-# Run integration tests as harness=false so cargo test runs main()
-# on the main thread (WinitPlugin requirement).
-[[test]]
-name = "physics_integration_tests"
-path = "tests/integration_tests.rs"
-harness = false
-
-# Floating origin recentering tests — uses the empty `floating_origin` world
-# fixture so no celestial body exerts gravity during the recentering
-# assertions. Runs as harness=false (main thread) for WinitPlugin.
-[[test]]
-name = "floating_origin_tests"
-path = "tests/floating_origin_tests.rs"
-harness = false
 
 [lints]
 workspace = true

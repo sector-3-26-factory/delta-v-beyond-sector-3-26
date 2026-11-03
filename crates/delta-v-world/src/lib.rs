@@ -44,14 +44,9 @@
 
 pub mod resources;
 
-#[cfg(test)]
-#[path = "lib_tests.rs"]
-mod tests;
-
 pub use delta_v_core::{AppState, SpawnEntity};
 pub use delta_v_types::{EntitySpawn, WorldDef};
-pub use resources::WorldDefResource;
-pub use resources::WorldPath;
+pub use resources::{WorldDefResource, WorldLoadFailure, WorldPath};
 
 use bevy::prelude::*;
 use delta_v_assets::template::{load_template_by_kind, load_world};
@@ -63,17 +58,31 @@ use delta_v_types::collision::scale_collision_shape;
 ///
 /// Systems run in [`AppState::LoadingWorld`]. On success the plugin
 /// inserts [`WorldDefResource`] and transitions to [`AppState::SpawningEntities`].
-/// On failure the application panics with a descriptive message
-/// (ADR-0013).
+/// On failure [`load_world_system`] records the error in the
+/// [`WorldLoadFailure`] resource (a runtime flag, not JSON-backed) and
+/// does not advance the state machine — the production binary exits
+/// non-zero on a non-empty resource (ADR-0013).
 pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<SpawnEntity>()
+        app.init_resource::<WorldLoadFailure>()
+            .add_message::<SpawnEntity>()
             .add_systems(OnEnter(AppState::LoadingWorld), load_world_system)
             // Setup scene lighting as fallback for worlds without suns.
             // Runs after world is loaded but before entities are spawned.
             .add_systems(OnEnter(AppState::SpawningEntities), setup_scene_lighting);
+        // In production builds a failed world load must still be fatal
+        // (ADR-0013): `load_world_system` records the error in
+        // `WorldLoadFailure` instead of panicking, so the app would
+        // otherwise stall in `LoadingWorld`. This system exits non-zero
+        // on a non-empty resource. It is gated off in `test` builds so
+        // the Z2 drivers can read the resource without the process dying.
+        #[cfg(not(feature = "test"))]
+        app.add_systems(
+            Update,
+            fail_on_world_load_error.run_if(in_state(AppState::LoadingWorld)),
+        );
     }
 }
 
@@ -114,19 +123,21 @@ fn setup_scene_lighting(
 /// each entity in the world.
 ///
 /// The `entity_type` is derived from the template's `entity_type` field
-/// (per ADR-0038, the template declares its own type).
+/// (per ADR-0038, the template declares its own type). Spawn entities in
+/// dependency order (per ADR-0038) after the world is loaded.
 ///
-/// Transitions to [`AppState::SpawningEntities`] so domain plugins can
-/// spawn entities in dependency order (per ADR-0038).
-///
-/// Panics if the world file or any template file cannot be loaded or validated.
-/// This is intentional per ADR-0013 (no silent fallbacks).
+/// On failure the error is recorded in the [`WorldLoadFailure`] resource
+/// and the state machine does not advance. Bevy systems return `()`, so
+/// the error is logged here rather than returned; the production binary
+/// exits non-zero on a non-empty resource (see
+/// [`fail_on_world_load_error`]).
 #[allow(clippy::needless_pass_by_value)]
 fn load_world_system(
     world_path: Res<'_, WorldPath>,
     mut commands: Commands<'_, '_>,
     mut events: MessageWriter<'_, SpawnEntity>,
     mut next: ResMut<'_, NextState<AppState>>,
+    mut failure: ResMut<'_, WorldLoadFailure>,
 ) {
     // ADR-0058: asteroid belts and fields are region definitions, not solid
     // bodies. They generate asteroids within their volume but are not
@@ -135,11 +146,17 @@ fn load_world_system(
     const NON_SOLID_TYPES: &[&str] = &["asteroid_belt", "asteroid_field"];
 
     // INVARIANT: a missing or invalid world file is a hard startup
-    // error (ADR-0013). The panic is intentional; no recovery is possible.
-    #[allow(clippy::panic)]
-    let mut world = load_world(world_path.as_ref()).unwrap_or_else(|e| {
-        panic!("fatal: failed to load world: {e}");
-    });
+    // error (ADR-0013). No recovery is possible; the error is logged
+    // and the state machine does not advance.
+    let mut world = match load_world(world_path.as_ref()) {
+        Ok(w) => w,
+        Err(e) => {
+            let msg = format!("failed to load world: {e}");
+            tracing::error!("{msg}");
+            failure.0 = msg;
+            return;
+        }
+    };
     tracing::info!("world loaded: {}", world.name);
 
     // Validate: exactly one entity must have player_controlled: true
@@ -148,10 +165,14 @@ fn load_world_system(
         .iter()
         .filter(|e| e.player_controlled)
         .count();
-    assert!(
-        player_controlled_count == 1,
-        "fatal: exactly one entity must have player_controlled: true, found {player_controlled_count}"
-    );
+    if player_controlled_count != 1 {
+        let msg = format!(
+            "exactly one entity must have player_controlled: true, found {player_controlled_count}"
+        );
+        tracing::error!("{msg}");
+        failure.0 = msg;
+        return;
+    }
 
     // Single pass: load each entity's template, check for collisions with
     // already-loaded entities, then emit the SpawnEntity event immediately.
@@ -173,19 +194,21 @@ fn load_world_system(
     for entity_spawn in &mut world.entities {
         // Load the template via the unified entry point (ADR-0049).
         // The template path is carried on the LoadedTemplate wrapper.
-        let loaded_template = {
-            #[allow(clippy::panic)]
-            load_template_by_kind(
-                &entity_spawn.template_short,
-                entity_spawn.player_controlled,
-                entity_spawn.ai_task.as_ref(),
-            )
-            .unwrap_or_else(|e| {
-                panic!(
-                    "fatal: failed to load template for entity '{}': {e}",
+        let loaded_template = match load_template_by_kind(
+            &entity_spawn.template_short,
+            entity_spawn.player_controlled,
+            entity_spawn.ai_task.as_ref(),
+        ) {
+            Ok(t) => t,
+            Err(e) => {
+                let msg = format!(
+                    "failed to load template for entity '{}': {e}",
                     entity_spawn.id
-                )
-            })
+                );
+                tracing::error!("{msg}");
+                failure.0 = msg;
+                return;
+            }
         };
 
         let entity_type = loaded_template.template.entity_type();
@@ -220,13 +243,16 @@ fn load_world_system(
         // Uses the actual rotation from the world definition, not identity,
         // so rotated bodies are checked correctly.
         for (other_id, other_pos, other_rot, other_shape) in &spawned {
-            assert!(
-                check_collision(pos, rot, &shape, *other_pos, *other_rot, other_shape).is_none(),
-                "fatal: entities '{}' and '{}' have overlapping collision shapes. \
-                 Entities cannot occupy the same space.",
-                entity_spawn.id,
-                other_id
-            );
+            if check_collision(pos, rot, &shape, *other_pos, *other_rot, other_shape).is_some() {
+                let msg = format!(
+                    "entities '{}' and '{}' have overlapping collision shapes. \
+                     Entities cannot occupy the same space.",
+                    entity_spawn.id, other_id
+                );
+                tracing::error!("{msg}");
+                failure.0 = msg;
+                return;
+            }
         }
 
         spawned.push((entity_spawn.id.clone(), pos, rot, shape));
@@ -306,4 +332,27 @@ fn build_spawn_event(
     }
 
     spawn_event
+}
+
+// ---------------------------------------------------------------------------
+// Production failure handling
+// ---------------------------------------------------------------------------
+
+/// Exits the process non-zero when a world load failed.
+///
+/// `load_world_system` records the error in [`WorldLoadFailure`] instead of
+/// panicking, so the state machine does not advance and the app would
+/// otherwise stall in `LoadingWorld`. In production builds this system makes
+/// that failure fatal (ADR-0013): it logs the message and exits non-zero.
+///
+/// Gated off under the `test` feature so the Z2 `--test-panic` driver can
+/// read the resource after `settle_render` without the process dying.
+#[cfg(not(feature = "test"))]
+#[allow(clippy::needless_pass_by_value)]
+fn fail_on_world_load_error(failure: Res<'_, WorldLoadFailure>) {
+    if failure.0.is_empty() {
+        return;
+    }
+    tracing::error!("world load failed: {}", failure.0);
+    std::process::exit(1);
 }

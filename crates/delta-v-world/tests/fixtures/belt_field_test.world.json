@@ -3,6 +3,42 @@
     "name": "Belt Field Test World",
     "entities": [
         {
+            "template": "suns/sol",
+            "id": "sun",
+            "position": {
+                "x": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 0.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 0.0,
+                    "unit": "m"
+                }
+            },
+            "scale": {
+                "x": {
+                    "value": 696000000.0,
+                    "unit": "m"
+                },
+                "y": {
+                    "value": 696000000.0,
+                    "unit": "m"
+                },
+                "z": {
+                    "value": 696000000.0,
+                    "unit": "m"
+                }
+            },
+            "mass": {
+                "value": 1.0,
+                "unit": "M_sun"
+            }
+        },
+        {
             "template": "ships/debug-ship-cube",
             "id": "test_ship",
             "player_controlled": true,

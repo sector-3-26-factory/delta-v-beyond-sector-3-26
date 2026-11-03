@@ -42,3 +42,13 @@ impl Deref for WorldPath {
 /// (ADR-0012) and to contain no silent fallbacks (ADR-0013).
 #[derive(Resource)]
 pub struct WorldDefResource(pub WorldDef);
+
+/// Set by [`crate::load_world_system`] when world loading fails.
+///
+/// The Z2 `--test-panic` driver checks this resource after `settle_render`
+/// to detect expected errors without relying on `catch_unwind` crossing
+/// async task pool thread boundaries.
+// allow-default: this is a runtime flag resource, not JSON-backed.
+// ADR-0013/ADR-0039 Default ban applies only to JSON-deserialized types.
+#[derive(Resource, Debug, Clone, Default)]
+pub struct WorldLoadFailure(pub String);

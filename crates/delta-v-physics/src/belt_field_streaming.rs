@@ -129,21 +129,13 @@ pub fn belt_sector_streaming_system(
             );
             continue;
         };
-        let parent_abs_pos = parent_transform.translation();
-
-        // Player position relative to orbital parent (in absolute coordinates)
+        // Convert parent's local position to absolute using the floating origin,
+        // same as the player's position. Without this, after a recenter the
+        // parent's local transform has shifted but the offset hasn't been
+        // applied, producing a wrong relative distance.
+        let parent_abs_pos = floating_origin.to_absolute(parent_transform.translation());
         let player_rel_parent = player_abs_pos - parent_abs_pos;
-
-        // Find nearest sector index using player's position relative to parent
-        let sector_index = find_nearest_sector_index(
-            &belt.id,
-            orbital_body.orbital_distance,
-            belt.sector_size,
-            player_rel_parent,
-        );
-
-        // Calculate player's distance from orbital parent (radial distance)
-        let player_dist_from_parent = player_rel_parent.length();
+        let player_dist = player_rel_parent.length();
         let player_z = player_rel_parent.z.abs();
 
         // Belt volume: torus from (orbital_distance - radial_extent/2) to (orbital_distance + radial_extent/2)
@@ -153,10 +145,10 @@ pub fn belt_sector_streaming_system(
         let belt_half_thickness = belt.thickness / 2.0;
 
         // Distance from player to belt volume
-        let radial_distance = if player_dist_from_parent < belt_inner_radius {
-            belt_inner_radius - player_dist_from_parent
-        } else if player_dist_from_parent > belt_outer_radius {
-            player_dist_from_parent - belt_outer_radius
+        let radial_distance = if player_dist < belt_inner_radius {
+            belt_inner_radius - player_dist
+        } else if player_dist > belt_outer_radius {
+            player_dist - belt_outer_radius
         } else {
             0.0 // Inside radial extent
         };
@@ -175,6 +167,14 @@ pub fn belt_sector_streaming_system(
             let circumference = 2.0 * std::f32::consts::PI * orbital_body.orbital_distance;
             #[allow(clippy::cast_possible_truncation)]
             let num_sectors = (circumference / belt.sector_size).ceil() as i64;
+
+            // Find nearest sector index using player's position relative to parent
+            let sector_index = find_nearest_sector_index(
+                &belt.id,
+                orbital_body.orbital_distance,
+                belt.sector_size,
+                player_rel_parent,
+            );
 
             for offset in [-1, 0, 1] {
                 let neighbor_index = (sector_index + offset + num_sectors) % num_sectors;
@@ -225,7 +225,11 @@ pub fn belt_sector_streaming_system(
                 );
                 continue;
             };
-            let parent_abs_pos = parent_transform.translation();
+            // Convert parent's local position to absolute using the floating origin,
+            // same as the player's position. Without this, after a recenter the
+            // parent's local transform has shifted but the offset hasn't been
+            // applied, producing a wrong relative distance.
+            let parent_abs_pos = floating_origin.to_absolute(parent_transform.translation());
 
             // Generate the sector
             // The OrbitalBody component already has the resolved orbital_parent entity.

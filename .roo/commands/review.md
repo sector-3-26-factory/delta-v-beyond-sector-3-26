@@ -56,3 +56,4 @@ Issues not explicitly marked for fixing will NOT be modified.
 - MUST NOT run `cargo fmt`, `cargo clippy`, `cargo test`, or any build commands
 - MUST NOT fix any violations found - only report them
 - MUST NOT proceed after producing the report without explicit user instructions
+- MUST NOT look for other issues such as code quality, logic bugs, style, or any other non-ADR concerns. Review scope is strictly limited to ADR architectural rule violations. This is a MUST NOT.
