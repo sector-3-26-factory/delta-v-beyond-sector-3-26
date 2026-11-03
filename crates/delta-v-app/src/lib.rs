@@ -118,7 +118,7 @@ pub fn build_app(config: AppConfig) -> App {
     let filter = config.log_filter.unwrap_or_else(|| {
         #[cfg(feature = "dev")]
         {
-            "warn,delta_v=debug,delta_v_core=debug,delta_v_config=debug,\
+            "warn,rodio=warn,delta_v=debug,delta_v_core=debug,delta_v_config=debug,\
              delta_v_physics=debug,delta_v_assets=debug,delta_v_ships=debug,\
              delta_v_propulsion=debug,delta_v_weapons=debug,delta_v_stations=debug,\
              delta_v_items=debug,delta_v_world=debug,delta_v_ai=debug"
@@ -126,7 +126,7 @@ pub fn build_app(config: AppConfig) -> App {
         }
         #[cfg(not(feature = "dev"))]
         {
-            "warn,delta_v=info,delta_v_core=info,delta_v_config=info,\
+            "warn,rodio=warn,delta_v=info,delta_v_core=info,delta_v_config=info,\
              delta_v_physics=info,delta_v_assets=info,delta_v_ships=info,\
              delta_v_propulsion=info,delta_v_weapons=info,delta_v_stations=info,\
              delta_v_items=info,delta_v_world=info,delta_v_ai=info"

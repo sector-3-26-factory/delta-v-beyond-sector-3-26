@@ -173,7 +173,6 @@ pub fn navigation_menu_refresh_system(
     targeting_mode: Res<'_, delta_v_core::navigation::TargetingMode>,
     mut events: MessageReader<'_, '_, NavigationListChanged>,
     mut row_bg_query: Query<'_, '_, (Entity, &mut BackgroundColor, &NavMenuRowBackground)>,
-    mut distance_text_query: Query<'_, '_, (Entity, &mut Text, &NavMenuDistanceText)>,
     mut text_queries: ParamSet<
         '_,
         '_,
@@ -198,6 +197,7 @@ pub fn navigation_menu_refresh_system(
                     Without<NavMenuDistanceText>,
                 ),
             >,
+            Query<'_, '_, (Entity, &mut Text, &NavMenuDistanceText)>,
         ),
     >,
 ) {
@@ -288,7 +288,8 @@ pub fn navigation_menu_refresh_system(
         }
 
         // Update distance column
-        if let Some((_entity, mut text, _)) = distance_text_query
+        if let Some((_entity, mut text, _)) = text_queries
+            .p2()
             .iter_mut()
             .find(|(_, _, m)| m.index == index)
         {
@@ -315,7 +316,8 @@ pub fn navigation_menu_refresh_system(
             {
                 text.0.clear();
             }
-            if let Some((_entity, mut text, _)) = distance_text_query
+            if let Some((_entity, mut text, _)) = text_queries
+                .p2()
                 .iter_mut()
                 .find(|(_, _, m)| m.index == *index)
             {
