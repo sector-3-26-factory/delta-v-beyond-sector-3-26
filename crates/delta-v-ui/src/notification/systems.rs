@@ -121,11 +121,21 @@ pub fn target_selected_notification_system(
             event.target,
             event.mode
         );
-        // Get entity info for the notification
-        let (name_str, entity_type_str) = match entity_query.get(event.target) {
-            Ok((name, entity_type, entity_id)) => {
-                let name_str = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
-                (name_str, entity_type.0.clone())
+        // Get entity info for the notification.
+        // {entity_id} uses the raw WorldEntityId (no type prefix).
+        // {entity_type} is i18n'd for locale-aware display.
+        let (entity_id_str, entity_type_str) = match entity_query.get(event.target) {
+            Ok((_name, entity_type, entity_id)) => {
+                let entity_type_str = match entity_type.0.as_str() {
+                    "ship" => i18n.entity_types.ship.clone(),
+                    "asteroid" => i18n.entity_types.asteroid.clone(),
+                    "station" => i18n.entity_types.station.clone(),
+                    "sun" => i18n.entity_types.sun.clone(),
+                    "planet" => i18n.entity_types.planet.clone(),
+                    "moon" => i18n.entity_types.moon.clone(),
+                    _ => entity_type.0.clone(),
+                };
+                (entity_id.0.clone(), entity_type_str)
             }
             Err(_) => ("Unknown".to_string(), "Unknown".to_string()),
         };
@@ -135,13 +145,13 @@ pub fn target_selected_notification_system(
                 .ui
                 .notification
                 .target_selected
-                .replace("{entity_id}", &name_str)
+                .replace("{entity_id}", &entity_id_str)
                 .replace("{entity_type}", &entity_type_str),
             delta_v_core::navigation::TargetingModeType::Nav => i18n
                 .ui
                 .notification
                 .nav_object_selected
-                .replace("{entity_id}", &name_str)
+                .replace("{entity_id}", &entity_id_str)
                 .replace("{entity_type}", &entity_type_str),
         };
 

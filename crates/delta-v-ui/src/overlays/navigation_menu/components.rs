@@ -46,6 +46,20 @@ pub struct NavMenuRowBackground {
     pub index: usize,
 }
 
+/// Marker component for the type column text in a navigation menu row.
+///
+/// Used by `navigation_menu_refresh_system` to distinguish the type column
+/// from the name column when both share the same `NavMenuRowBackground` index.
+#[derive(Component)]
+pub struct NavMenuTypeText;
+
+/// Marker component for the name/id column text in a navigation menu row.
+///
+/// Used by `navigation_menu_refresh_system` to distinguish the name column
+/// from the type column when both share the same `NavMenuRowBackground` index.
+#[derive(Component)]
+pub struct NavMenuNameText;
+
 /// Component linking a navigation menu row to its target entity.
 ///
 /// This is used for click handling - when a row is clicked, we need to know

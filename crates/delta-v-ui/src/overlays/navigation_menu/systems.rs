@@ -182,13 +182,21 @@ pub fn navigation_menu_refresh_system(
                 '_,
                 '_,
                 (Entity, &mut Text, &NavMenuRowBackground, &NavMenuRowEntity),
-                Without<NavMenuDistanceText>,
+                (
+                    With<super::components::NavMenuTypeText>,
+                    Without<super::components::NavMenuNameText>,
+                    Without<NavMenuDistanceText>,
+                ),
             >,
             Query<
                 '_,
                 '_,
                 (Entity, &mut Text, &NavMenuRowBackground, &NavMenuRowEntity),
-                Without<NavMenuDistanceText>,
+                (
+                    With<super::components::NavMenuNameText>,
+                    Without<super::components::NavMenuTypeText>,
+                    Without<NavMenuDistanceText>,
+                ),
             >,
         ),
     >,
@@ -256,7 +264,7 @@ pub fn navigation_menu_refresh_system(
             Color::NONE
         };
 
-        // Update type column
+        // Update type column (p0 = With<NavMenuTypeText>)
         if let Some((_entity, mut text, _, _)) = text_queries
             .p0()
             .iter_mut()
@@ -270,7 +278,7 @@ pub fn navigation_menu_refresh_system(
             }
         }
 
-        // Update name column (display_name)
+        // Update name column (p1 = With<NavMenuNameText>)
         if let Some((_entity, mut text, _, _)) = text_queries
             .p1()
             .iter_mut()

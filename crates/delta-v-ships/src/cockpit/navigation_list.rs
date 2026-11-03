@@ -90,46 +90,50 @@ fn rebuild_navigation_list(
     let mut entries: Vec<delta_v_core::NavEntry> = match targeting_mode.mode {
         TargetingModeType::Combat => targetable_query
             .iter()
-            .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
-                if entity == player_ship.0 {
-                    return None;
-                }
-                // Combat mode: only Targetable entities (ships, stations, projectiles)
-                let distance = distance_to_surface(player_pos, transform.translation, shape);
-                let display_name = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
-                Some(delta_v_core::NavEntry {
-                    entity,
-                    entity_type: entity_type.0.clone(),
-                    entity_id: entity_id.0.clone(),
-                    distance,
-                    display_name,
-                })
-            })
+            .filter_map(
+                |(entity, transform, _name, entity_type, entity_id, shape)| {
+                    if entity == player_ship.0 {
+                        return None;
+                    }
+                    // Combat mode: only Targetable entities (ships, stations, projectiles)
+                    let distance = distance_to_surface(player_pos, transform.translation, shape);
+                    let display_name = entity_id.0.clone();
+                    Some(delta_v_core::NavEntry {
+                        entity,
+                        entity_type: entity_type.0.clone(),
+                        entity_id: entity_id.0.clone(),
+                        distance,
+                        display_name,
+                    })
+                },
+            )
             .collect(),
         TargetingModeType::Nav => navigable_query
             .iter()
-            .filter_map(|(entity, transform, name, entity_type, entity_id, shape)| {
-                if entity == player_ship.0 {
-                    return None;
-                }
-                // Nav mode: apply distance and class filter (4.1)
-                // - Sun, planets: always
-                // - Named asteroids over 100 km: always
-                // - Stations, mining platforms, other ships, fleets: always
-                // - Moons: only while player is inside parent's SOI
-                // - Belt and field asteroids: only while their sector/field is loaded
-                // For now, all Navigable entities are included; SOI check for moons
-                // and sector loading for belt asteroids will be added when those systems exist.
-                let distance = distance_to_surface(player_pos, transform.translation, shape);
-                let display_name = name.map_or_else(|| entity_id.0.clone(), ToString::to_string);
-                Some(delta_v_core::NavEntry {
-                    entity,
-                    entity_type: entity_type.0.clone(),
-                    entity_id: entity_id.0.clone(),
-                    distance,
-                    display_name,
-                })
-            })
+            .filter_map(
+                |(entity, transform, _name, entity_type, entity_id, shape)| {
+                    if entity == player_ship.0 {
+                        return None;
+                    }
+                    // Nav mode: apply distance and class filter (4.1)
+                    // - Sun, planets: always
+                    // - Named asteroids over 100 km: always
+                    // - Stations, mining platforms, other ships, fleets: always
+                    // - Moons: only while player is inside parent's SOI
+                    // - Belt and field asteroids: only while their sector/field is loaded
+                    // For now, all Navigable entities are included; SOI check for moons
+                    // and sector loading for belt asteroids will be added when those systems exist.
+                    let distance = distance_to_surface(player_pos, transform.translation, shape);
+                    let display_name = entity_id.0.clone();
+                    Some(delta_v_core::NavEntry {
+                        entity,
+                        entity_type: entity_type.0.clone(),
+                        entity_id: entity_id.0.clone(),
+                        distance,
+                        display_name,
+                    })
+                },
+            )
             .collect(),
     };
 
@@ -141,21 +145,6 @@ fn rebuild_navigation_list(
     });
 
     list_data.entries = entries;
-    tracing::debug!(
-        "[nav_list] updated with {} entries (mode: {:?})",
-        list_data.entries.len(),
-        targeting_mode.mode
-    );
-    for entry in &list_data.entries {
-        tracing::debug!(
-            "[nav_list]   entry: entity={:?} type={} id={} distance={:.1} name={}",
-            entry.entity,
-            entry.entity_type,
-            entry.entity_id,
-            entry.distance,
-            entry.display_name
-        );
-    }
 }
 
 /// Updates the navigation list based on the current targeting mode.
@@ -216,11 +205,10 @@ pub fn update_navigation_list_system(
         "[nav_list] Combat query found {} entities",
         targetable_query.iter().count()
     );
-    for (entity, _, name, entity_type, entity_id, _) in targetable_query.iter() {
+    for (entity, _, _name, entity_type, entity_id, _) in targetable_query.iter() {
         tracing::debug!(
-            "[nav_list] Combat entity: {:?} name={:?} type={} id={}",
+            "[nav_list] Combat entity: {:?} type={} id={}",
             entity,
-            name,
             entity_type.0,
             entity_id.0
         );
@@ -230,11 +218,10 @@ pub fn update_navigation_list_system(
         "[nav_list] Nav query found {} entities",
         navigable_query.iter().count()
     );
-    for (entity, _, name, entity_type, entity_id, _) in navigable_query.iter() {
+    for (entity, _, _name, entity_type, entity_id, _) in navigable_query.iter() {
         tracing::debug!(
-            "[nav_list] Nav entity: {:?} name={:?} type={} id={}",
+            "[nav_list] Nav entity: {:?} type={} id={}",
             entity,
-            name,
             entity_type.0,
             entity_id.0
         );
@@ -255,11 +242,10 @@ pub fn update_navigation_list_system(
     // Debug: log all entities found by the navigable query
     if current_mode == TargetingModeType::Nav {
         tracing::debug!("[nav_list] Nav mode - all entities with EntityType+EntityId:");
-        for (entity, _, name, entity_type, entity_id, _) in navigable_query.iter() {
+        for (entity, _, _name, entity_type, entity_id, _) in navigable_query.iter() {
             tracing::debug!(
-                "[nav_list]   entity={:?} name={:?} type={} id={}",
+                "[nav_list]   entity={:?} type={} id={}",
                 entity,
-                name,
                 entity_type.0,
                 entity_id.0
             );

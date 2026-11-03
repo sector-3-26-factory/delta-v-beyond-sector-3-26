@@ -146,6 +146,7 @@ fn navigation_menu_content(
                 },
                 TextColor(UiTheme::LABEL_COLOR),
                 super::components::NavMenuRowBackground { index },
+                super::components::NavMenuTypeText,
                 super::components::NavMenuRowEntity {
                     entity: entry.entity,
                 },
@@ -168,6 +169,7 @@ fn navigation_menu_content(
                 },
                 TextColor(UiTheme::VALUE_COLOR),
                 super::components::NavMenuRowBackground { index },
+                super::components::NavMenuNameText,
                 super::components::NavMenuRowEntity {
                     entity: entry.entity,
                 },
