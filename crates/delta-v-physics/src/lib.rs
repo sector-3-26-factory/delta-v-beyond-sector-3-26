@@ -55,6 +55,7 @@ pub use belt_field_generation::{
 pub use belt_field_spawn::{
     AsteroidBelt, AsteroidField, spawn_asteroid_belt, spawn_asteroid_field,
 };
+pub use belt_field_streaming::{ParentEntityId, ParentEntityType};
 pub use celestial::{
     LazyLoadMesh, Navigable, OrbitalBody, OrbitalParentId, PendingCelestialMesh, Planet, Sun,
     SunFallbackVfx,

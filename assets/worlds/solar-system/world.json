@@ -8,11 +8,11 @@
       "player_controlled": true,
       "position": {
         "x": {
-          "value": 380500000000.0,
+          "value": 400000000000.0,
           "unit": "m"
         },
         "y": {
-          "value": 500000000.0,
+          "value": 50000000.0,
           "unit": "m"
         },
         "z": {

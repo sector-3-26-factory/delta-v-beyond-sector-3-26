@@ -395,6 +395,13 @@ fn pick_radius(distribution: &[SizeDistributionEntry], hash: u64) -> f32 {
         }
     }
 
+    // Fallback: return the last entry's radius if floating point precision
+    // caused target to be slightly > 0 after the loop.
+    // This can happen when hash = u64::MAX and target = total_weight exactly.
+    if let Some(last) = distribution.last() {
+        return last.radius;
+    }
+
     // This should never be reached if total_weight > 0 and hash is valid,
     // but we include a fallback with a clear panic message for safety.
     panic!(

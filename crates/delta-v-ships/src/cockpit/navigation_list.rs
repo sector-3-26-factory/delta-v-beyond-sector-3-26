@@ -30,7 +30,7 @@ use delta_v_core::events::{NavigationListChanged, TargetSelected};
 use delta_v_core::navigation::{
     EntityType, NavigationListData, TargetingMode, TargetingModeType, WorldEntityId,
 };
-use delta_v_physics::{CollisionShape, distance_to_surface};
+use delta_v_physics::{CollisionShape, ParentEntityId, ParentEntityType, distance_to_surface};
 
 /// Internal function to rebuild the navigation list entries.
 ///
@@ -39,7 +39,8 @@ use delta_v_physics::{CollisionShape, distance_to_surface};
 #[allow(
     clippy::too_many_arguments,
     clippy::needless_pass_by_value,
-    clippy::type_complexity
+    clippy::type_complexity,
+    clippy::too_many_lines
 )]
 fn rebuild_navigation_list(
     player_ship: Res<'_, delta_v_core::PlayerShipEntity>,
@@ -55,6 +56,8 @@ fn rebuild_navigation_list(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<Targetable>,
     >,
@@ -68,16 +71,20 @@ fn rebuild_navigation_list(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<delta_v_physics::Navigable>,
     >,
 ) {
     // Get player position - find the player ship by checking all entities with Transform
     // We use the player_ship resource to identify which entity is the player
-    #[allow(clippy::expect_used)]
+    // INVARIANT: PlayerShipEntity always references a valid entity with Targetable component
+    // because the player ship is spawned with Targetable and the resource is updated atomically.
+    #[allow(clippy::expect_used)] // Player ship must exist in targetable_query by invariant above
     let player_pos = targetable_query
         .iter()
-        .find_map(|(entity, transform, _, _, _, _)| {
+        .find_map(|(entity, transform, _, _, _, _, _, _)| {
             if entity == player_ship.0 {
                 Some(transform.translation)
             } else {
@@ -91,13 +98,40 @@ fn rebuild_navigation_list(
         TargetingModeType::Combat => targetable_query
             .iter()
             .filter_map(
-                |(entity, transform, _name, entity_type, entity_id, shape)| {
+                |(
+                    entity,
+                    transform,
+                    _name,
+                    entity_type,
+                    entity_id,
+                    shape,
+                    parent_id,
+                    parent_type,
+                )| {
                     if entity == player_ship.0 {
                         return None;
                     }
                     // Combat mode: only Targetable entities (ships, stations, projectiles)
                     let distance = distance_to_surface(player_pos, transform.translation, shape);
-                    let display_name = entity_id.0.clone();
+                    let display_name = if entity_type.0 == "asteroid" {
+                        if let (Some(parent_id), Some(parent_type)) = (parent_id, parent_type) {
+                            if parent_type.0 == "asteroid_belt" || parent_type.0 == "asteroid_field"
+                            {
+                                let name = parent_id.0.clone();
+                                if name.len() > 15 {
+                                    format!("{}...", &name[..12])
+                                } else {
+                                    name
+                                }
+                            } else {
+                                entity_id.0.clone()
+                            }
+                        } else {
+                            entity_id.0.clone()
+                        }
+                    } else {
+                        entity_id.0.clone()
+                    };
                     Some(delta_v_core::NavEntry {
                         entity,
                         entity_type: entity_type.0.clone(),
@@ -111,7 +145,16 @@ fn rebuild_navigation_list(
         TargetingModeType::Nav => navigable_query
             .iter()
             .filter_map(
-                |(entity, transform, _name, entity_type, entity_id, shape)| {
+                |(
+                    entity,
+                    transform,
+                    _name,
+                    entity_type,
+                    entity_id,
+                    shape,
+                    parent_id,
+                    parent_type,
+                )| {
                     if entity == player_ship.0 {
                         return None;
                     }
@@ -124,7 +167,25 @@ fn rebuild_navigation_list(
                     // For now, all Navigable entities are included; SOI check for moons
                     // and sector loading for belt asteroids will be added when those systems exist.
                     let distance = distance_to_surface(player_pos, transform.translation, shape);
-                    let display_name = entity_id.0.clone();
+                    let display_name = if entity_type.0 == "asteroid" {
+                        if let (Some(parent_id), Some(parent_type)) = (parent_id, parent_type) {
+                            if parent_type.0 == "asteroid_belt" || parent_type.0 == "asteroid_field"
+                            {
+                                let name = parent_id.0.clone();
+                                if name.len() > 15 {
+                                    format!("{}...", &name[..12])
+                                } else {
+                                    name
+                                }
+                            } else {
+                                entity_id.0.clone()
+                            }
+                        } else {
+                            entity_id.0.clone()
+                        }
+                    } else {
+                        entity_id.0.clone()
+                    };
                     Some(delta_v_core::NavEntry {
                         entity,
                         entity_type: entity_type.0.clone(),
@@ -174,6 +235,8 @@ pub fn update_navigation_list_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<Targetable>,
     >,
@@ -188,6 +251,8 @@ pub fn update_navigation_list_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<delta_v_physics::Navigable>,
     >,
@@ -205,7 +270,7 @@ pub fn update_navigation_list_system(
         "[nav_list] Combat query found {} entities",
         targetable_query.iter().count()
     );
-    for (entity, _, _name, entity_type, entity_id, _) in targetable_query.iter() {
+    for (entity, _, _name, entity_type, entity_id, _, _, _) in targetable_query.iter() {
         tracing::debug!(
             "[nav_list] Combat entity: {:?} type={} id={}",
             entity,
@@ -218,7 +283,7 @@ pub fn update_navigation_list_system(
         "[nav_list] Nav query found {} entities",
         navigable_query.iter().count()
     );
-    for (entity, _, _name, entity_type, entity_id, _) in navigable_query.iter() {
+    for (entity, _, _name, entity_type, entity_id, _, _, _) in navigable_query.iter() {
         tracing::debug!(
             "[nav_list] Nav entity: {:?} type={} id={}",
             entity,
@@ -242,7 +307,7 @@ pub fn update_navigation_list_system(
     // Debug: log all entities found by the navigable query
     if current_mode == TargetingModeType::Nav {
         tracing::debug!("[nav_list] Nav mode - all entities with EntityType+EntityId:");
-        for (entity, _, _name, entity_type, entity_id, _) in navigable_query.iter() {
+        for (entity, _, _name, entity_type, entity_id, _, _, _) in navigable_query.iter() {
             tracing::debug!(
                 "[nav_list]   entity={:?} type={} id={}",
                 entity,
@@ -282,6 +347,8 @@ pub fn rebuild_on_spawn_despawn_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<Targetable>,
     >,
@@ -295,6 +362,8 @@ pub fn rebuild_on_spawn_despawn_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<delta_v_physics::Navigable>,
     >,
@@ -315,9 +384,12 @@ pub fn rebuild_on_spawn_despawn_system(
         let current_entities: std::collections::HashSet<Entity> = match targeting_mode.mode {
             TargetingModeType::Combat => targetable_query
                 .iter()
-                .map(|(e, _, _, _, _, _)| e)
+                .map(|(e, _, _, _, _, _, _, _)| e)
                 .collect(),
-            TargetingModeType::Nav => navigable_query.iter().map(|(e, _, _, _, _, _)| e).collect(),
+            TargetingModeType::Nav => navigable_query
+                .iter()
+                .map(|(e, _, _, _, _, _, _, _)| e)
+                .collect(),
         };
         for entry in &list_data.entries {
             if !current_entities.contains(&entry.entity) {
@@ -409,6 +481,8 @@ pub fn update_navigation_list_distances_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<Targetable>,
     >,
@@ -422,16 +496,20 @@ pub fn update_navigation_list_distances_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
     >,
     mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
 ) {
     let _span = info_span!("delta_v_ships::update_navigation_list_distances_system").entered();
     // Get player position
-    #[allow(clippy::expect_used)]
+    // INVARIANT: PlayerShipEntity always references a valid entity with Targetable component
+    // because the player ship is spawned with Targetable and the resource is updated atomically.
+    #[allow(clippy::expect_used)] // Player ship must exist in targetable_query by invariant above
     let player_pos = targetable_query
         .iter()
-        .find_map(|(entity, transform, _, _, _, _)| {
+        .find_map(|(entity, transform, _, _, _, _, _, _)| {
             if entity == player_ship.0 {
                 Some(transform.translation)
             } else {
@@ -449,7 +527,7 @@ pub fn update_navigation_list_distances_system(
             TargetingModeType::Combat => {
                 targetable_query
                     .iter()
-                    .find_map(|(entity, transform, _, _, _, shape)| {
+                    .find_map(|(entity, transform, _, _, _, shape, _, _)| {
                         if entity == entry.entity {
                             Some(distance_to_surface(
                                 player_pos,
@@ -464,7 +542,7 @@ pub fn update_navigation_list_distances_system(
             TargetingModeType::Nav => {
                 navigable_query
                     .iter()
-                    .find_map(|(entity, transform, _, _, _, shape)| {
+                    .find_map(|(entity, transform, _, _, _, shape, _, _)| {
                         if entity == entry.entity {
                             Some(distance_to_surface(
                                 player_pos,
@@ -522,6 +600,8 @@ pub fn init_navigation_list_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<Targetable>,
     >,
@@ -536,6 +616,8 @@ pub fn init_navigation_list_system(
             &EntityType,
             &WorldEntityId,
             &CollisionShape,
+            Option<&ParentEntityId>,
+            Option<&ParentEntityType>,
         ),
         With<delta_v_physics::Navigable>,
     >,

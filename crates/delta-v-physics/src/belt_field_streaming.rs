@@ -28,10 +28,17 @@
 //! - Moons are NOT streamed (they exist from world load)
 
 use bevy::prelude::*;
-use delta_v_core::{AppState, FloatingOrigin, PlayerShipEntity, Targetable, WorldEntityId};
+use delta_v_core::{
+    AppState, EntityType, FloatingOrigin, NavigationListChanged, PlayerShipEntity, SpawnEntity,
+    Targetable, WorldEntityId,
+};
 use delta_v_types::PlayerSettings;
 use delta_v_types::collision::layers::ASTEROID;
+use delta_v_types::{
+    AsteroidTemplate, CollisionShapeData, CollisionShapeType, EntityTemplate, LoadedTemplate,
+};
 use std::hash::{Hash, Hasher};
+use tracing::instrument;
 
 use crate::belt_field_generation::{
     AsteroidDeltaStore, BeltSectorParams, FieldParams, GeneratedAsteroid, SizeDistributionEntry,
@@ -42,7 +49,6 @@ use crate::belt_field_spawn::{AsteroidBelt, AsteroidField};
 use crate::celestial::{LazyLoadMesh, OrbitalBody};
 use crate::constants::{COLLISION_RELEVANCE_PX, STREAMING_DISTANCE_M};
 use crate::{CollisionLayersComponent, CollisionShape, Navigable, OrbitalParentId, RigidBody};
-use delta_v_types::{CollisionShapeData, CollisionShapeType};
 
 /// Component marking a belt sector that has been generated.
 #[derive(Component, Clone, Debug)]
@@ -64,6 +70,20 @@ pub struct GeneratedField {
     pub generated_asteroids: Vec<GeneratedAsteroid>,
 }
 
+/// Component storing the parent entity's `WorldEntityId` for display purposes.
+///
+/// Attached to streamed asteroids to identify their parent belt/field
+/// for navigation list display.
+#[derive(Component, Clone, Debug)]
+pub struct ParentEntityId(pub String);
+
+/// Component storing the parent entity's type for display logic.
+///
+/// Attached to streamed asteroids to identify whether the parent is
+/// an asteroid belt or asteroid field for navigation list display.
+#[derive(Component, Clone, Debug)]
+pub struct ParentEntityType(pub String);
+
 /// Resource tracking which sectors/fields are currently loaded.
 // allow-default: Bevy Resource trait bound requires Default for init_resource
 #[derive(Debug, Default, Resource)]
@@ -82,6 +102,7 @@ pub struct LoadedSectors {
 ///
 /// Panics if a belt entity is missing the `OrbitalParentId` component.
 /// This is a world authoring error and should never happen in a valid world.
+#[instrument(target = "delta_v_physics", skip_all)]
 #[allow(
     clippy::needless_pass_by_value,
     clippy::type_complexity,
@@ -105,13 +126,21 @@ pub fn belt_sector_streaming_system(
     parent_query: Query<'_, '_, &GlobalTransform>,
     // Need to get WorldEntityId of orbital parent
     world_entity_query: Query<'_, '_, &WorldEntityId>,
+    mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
+    mut spawn_events: MessageWriter<'_, SpawnEntity>,
 ) {
     let Ok(player_transform) = player_query.get(player_ship.0) else {
+        tracing::warn!("[belt_streaming] player query failed");
         return;
     };
     let player_pos = player_transform.translation();
     let simulation_time = time.elapsed_secs();
     let detail_level = player_settings.detail_level;
+    tracing::debug!(
+        "[belt_streaming] tick player_pos={:?} belts_found={}",
+        player_pos,
+        belt_query.iter().count()
+    );
 
     // Determine which sectors should be loaded
     let mut should_load: Vec<(String, i64)> = Vec::new();
@@ -160,6 +189,16 @@ pub fn belt_sector_streaming_system(
         };
 
         let distance_to_belt = radial_distance.hypot(vertical_distance);
+        tracing::info!(
+            "[belt_streaming] belt={} player_dist={:.3e} belt_inner={:.3e} belt_outer={:.3e} distance_to_belt={:.3e} STREAMING={:.3e} within={}",
+            belt.id,
+            player_dist,
+            belt_inner_radius,
+            belt_outer_radius,
+            distance_to_belt,
+            STREAMING_DISTANCE_M,
+            distance_to_belt <= STREAMING_DISTANCE_M
+        );
 
         // Check if player is within streaming distance of the belt volume
         if distance_to_belt <= STREAMING_DISTANCE_M {
@@ -182,6 +221,7 @@ pub fn belt_sector_streaming_system(
             }
         }
     }
+    tracing::info!("[belt_streaming] should_load={:?}", should_load);
 
     // Despawn sectors that are no longer needed
     let mut to_despawn: Vec<Entity> = Vec::new();
@@ -234,6 +274,8 @@ pub fn belt_sector_streaming_system(
             // Generate the sector
             // The OrbitalBody component already has the resolved orbital_parent entity.
             // We need to get the WorldEntityId of that parent entity.
+            // INVARIANT: All orbital parent entities must have a WorldEntityId component
+            // because they are spawned with it during world load.
             let orbital_parent_entity = orbital_body.orbital_parent;
             let orbital_parent = world_entity_query.get(orbital_parent_entity).map_or_else(
                 |_| {
@@ -297,14 +339,59 @@ pub fn belt_sector_streaming_system(
                 .id();
 
             // Spawn each asteroid as a child entity
+            tracing::info!(
+                "[belt_streaming] SPAWNING sector={} belt={} asteroids={}",
+                sector_index,
+                belt_id,
+                asteroids.len()
+            );
             for asteroid in asteroids {
+                // Extract values needed for SpawnEntity event before moving asteroid
+                let stable_id = asteroid.stable_id;
+                let mesh_name = asteroid.mesh_name.clone();
+                let collision_shape = asteroid.collision_shape;
+                let bounding_box = asteroid.bounding_box;
+                let radius = asteroid.radius;
+                let mass = asteroid.mass;
+                let position = asteroid.position;
+                let rotation = asteroid.rotation;
+
                 spawn_generated_asteroid(
                     &mut commands,
                     &asset_server,
                     asteroid,
                     sector_entity,
                     sector_abs_pos,
+                    belt_id,
+                    "asteroid_belt",
                 );
+
+                // Emit SpawnEntity event so navigation list rebuilds
+                let template_radius = match collision_shape.shape_type {
+                    CollisionShapeType::Sphere { radius } => radius,
+                    _ => 1.0,
+                };
+                let template = LoadedTemplate {
+                    template: EntityTemplate::Asteroid(AsteroidTemplate {
+                        entity_type: "asteroid".to_string(),
+                        collision_shape,
+                        bounding_box,
+                        is_gravity_source: false,
+                    }),
+                    template_path: format!("templates/{mesh_name}/asteroid.json"),
+                };
+                spawn_events.write(SpawnEntity {
+                    id: format!("asteroid_{stable_id}"),
+                    template,
+                    position: position - sector_abs_pos,
+                    rotation,
+                    scale: Vec3::splat(radius / template_radius),
+                    ai_task: None,
+                    mass: Some(mass),
+                    orbital_parameters: None,
+                    asteroid_belt_parameters: None,
+                    asteroid_field_parameters: None,
+                });
             }
 
             // Track as loaded
@@ -313,15 +400,19 @@ pub fn belt_sector_streaming_system(
                 .push((belt_id.clone(), *sector_index));
         }
     }
+    // Emit event so navigation list rebuilds with new asteroids
+    nav_list_events.write(NavigationListChanged);
 }
 
 /// System that determines which fields should be loaded based on player position.
 ///
 /// Runs in `FixedUpdate` during `AppState::InGame` per ADR-0017.
+#[instrument(target = "delta_v_physics", skip_all)]
 #[allow(
     clippy::needless_pass_by_value,
     clippy::type_complexity,
-    clippy::too_many_arguments
+    clippy::too_many_arguments,
+    clippy::too_many_lines
 )]
 pub fn field_streaming_system(
     mut commands: Commands<'_, '_>,
@@ -329,7 +420,8 @@ pub fn field_streaming_system(
     delta_store: ResMut<'_, AsteroidDeltaStore>,
     time: Res<'_, Time<Fixed>>,
     player_settings: Res<'_, PlayerSettings>,
-    player_query: Query<'_, '_, &GlobalTransform, With<PlayerShipEntity>>,
+    player_ship: Res<'_, PlayerShipEntity>,
+    player_query: Query<'_, '_, &GlobalTransform>,
     field_query: Query<
         '_,
         '_,
@@ -342,34 +434,48 @@ pub fn field_streaming_system(
     >,
     existing_fields: Query<'_, '_, (Entity, &GeneratedField)>,
     asset_server: Res<'_, AssetServer>,
-    floating_origin: Res<'_, FloatingOrigin>,
+    _floating_origin: Res<'_, FloatingOrigin>,
+    mut nav_list_events: MessageWriter<'_, NavigationListChanged>,
+    mut spawn_events: MessageWriter<'_, SpawnEntity>,
 ) {
-    let Ok(player_transform) = player_query.single() else {
+    let Ok(player_transform) = player_query.get(player_ship.0) else {
+        tracing::warn!("[field_streaming] player query failed");
         return;
     };
     let player_local_pos = player_transform.translation();
     let simulation_time = time.elapsed_secs();
     let detail_level = player_settings.detail_level;
+    tracing::debug!(
+        "[field_streaming] tick player_pos={:?} fields_found={}",
+        player_local_pos,
+        field_query.iter().count()
+    );
 
     // Determine which fields should be loaded
     let mut should_load: Vec<String> = Vec::new();
 
-    for (_field_entity, field, field_transform, orbital_body) in &field_query {
-        // Get the field's current position in absolute coordinates
-        let field_abs_pos = orbital_body.map_or_else(
-            || field_transform.translation(),
-            |orbital| compute_orbital_position(orbital, simulation_time),
+    for (_field_entity, field, field_transform, _orbital_body) in &field_query {
+        // Use the field's actual transform position directly (already in local
+        // coordinates, same frame as player_local_pos). Recomputing via
+        // compute_orbital_position would return absolute coordinates relative
+        // to the sun, which does not account for the floating origin offset
+        // and produces wrong distances after recentering.
+        let field_pos = field_transform.translation();
+        let distance = player_local_pos.distance(field_pos);
+        tracing::info!(
+            "[field_streaming] field={} field_pos={:?} player_pos={:?} distance={:.3e} STREAMING={:.3e} within={}",
+            field.id,
+            field_pos,
+            player_local_pos,
+            distance,
+            STREAMING_DISTANCE_M,
+            distance <= STREAMING_DISTANCE_M
         );
-
-        // Convert to local coordinates for distance check
-        let field_local_pos = floating_origin.to_local(field_abs_pos);
-
-        // Check if within streaming distance (in local coordinates)
-        let distance = player_local_pos.distance(field_local_pos);
         if distance <= STREAMING_DISTANCE_M {
             should_load.push(field.id.clone());
         }
     }
+    tracing::info!("[field_streaming] should_load={:?}", should_load);
 
     // Despawn fields that are no longer needed
     let mut to_despawn: Vec<Entity> = Vec::new();
@@ -437,20 +543,66 @@ pub fn field_streaming_system(
                 .id();
 
             // Spawn each asteroid as a child entity
+            tracing::info!(
+                "[field_streaming] SPAWNING field={} asteroids={}",
+                field_id,
+                asteroids.len()
+            );
             for asteroid in asteroids {
+                // Extract values needed for SpawnEntity event before moving asteroid
+                let stable_id = asteroid.stable_id;
+                let mesh_name = asteroid.mesh_name.clone();
+                let collision_shape = asteroid.collision_shape;
+                let bounding_box = asteroid.bounding_box;
+                let radius = asteroid.radius;
+                let mass = asteroid.mass;
+                let position = asteroid.position;
+                let rotation = asteroid.rotation;
+
                 spawn_generated_asteroid(
                     &mut commands,
                     &asset_server,
                     asteroid,
                     field_gen_entity,
                     field_abs_pos,
+                    field_id,
+                    "asteroid_field",
                 );
+
+                // Emit SpawnEntity event so navigation list rebuilds
+                let template_radius = match collision_shape.shape_type {
+                    CollisionShapeType::Sphere { radius } => radius,
+                    _ => 1.0,
+                };
+                let template = LoadedTemplate {
+                    template: EntityTemplate::Asteroid(AsteroidTemplate {
+                        entity_type: "asteroid".to_string(),
+                        collision_shape,
+                        bounding_box,
+                        is_gravity_source: false,
+                    }),
+                    template_path: format!("templates/{mesh_name}/asteroid.json"),
+                };
+                spawn_events.write(SpawnEntity {
+                    id: format!("asteroid_{stable_id}"),
+                    template,
+                    position: position - field_abs_pos,
+                    rotation,
+                    scale: Vec3::splat(radius / template_radius),
+                    ai_task: None,
+                    mass: Some(mass),
+                    orbital_parameters: None,
+                    asteroid_belt_parameters: None,
+                    asteroid_field_parameters: None,
+                });
             }
 
             // Track as loaded
             loaded_sectors.fields.push(field_id.clone());
         }
     }
+    // Emit event so navigation list rebuilds with new asteroids
+    nav_list_events.write(NavigationListChanged);
 }
 
 /// Sector identity comes from orbital position, not a running counter.
@@ -722,6 +874,7 @@ fn sector_world_position(
 }
 
 /// Computes orbital position for a body at a given time.
+#[allow(dead_code)]
 fn compute_orbital_position(orbital: &OrbitalBody, time: f32) -> Vec3 {
     // Simplified - would use proper Keplerian propagation
     let angle =
@@ -739,6 +892,8 @@ fn spawn_generated_asteroid(
     asteroid: GeneratedAsteroid,
     parent: Entity,
     sector_abs_pos: Vec3,
+    parent_name: &str,
+    parent_type: &str,
 ) {
     let entity_id = format!("asteroid_{}", asteroid.stable_id);
 
@@ -763,6 +918,16 @@ fn spawn_generated_asteroid(
     // relative to the sector entity.
     let relative_position = asteroid.position - sector_abs_pos;
 
+    tracing::info!(
+        "[spawn_generated_asteroid] id={} parent={} parent_type={} abs_pos={:?} rel_pos={:?} sector_abs_pos={:?}",
+        entity_id,
+        parent_name,
+        parent_type,
+        asteroid.position,
+        relative_position,
+        sector_abs_pos
+    );
+
     let mut entity_commands = commands.spawn((
         Name::new(format!("Asteroid: {entity_id}")),
         Transform::from_translation(relative_position)
@@ -773,7 +938,10 @@ fn spawn_generated_asteroid(
         CollisionLayersComponent::new(ASTEROID),
         Navigable,
         Targetable,
+        EntityType("asteroid".to_string()),
         WorldEntityId(entity_id),
+        ParentEntityId(parent_name.to_string()),
+        ParentEntityType(parent_type.to_string()),
         LazyLoadMesh {
             min_screen_radius_px: crate::celestial::ALWAYS_VISIBLE_SCREEN_RADIUS_PX,
             loaded: false,
